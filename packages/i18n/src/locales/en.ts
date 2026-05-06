@@ -1,0 +1,33 @@
+import type { LocaleBundle } from '../types.js'
+
+export const en: LocaleBundle = {
+  code: 'en',
+  name: 'English',
+  dict: {
+    'common:appName': 'Modern Admin',
+    'common:home': 'Home',
+    'common:search': 'Search',
+    'common:loading': 'Loading…',
+    'common:save': 'Save',
+    'common:cancel': 'Cancel',
+    'common:delete': 'Delete',
+    'common:create': 'Create',
+    'common:edit': 'Edit',
+    'common:show': 'Show',
+    'common:back': 'Back',
+    'common:noRecords': 'No records found.',
+    'common:confirmDelete': 'Delete this record?',
+    'common:perPage': 'Per page',
+    'common:page': 'Page',
+    'common:of': 'of',
+    'common:total': 'Total',
+    'auth:login': 'Sign in',
+    'auth:logout': 'Sign out',
+    'auth:email': 'Email',
+    'auth:password': 'Password',
+    'auth:loginFailed': 'Invalid credentials.',
+    'errors:notFound': 'Not found.',
+    'errors:forbidden': 'You do not have access to this resource.',
+    'errors:server': 'Something went wrong. Please retry.',
+  },
+}

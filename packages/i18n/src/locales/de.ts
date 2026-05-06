@@ -1,0 +1,33 @@
+import type { LocaleBundle } from '../types.js'
+
+export const de: LocaleBundle = {
+  code: 'de',
+  name: 'Deutsch',
+  dict: {
+    'common:appName': 'Modern Admin',
+    'common:home': 'Startseite',
+    'common:search': 'Suche',
+    'common:loading': 'Lädt…',
+    'common:save': 'Speichern',
+    'common:cancel': 'Abbrechen',
+    'common:delete': 'Löschen',
+    'common:create': 'Erstellen',
+    'common:edit': 'Bearbeiten',
+    'common:show': 'Anzeigen',
+    'common:back': 'Zurück',
+    'common:noRecords': 'Keine Einträge gefunden.',
+    'common:confirmDelete': 'Diesen Eintrag löschen?',
+    'common:perPage': 'Pro Seite',
+    'common:page': 'Seite',
+    'common:of': 'von',
+    'common:total': 'Gesamt',
+    'auth:login': 'Anmelden',
+    'auth:logout': 'Abmelden',
+    'auth:email': 'E-Mail',
+    'auth:password': 'Passwort',
+    'auth:loginFailed': 'Ungültige Zugangsdaten.',
+    'errors:notFound': 'Nicht gefunden.',
+    'errors:forbidden': 'Kein Zugriff auf diese Ressource.',
+    'errors:server': 'Etwas ist schiefgelaufen. Bitte erneut versuchen.',
+  },
+}

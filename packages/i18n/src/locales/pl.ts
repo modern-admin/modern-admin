@@ -1,0 +1,33 @@
+import type { LocaleBundle } from '../types.js'
+
+export const pl: LocaleBundle = {
+  code: 'pl',
+  name: 'Polski',
+  dict: {
+    'common:appName': 'Modern Admin',
+    'common:home': 'Strona główna',
+    'common:search': 'Szukaj',
+    'common:loading': 'Ładowanie…',
+    'common:save': 'Zapisz',
+    'common:cancel': 'Anuluj',
+    'common:delete': 'Usuń',
+    'common:create': 'Utwórz',
+    'common:edit': 'Edytuj',
+    'common:show': 'Pokaż',
+    'common:back': 'Wstecz',
+    'common:noRecords': 'Nie znaleziono rekordów.',
+    'common:confirmDelete': 'Usunąć ten rekord?',
+    'common:perPage': 'Na stronę',
+    'common:page': 'Strona',
+    'common:of': 'z',
+    'common:total': 'Razem',
+    'auth:login': 'Zaloguj się',
+    'auth:logout': 'Wyloguj się',
+    'auth:email': 'Email',
+    'auth:password': 'Hasło',
+    'auth:loginFailed': 'Nieprawidłowe dane logowania.',
+    'errors:notFound': 'Nie znaleziono.',
+    'errors:forbidden': 'Brak dostępu do tego zasobu.',
+    'errors:server': 'Coś poszło nie tak. Spróbuj ponownie.',
+  },
+}

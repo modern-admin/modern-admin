@@ -1,0 +1,33 @@
+import type { LocaleBundle } from '../types.js'
+
+export const it: LocaleBundle = {
+  code: 'it',
+  name: 'Italiano',
+  dict: {
+    'common:appName': 'Modern Admin',
+    'common:home': 'Home',
+    'common:search': 'Cerca',
+    'common:loading': 'Caricamento…',
+    'common:save': 'Salva',
+    'common:cancel': 'Annulla',
+    'common:delete': 'Elimina',
+    'common:create': 'Crea',
+    'common:edit': 'Modifica',
+    'common:show': 'Visualizza',
+    'common:back': 'Indietro',
+    'common:noRecords': 'Nessun record trovato.',
+    'common:confirmDelete': 'Eliminare questo record?',
+    'common:perPage': 'Per pagina',
+    'common:page': 'Pagina',
+    'common:of': 'di',
+    'common:total': 'Totale',
+    'auth:login': 'Accedi',
+    'auth:logout': 'Esci',
+    'auth:email': 'Email',
+    'auth:password': 'Password',
+    'auth:loginFailed': 'Credenziali non valide.',
+    'errors:notFound': 'Non trovato.',
+    'errors:forbidden': 'Non hai accesso a questa risorsa.',
+    'errors:server': 'Qualcosa è andato storto. Riprova.',
+  },
+}

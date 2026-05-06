@@ -1,0 +1,40 @@
+{
+  "name": "@modern-admin/realtime",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "peerDependencies": {
+    "@nestjs/common": "^11.1.19",
+    "@nestjs/websockets": "^11.1.19",
+    "@nestjs/platform-socket.io": "^11.1.19"
+  },
+  "peerDependenciesMeta": {
+    "@nestjs/common": { "optional": true },
+    "@nestjs/websockets": { "optional": true },
+    "@nestjs/platform-socket.io": { "optional": true }
+  },
+  "dependencies": {
+    "@modern-admin/core": "workspace:*",
+    "@modern-admin/nest": "workspace:*"
+  },
+  "devDependencies": {
+    "@modern-admin/tsconfig": "workspace:*",
+    "@nestjs/common": "^11.1.19",
+    "@nestjs/websockets": "^11.1.19",
+    "@types/bun": "^1.3.13",
+    "typescript": "^6.0.3"
+  }
+}

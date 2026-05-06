@@ -1,0 +1,33 @@
+import type { LocaleBundle } from '../types.js'
+
+export const ja: LocaleBundle = {
+  code: 'ja',
+  name: '日本語',
+  dict: {
+    'common:appName': 'Modern Admin',
+    'common:home': 'ホーム',
+    'common:search': '検索',
+    'common:loading': '読み込み中…',
+    'common:save': '保存',
+    'common:cancel': 'キャンセル',
+    'common:delete': '削除',
+    'common:create': '作成',
+    'common:edit': '編集',
+    'common:show': '表示',
+    'common:back': '戻る',
+    'common:noRecords': 'レコードが見つかりません。',
+    'common:confirmDelete': 'このレコードを削除しますか？',
+    'common:perPage': '1ページあたり',
+    'common:page': 'ページ',
+    'common:of': '/',
+    'common:total': '合計',
+    'auth:login': 'ログイン',
+    'auth:logout': 'ログアウト',
+    'auth:email': 'メールアドレス',
+    'auth:password': 'パスワード',
+    'auth:loginFailed': '認証情報が無効です。',
+    'errors:notFound': '見つかりません。',
+    'errors:forbidden': 'このリソースへのアクセス権がありません。',
+    'errors:server': 'エラーが発生しました。再試行してください。',
+  },
+}

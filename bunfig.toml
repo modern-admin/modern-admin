@@ -1,0 +1,11 @@
+# bun configuration — https://bun.sh/docs/runtime/bunfig
+[install]
+# strict workspace resolution; let bun manage the lockfile
+exact = false
+auto = "auto"
+
+[install.scopes]
+# placeholder for private registries when needed
+
+[test]
+# default test runner config

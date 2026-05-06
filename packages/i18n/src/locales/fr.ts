@@ -1,0 +1,33 @@
+import type { LocaleBundle } from '../types.js'
+
+export const fr: LocaleBundle = {
+  code: 'fr',
+  name: 'Français',
+  dict: {
+    'common:appName': 'Modern Admin',
+    'common:home': 'Accueil',
+    'common:search': 'Recherche',
+    'common:loading': 'Chargement…',
+    'common:save': 'Enregistrer',
+    'common:cancel': 'Annuler',
+    'common:delete': 'Supprimer',
+    'common:create': 'Créer',
+    'common:edit': 'Modifier',
+    'common:show': 'Afficher',
+    'common:back': 'Retour',
+    'common:noRecords': 'Aucun enregistrement.',
+    'common:confirmDelete': 'Supprimer cet enregistrement ?',
+    'common:perPage': 'Par page',
+    'common:page': 'Page',
+    'common:of': 'sur',
+    'common:total': 'Total',
+    'auth:login': 'Connexion',
+    'auth:logout': 'Déconnexion',
+    'auth:email': 'E-mail',
+    'auth:password': 'Mot de passe',
+    'auth:loginFailed': 'Identifiants invalides.',
+    'errors:notFound': 'Introuvable.',
+    'errors:forbidden': 'Accès refusé à cette ressource.',
+    'errors:server': 'Une erreur est survenue. Veuillez réessayer.',
+  },
+}

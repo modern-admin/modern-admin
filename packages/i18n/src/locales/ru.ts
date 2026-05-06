@@ -1,0 +1,33 @@
+import type { LocaleBundle } from '../types.js'
+
+export const ru: LocaleBundle = {
+  code: 'ru',
+  name: 'Русский',
+  dict: {
+    'common:appName': 'Modern Admin',
+    'common:home': 'Главная',
+    'common:search': 'Поиск',
+    'common:loading': 'Загрузка…',
+    'common:save': 'Сохранить',
+    'common:cancel': 'Отмена',
+    'common:delete': 'Удалить',
+    'common:create': 'Создать',
+    'common:edit': 'Редактировать',
+    'common:show': 'Просмотр',
+    'common:back': 'Назад',
+    'common:noRecords': 'Записей не найдено.',
+    'common:confirmDelete': 'Удалить запись?',
+    'common:perPage': 'На странице',
+    'common:page': 'Страница',
+    'common:of': 'из',
+    'common:total': 'Всего',
+    'auth:login': 'Войти',
+    'auth:logout': 'Выйти',
+    'auth:email': 'Email',
+    'auth:password': 'Пароль',
+    'auth:loginFailed': 'Неверные данные.',
+    'errors:notFound': 'Не найдено.',
+    'errors:forbidden': 'Нет доступа к этому ресурсу.',
+    'errors:server': 'Что-то пошло не так. Повторите попытку.',
+  },
+}
