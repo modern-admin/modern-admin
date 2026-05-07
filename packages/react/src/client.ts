@@ -21,8 +21,10 @@ const buildQuery = (query?: ListQuery): string => {
   if (query.sortBy) params.set('sortBy', query.sortBy)
   if (query.direction) params.set('direction', query.direction)
   if (query.filters) {
+    // Bracket notation — Express's qs parser turns `filters[k]=v` into
+    // `query.filters = { k: 'v' }` which is what the list action expects.
     for (const [k, v] of Object.entries(query.filters)) {
-      if (v !== '' && v != null) params.set(`filters.${k}`, v)
+      if (v !== '' && v != null) params.set(`filters[${k}]`, v)
     }
   }
   const qs = params.toString()
@@ -98,6 +100,21 @@ export class AdminClient {
       { method: 'DELETE' },
     )
   }
+
+  /** Bulk-delete a set of records via the resource's `bulkDelete` action. */
+  bulkDelete(resourceId: string, recordIds: ReadonlyArray<string>): Promise<unknown> {
+    return this.request<unknown>(
+      `/admin/api/resources/${encodeURIComponent(resourceId)}/actions/bulkDelete`,
+      { method: 'POST', body: JSON.stringify({ recordIds }) },
+    )
+  }
+
+  search(resourceId: string, query: string): Promise<ListResponse> {
+    const qs = query ? `?q=${encodeURIComponent(query)}` : ''
+    return this.request<ListResponse>(
+      `/admin/api/resources/${encodeURIComponent(resourceId)}/actions/search${qs}`,
+    )
+  }
 }
 
 export class AdminApiError extends Error {
@@ -105,4 +122,19 @@ export class AdminApiError extends Error {
     super(message)
     this.name = 'AdminApiError'
   }
+}
+
+/** Extract a human-readable message from any error thrown by AdminClient.
+ *  The raw message is the HTTP response body text (often JSON). We try to
+ *  parse the `.message` field from the JSON payload before falling back. */
+export function parseApiError(err: unknown): { status?: number; message: string } {
+  if (err instanceof AdminApiError) {
+    try {
+      const body = JSON.parse(err.message) as { message?: string }
+      return { status: err.status, message: body.message ?? err.message }
+    } catch {
+      return { status: err.status, message: err.message }
+    }
+  }
+  return { message: err instanceof Error ? err.message : String(err) }
 }

@@ -76,10 +76,34 @@ export class InMemoryResource extends BaseResource {
   private matches(row: InMemoryRow, filter: Filter): boolean {
     const filters = filter.filters ?? {}
     for (const [path, entry] of Object.entries(filters)) {
+      const needle = entry.value
+      if (needle == null || needle === '') continue
+
+      // Date-range filters: keys ending with _from / _to produced by the
+      // date-range picker. Values are ISO date strings — lexicographic
+      // comparison works because yyyy-MM-dd strings sort correctly.
+      if (path.endsWith('_from') || path.endsWith('_to')) {
+        const basePath = path.slice(0, path.lastIndexOf('_'))
+        const value = String(row[basePath] ?? '')
+        if (!value) continue
+        const needleStr = String(needle)
+        if (path.endsWith('_from') && value < needleStr) return false
+        if (path.endsWith('_to') && value > needleStr) return false
+        continue
+      }
+
       const value = row[path]
-      if (typeof entry.value === 'string') {
-        if (!String(value ?? '').toLowerCase().includes(entry.value.toLowerCase())) return false
-      } else if (entry.value !== value) {
+      // Array fields (e.g. many-to-many tagIds): match when the needle equals
+      // (or is contained in) any element. Strings do case-insensitive substring.
+      if (Array.isArray(value)) {
+        const items = value.map((v) => String(v).toLowerCase())
+        const target = String(needle).toLowerCase()
+        if (!items.some((i) => i.includes(target))) return false
+        continue
+      }
+      if (typeof needle === 'string') {
+        if (!String(value ?? '').toLowerCase().includes(needle.toLowerCase())) return false
+      } else if (needle !== value) {
         return false
       }
     }

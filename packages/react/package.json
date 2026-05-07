@@ -21,11 +21,14 @@
     "react-dom": "^19.2.6"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
     "@modern-admin/core": "workspace:*",
+    "@modern-admin/i18n": "workspace:*",
     "@modern-admin/ui": "workspace:*",
     "@tanstack/react-query": "^5.100.9",
+    "@tanstack/react-table": "^8.21.3",
+    "lucide-react": "^1.14.0",
     "react-hook-form": "^7.75.0",
-    "@hookform/resolvers": "^5.2.2",
     "zod": "^4.4.3"
   },
   "devDependencies": {

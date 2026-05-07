@@ -27,6 +27,7 @@ yarn-error.log*
 .vscode/*
 .idea/workspace.xml
 .idea/tasks.xml
+.idea
 
 # OS
 .DS_Store

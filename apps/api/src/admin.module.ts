@@ -3,7 +3,7 @@
 // module that exposes /admin/api/*.
 
 import { Module } from '@nestjs/common'
-import { InMemoryRealtimeBus, type BaseDatabase, type BaseResource, type ICacheProvider, type IAuthProvider, type IRealtimeBus } from '@modern-admin/core'
+import { InMemoryRealtimeBus, type BaseDatabase, type BaseResource, type ICacheProvider, type IAuthProvider, type IRealtimeBus, type ResourceOptions } from '@modern-admin/core'
 import { ModernAdminModule } from '@modern-admin/nest'
 import { ModernAdminGraphqlModule } from '@modern-admin/graphql'
 import { ModernAdminRealtimeModule, RedisRealtimeBus } from '@modern-admin/realtime'
@@ -12,6 +12,16 @@ import { BetterAuthProvider } from '@modern-admin/auth-better-auth'
 import { Redis } from 'ioredis'
 import { InMemoryDatabase, InMemoryResource } from './demo/in-memory-adapter.js'
 import { seed } from './demo/seed.js'
+
+const NAV: Record<string, ResourceOptions> = {
+  users:      { navigation: { icon: 'Users',          group: 'User Management' } },
+  categories: { navigation: { icon: 'FolderTree',     group: 'Content' } },
+  tags:       { navigation: { icon: 'Tag',             group: 'Content' } },
+  posts:      { navigation: { icon: 'FileText',        group: 'Content' } },
+  comments:   { navigation: { icon: 'MessageSquare',   group: 'Content' } },
+}
+
+const db = seed()
 
 const buildCache = (): ICacheProvider | undefined => {
   const url = process.env.REDIS_URL
@@ -40,10 +50,10 @@ const buildRealtime = (): IRealtimeBus => {
 const realtimeBus = buildRealtime()
 
 const buildAuth = (): IAuthProvider | undefined => {
-  // The host app instantiates Better Auth and passes it in. We only wire the
-  // adapter when the env explicitly opts in so the dev experience stays
-  // friction-free without OAuth/SMTP configuration.
-  if (process.env.BETTER_AUTH_ENABLED !== 'true') return undefined
+  // Reference app instantiates Better Auth in main.ts and stores it on
+  // globalThis before Nest boots. Set BETTER_AUTH_ENABLED=false to bypass
+  // (e.g. when running without a session DB writable).
+  if (process.env.BETTER_AUTH_ENABLED === 'false') return undefined
   const auth = (globalThis as { __betterAuth?: unknown }).__betterAuth
   if (!auth) return undefined
   return new BetterAuthProvider({ auth: auth as never })
@@ -53,7 +63,7 @@ const buildAuth = (): IAuthProvider | undefined => {
   imports: [
     ModernAdminModule.forRoot({
       global: true,
-      databases: [seed()],
+      resources: db.tables.map((t) => ({ resource: t, options: NAV[t.name] ?? {} })),
       adapters: [{
         Database: InMemoryDatabase as unknown as typeof BaseDatabase,
         Resource: InMemoryResource as unknown as typeof BaseResource,

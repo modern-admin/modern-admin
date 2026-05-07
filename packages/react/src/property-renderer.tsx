@@ -2,9 +2,26 @@
 // Custom components registered via ComponentLoader take precedence.
 
 import * as React from 'react'
-import { Input, Textarea, Select, Badge } from '@modern-admin/ui'
+import {
+  Input,
+  Textarea,
+  Badge,
+  Switch,
+  DatePicker,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@modern-admin/ui'
 import type { PropertyJSON } from './types.js'
 import { useAdminContext } from './provider.js'
+import {
+  ReferenceCombobox,
+  ReferenceLink,
+  ReferenceLinkList,
+  ReferenceMultiCombobox,
+} from './reference.js'
 
 const formatDate = (value: unknown): string => {
   if (value == null) return ''
@@ -27,7 +44,7 @@ export function PropertyDisplay({ property, value, view = 'list' }: PropertyDisp
     const Custom = components.get(componentName)!
     return <Custom property={property} value={value} view={view} />
   }
-  if (value == null || value === '') return <span className="text-slate-400">—</span>
+  if (value == null || value === '') return <span className="text-muted-foreground">—</span>
   switch (property.type) {
     case 'boolean':
       return <Badge variant={value ? 'default' : 'outline'}>{value ? 'true' : 'false'}</Badge>
@@ -38,13 +55,32 @@ export function PropertyDisplay({ property, value, view = 'list' }: PropertyDisp
     case 'mixed':
     case 'key-value':
       return (
-        <code className="text-xs text-slate-600">{JSON.stringify(value)}</code>
+        <code className="text-xs text-muted-foreground">{JSON.stringify(value)}</code>
       )
     case 'reference':
-      return <Badge variant="secondary">→ {String(value)}</Badge>
+      if (property.reference) {
+        if (property.isArray) {
+          const ids = Array.isArray(value)
+            ? (value as Array<string | number>)
+            : []
+          return <ReferenceLinkList resourceId={property.reference} recordIds={ids} />
+        }
+        return (
+          <ReferenceLink
+            resourceId={property.reference}
+            recordId={value as string | number}
+            showIcon={view === 'show'}
+          />
+        )
+      }
+      return <Badge variant="secondary">{String(value)}</Badge>
     case 'richtext':
     case 'textarea':
-      return <span className="line-clamp-2 text-slate-700">{String(value)}</span>
+      return (
+        <span className={view === 'show' ? 'whitespace-pre-wrap text-foreground' : 'line-clamp-2 text-foreground'}>
+          {String(value)}
+        </span>
+      )
     default:
       return <span>{String(value)}</span>
   }
@@ -70,31 +106,53 @@ export function PropertyEditor({
     return <Custom property={property} value={value} onChange={onChange} disabled={disabled} />
   }
   const stringValue = value == null ? '' : String(value)
+  if (property.reference) {
+    if (property.isArray) {
+      const arr = Array.isArray(value)
+        ? (value as Array<string | number>)
+        : []
+      return (
+        <ReferenceMultiCombobox
+          referenceResourceId={property.reference}
+          value={arr}
+          onChange={(next) => onChange(next)}
+          disabled={disabled}
+        />
+      )
+    }
+    return (
+      <ReferenceCombobox
+        referenceResourceId={property.reference}
+        value={value as string | number | null | undefined}
+        onChange={(next) => onChange(next)}
+        disabled={disabled}
+      />
+    )
+  }
   if (property.availableValues?.length) {
     return (
-      <Select
-        value={stringValue}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled}
-      >
-        <option value="">—</option>
-        {property.availableValues.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
+      <Select value={stringValue} onValueChange={(v) => onChange(v === '_empty_' ? '' : v)} disabled={disabled}>
+        <SelectTrigger>
+          <SelectValue placeholder="—" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="_empty_">—</SelectItem>
+          {property.availableValues.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
       </Select>
     )
   }
   switch (property.type) {
     case 'boolean':
       return (
-        <input
-          type="checkbox"
+        <Switch
           checked={Boolean(value)}
-          onChange={(e) => onChange(e.target.checked)}
+          onCheckedChange={(v) => onChange(Boolean(v))}
           disabled={disabled}
-          className="h-4 w-4"
         />
       )
     case 'number':
@@ -110,20 +168,23 @@ export function PropertyEditor({
       )
     case 'date':
       return (
-        <Input
-          type="date"
-          value={formatDate(value)}
-          onChange={(e) => onChange(e.target.value)}
+        <DatePicker
+          mode="date"
+          value={value == null ? '' : String(value)}
+          onChange={(v) => onChange(v === '' ? null : v)}
           disabled={disabled}
+          ariaLabel={property.label}
         />
       )
     case 'datetime':
+    case 'datetime-local':
       return (
-        <Input
-          type="datetime-local"
-          value={formatDate(value)}
-          onChange={(e) => onChange(e.target.value)}
+        <DatePicker
+          mode="datetime"
+          value={value == null ? '' : String(value)}
+          onChange={(v) => onChange(v === '' ? null : v)}
           disabled={disabled}
+          ariaLabel={property.label}
         />
       )
     case 'richtext':

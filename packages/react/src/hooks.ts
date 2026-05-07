@@ -104,3 +104,37 @@ export const useDeleteRecord = (
     },
   })
 }
+
+export const useBulkDeleteRecords = (
+  resourceId: string,
+): UseMutationResult<unknown, Error, ReadonlyArray<string>> => {
+  const client = useAdminClient()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (ids) => client.bulkDelete(resourceId, ids),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['modern-admin', resourceId] })
+    },
+  })
+}
+
+const keySearch = (resourceId: string, query: string) =>
+  ['modern-admin', resourceId, 'search', query] as const
+
+/**
+ * Live-search hook against a resource's `search` action. Used by reference
+ * comboboxes — debounce the input on the call site.
+ */
+export const useSearchRecords = (
+  resourceId: string | undefined,
+  query: string,
+  enabled = true,
+): UseQueryResult<ListResponse> => {
+  const client = useAdminClient()
+  return useQuery({
+    queryKey: keySearch(resourceId ?? '', query),
+    queryFn: () => client.search(resourceId!, query),
+    enabled: !!resourceId && enabled,
+    staleTime: 30_000,
+  })
+}

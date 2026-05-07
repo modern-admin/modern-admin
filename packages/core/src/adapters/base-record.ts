@@ -1,5 +1,5 @@
 import { ValidationError, type PropertyErrors, type RecordError } from '../errors'
-import { flatten, get, set, selectParams, merge } from '../utils/flat.js'
+import { flatten, get, set, selectParams, merge, unflatten } from '../utils/flat.js'
 import type { ParamsType, RecordJSON } from './types.js'
 import type { BaseResource } from './base-resource.js'
 
@@ -114,10 +114,13 @@ export class BaseRecord {
       const child = this.populated[key]
       populated[key] = child instanceof BaseRecord ? child.toJSON() : child
     }
+    // Wire shape ships nested params (arrays/objects rebuilt) so clients
+    // don't have to reverse the flat dot-notation. The internal `this.params`
+    // stays flat for path-based mutators.
     return {
       id: this.id(),
       title: this.title(),
-      params: this.params,
+      params: unflatten(this.params),
       populated,
       errors: this.errors,
       baseError: this.baseError,

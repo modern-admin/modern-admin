@@ -34,7 +34,7 @@ export interface ActionDescriptor {
 export interface ResourceJSON {
   id: string
   name: string
-  navigation: { name?: string; icon?: string } | null
+  navigation: { name?: string; icon?: string; group?: string } | null
   properties: PropertyJSON[]
   actions: ActionDescriptor[]
 }
