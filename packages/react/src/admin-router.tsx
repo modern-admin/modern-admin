@@ -1,0 +1,203 @@
+// Code-based route tree wired up to @tanstack/react-router. Imported by
+// `admin-app.tsx` and renders the entire authenticated shell as the root
+// route's component. Each leaf route is a thin wrapper that pulls typed
+// `params` and renders the existing page component (page props remain a
+// public API surface — no changes to ResourceListPage/ResourceShowPage/etc.).
+//
+// History: browser (`createBrowserHistory`) — clean path-based URLs.
+// Requires an SPA fallback rule on the server (e.g. `try_files ... index.html`
+// in nginx, historyApiFallback in Vite). See `router.tsx` and `docs/frontend.md`.
+//
+// Search params: TSR's default JSON-style parser would mangle our existing
+// `filters[<path>]=<value>` URL format. We make `parseSearch`/`stringifySearch`
+// no-ops (TSR keeps `searchStr` raw); `useRoute()` re-parses `searchStr` into
+// `ListQueryState` via `parseLocation` in `router.tsx`.
+
+import * as React from 'react'
+import {
+  createBrowserHistory,
+  createRootRouteWithContext,
+  createRoute,
+  createRouter,
+  Outlet,
+  RouterProvider,
+} from '@tanstack/react-router'
+import { ResourceListPage } from './pages/list-page.js'
+import { ResourceShowPage } from './pages/show-page.js'
+import { ResourceEditPage } from './pages/edit-page.js'
+import { HomePage } from './pages/home-page.js'
+import { SettingsPage } from './pages/settings-page.js'
+import { AuditLogPage } from './pages/audit-log-page.js'
+
+// ─── Route tree ───────────────────────────────────────────────────────────────
+
+interface RouterContext {
+  ShellLayout: React.ComponentType<{ children: React.ReactNode }>
+}
+
+const rootRoute = createRootRouteWithContext<RouterContext>()({
+  // The actual shell (sidebar + header + main) lives in `admin-app.tsx`.
+  // It's passed in via the router's context at provider time so we don't
+  // create a circular module dependency between admin-app and admin-router.
+  component: function RootRouteShell() {
+    const { ShellLayout } = rootRoute.useRouteContext()
+    return (
+      <ShellLayout>
+        <Outlet />
+      </ShellLayout>
+    )
+  },
+})
+
+const homeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/',
+  component: function HomeRouteComponent() {
+    return <HomePage />
+  },
+})
+
+const auditLogRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/audit-log',
+  component: function AuditLogRouteComponent() {
+    return <AuditLogPage />
+  },
+})
+
+const resourceListRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/resources/$resourceId',
+  component: function ResourceListRouteComponent() {
+    const { resourceId } = resourceListRoute.useParams()
+    return <ResourceListPage resourceId={resourceId} />
+  },
+})
+
+const resourceNewRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/resources/$resourceId/new',
+  component: function ResourceNewRouteComponent() {
+    const { resourceId } = resourceNewRoute.useParams()
+    return <ResourceEditPage resourceId={resourceId} />
+  },
+})
+
+const resourceShowRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/resources/$resourceId/$recordId',
+  component: function ResourceShowRouteComponent() {
+    const { resourceId, recordId } = resourceShowRoute.useParams()
+    return <ResourceShowPage resourceId={resourceId} recordId={recordId} />
+  },
+})
+
+const resourceEditRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/resources/$resourceId/$recordId/edit',
+  component: function ResourceEditRouteComponent() {
+    const { resourceId, recordId } = resourceEditRoute.useParams()
+    return <ResourceEditPage resourceId={resourceId} recordId={recordId} />
+  },
+})
+
+const settingsIndexRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/settings',
+  component: function SettingsIndexRouteComponent() {
+    return <SettingsPage />
+  },
+})
+
+const settingsSectionRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/settings/$section',
+  component: function SettingsSectionRouteComponent() {
+    const { section } = settingsSectionRoute.useParams()
+    return <SettingsPage section={section} />
+  },
+})
+
+const routeTree = rootRoute.addChildren([
+  homeRoute,
+  auditLogRoute,
+  resourceNewRoute,
+  resourceEditRoute,
+  resourceShowRoute,
+  resourceListRoute,
+  settingsSectionRoute,
+  settingsIndexRoute,
+])
+
+// ─── Router instance ──────────────────────────────────────────────────────────
+//
+// Search params: in TSR v1.169 `location.searchStr` is computed as
+// `stringifySearch(parseSearch(rawUrlSearch))` — it's NOT the raw URL search
+// string. Our list page reads `searchStr` to extract `filters[<path>]=<value>`
+// pairs (see `parseLocation` in `router.tsx`), so the parse/stringify pair
+// must be a flat-key identity round-trip rather than TSR's default
+// JSON-encoded values (which would mangle the bracket notation) or no-ops
+// (which would drop the search entirely — filters/sort never reach the API).
+
+const flatParseSearch = (search: string): Record<string, string> => {
+  const str = search.startsWith('?') ? search.slice(1) : search
+  if (!str) return {}
+  const params = new URLSearchParams(str)
+  const out: Record<string, string> = {}
+  params.forEach((value, key) => {
+    out[key] = value
+  })
+  return out
+}
+
+const flatStringifySearch = (search: Record<string, unknown>): string => {
+  if (!search) return ''
+  const params = new URLSearchParams()
+  for (const [k, v] of Object.entries(search)) {
+    if (v == null || v === '') continue
+    params.set(k, typeof v === 'string' ? v : String(v))
+  }
+  const s = params.toString()
+  return s ? `?${s}` : ''
+}
+
+const noopRouterContext: RouterContext = {
+  // Replaced at provider mount time via the `context` prop on RouterProvider.
+  ShellLayout: () => null,
+}
+
+const router = createRouter({
+  routeTree,
+  history: createBrowserHistory(),
+  parseSearch: flatParseSearch,
+  stringifySearch: flatStringifySearch,
+  context: noopRouterContext,
+  defaultPreload: false,
+  scrollRestoration: false,
+})
+
+// Type registration — gives typed `useParams()`/`useSearch()` and link
+// validation across the package.
+declare module '@tanstack/react-router' {
+  interface Register {
+    router: typeof router
+  }
+}
+
+// ─── Provider ─────────────────────────────────────────────────────────────────
+
+export interface AdminRouterProviderProps {
+  /** Component rendered as the authenticated shell. Receives `children` —
+   *  must include an `<Outlet/>` slot (or a child element wrapping it) so
+   *  routed page components can mount inside it. */
+  ShellLayout: React.ComponentType<{ children: React.ReactNode }>
+}
+
+/** Mounts the admin's route tree. Must be rendered only after the user is
+ *  authenticated — login flow happens upstream in `AdminApp`. */
+export function AdminRouterProvider({
+  ShellLayout,
+}: AdminRouterProviderProps): React.ReactElement {
+  const context = React.useMemo<RouterContext>(() => ({ ShellLayout }), [ShellLayout])
+  return <RouterProvider router={router} context={context} />
+}

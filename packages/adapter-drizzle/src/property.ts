@@ -25,12 +25,14 @@ export class DrizzleProperty extends BaseProperty {
 
   constructor(column: DrizzleColumn, reference: string | null = null, position = 1) {
     const isEnum = (column.enumValues?.length ?? 0) > 0
+    const isArray = column.dataType === 'array'
     const type = DrizzleProperty.resolveType(column, isEnum, reference !== null)
     super({
       path: column.name,
       type,
       isId: column.primary === true,
-      isSortable: type !== 'json' && type !== 'mixed',
+      isArray,
+      isSortable: type !== 'json' && type !== 'mixed' && !isArray,
       isRequired:
         column.notNull === true && column.hasDefault !== true && column.primary !== true,
       position,
@@ -47,7 +49,14 @@ export class DrizzleProperty extends BaseProperty {
   ): PropertyType {
     if (isReference) return 'reference'
     if (isEnum) return 'enum'
-    const mapped = DATA_TYPE_TO_PROPERTY[column.dataType]
+    // For PgArray columns, the *element* type lives on `baseColumn`. Surface
+    // that as the property type so adapters/UI render the inner kind (e.g.
+    // `text[]` shows as `string`).
+    const dataType =
+      column.dataType === 'array' && column.baseColumn?.dataType
+        ? column.baseColumn.dataType
+        : column.dataType
+    const mapped = DATA_TYPE_TO_PROPERTY[dataType]
     if (mapped) {
       if (mapped === 'string' && column.primary && isUuidColumn(column.name, column.columnType)) {
         return 'uuid'

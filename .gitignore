@@ -18,10 +18,16 @@ yarn-error.log*
 **/.nest
 *.tsbuildinfo
 
+
+.playwright-mcp
+
 # env
 .env
 .env.*
 !.env.example
+
+.agents
+.cursor
 
 # editors
 .vscode/*

@@ -24,9 +24,16 @@ export interface DatePickerProps {
   mode?: DatePickerMode
   disabled?: boolean
   placeholder?: string
+  /** Applied to the outer wrapper div (controls width, etc.). */
   className?: string
+  /** Applied to the inner text Input — use to override height / font size. */
+  inputClassName?: string
   /** ARIA label forwarded to the trigger input (mobile users / screen readers). */
   ariaLabel?: string
+  /** ARIA label for the calendar icon button. Default: "Open calendar". */
+  openCalendarLabel?: string
+  /** Label for the time input shown in datetime mode. Default: "Time". */
+  timeLabel?: string
 }
 
 const DATE_FMT = 'yyyy-MM-dd'
@@ -77,7 +84,10 @@ export function DatePicker({
   disabled,
   placeholder,
   className,
+  inputClassName,
   ariaLabel,
+  openCalendarLabel = 'Open calendar',
+  timeLabel = 'Time',
 }: DatePickerProps): React.ReactElement {
   const [open, setOpen] = React.useState(false)
   const date = parseValue(value)
@@ -166,7 +176,7 @@ export function DatePicker({
           placeholder={inputPlaceholder}
           disabled={disabled}
           aria-label={ariaLabel}
-          className="pr-10"
+          className={cn(inputClassName, 'pr-10')}
         />
         <PopoverTrigger asChild>
           <Button
@@ -174,7 +184,7 @@ export function DatePicker({
             variant="ghost"
             size="icon"
             disabled={disabled}
-            aria-label="Open calendar"
+            aria-label={openCalendarLabel}
             className="absolute right-1 top-1/2 size-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
           >
             <CalendarIcon className="size-4" />
@@ -194,7 +204,7 @@ export function DatePicker({
         />
         {mode === 'datetime' && (
           <div className="flex items-center gap-2 border-t p-3">
-            <span className="text-xs text-muted-foreground">Time</span>
+            <span className="text-xs text-muted-foreground">{timeLabel}</span>
             <Input
               type="time"
               value={time}

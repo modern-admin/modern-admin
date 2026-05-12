@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { Filter, ValidationError } from '@modern-admin/core'
 import { PrismaResource } from '../src/resource.js'
-import { userModel, roleEnum } from './_helpers/dmmf.js'
+import { postModel, userModel, roleEnum } from './_helpers/dmmf.js'
 import { createClient, createDelegate, type FakeDelegate } from './_helpers/fake-client.js'
 
 const buildResource = (
@@ -79,6 +79,22 @@ describe('PrismaResource', () => {
     const args = delegate.calls.at(-1)?.args as { data: Record<string, unknown> }
     expect(args.data).not.toHaveProperty('posts')
     expect(args.data.email).toBe('new@x')
+  })
+
+  test('create preserves scalar foreign-key fields that back relations', async () => {
+    const delegate = createDelegate()
+    const client = createClient({ post: delegate })
+    const resource = new PrismaResource({
+      model: postModel,
+      client,
+      enums: [roleEnum],
+    })
+    await resource.create({
+      title: 'Hello',
+      authorId: 'user-42',
+    })
+    const args = delegate.calls.at(-1)?.args as { data: Record<string, unknown> }
+    expect(args.data.authorId).toBe('user-42')
   })
 
   test('update routes through delegate.update with idClause', async () => {

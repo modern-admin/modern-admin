@@ -30,6 +30,8 @@ import {
   type PropertyType,
   type RawFilters,
 } from '@modern-admin/core'
+import { GraphQLUpload } from './scalars.js'
+import type { ExtensionContext, GraphqlExtensionFactory, GraphqlSchemaExtension } from './extensions.js'
 
 export interface GraphqlContext {
   admin: ModernAdmin
@@ -113,6 +115,20 @@ const buildPropertyFields = (
   for (const p of properties) {
     if (p.subProperties().length > 0) continue
     const isId = p.isId()
+    // M2M virtual property: surfaced as `[JSON!]` — each entry carries the
+    // referenced record's id plus any junction extra fields. Keeping it as
+    // JSON sidesteps generating per-junction object types while still
+    // exposing the data verbatim to clients.
+    if (p.type() === 'm2m') {
+      fields[p.path()] = {
+        type: new GraphQLList(new GraphQLNonNull(GraphQLJSON)),
+        resolve: (src) => {
+          const v = (src as Record<string, unknown> | undefined)?.[p.path()]
+          return Array.isArray(v) ? v : []
+        },
+      }
+      continue
+    }
     const baseType = isId ? GraphQLID : scalarFor(p.type())
     const resolved = p.isRequired() && !isId ? new GraphQLNonNull(baseType) : baseType
     fields[p.path()] = {
@@ -140,6 +156,11 @@ const buildCreateInputFields = (
   const fields: Record<string, GraphQLInputFieldConfig> = {}
   for (const p of properties) {
     if (p.isId() || p.subProperties().length > 0) continue
+    if (p.type() === 'm2m') {
+      // Accept an array of `{ id, ...extras }` items (or bare ids).
+      fields[p.path()] = { type: new GraphQLList(GraphQLJSON) }
+      continue
+    }
     const base = scalarFor(p.type())
     fields[p.path()] = { type: p.isRequired() ? new GraphQLNonNull(base) : base }
   }
@@ -152,6 +173,10 @@ const buildUpdateInputFields = (
   const fields: Record<string, GraphQLInputFieldConfig> = {}
   for (const p of properties) {
     if (p.isId() || p.subProperties().length > 0) continue
+    if (p.type() === 'm2m') {
+      fields[p.path()] = { type: new GraphQLList(GraphQLJSON) }
+      continue
+    }
     fields[p.path()] = { type: scalarFor(p.type()) }
   }
   return fields
@@ -183,6 +208,9 @@ const attachReferenceResolvers = (
   for (const property of resource.properties()) {
     const refId = property.reference()
     if (!refId) continue
+    // M2M virtual properties carry `reference` for routing the editor, but
+    // the value isn't a scalar FK — skip the auto-resolver.
+    if (property.type() === 'm2m') continue
     const targetResource = admin.resources.find((r) => r.decorate().id === refId)
     if (!targetResource) continue
     // Augment the existing scalar field with a sibling-loaded reference.
@@ -221,7 +249,17 @@ const filterFromInput = (
   return new Filter(raw, resource)
 }
 
-export const buildGraphqlSchema = (admin: ModernAdmin): GraphQLSchema => {
+export interface BuildGraphqlSchemaOptions {
+  /** Extra Query/Mutation fields (and named types) contributed by sibling
+   * packages — see `GraphqlSchemaExtension`. Each entry may be a static
+   * object or a factory that takes the shared `Upload` scalar. */
+  extensions?: ReadonlyArray<GraphqlExtensionFactory>
+}
+
+export const buildGraphqlSchema = (
+  admin: ModernAdmin,
+  options: BuildGraphqlSchemaOptions = {},
+): GraphQLSchema => {
   const objectTypes = new Map<string, GraphQLObjectType>()
   const filterInputs = new Map<string, GraphQLInputObjectType>()
   const createInputs = new Map<string, GraphQLInputObjectType>()
@@ -303,7 +341,7 @@ export const buildGraphqlSchema = (admin: ModernAdmin): GraphQLSchema => {
               perPage: args.limit != null ? String(args.limit) : undefined,
               sortBy: args.sortBy ?? undefined,
               direction: args.sortDirection ?? undefined,
-              ...(args.filter as Record<string, string> | undefined),
+              filters: (args.filter as Record<string, unknown> | undefined) ?? {},
             },
           },
           ctx.currentAdmin,
@@ -389,12 +427,50 @@ export const buildGraphqlSchema = (admin: ModernAdmin): GraphQLSchema => {
     resolve: () => 'ok',
   }
 
+  // Merge schema extensions (e.g. file upload mutations contributed by
+  // `@modern-admin/feature-upload`). Extension factories receive the shared
+  // `Upload` scalar so they don't have to redeclare it.
+  const extensionContext: ExtensionContext = { Upload: GraphQLUpload }
+  const extraTypes: GraphQLObjectType[] = []
+  for (const factory of options.extensions ?? []) {
+    const ext: GraphqlSchemaExtension =
+      typeof factory === 'function' ? factory(extensionContext) : factory
+    if (ext.queries) {
+      for (const [name, cfg] of Object.entries(ext.queries)) {
+        if (queryFields[name]) {
+          throw new Error(
+            `Schema extension "${ext.name ?? '(anonymous)'}" tried to redefine Query.${name}`,
+          )
+        }
+        queryFields[name] = cfg
+      }
+    }
+    if (ext.mutations) {
+      for (const [name, cfg] of Object.entries(ext.mutations)) {
+        if (mutationFields[name]) {
+          throw new Error(
+            `Schema extension "${ext.name ?? '(anonymous)'}" tried to redefine Mutation.${name}`,
+          )
+        }
+        mutationFields[name] = cfg
+      }
+    }
+    if (ext.types) {
+      for (const t of ext.types) {
+        // Only object types can appear in the extra-types list (input/scalar
+        // types are referenced through field configs, which auto-collect them).
+        if (t instanceof GraphQLObjectType) extraTypes.push(t)
+      }
+    }
+  }
+
   return new GraphQLSchema({
     query: new GraphQLObjectType({ name: 'Query', fields: () => queryFields }),
     mutation:
       Object.keys(mutationFields).length > 0
         ? new GraphQLObjectType({ name: 'Mutation', fields: () => mutationFields })
         : undefined,
+    types: extraTypes.length > 0 ? extraTypes : undefined,
   })
 }
 

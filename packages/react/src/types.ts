@@ -4,6 +4,40 @@
 
 export type View = 'list' | 'show' | 'edit' | 'filter'
 
+/**
+ * Mirror of `core` `ShowWhen` — declarative rule that conditionally hides a
+ * field on the edit form based on the current value of another form field.
+ * Operators combine with OR semantics; `defaultWhenEmpty` triggers when the
+ * control field is null / undefined / ''.
+ */
+export interface ShowWhenSpec {
+  field: string
+  equals?: unknown
+  notEquals?: unknown
+  in?: unknown[]
+  notIn?: unknown[]
+  isEmpty?: boolean
+  defaultWhenEmpty?: boolean
+}
+
+/**
+ * Mirror of `core` `KeyValueField` — declares one row in the key-value
+ * editor used as a friendly alternative to the raw JSON editor.
+ */
+export interface KeyValueFieldSpec {
+  key: string
+  label?: string
+  type?: 'string' | 'number' | 'boolean' | 'textarea' | 'select' | 'autocomplete'
+  description?: string
+  placeholder?: string
+  isRequired?: boolean
+  availableValues?: ReadonlyArray<string | { value: string; label: string }>
+  /** For `type: 'autocomplete'`: pull dynamic suggestions from another resource. */
+  suggestionsResource?: string
+  /** Path of the field on `suggestionsResource` to project. */
+  suggestionsField?: string
+}
+
 export interface PropertyJSON {
   path: string
   label: string
@@ -19,24 +53,48 @@ export interface PropertyJSON {
   visibility: Record<View, boolean>
   position: number
   description?: string
+  showWhen?: ShowWhenSpec
+  keyValueFields?: KeyValueFieldSpec[]
   custom: Record<string, unknown>
+}
+
+export interface ActionGroup {
+  name: string
+  icon?: string
 }
 
 export interface ActionDescriptor {
   name: string
   actionType: 'resource' | 'record' | 'bulk'
   resourceId: string
+  nesting?: ActionGroup[]
   guard?: string
   component?: string | null
   custom?: Record<string, unknown>
+}
+
+export interface RelatedResource {
+  resourceId: string
+  foreignKey: string
+  label?: string
 }
 
 export interface ResourceJSON {
   id: string
   name: string
   navigation: { name?: string; icon?: string; group?: string } | null
+  relatedResources?: RelatedResource[]
   properties: PropertyJSON[]
   actions: ActionDescriptor[]
+}
+
+export interface CurrentUser {
+  id: string
+  email?: string
+  name?: string
+  role?: string
+  avatarUrl?: string
+  [claim: string]: unknown
 }
 
 export interface AdminConfig {
@@ -62,6 +120,15 @@ export interface ListResponse {
 
 export interface RecordResponse {
   record: RecordJSON
+}
+
+/** Generic response from a custom action invocation (record / bulk / resource). */
+export interface CustomActionResponse {
+  record?: RecordJSON
+  records?: RecordJSON[]
+  notice?: { message: string; type: 'success' | 'info' | 'error' | 'warning' }
+  redirectUrl?: string
+  [key: string]: unknown
 }
 
 export interface ListQuery {

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, ilike, inArray, like, lte } from 'drizzle-orm'
+import { and, arrayContains, arrayOverlaps, asc, desc, eq, gte, ilike, inArray, like, lte } from 'drizzle-orm'
 import type { Filter, FilterElement, FilterValue, FindOptions } from '@modern-admin/core'
 import type { DrizzleProperty } from './property.js'
 import type { DrizzleColumn, DrizzleTable } from './types.js'
@@ -51,7 +51,11 @@ const elementToCondition = (
 
   if (Array.isArray(value)) {
     const list = value.map((v) => coerceScalar(v as FilterValue, property)) as unknown[]
-    return list.length ? inArray(column as never, list as never) : null
+    if (!list.length) return null
+    // Scalar-list (Postgres `text[]` / `int[]`) column: match rows whose
+    // array overlaps any requested value.
+    if (property.isArray()) return arrayOverlaps(column as never, list as never)
+    return inArray(column as never, list as never)
   }
 
   if (isRangeValue(value)) {
@@ -67,6 +71,10 @@ const elementToCondition = (
   }
 
   const coerced = coerceScalar(value, property)
+  // Scalar value against a list column → array contains scalar (`@>`).
+  if (property.isArray()) {
+    return arrayContains(column as never, [coerced] as never)
+  }
   if (property.type() === 'string' && typeof coerced === 'string') {
     // Postgres has ilike; MySQL/SQLite fall back to LIKE.
     const op = (column as DrizzleColumn).columnType?.startsWith('Pg') ? ilike : like

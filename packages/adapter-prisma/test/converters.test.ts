@@ -42,6 +42,38 @@ describe('filterToWhere', () => {
     const filter = new Filter({ unknownField: 'x' }, resource)
     expect(filterToWhere(filter)).toEqual({})
   })
+
+  test('scalar list (isArray) columns use `has` for a single needle', () => {
+    const model = {
+      name: 'Post',
+      fields: [
+        { name: 'id', kind: 'scalar' as const, type: 'String', isList: false, isRequired: true, isUnique: false, isId: true, isReadOnly: false, hasDefaultValue: true },
+        { name: 'tagIds', kind: 'scalar' as const, type: 'String', isList: true, isRequired: false, isUnique: false, isId: false, isReadOnly: false, hasDefaultValue: false },
+      ],
+    }
+    const resource = new PrismaResource({
+      model,
+      client: createClient({ post: createDelegate() }),
+    })
+    const filter = new Filter({ tagIds: 'turing' }, resource)
+    expect(filterToWhere(filter)).toEqual({ tagIds: { has: 'turing' } })
+  })
+
+  test('scalar list columns use `hasSome` for an array of needles', () => {
+    const model = {
+      name: 'Post',
+      fields: [
+        { name: 'id', kind: 'scalar' as const, type: 'String', isList: false, isRequired: true, isUnique: false, isId: true, isReadOnly: false, hasDefaultValue: true },
+        { name: 'tagIds', kind: 'scalar' as const, type: 'String', isList: true, isRequired: false, isUnique: false, isId: false, isReadOnly: false, hasDefaultValue: false },
+      ],
+    }
+    const resource = new PrismaResource({
+      model,
+      client: createClient({ post: createDelegate() }),
+    })
+    const filter = new Filter({ tagIds: ['turing', 'logic'] }, resource)
+    expect(filterToWhere(filter)).toEqual({ tagIds: { hasSome: ['turing', 'logic'] } })
+  })
 })
 
 describe('findOptionsToPrisma', () => {

@@ -64,8 +64,8 @@ export function ExportDialog({
       })
       const body =
         format === 'csv'
-          ? recordsToCsv(records, { properties })
-          : recordsToJson(records, { properties })
+          ? recordsToCsv(records, { properties, query })
+          : recordsToJson(records, { properties, query })
       const mime = format === 'csv' ? 'text/csv' : 'application/json'
       downloadText(exportFilename(resourceId, format), mime, body)
       notify.success({ key: 'export:exported', params: { count: records.length } })
@@ -101,9 +101,9 @@ export function ExportDialog({
           onClick={() => run('csv')}
         >
           <FileSpreadsheet className="size-5 shrink-0" />
-          <div className="flex flex-col items-start text-left">
+          <div className="min-w-0 flex flex-col items-start text-left overflow-hidden">
             <span className="font-medium">CSV</span>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs text-muted-foreground truncate w-full">
               {t('export:csvHint')}
             </span>
           </div>
@@ -116,9 +116,9 @@ export function ExportDialog({
           onClick={() => run('json')}
         >
           <FileJson className="size-5 shrink-0" />
-          <div className="flex flex-col items-start text-left">
+          <div className="min-w-0 flex flex-col items-start text-left overflow-hidden">
             <span className="font-medium">JSON</span>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs text-muted-foreground truncate w-full">
               {t('export:jsonHint')}
             </span>
           </div>

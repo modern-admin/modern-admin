@@ -1,20 +1,36 @@
 // Top-level CRUD shell. Composes provider + router + sidebar + content.
+// Sidebar is the shadcn `<Sidebar>` recipe — collapsible to icons on
+// desktop and rendered as a Sheet on mobile via the `useSidebar` context.
 
 import * as React from 'react'
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
   Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
   cn,
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
+  useSidebar,
 } from '@modern-admin/ui'
 import {
   BookOpen,
+  ChevronDown,
   ChevronLeft,
   Database,
   FileText,
@@ -23,6 +39,9 @@ import {
   Home,
   Image,
   LayoutGrid,
+  Loader2,
+  LogOut,
+  History,
   Mail,
   Menu,
   MessageSquare,
@@ -31,19 +50,22 @@ import {
   ShoppingCart,
   Tag,
   type LucideProps,
+  User,
   Users,
 } from 'lucide-react'
-import { useResources, useAdminConfig } from './hooks.js'
-import { Link, Router, useRoute } from './router.js'
-import { ResourceListPage } from './pages/list-page.js'
-import { ResourceShowPage } from './pages/show-page.js'
-import { ResourceEditPage } from './pages/edit-page.js'
-import { HomePage } from './pages/home-page.js'
+import { useCurrentUser, useLogout, useResources } from './hooks.js'
+import { LoginPage } from './pages/login-page.js'
+import type { CurrentUser } from './types.js'
+import { Link, useRoute, useNavigate } from './router.js'
+import { AdminRouterProvider } from './admin-router.js'
 import { useI18n } from './i18n.js'
 import { LanguageSwitcher, ThemeToggle } from './header-controls.js'
 import { NotifyToaster } from './notify.js'
 import { DialogsProvider } from './dialogs.js'
+import { HotkeyRegistryProvider } from './hotkey-registry.js'
+import { HotkeyHelpButton } from './hotkey-help.js'
 import type { ResourceJSON } from './types.js'
+import { AiAssistantWidget } from './components/ai-assistant-widget.js'
 
 // ─── Icon registry ────────────────────────────────────────────────────────────
 
@@ -72,25 +94,6 @@ function NavIcon({ name, className }: { name?: string; className?: string }): Re
   return <Icon className={className} />
 }
 
-// ─── Sidebar state ────────────────────────────────────────────────────────────
-
-const SIDEBAR_KEY = 'modern-admin:sidebar-collapsed'
-
-function useSidebarCollapsed(): [boolean, () => void] {
-  const [collapsed, setCollapsed] = React.useState(() => {
-    if (typeof localStorage === 'undefined') return false
-    return localStorage.getItem(SIDEBAR_KEY) === 'true'
-  })
-  const toggle = React.useCallback(() => {
-    setCollapsed((v) => {
-      const next = !v
-      localStorage.setItem(SIDEBAR_KEY, String(next))
-      return next
-    })
-  }, [])
-  return [collapsed, toggle]
-}
-
 // ─── Navigation helpers ───────────────────────────────────────────────────────
 
 interface NavGroup {
@@ -107,7 +110,7 @@ function buildNavGroups(resources: ResourceJSON[]): {
 
   for (const r of resources) {
     if (r.navigation === null) continue // explicitly hidden
-    const group = r.navigation?.group
+    const group = r.navigation?.name ?? r.navigation?.group
     if (group) {
       const list = groupMap.get(group) ?? []
       list.push(r)
@@ -121,255 +124,341 @@ function buildNavGroups(resources: ResourceJSON[]): {
   return { groups, ungrouped }
 }
 
-// ─── Nav item (expanded) ──────────────────────────────────────────────────────
+// ─── Sidebar group collapse persistence ───────────────────────────────────────
 
-function NavItem({ resource }: { resource: ResourceJSON }): React.ReactElement {
+const SIDEBAR_GROUPS_KEY = 'sidebar:groups:collapsed'
+
+function loadCollapsedGroups(): Set<string> {
+  if (typeof localStorage === 'undefined') return new Set()
+  try {
+    const raw = localStorage.getItem(SIDEBAR_GROUPS_KEY)
+    return raw ? new Set(JSON.parse(raw) as string[]) : new Set()
+  } catch {
+    return new Set()
+  }
+}
+
+function saveCollapsedGroups(collapsed: Set<string>): void {
+  if (typeof localStorage === 'undefined') return
+  try {
+    localStorage.setItem(SIDEBAR_GROUPS_KEY, JSON.stringify([...collapsed]))
+  } catch { /* quota / private mode — ignore */ }
+}
+
+function isResourceActive(route: ReturnType<typeof useRoute>, resourceId: string): boolean {
   return (
-    <Link
-      to={{ name: 'list', resourceId: resource.id }}
-      className="flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
-    >
-      <NavIcon name={resource.navigation?.icon} className="size-4 shrink-0 text-muted-foreground" />
-      {resource.name}
-    </Link>
+    (route.name === 'list' || route.name === 'show' || route.name === 'edit' || route.name === 'new') &&
+    'resourceId' in route &&
+    route.resourceId === resourceId
   )
 }
 
-// ─── Nav item (icon-only with tooltip) ───────────────────────────────────────
-
-function NavIconItem({
-  resource,
-}: {
-  resource: ResourceJSON
-}): React.ReactElement {
+function ResourceMenuItem({ resource }: { resource: ResourceJSON }): React.ReactElement {
+  const route = useRoute()
+  const active = isResourceActive(route, resource.id)
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Link
-          to={{ name: 'list', resourceId: resource.id }}
-          className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground"
-        >
-          <NavIcon name={resource.navigation?.icon} className="size-4" />
+    <SidebarMenuItem>
+      <SidebarMenuButton asChild isActive={active} tooltip={resource.name}>
+        <Link to={{ name: 'list', resourceId: resource.id }}>
+          <NavIcon name={resource.navigation?.icon} />
+          <span>{resource.name}</span>
         </Link>
-      </TooltipTrigger>
-      <TooltipContent side="right">{resource.name}</TooltipContent>
-    </Tooltip>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  )
+}
+
+// ─── Desktop collapse pill — round chevron on the right edge of the sidebar.
+//     Sits half-outside the sidebar (translate-x-1/2) and rotates the chevron
+//     when the sidebar is in icon/collapsed state. Hidden on mobile (the
+//     header burger handles that).
+function SidebarCollapseToggle(): React.ReactElement {
+  const { state, toggleSidebar } = useSidebar()
+  const collapsed = state === 'collapsed'
+  return (
+    <button
+      type="button"
+      onClick={toggleSidebar}
+      aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+      className="absolute right-0 top-24 z-50 hidden h-5 w-5 translate-x-1/2 items-center justify-center rounded-full border border-border bg-card shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground md:flex"
+    >
+      <ChevronLeft
+        className="size-3 transition-transform duration-300"
+        style={{ transform: collapsed ? 'rotate(180deg)' : 'rotate(0deg)' }}
+      />
+    </button>
   )
 }
 
 // ─── Sidebar ─────────────────────────────────────────────────────────────────
 
-function Sidebar({
-  collapsed,
-  onToggle,
-  mobileOpen,
-  onCloseMobile,
-}: {
-  collapsed: boolean
-  onToggle(): void
-  mobileOpen: boolean
-  onCloseMobile(): void
-}): React.ReactElement {
+function AppSidebar(): React.ReactElement {
   const resources = useResources()
   const { t } = useI18n()
   const route = useRoute()
   const { groups, ungrouped } = React.useMemo(() => buildNavGroups(resources), [resources])
-  const allVisible = React.useMemo(
-    () => [...groups.flatMap((g) => g.resources), ...ungrouped],
-    [groups, ungrouped],
-  )
-  const defaultOpen = React.useMemo(() => groups.map((g) => g.label), [groups])
+  const { isMobile, setOpenMobile, state } = useSidebar()
+
+  const [collapsedGroups, setCollapsedGroups] = React.useState<Set<string>>(loadCollapsedGroups)
+  const toggleGroup = React.useCallback((label: string): void => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev)
+      if (next.has(label)) next.delete(label)
+      else next.add(label)
+      saveCollapsedGroups(next)
+      return next
+    })
+  }, [])
 
   // Auto-close the mobile drawer whenever the route changes (link tap).
   const routeKey = `${route.name}:${'resourceId' in route ? route.resourceId : ''}:${'recordId' in route ? route.recordId : ''}`
   React.useEffect(() => {
-    if (mobileOpen) onCloseMobile()
+    if (isMobile) setOpenMobile(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routeKey])
 
-  // On mobile the sidebar is a fixed slide-in drawer (always 240px wide,
-  // ignores `collapsed`). On md+ it sits in-flow and animates between
-  // collapsed (56px) and expanded (240px). Show the expanded view whenever
-  // the mobile drawer is open, regardless of the desktop `collapsed` state.
-  const showExpandedContent = mobileOpen || !collapsed
+  const homeActive = route.name === 'home'
+  const auditActive = route.name === 'audit-log'
 
   return (
-    <>
-      {/* Backdrop — mobile only, when drawer is open */}
-      {mobileOpen && (
-        <button
-          type="button"
-          aria-label={t('common:close')}
-          onClick={onCloseMobile}
-          className="fixed inset-0 z-40 bg-black/40 md:hidden"
-        />
-      )}
-
-      <aside
-        className={cn(
-          'fixed inset-y-0 left-0 z-50 w-60 shrink-0 border-r border-border bg-card transition-transform duration-300',
-          mobileOpen ? 'translate-x-0' : '-translate-x-full',
-          // md+: in-flow, no horizontal translate, animate width instead.
-          'md:static md:translate-x-0 md:transition-[width]',
-          collapsed ? 'md:w-14' : 'md:w-60',
-        )}
-      >
-      {/* Content — clips via overflow-hidden so items don't spill during animation */}
-      <div className="absolute inset-0 flex flex-col overflow-hidden py-2">
-        {!showExpandedContent ? (
-          /* ── Icon-only view ── */
-          <div className="flex flex-col items-center gap-1 pt-1">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Link
-                  to={{ name: 'home' }}
-                  className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground"
-                >
-                  <Home className="size-4" />
+    <Sidebar collapsible="icon">
+      <SidebarHeader className="h-14 flex-row items-center gap-2 border-b border-border px-3 py-0 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+        <Database className="size-4 shrink-0 text-primary" />
+        <span className="truncate text-sm font-semibold group-data-[collapsible=icon]:hidden">
+          {t('common:appName')}
+        </span>
+      </SidebarHeader>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={homeActive} tooltip={t('common:home')}>
+                <Link to={{ name: 'home' }}>
+                  <Home />
+                  <span>{t('common:home')}</span>
                 </Link>
-              </TooltipTrigger>
-              <TooltipContent side="right">{t('common:home')}</TooltipContent>
-            </Tooltip>
-
-            <div className="my-1 h-px w-6 bg-border" />
-
-            {allVisible.map((r) => (
-              <NavIconItem key={r.id} resource={r} />
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={auditActive} tooltip={t('audit:title')}>
+                <Link to={{ name: 'audit-log' }}>
+                  <History />
+                  <span>{t('audit:title')}</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            {ungrouped.map((r) => (
+              <ResourceMenuItem key={r.id} resource={r} />
             ))}
-          </div>
-        ) : (
-          /* ── Expanded view ── */
-          <div className="flex flex-col gap-0.5 px-2">
-            <Link
-              to={{ name: 'home' }}
-              className="flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
-            >
-              <Home className="size-4 shrink-0 text-muted-foreground" />
-              {t('common:home')}
-            </Link>
+          </SidebarMenu>
+        </SidebarGroup>
 
-            {ungrouped.length > 0 && (
-              <div className="mt-1 flex flex-col gap-0.5">
-                {ungrouped.map((r) => (
-                  <NavItem key={r.id} resource={r} />
-                ))}
-              </div>
-            )}
-
-            {groups.length > 0 && (
-              <Accordion type="multiple" defaultValue={defaultOpen} className="mt-1 w-full">
-                {groups.map((group) => (
-                  <AccordionItem key={group.label} value={group.label} className="border-0">
-                    <AccordionTrigger className="px-2">{group.label}</AccordionTrigger>
-                    <AccordionContent className="pb-0">
-                      <div className="flex flex-col gap-0.5">
-                        {group.resources.map((r) => (
-                          <NavItem key={r.id} resource={r} />
-                        ))}
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Toggle button — sits on the right edge; hidden on mobile (burger handles it). */}
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        className="absolute right-0 top-5 z-10 hidden h-5 w-5 translate-x-1/2 items-center justify-center rounded-full border border-border bg-card shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground md:flex"
-      >
-        <ChevronLeft
-          className="size-3 transition-transform duration-300"
-          style={{ transform: collapsed ? 'rotate(180deg)' : 'rotate(0deg)' }}
-        />
-      </button>
-    </aside>
-    </>
+        {groups.map((group) => {
+          // In icon mode the label is hidden (opacity-0) and items show as
+          // icon-only tooltips — always show items regardless of collapse state.
+          const isOpen = state === 'collapsed' || !collapsedGroups.has(group.label)
+          return (
+            <SidebarGroup key={group.label}>
+              <SidebarGroupLabel asChild>
+                <button
+                  type="button"
+                  className="w-full cursor-pointer justify-between hover:bg-accent hover:text-accent-foreground"
+                  onClick={() => toggleGroup(group.label)}
+                >
+                  {group.label}
+                  <ChevronDown
+                    className={cn(
+                      'size-4 shrink-0 transition-transform duration-200',
+                      !isOpen && '-rotate-90',
+                    )}
+                  />
+                </button>
+              </SidebarGroupLabel>
+              {isOpen && (
+                <SidebarMenu>
+                  {group.resources.map((r) => (
+                    <ResourceMenuItem key={r.id} resource={r} />
+                  ))}
+                </SidebarMenu>
+              )}
+            </SidebarGroup>
+          )
+        })}
+      </SidebarContent>
+      <SidebarFooter />
+      <SidebarCollapseToggle />
+    </Sidebar>
   )
 }
 
 // ─── Header ───────────────────────────────────────────────────────────────────
 
-function Header({
-  onOpenMobile,
-}: {
-  onOpenMobile(): void
-}): React.ReactElement {
-  const { data } = useAdminConfig()
+function userInitials(user: CurrentUser): string {
+  const source = user.name?.trim() || user.email?.trim() || user.id
+  const parts = source.split(/\s+|[._@-]/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase()
+  return (parts[0]![0]! + parts[1]![0]!).toUpperCase()
+}
+
+function UserMenu({ user }: { user: CurrentUser }): React.ReactElement {
   const { t } = useI18n()
+  const logout = useLogout()
+  const navigate = useNavigate()
+  const initials = userInitials(user)
+  const display = user.name || user.email || user.id
   return (
-    <header className="flex h-14 items-center gap-3 border-b border-border bg-card px-4 sm:px-6">
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          className="h-9 gap-2 px-2"
+          aria-label={display}
+        >
+          <Avatar className="size-7">
+            {user.avatarUrl && <AvatarImage src={user.avatarUrl} alt={display} />}
+            <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+          </Avatar>
+          <span className="hidden max-w-[10rem] truncate text-sm sm:inline">{display}</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" sideOffset={8} className="w-56 p-1">
+        <DropdownMenuLabel className="flex items-center gap-2 px-3 py-2">
+          <Avatar className="size-8">
+            {user.avatarUrl && <AvatarImage src={user.avatarUrl} alt={display} />}
+            <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+          </Avatar>
+          <div className="flex min-w-0 flex-col">
+            <span className="truncate text-sm font-medium">{display}</span>
+            {user.email && user.email !== display && (
+              <span className="truncate text-xs text-muted-foreground">{user.email}</span>
+            )}
+            {user.role && (
+              <span className="truncate text-xs uppercase tracking-wide text-muted-foreground">
+                {user.role}
+              </span>
+            )}
+          </div>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          className="gap-3 px-3 py-2"
+          onSelect={(e) => {
+            e.preventDefault()
+            navigate({ name: 'settings', section: 'api-keys' })
+          }}
+        >
+          <Settings className="size-4 text-muted-foreground" />
+          <span>{t('settings:menuItem')}</span>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          className="gap-3 px-3 py-2"
+          disabled={logout.isPending}
+          onSelect={(e) => {
+            e.preventDefault()
+            logout.mutate()
+          }}
+        >
+          <LogOut className="size-4 text-muted-foreground" />
+          <span>{t('auth:logout')}</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+function Header({ user }: { user: CurrentUser | null }): React.ReactElement {
+  const { t } = useI18n()
+  const { setOpenMobile } = useSidebar()
+  return (
+    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-card px-4 sm:px-6">
       <Button
         variant="ghost"
         size="icon"
         className="md:hidden"
-        onClick={onOpenMobile}
+        onClick={() => setOpenMobile(true)}
         aria-label={t('common:openMenu')}
       >
         <Menu className="size-5" />
       </Button>
-      <div className="font-semibold">
-        {data?.branding?.companyName ?? t('common:appName')}
-      </div>
       <div className="ml-auto flex items-center gap-1">
+        <HotkeyHelpButton />
         <LanguageSwitcher />
         <ThemeToggle />
+        {user ? (
+          <UserMenu user={user} />
+        ) : (
+          <Button variant="ghost" size="icon" disabled aria-label={t('auth:login')}>
+            <User className="size-4 opacity-50" />
+          </Button>
+        )}
       </div>
     </header>
   )
 }
 
-// ─── Route switch ─────────────────────────────────────────────────────────────
-
-function RouteSwitch(): React.ReactElement {
-  const route = useRoute()
-  switch (route.name) {
-    case 'list':
-      return <ResourceListPage resourceId={route.resourceId} />
-    case 'show':
-      return <ResourceShowPage resourceId={route.resourceId} recordId={route.recordId} />
-    case 'edit':
-      return <ResourceEditPage resourceId={route.resourceId} recordId={route.recordId} />
-    case 'new':
-      return <ResourceEditPage resourceId={route.resourceId} />
-    case 'home':
-    default:
-      return <HomePage />
-  }
-}
-
 // ─── AdminApp ─────────────────────────────────────────────────────────────────
 
-export function AdminApp(): React.ReactElement {
-  const [collapsed, toggleCollapsed] = useSidebarCollapsed()
-  const [mobileOpen, setMobileOpen] = React.useState(false)
+export interface AdminAppProps {
+  /** Optional helper line shown under the title on the login screen — e.g.
+   *  demo credentials. */
+  loginHint?: React.ReactNode
+}
 
+function FullscreenSpinner(): React.ReactElement {
+  const { t } = useI18n()
   return (
-    <Router>
-      <DialogsProvider>
-        <TooltipProvider delayDuration={300}>
-          <div className="flex h-screen w-screen flex-col bg-background text-foreground">
-            <Header onOpenMobile={() => setMobileOpen(true)} />
-            <div className="flex flex-1 overflow-hidden">
-              <Sidebar
-                collapsed={collapsed}
-                onToggle={toggleCollapsed}
-                mobileOpen={mobileOpen}
-                onCloseMobile={() => setMobileOpen(false)}
-              />
-              <main className="flex-1 overflow-auto p-4 sm:p-6">
-                <RouteSwitch />
-              </main>
-            </div>
-            <NotifyToaster />
-          </div>
-        </TooltipProvider>
-      </DialogsProvider>
-    </Router>
+    <div
+      role="status"
+      aria-busy="true"
+      aria-live="polite"
+      className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background p-6"
+    >
+      <div className="flex items-center gap-3">
+        <span className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 ring-1 ring-primary/20">
+          <Database className="size-6 text-primary" />
+        </span>
+        <span className="text-xl font-semibold tracking-tight">
+          {t('common:appName')}
+        </span>
+      </div>
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+        <span>{t('common:loading')}</span>
+      </div>
+    </div>
   )
+}
+
+// `ShellLayout` is the rootRoute component supplied to TSR via context.
+// `useCurrentUser()` here is safe — provider/query state is set up upstream
+// in `AdminApp`, and by the time this layout renders the user is guaranteed
+// to be authenticated (otherwise `AdminApp` short-circuits to `<LoginPage/>`).
+function ShellLayout({ children }: { children: React.ReactNode }): React.ReactElement {
+  const { user } = useCurrentUser()
+  return (
+    <HotkeyRegistryProvider>
+      <DialogsProvider>
+        <SidebarProvider>
+          <AppSidebar />
+          <SidebarInset className="min-w-0">
+            <Header user={user} />
+            <main className="min-w-0 flex-1 overflow-auto p-4 sm:p-6">
+              {children}
+            </main>
+            <AiAssistantWidget />
+          </SidebarInset>
+          <NotifyToaster />
+        </SidebarProvider>
+      </DialogsProvider>
+    </HotkeyRegistryProvider>
+  )
+}
+
+export function AdminApp({ loginHint }: AdminAppProps = {}): React.ReactElement {
+  const { user, isLoading, isAuthenticated } = useCurrentUser()
+  if (isLoading) return <FullscreenSpinner />
+  if (!isAuthenticated || !user) return <LoginPage hint={loginHint} />
+  return <AdminRouterProvider ShellLayout={ShellLayout} />
 }

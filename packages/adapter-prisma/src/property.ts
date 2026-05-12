@@ -23,9 +23,10 @@ const isUuidColumn = (name: string): boolean => /(^id$|Id$|_id$|uuid)/i.test(nam
 export class PrismaProperty extends BaseProperty {
   public readonly field: DmmfField
 
-  constructor(field: DmmfField, enums: readonly DmmfEnum[] = [], position = 1) {
+  constructor(field: DmmfField, enums: readonly DmmfEnum[] = [], position = 1, referenceOverride: string | null = null) {
     const enumDef = field.kind === 'enum' ? enums.find((e) => e.name === field.type) : undefined
-    const type = PrismaProperty.resolveType(field, enumDef !== undefined)
+    const reference = field.kind === 'object' ? field.type : referenceOverride
+    const type = PrismaProperty.resolveType(field, enumDef !== undefined, reference !== null)
     super({
       path: field.name,
       type,
@@ -34,15 +35,15 @@ export class PrismaProperty extends BaseProperty {
       isRequired: field.isRequired && !field.hasDefaultValue && !field.isId,
       isArray: field.isList,
       position,
-      reference: field.kind === 'object' ? field.type : null,
+      reference,
       availableValues: enumDef ? enumDef.values.map((v) => v.name) : null,
     })
     this.field = field
   }
 
-  private static resolveType(field: DmmfField, isEnum: boolean): PropertyType {
+  private static resolveType(field: DmmfField, isEnum: boolean, isReference: boolean): PropertyType {
     if (isEnum) return 'enum'
-    if (field.kind === 'object') return 'reference'
+    if (field.kind === 'object' || isReference) return 'reference'
     if (field.kind === 'scalar') {
       const mapped = SCALAR_TO_PROPERTY[field.type]
       if (mapped) {
@@ -63,8 +64,8 @@ export class PrismaProperty extends BaseProperty {
   }
 
   override isEditable(): boolean {
-    if (this.field.isReadOnly) return false
     if (this.field.kind === 'object') return false
+    if (this.field.isReadOnly && this.reference() === null) return false
     return super.isEditable()
   }
 }

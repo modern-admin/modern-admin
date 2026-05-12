@@ -1,6 +1,7 @@
 // TanStack Query hooks that wrap AdminClient. Query keys are
 // `[resourceId, action, params?]` so cache invalidation is precise.
 
+import * as React from 'react'
 import {
   useMutation,
   useQuery,
@@ -11,17 +12,35 @@ import {
 import { useAdminClient } from './provider.js'
 import type {
   AdminConfig,
+  CustomActionResponse,
+  CurrentUser,
   ListQuery,
   ListResponse,
   RecordResponse,
   ResourceJSON,
 } from './types.js'
+import {
+  AdminApiError,
+  type AuditLogQuery,
+  type AuditLogResponse,
+  type HistoryListResponse,
+  type HistoryRevisionResponse,
+  type TimeSeriesQuery,
+  type TimeSeriesResponse,
+} from './client.js'
+import { useI18n } from './i18n.js'
 
 const KEY_CONFIG = ['modern-admin', 'config'] as const
 const keyList = (resourceId: string, query?: ListQuery) =>
   ['modern-admin', resourceId, 'list', query ?? null] as const
 const keyShow = (resourceId: string, recordId: string) =>
   ['modern-admin', resourceId, 'show', recordId] as const
+const keyHistory = (resourceId: string, recordId: string) =>
+  ['modern-admin', resourceId, 'history', recordId] as const
+const keyHistoryRevision = (resourceId: string, recordId: string, revisionId: string) =>
+  ['modern-admin', resourceId, 'history', recordId, revisionId] as const
+const keyAuditLog = (query?: AuditLogQuery) =>
+  ['modern-admin', 'audit-log', query ?? null] as const
 
 export const useAdminConfig = (): UseQueryResult<AdminConfig> => {
   const client = useAdminClient()
@@ -30,12 +49,20 @@ export const useAdminConfig = (): UseQueryResult<AdminConfig> => {
 
 export const useResource = (resourceId: string | undefined): ResourceJSON | undefined => {
   const { data } = useAdminConfig()
-  return data?.resources.find((r) => r.id === resourceId)
+  const { localizeResource } = useI18n()
+  return React.useMemo(() => {
+    const resource = data?.resources.find((r) => r.id === resourceId)
+    return resource ? localizeResource(resource) : undefined
+  }, [data?.resources, localizeResource, resourceId])
 }
 
 export const useResources = (): ResourceJSON[] => {
   const { data } = useAdminConfig()
-  return data?.resources ?? []
+  const { localizeResource } = useI18n()
+  return React.useMemo(
+    () => (data?.resources ?? []).map((resource) => localizeResource(resource)),
+    [data?.resources, localizeResource],
+  )
 }
 
 export const useRecords = (
@@ -125,6 +152,131 @@ const keySearch = (resourceId: string, query: string) =>
  * Live-search hook against a resource's `search` action. Used by reference
  * comboboxes — debounce the input on the call site.
  */
+// ─── Auth ─────────────────────────────────────────────────────────────────
+
+const KEY_ME = ['modern-admin', 'auth', 'me'] as const
+
+export interface CurrentUserResult {
+  user: CurrentUser | null
+  isLoading: boolean
+  isAuthenticated: boolean
+  error: Error | null
+}
+
+/** Resolve the current admin via /admin/api/auth/me. A 401 response surfaces
+ *  as `user: null` (rather than an error) so callers can branch on it to
+ *  render the login screen. */
+export const useCurrentUser = (): CurrentUserResult => {
+  const client = useAdminClient()
+  const query = useQuery<{ user: CurrentUser } | null, Error>({
+    queryKey: KEY_ME,
+    queryFn: async () => {
+      try {
+        return await client.me()
+      } catch (err) {
+        if (err instanceof AdminApiError && err.status === 401) return null
+        throw err
+      }
+    },
+    staleTime: 30_000,
+    retry: (failureCount, err) => {
+      if (err instanceof AdminApiError && err.status === 401) return false
+      return failureCount < 1
+    },
+  })
+  return {
+    user: query.data?.user ?? null,
+    isLoading: query.isLoading,
+    isAuthenticated: !!query.data?.user,
+    error: query.error,
+  }
+}
+
+export const useLogin = (): UseMutationResult<
+  void,
+  Error,
+  { email: string; password: string }
+> => {
+  const client = useAdminClient()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ email, password }) => client.login(email, password),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: KEY_ME })
+      qc.invalidateQueries({ queryKey: KEY_CONFIG })
+    },
+  })
+}
+
+export const useLogout = (): UseMutationResult<void, Error, void> => {
+  const client = useAdminClient()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => client.logout(),
+    onSuccess: async () => {
+      // Cancel any in-flight `me` refetch so it cannot overwrite the
+      // optimistic null below and bounce the gate back to authenticated.
+      await qc.cancelQueries({ queryKey: KEY_ME })
+      // Flip the auth gate to "logged out" immediately. We deliberately
+      // do NOT invalidate KEY_ME here — Better Auth has already deleted
+      // the server-side session, but the Set-Cookie header may not be
+      // applied to outgoing requests for a tick, and a refetch in that
+      // window would return the still-valid user and cancel the logout
+      // visually. The next mount/refresh will re-check freshly.
+      qc.setQueryData(KEY_ME, null)
+      // Drop every other cached resource so list/show data doesn't
+      // linger behind the login form.
+      qc.removeQueries({
+        predicate: (q) => {
+          const k = q.queryKey as readonly unknown[]
+          return !(k[0] === 'modern-admin' && k[1] === 'auth' && k[2] === 'me')
+        },
+      })
+    },
+  })
+}
+
+export const useInvokeRecordAction = (
+  resourceId: string,
+): UseMutationResult<CustomActionResponse, Error, { recordId: string; actionName: string }> => {
+  const client = useAdminClient()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ recordId, actionName }) =>
+      client.invokeRecordAction(resourceId, recordId, actionName),
+    onSuccess: (_data, { recordId }) => {
+      qc.invalidateQueries({ queryKey: ['modern-admin', resourceId] })
+      qc.invalidateQueries({ queryKey: ['modern-admin', resourceId, 'show', recordId] })
+    },
+  })
+}
+
+export const useInvokeBulkAction = (
+  resourceId: string,
+): UseMutationResult<CustomActionResponse, Error, { actionName: string; ids: string[] }> => {
+  const client = useAdminClient()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ actionName, ids }) => client.invokeBulkAction(resourceId, actionName, ids),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['modern-admin', resourceId] })
+    },
+  })
+}
+
+export const useInvokeResourceAction = (
+  resourceId: string,
+): UseMutationResult<CustomActionResponse, Error, { actionName: string; payload?: Record<string, unknown> }> => {
+  const client = useAdminClient()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ actionName, payload }) => client.invokeResourceAction(resourceId, actionName, payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['modern-admin', resourceId] })
+    },
+  })
+}
+
 export const useSearchRecords = (
   resourceId: string | undefined,
   query: string,
@@ -135,6 +287,111 @@ export const useSearchRecords = (
     queryKey: keySearch(resourceId ?? '', query),
     queryFn: () => client.search(resourceId!, query),
     enabled: !!resourceId && enabled,
+    staleTime: 30_000,
+  })
+}
+
+/**
+ * Distinct (deduplicated, sorted) values pulled from a single field of a
+ * resource — the data source for the autocomplete `suggestionsResource +
+ * suggestionsField` binding on `KeyValueFieldSpec`. Loads up to `perPage`
+ * records and projects `field` client-side; for typical admin resources
+ * (hundreds–low thousands of rows) this is plenty cheap. For very large
+ * tables, reach for a dedicated `distinct` endpoint.
+ */
+export const useFieldSuggestions = (
+  resourceId: string | undefined,
+  field: string | undefined,
+  perPage = 200,
+): UseQueryResult<string[]> => {
+  const client = useAdminClient()
+  return useQuery({
+    queryKey: ['modern-admin', 'fieldSuggestions', resourceId ?? '', field ?? '', perPage],
+    queryFn: async (): Promise<string[]> => {
+      const res = await client.list(resourceId!, { perPage })
+      const seen = new Set<string>()
+      const out: string[] = []
+      for (const r of res.records) {
+        const raw = r.params?.[field!]
+        if (raw == null || raw === '') continue
+        const v = String(raw)
+        if (seen.has(v)) continue
+        seen.add(v)
+        out.push(v)
+      }
+      out.sort((a, b) => a.localeCompare(b))
+      return out
+    },
+    enabled: !!resourceId && !!field,
+    staleTime: 60_000,
+  })
+}
+
+export const useTimeSeries = (
+  query: TimeSeriesQuery | null,
+): UseQueryResult<TimeSeriesResponse> => {
+  const client = useAdminClient()
+  return useQuery({
+    queryKey: ['modern-admin', 'timeseries', query],
+    queryFn: () => client.timeseries(query!),
+    enabled: query !== null && !!query.resource && !!query.dateField,
+    staleTime: 60_000,
+  })
+}
+
+export const useRecordHistory = (
+  resourceId: string,
+  recordId: string | undefined,
+  options: { limit?: number; offset?: number } = {},
+): UseQueryResult<HistoryListResponse> => {
+  const client = useAdminClient()
+  return useQuery({
+    queryKey: [...keyHistory(resourceId, recordId ?? ''), options] as const,
+    queryFn: () => client.listHistory(resourceId, recordId!, options),
+    enabled: !!resourceId && !!recordId,
+    staleTime: 30_000,
+  })
+}
+
+export const useHistoryRevision = (
+  resourceId: string,
+  recordId: string | undefined,
+  revisionId: string | undefined,
+): UseQueryResult<HistoryRevisionResponse> => {
+  const client = useAdminClient()
+  return useQuery({
+    queryKey: keyHistoryRevision(resourceId, recordId ?? '', revisionId ?? ''),
+    queryFn: () => client.getHistoryRevision(resourceId, recordId!, revisionId!),
+    enabled: !!resourceId && !!recordId && !!revisionId,
+    staleTime: 30_000,
+  })
+}
+
+export const useRevertRevision = (
+  resourceId: string,
+  recordId: string,
+): UseMutationResult<RecordResponse, Error, { revisionId: string; reason?: string }> => {
+  const client = useAdminClient()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ revisionId, reason }) =>
+      client.revertHistoryRevision(resourceId, recordId, revisionId, { reason }),
+    onSuccess: (_data, { revisionId }) => {
+      qc.invalidateQueries({ queryKey: ['modern-admin', resourceId] })
+      qc.invalidateQueries({ queryKey: keyShow(resourceId, recordId) })
+      qc.invalidateQueries({ queryKey: keyHistory(resourceId, recordId) })
+      qc.invalidateQueries({ queryKey: keyHistoryRevision(resourceId, recordId, revisionId) })
+    },
+  })
+}
+
+export const useAuditLog = (
+  query: AuditLogQuery = {},
+): UseQueryResult<AuditLogResponse> => {
+  const client = useAdminClient()
+  return useQuery({
+    queryKey: keyAuditLog(query),
+    queryFn: () => client.listAuditLog(query),
     staleTime: 30_000,
   })
 }

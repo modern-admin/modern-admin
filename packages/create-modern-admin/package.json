@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "bin": {
-    "create-modern-admin": "./src/cli.ts"
+    "create-modern-admin": "./src/cli.ts",
+    "modern-admin": "./src/cli.ts"
   },
   "main": "./src/index.ts",
   "types": "./src/index.ts",
@@ -13,6 +14,10 @@
       "types": "./src/index.ts",
       "default": "./src/index.ts"
     }
+  },
+  "dependencies": {
+    "@modern-admin/system-prisma": "workspace:*",
+    "@modern-admin/system-drizzle": "workspace:*"
   },
   "scripts": {
     "build": "tsc -b",

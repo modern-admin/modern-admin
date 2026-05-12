@@ -3,7 +3,7 @@ import { Filter } from '@modern-admin/core'
 import { DrizzleResource } from '../src/resource.js'
 import { filterToWhere, findOptionsToDrizzle } from '../src/converters.js'
 import { createFakeClient } from './_helpers/fake-client.js'
-import { users } from './_helpers/schema.js'
+import { posts, users } from './_helpers/schema.js'
 
 const makeResource = () => {
   const client = createFakeClient()
@@ -44,6 +44,24 @@ describe('filterToWhere', () => {
       users,
     )
     expect(where).toBeDefined()
+  })
+
+  it('uses array-contains for scalar-list columns with a single needle', () => {
+    const client = createFakeClient()
+    const resource = new DrizzleResource({ client, table: posts, tableKey: 'posts' })
+    const where = filterToWhere(
+      new Filter({ tagIds: 'turing' }, resource),
+      posts,
+    )
+    // Sanity check: the produced SQL fragment is drizzle's `arrayContains`
+    // helper, which emits Postgres' `@>` operator on a `text[]` column.
+    expect(where).toBeDefined()
+    const chunks = (where as { queryChunks?: unknown[] }).queryChunks ?? []
+    const stringChunks = chunks
+      .filter((c) => typeof c === 'object' && c !== null && 'value' in c)
+      .map((c) => (c as { value?: unknown[] }).value?.join(''))
+      .join(' ')
+    expect(stringChunks).toContain('@>')
   })
 })
 

@@ -69,9 +69,18 @@ export interface PrismaResourceConfig {
   enums?: readonly DmmfEnum[]
   /** Override the delegate key — defaults to `lowercaseFirst(model.name)`. */
   clientKey?: string
+  /** Database dialect; only used to render display SQL. Defaults to `'pg'`. */
+  dialect?: PrismaDialect
 }
+
+export type PrismaDialect = 'pg' | 'mysql' | 'sqlite'
 
 export interface PrismaDatabaseConfig {
   client: PrismaClientLike
   dmmf: DmmfDocument
+  /**
+   * Database dialect. Used only to render the display SQL returned with
+   * time-series results. Defaults to `'pg'` when omitted.
+   */
+  dialect?: PrismaDialect
 }

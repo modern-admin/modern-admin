@@ -1,0 +1,27 @@
+{
+  "name": "@modern-admin/feature-password",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@modern-admin/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@modern-admin/tsconfig": "workspace:*",
+    "@types/bun": "^1.3.13",
+    "typescript": "^6.0.3"
+  }
+}

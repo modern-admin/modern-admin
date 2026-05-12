@@ -47,9 +47,9 @@ export class BaseRecord {
   }
 
   title(): string {
-    const titleProp = this.resource.properties().find((p) => p.isTitle())
-    if (!titleProp) return this.id()
-    const value = this.params[titleProp.name()]
+    const path = this.resource.titlePropertyPath()
+    if (!path) return this.id()
+    const value = this.params[path]
     return value == null ? this.id() : String(value)
   }
 

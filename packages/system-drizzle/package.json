@@ -1,0 +1,38 @@
+{
+  "name": "@modern-admin/system-drizzle",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./pg": {
+      "types": "./src/schema/pg.ts",
+      "default": "./src/schema/pg.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@modern-admin/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "drizzle-orm": ">=0.45"
+  },
+  "peerDependenciesMeta": {
+    "drizzle-orm": { "optional": true }
+  },
+  "devDependencies": {
+    "@modern-admin/tsconfig": "workspace:*",
+    "@types/bun": "^1.3.13",
+    "drizzle-orm": "^0.45.0",
+    "typescript": "^6.0.3"
+  }
+}

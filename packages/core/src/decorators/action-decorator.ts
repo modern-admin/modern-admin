@@ -4,6 +4,7 @@ import type {
   ActionDescriptor,
   ActionResponse,
 } from '../actions/action.js'
+import { normalizeActionNesting } from '../actions/action.js'
 import type { ActionOptions } from './action-options.js'
 
 const resolveFlag = async (
@@ -45,11 +46,13 @@ export class ActionDecorator<R extends ActionResponse = ActionResponse> {
   }
 
   toDescriptor(): ActionDescriptor {
-    const { name, actionType, guard, component, custom } = this.merged
+    const { name, actionType, nesting, guard, component, custom } = this.merged
+    const normalizedNesting = normalizeActionNesting(nesting)
     return {
       name,
       actionType,
       resourceId: this.resourceId,
+      ...(normalizedNesting !== undefined ? { nesting: normalizedNesting } : {}),
       ...(guard !== undefined ? { guard } : {}),
       ...(component !== undefined ? { component } : {}),
       ...(custom !== undefined ? { custom } : {}),

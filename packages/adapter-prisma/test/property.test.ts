@@ -33,6 +33,14 @@ describe('PrismaProperty', () => {
     expect(prop.isEditable()).toBe(false)
   })
 
+  test('marks scalar foreign-key fields as references when relation target is known', () => {
+    const authorId = postModel.fields.find((f) => f.name === 'authorId')!
+    const prop = new PrismaProperty(authorId, [], 1, 'User')
+    expect(prop.type()).toBe('reference')
+    expect(prop.reference()).toBe('User')
+    expect(prop.isEditable()).toBe(true)
+  })
+
   test('isRequired ignores fields that have a default value', () => {
     const id = userModel.fields.find((f) => f.name === 'id')!
     expect(new PrismaProperty(id).isRequired()).toBe(false)

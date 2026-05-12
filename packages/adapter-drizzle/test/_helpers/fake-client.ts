@@ -9,7 +9,7 @@ import type {
 } from '../../src/types.js'
 
 export interface FakeCall {
-  op: 'select' | 'from' | 'where' | 'orderBy' | 'limit' | 'offset' | 'insert' | 'values' | 'returning' | 'update' | 'set' | 'delete'
+  op: 'select' | 'from' | 'where' | 'orderBy' | 'groupBy' | 'limit' | 'offset' | 'insert' | 'values' | 'returning' | 'update' | 'set' | 'delete'
   arg?: unknown
 }
 
@@ -40,6 +40,10 @@ export const createFakeClient = (canned: Canned = {}): FakeClient => {
       },
       orderBy(...columns) {
         calls.push({ op: 'orderBy', arg: columns })
+        return qb
+      },
+      groupBy(...columns) {
+        calls.push({ op: 'groupBy', arg: columns })
         return qb
       },
       limit(n) {

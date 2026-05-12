@@ -42,7 +42,14 @@ const buildClause = (element: FilterElement): unknown => {
   const property = element.property as PrismaProperty | null
   const { value } = element
 
-  if (Array.isArray(value)) return { in: value.map((v) => coerceScalar(v as FilterValue, property)) }
+  if (Array.isArray(value)) {
+    const list = value.map((v) => coerceScalar(v as FilterValue, property))
+    // Many-to-many / scalar-list column: filter rows whose array contains
+    // *any* of the requested values. Prisma exposes `hasSome` for that on
+    // `String[]` / `Int[]` columns.
+    if (property?.isArray()) return { hasSome: list }
+    return { in: list }
+  }
 
   if (isRangeValue(value)) {
     const clause: Record<string, unknown> = {}
@@ -56,6 +63,8 @@ const buildClause = (element: FilterElement): unknown => {
   }
 
   const coerced = coerceScalar(value, property)
+  // Scalar value against a list column → "array contains scalar".
+  if (property?.isArray()) return { has: coerced }
   if (property && property.type() === 'string' && typeof coerced === 'string') {
     return { contains: coerced, mode: 'insensitive' }
   }

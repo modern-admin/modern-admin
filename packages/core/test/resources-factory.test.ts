@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { ResourcesFactory, type Adapter } from '../src/factories/resources-factory.js'
+import { ResourcesFactory, type Adapter, type GlobalPlugin } from '../src/factories/resources-factory.js'
 import { NoDatabaseAdapterError, NoResourceAdapterError } from '../src/errors'
 import { FakeDatabase, FakeResource, type FakeTable } from './_helpers/fake-adapter.js'
 
@@ -57,5 +57,82 @@ describe('ResourcesFactory', () => {
         adapters: [adapter],
       }),
     ).toThrow(NoResourceAdapterError)
+  })
+
+  describe('global plugins', () => {
+    const usersTable: FakeTable = { name: 'users', rows: [] }
+    const postsTable: FakeTable = { name: 'posts', rows: [] }
+    const healthTable: FakeTable = { name: 'health', rows: [] }
+
+    test('applies a plugin to every built resource by default', () => {
+      const seen: string[] = []
+      const plugin: GlobalPlugin = {
+        apply: (opts, resource) => {
+          seen.push(resource.id())
+          return opts
+        },
+      }
+      ResourcesFactory.buildResources({
+        databases: [[usersTable, postsTable]],
+        adapters: [adapter],
+        plugins: [plugin],
+      })
+      expect(seen.sort()).toEqual(['posts', 'users'])
+    })
+
+    test('include whitelists resource ids', () => {
+      const seen: string[] = []
+      const plugin: GlobalPlugin = {
+        include: ['users'],
+        apply: (opts, resource) => { seen.push(resource.id()); return opts },
+      }
+      ResourcesFactory.buildResources({
+        databases: [[usersTable, postsTable]],
+        adapters: [adapter],
+        plugins: [plugin],
+      })
+      expect(seen).toEqual(['users'])
+    })
+
+    test('exclude blacklists resource ids', () => {
+      const seen: string[] = []
+      const plugin: GlobalPlugin = {
+        exclude: ['health'],
+        apply: (opts, resource) => { seen.push(resource.id()); return opts },
+      }
+      ResourcesFactory.buildResources({
+        databases: [[usersTable, postsTable, healthTable]],
+        adapters: [adapter],
+        plugins: [plugin],
+      })
+      expect(seen.sort()).toEqual(['posts', 'users'])
+    })
+
+    test('plugin output is overridable by user ResourceOptions', () => {
+      const plugin: GlobalPlugin = {
+        apply: (opts) => ({ ...opts, name: 'PluginName' }),
+      }
+      const result = ResourcesFactory.buildResources({
+        resources: [{ resource: usersTable, options: { id: 'users', name: 'UserSet' } }],
+        adapters: [adapter],
+        plugins: [plugin],
+      })
+      expect(result[0]!.decorate().name).toBe('UserSet')
+    })
+
+    test('plugin filter respects ResourceOptions.id override', () => {
+      const seen: string[] = []
+      const plugin: GlobalPlugin = {
+        include: ['accounts'],
+        apply: (opts, resource) => { seen.push(resource.id()); return opts },
+      }
+      ResourcesFactory.buildResources({
+        // raw resource id is "users" but options renames to "accounts"
+        resources: [{ resource: usersTable, options: { id: 'accounts' } }],
+        adapters: [adapter],
+        plugins: [plugin],
+      })
+      expect(seen).toEqual(['users']) // observed via resource.id() — but it ran
+    })
   })
 })

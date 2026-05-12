@@ -12,4 +12,9 @@ export type {
   RecordJSON,
   SortDirection,
   StreamOptions,
+  TimeSeriesPoint,
+  TimeSeriesQuery,
+  TimeSeriesResult,
+  TimeSeriesSeries,
+  TimeSeriesStep,
 } from './types.js'

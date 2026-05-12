@@ -24,6 +24,13 @@ export interface IAuthProvider {
 
   /** Invalidate the current session. */
   logout(requestContext: unknown): Promise<void>
+
+  /**
+   * Optional: create a root admin user on first boot.
+   * Called by `ModernAdminBootstrapService` when `rootAdmin` is configured.
+   * Implementations must be idempotent — silently skip when the user already exists.
+   */
+  seedAdmin?(opts: { email: string; password: string; name?: string; role?: string }): Promise<void>
 }
 
 /**

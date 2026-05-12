@@ -12,7 +12,7 @@ test.describe('Web SPA', () => {
   })
 
   test('navigates to the users resource list', async ({ page }) => {
-    await page.goto('/#/resources/users')
+    await page.goto('/resources/users')
     // Wait for the table to mount with at least one seeded row.
     await expect(page.getByText('ada@example.com')).toBeVisible({ timeout: 10_000 })
   })

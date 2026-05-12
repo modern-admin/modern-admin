@@ -1,0 +1,13 @@
+{
+  "extends": "@modern-admin/tsconfig/node.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "composite": false,
+    "noEmit": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "useDefineForClassFields": false,
+    "target": "ES2022"
+  },
+  "include": ["src/**/*", "test/**/*"]
+}

@@ -43,7 +43,7 @@ export class DrizzleDatabase extends BaseDatabase {
   }
 
   override resources(): DrizzleResource[] {
-    const { client, schema, resources: overrides } = this.config
+    const { client, schema, resources: overrides, dialect } = this.config
     const out: DrizzleResource[] = []
     for (const tableKey of Object.keys(schema)) {
       const table = schema[tableKey]
@@ -55,6 +55,7 @@ export class DrizzleDatabase extends BaseDatabase {
           schema,
           table,
           tableKey,
+          dialect: dialect ?? 'pg',
           ...cfg,
         }),
       )

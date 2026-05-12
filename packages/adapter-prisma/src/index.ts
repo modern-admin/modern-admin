@@ -20,6 +20,7 @@ export type {
   DmmfModel,
   PrismaClientLike,
   PrismaDatabaseConfig,
+  PrismaDialect,
   PrismaModelDelegate,
   PrismaResourceConfig,
 } from './types.js'

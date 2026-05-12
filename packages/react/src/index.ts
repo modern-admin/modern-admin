@@ -1,7 +1,22 @@
 // @modern-admin/react — React-side runtime: provider, hooks, property-type
 // renderers, ComponentLoader, and a default <AdminApp> shell.
 
-export { AdminClient, AdminApiError, type AdminClientOptions } from './client.js'
+export {
+  AdminClient,
+  AdminApiError,
+  type AdminClientOptions,
+  type AiAssistantChatEnqueueResponse,
+  type AiAssistantChatMessage,
+  type AiAssistantChatResponse,
+  type AiAssistantCitation,
+  type AiAssistantSettings,
+  type AiAssistantTask,
+  type ApiKeyRecord,
+  type UploadedFileInfo,
+  type UploadProgress,
+  type UploadFileOptions,
+  type UploadFilesOptions,
+} from './client.js'
 export { ComponentLoader, type ComponentEntry } from './component-loader.js'
 export {
   ModernAdminProvider,
@@ -19,7 +34,12 @@ export {
   useUpdateRecord,
   useDeleteRecord,
   useBulkDeleteRecords,
+  useInvokeResourceAction,
   useSearchRecords,
+  useCurrentUser,
+  useLogin,
+  useLogout,
+  type CurrentUserResult,
 } from './hooks.js'
 export {
   PropertyDisplay,
@@ -33,7 +53,23 @@ export {
   ReferenceCombobox,
   ReferenceMultiCombobox,
 } from './reference.js'
-export { I18nProvider, useI18n, type I18nProviderProps } from './i18n.js'
+export {
+  I18nProvider,
+  useI18n,
+  type I18nProviderProps,
+  type MetadataKeyValueFieldTranslations,
+  type MetadataPropertyTranslations,
+  type MetadataResourceTranslations,
+  type MetadataLocaleTranslations,
+  type MetadataTranslations,
+} from './i18n.js'
+export { useHotkey, type HotkeyOptions } from './use-hotkey.js'
+export {
+  HotkeyRegistryProvider,
+  useRegisteredHotkeys,
+  type HotkeyDescriptor,
+} from './hotkey-registry.js'
+export { HotkeyHelpButton } from './hotkey-help.js'
 export { ThemeToggle, LanguageSwitcher } from './header-controls.js'
 export { NotifyToaster, useNotify, type NotifyMessage } from './notify.js'
 export {
@@ -49,19 +85,22 @@ export {
   buildValidationSchema,
   buildPropertySchema,
   defaultValueFor,
+  type FormValuesGetter,
   type Translator,
 } from './validation.js'
+export { evaluateShowWhen } from './show-when.js'
 export {
-  Router,
   Link,
   useRoute,
   useNavigate,
   buildHref,
+  parseLocation,
   type Route,
   type ListQueryState,
   type LinkProps,
 } from './router.js'
-export { AdminApp } from './admin-app.js'
+export { AdminApp, type AdminAppProps } from './admin-app.js'
+export { LoginPage, type LoginPageProps } from './pages/login-page.js'
 export {
   useRealtimeInvalidation,
   applyDeletionLocally,
@@ -93,11 +132,24 @@ export {
 export type {
   AdminConfig,
   ActionDescriptor,
+  CurrentUser,
   ListQuery,
   ListResponse,
   PropertyJSON,
   RecordJSON,
   RecordResponse,
+  RelatedResource,
   ResourceJSON,
+  ShowWhenSpec,
   View,
 } from './types.js'
+export { RelatedRecordsTabs } from './components/related-records-tabs.js'
+export {
+  LocalStorageDashboardStore,
+  ServerDashboardStore,
+  useDashboardCharts,
+  resolveRange,
+  emitDashboardReload,
+  type UseDashboardChartsOptions,
+  type UseDashboardChartsResult,
+} from './use-dashboard-charts.js'

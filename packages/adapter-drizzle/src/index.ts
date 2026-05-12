@@ -20,6 +20,7 @@ export type {
   DrizzleColumn,
   DrizzleDatabaseConfig,
   DrizzleDeleteBuilder,
+  DrizzleDialect,
   DrizzleInsertBuilder,
   DrizzleQueryBuilder,
   DrizzleResourceConfig,

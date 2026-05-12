@@ -18,6 +18,11 @@ export {
   type RecordJSON,
   type SortDirection,
   type StreamOptions,
+  type TimeSeriesPoint,
+  type TimeSeriesQuery,
+  type TimeSeriesResult,
+  type TimeSeriesSeries,
+  type TimeSeriesStep,
 } from './adapters'
 
 // Filter
@@ -38,13 +43,24 @@ export {
   propertyOptionsZ,
   propertyVisibilityZ,
   propertyComponentsZ,
+  showWhenZ,
+  keyValueFieldZ,
   actionOptionsZ,
   resourceOptionsZ,
+  relatedResourceZ,
   type PropertyOptions,
+  type PropertyContextBase,
+  type PropertyContext,
+  type PropertyAccessFunction,
+  type PropertyJSON,
+  type ResourceJSON,
   type PropertyVisibility,
   type PropertyComponents,
+  type ShowWhen,
+  type KeyValueField,
   type ActionOptions,
   type ResourceOptions,
+  type RelatedResource,
 } from './decorators'
 
 // Actions
@@ -56,11 +72,14 @@ export {
   editAction,
   deleteAction,
   bulkDeleteAction,
+  normalizeActionNesting,
   searchAction,
   type Action,
   type ActionContext,
   type ActionDescriptor,
+  type ActionGroup,
   type ActionHandler,
+  type ActionNesting,
   type ActionRequest,
   type ActionResponse,
   type ActionType,
@@ -112,6 +131,66 @@ export {
   ResourcesFactory,
   type Adapter,
   type FeatureFn,
+  type GlobalPlugin,
   type ResourceWithOptions,
 } from './factories/resources-factory.js'
-export { ModernAdmin, ACTIONS, type ModernAdminOptions } from './modern-admin.js'
+export {
+  ModernAdmin,
+  ACTIONS,
+  type ModernAdminJSON,
+  type ModernAdminOptions,
+  type RegisterResourcesArgs,
+  type RolePermissions,
+} from './modern-admin.js'
+
+// Dashboard / chart-builder schemas + storage port
+export {
+  chartVisualisationZ,
+  aggregationOpZ,
+  aggregationStepZ,
+  timeRangePresetZ,
+  timeRangeZ,
+  chartWidthZ,
+  chartDefZ,
+  chartGroupZ,
+  dashboardBlobZ,
+  EMPTY_DASHBOARD,
+  type ChartVisualisation,
+  type AggregationOpName,
+  type AggregationStep,
+  type TimeRangePreset,
+  type TimeRange,
+  type ChartWidth,
+  type ChartDef,
+  type ChartDefInput,
+  type ChartGroup,
+  type ChartGroupInput,
+  type DashboardBlob,
+  type IDashboardStore,
+} from './dashboard/store.js'
+
+// System subsystems — action logs, webhooks, config, history, AI tasks,
+// and SQL cache. Ports + Zod entry schemas + in-memory defaults; concrete
+// adapters live in `@modern-admin/system-prisma` and
+// `@modern-admin/system-drizzle`.
+export * from './system'
+
+// Diff utilities — shared between feature-history (server-side, snapshot
+// computation) and the React revisions UI (client-side, side-by-side view).
+export {
+  computeFieldDiff,
+  diffSnapshots,
+  omitFields,
+  stableStringify,
+  valuesEqual,
+  type FieldDiffEntry,
+} from './diff'
+
+// UUID v7 generator — see `CLAUDE.md` → "Identifier policy".
+export { uuidv7 } from './utils/uuid.js'
+
+// `unflatten` converts BaseRecord's internal flat dot-notation params back
+// to a nested object. Exposed so features (e.g. feature-history) can
+// normalise pre-mutation snapshots to the same shape that `toJSON()`
+// emits on the response, keeping diffs symmetric.
+export { unflatten } from './utils/flat.js'

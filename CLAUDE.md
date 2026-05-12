@@ -25,6 +25,7 @@ When upgrading, pay attention to the major versions currently locked:
 | better-auth            | 1.6+            |                                                     |
 | react / react-dom      | 19.x            | use `import type { ReactElement } from 'react'` instead of `JSX.Element` |
 | @tanstack/react-query  | 5.x             |                                                     |
+| @tanstack/react-router | 1.x             | browser history via `createBrowserHistory()`; NOT TanStack Start (no SSR) |
 
 When touching one of those, expect to update call sites for the new API.
 
@@ -57,6 +58,44 @@ When touching one of those, expect to update call sites for the new API.
 - Validation is **Zod everywhere** — DTOs, decorator options, form schemas.
 - Cross-instance cache invalidation goes through Redis pub/sub. WebSocket
   realtime events ride the same channel.
+
+## i18n rule (mandatory)
+
+**No hardcoded user-visible text anywhere.** Every string that appears in the
+UI must be internationalised:
+
+- All keys live in `packages/i18n/src/locales/en.ts` (source of truth) and
+  mirrored to all other locale files (`de`, `es`, `fr`, `it`, `ja`, `pl`,
+  `pt-BR`, `ru`).
+- `packages/ui` components are i18n-unaware by design (no direct `useI18n`
+  calls). They accept an optional `labels?: { ... }` prop with English
+  fallback defaults so they work standalone in tests/Storybook.
+- The `packages/react` layer is the translation boundary: it calls
+  `t('namespace:key')` and passes the result via the component's `labels`
+  prop (or named prop for single strings).
+- When adding any new UI component or new visible string to an existing one:
+  1. Add the key(s) to `en.ts` first.
+  2. Add translations to **all** other locale files in the same commit.
+  3. Add the `labels` prop (or named prop) to the UI component.
+  4. Wire `t('...')` in the `packages/react` call site.
+- Template strings use `{placeholder}` syntax and are replaced at the
+  component level: `l.uploadingFile.replace('{name}', uploadingName)`.
+
+## Identifier policy (mandatory)
+
+- **UUID v7 everywhere.** All generated identifiers — primary keys, log
+  entry ids, queue job ids, file storage keys, action ids, anything
+  persisted or surfaced — MUST be UUID v7 (RFC 9562). Never use
+  `crypto.randomUUID()` (v4), `randomUUID()`, `nanoid`, or any non-v7
+  generator. Use `uuidv7()` from `@modern-admin/core` (re-exported from
+  `packages/core/src/utils/uuid.ts`).
+- Rationale: UUID v7 is time-ordered, which keeps inserts cache- and
+  index-friendly, makes "newest first" listings cheap, and yields
+  natural pagination cursors.
+- Database defaults (Prisma `@default(uuid(7))`, Drizzle `defaultRandom()`)
+  are not UUID v7 in current versions of those ORMs. Generate ids in
+  application code with `uuidv7()` and pass them explicitly on insert
+  rather than relying on engine defaults.
 
 ## Code style
 

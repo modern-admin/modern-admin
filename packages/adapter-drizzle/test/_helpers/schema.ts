@@ -21,6 +21,7 @@ const postsDef = pgTable('posts', {
     .notNull()
     .references(() => usersDef.id),
   published: boolean('published').default(false).notNull(),
+  tagIds: text('tagIds').array(),
 })
 
 // Re-export as duck-typed DrizzleTable since drizzle's PgTableWithColumns

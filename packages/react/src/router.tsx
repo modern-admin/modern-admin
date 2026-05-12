@@ -1,9 +1,23 @@
-// Tiny hash-router. We avoid TanStack Router so the package stays
-// transport-agnostic and works as a drop-in inside the host app's router. The
-// hash-based URLs (`#/resources/:id`) survive page refresh and history.back()
-// without server-side routing rules.
+// Routing engine compat layer over @tanstack/react-router with `createBrowserHistory()`.
+//
+// Why browser history? Clean, standard path-based URLs (`/resources/:id?page=2`).
+// Works with server-side analytics and deep links. Requires an SPA fallback rule
+// on the server (`try_files ... index.html` in nginx, `historyApiFallback` in
+// Vite preview). This is the one-line standard config for any modern static host
+// (Vercel, Netlify, nginx). No SSR is used — admin pages are auth-walled.
+//
+// Why TSR? Future-proof primitives — devtools, search-param schemas, per-route
+// loaders, code-splitting — without paying for SSR/Nitro (TanStack Start).
+//
+// Public API (Route discriminated union, `Link`, `useRoute`, `useNavigate`,
+// `buildHref`) is kept stable. `Route` is the canonical surface; the underlying
+// TSR state is mapped to it via `parseLocation`. Search params are kept
+// opaque to TSR (`parseSearch`/`stringifySearch` are no-ops in `admin-router`):
+// `ListQueryState` (with `filters[<key>]=<v>` keys) is parsed manually from
+// the raw `searchStr` so the URL format doesn't depend on TSR's JSON-search encoding.
 
 import * as React from 'react'
+import { useRouter, useRouterState } from '@tanstack/react-router'
 
 /** URL-persisted state for the resource list page. */
 export interface ListQueryState {
@@ -17,14 +31,17 @@ export interface ListQueryState {
 
 export type Route =
   | { name: 'home' }
+  | { name: 'audit-log' }
   | { name: 'list'; resourceId: string; query?: ListQueryState }
   | { name: 'show'; resourceId: string; recordId: string }
   | { name: 'edit'; resourceId: string; recordId: string }
   | { name: 'new'; resourceId: string }
+  /** Settings hub. Sub-section selected via `section` (e.g. 'api-keys'). */
+  | { name: 'settings'; section?: string }
 
 const parseListQuery = (search: string): ListQueryState | undefined => {
   if (!search) return undefined
-  const params = new URLSearchParams(search)
+  const params = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search)
   const out: ListQueryState = {}
   const page = params.get('page')
   if (page) {
@@ -65,12 +82,17 @@ const buildListQuery = (q: ListQueryState | undefined): string => {
   return s ? `?${s}` : ''
 }
 
-const parseHash = (): Route => {
-  const raw = (typeof window !== 'undefined' ? window.location.hash : '') || ''
-  const trimmed = raw.replace(/^#\/?/, '')
-  const [pathPart, queryPart = ''] = trimmed.split('?')
-  const parts = (pathPart ?? '').split('/').filter(Boolean)
+/** Map a TSR location (pathname + raw searchStr) to the canonical `Route`
+ *  union the rest of the codebase consumes. Pure — used both at render
+ *  time (via `useRoute`) and outside the React tree if ever needed. */
+export const parseLocation = (pathname: string, searchStr: string): Route => {
+  const parts = pathname.split('/').filter(Boolean)
   if (parts.length === 0) return { name: 'home' }
+  if (parts[0] === 'audit-log') return { name: 'audit-log' }
+  if (parts[0] === 'settings') {
+    const section = parts[1] ? decodeURIComponent(parts[1]) : undefined
+    return section ? { name: 'settings', section } : { name: 'settings' }
+  }
   if (parts[0] === 'resources' && parts[1]) {
     const resourceId = decodeURIComponent(parts[1])
     if (parts[2] === 'new') return { name: 'new', resourceId }
@@ -78,65 +100,73 @@ const parseHash = (): Route => {
       return { name: 'edit', resourceId, recordId: decodeURIComponent(parts[2]) }
     }
     if (parts[2]) return { name: 'show', resourceId, recordId: decodeURIComponent(parts[2]) }
-    const query = parseListQuery(queryPart)
+    const query = parseListQuery(searchStr)
     return query ? { name: 'list', resourceId, query } : { name: 'list', resourceId }
   }
   return { name: 'home' }
 }
 
+/** Build a path URL for the given route. Pure — kept for tests and for
+ *  `<Link>` href generation. */
 export const buildHref = (route: Route): string => {
   switch (route.name) {
     case 'home':
-      return '#/'
+      return '/'
+    case 'audit-log':
+      return '/audit-log'
     case 'list':
-      return `#/resources/${encodeURIComponent(route.resourceId)}${buildListQuery(route.query)}`
+      return `/resources/${encodeURIComponent(route.resourceId)}${buildListQuery(route.query)}`
     case 'show':
-      return `#/resources/${encodeURIComponent(route.resourceId)}/${encodeURIComponent(route.recordId)}`
+      return `/resources/${encodeURIComponent(route.resourceId)}/${encodeURIComponent(route.recordId)}`
     case 'edit':
-      return `#/resources/${encodeURIComponent(route.resourceId)}/${encodeURIComponent(route.recordId)}/edit`
+      return `/resources/${encodeURIComponent(route.resourceId)}/${encodeURIComponent(route.recordId)}/edit`
     case 'new':
-      return `#/resources/${encodeURIComponent(route.resourceId)}/new`
+      return `/resources/${encodeURIComponent(route.resourceId)}/new`
+    case 'settings':
+      return route.section ? `/settings/${encodeURIComponent(route.section)}` : '/settings'
   }
 }
 
-const RouterContext = React.createContext<{
-  route: Route
-  navigate(route: Route): void
-} | null>(null)
+/** Current canonical route, derived from the live TSR state. */
+export const useRoute = (): Route =>
+  useRouterState({
+    select: (s) => parseLocation(s.location.pathname, s.location.searchStr ?? ''),
+  })
 
-export function Router({ children }: { children: React.ReactNode }): React.ReactElement {
-  const [route, setRoute] = React.useState<Route>(() => parseHash())
-  React.useEffect(() => {
-    const handler = () => setRoute(parseHash())
-    window.addEventListener('hashchange', handler)
-    return () => window.removeEventListener('hashchange', handler)
-  }, [])
-  const navigate = React.useCallback((next: Route) => {
-    window.location.hash = buildHref(next).slice(1)
-  }, [])
-  return (
-    <RouterContext.Provider value={{ route, navigate }}>{children}</RouterContext.Provider>
-  )
-}
-
-export const useRoute = (): Route => {
-  const ctx = React.useContext(RouterContext)
-  if (!ctx) throw new Error('useRoute must be inside <Router />')
-  return ctx.route
-}
-
+/** Imperative navigator. Same signature as the legacy custom router so
+ *  call-sites don't change. Goes through TSR history → re-routing flows
+ *  through TSR's lifecycle. */
 export const useNavigate = (): ((route: Route) => void) => {
-  const ctx = React.useContext(RouterContext)
-  if (!ctx) throw new Error('useNavigate must be inside <Router />')
-  return ctx.navigate
+  const router = useRouter()
+  return React.useCallback(
+    (next: Route) => {
+      router.history.push(buildHref(next))
+    },
+    [router],
+  )
 }
 
 export interface LinkProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
   to: Route
 }
 
-export const Link = ({ to, children, ...rest }: LinkProps): React.ReactElement => (
-  <a href={buildHref(to)} {...rest}>
-    {children}
-  </a>
-)
+/** Anchor with path href + client-side navigation on plain left-click.
+ *  Modifier clicks (cmd/ctrl/shift/alt, middle button) fall through to
+ *  default browser behaviour so "open in new tab" keeps working. */
+export const Link = ({ to, onClick, ...rest }: LinkProps): React.ReactElement => {
+  const router = useRouter()
+  const href = buildHref(to)
+  const handleClick = React.useCallback(
+    (event: React.MouseEvent<HTMLAnchorElement>) => {
+      onClick?.(event)
+      if (event.defaultPrevented) return
+      if (event.button !== 0) return
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+      if (rest.target && rest.target !== '_self') return
+      event.preventDefault()
+      router.history.push(href)
+    },
+    [onClick, router, href, rest.target],
+  )
+  return <a href={href} onClick={handleClick} {...rest} />
+}

@@ -65,6 +65,11 @@ export function csvEscape(value: unknown): string {
 export interface SerializeOptions {
   /** Properties to export in this order. Defaults to union of keys in `records`. */
   properties?: PropertyJSON[]
+  /** When provided, the active list query is embedded as a comment at the top
+   *  of the exported file so the export is self-documenting:
+   *  – CSV: `# Query: {...}` line before the header row
+   *  – JSON: `// Query: {...}` line before the JSON array  */
+  query?: ListQuery
 }
 
 /** Build a CSV document for the given records. UTF-8 BOM for Excel friendliness. */
@@ -76,10 +81,15 @@ export function recordsToCsv(records: RecordJSON[], opts: SerializeOptions = {})
   const lines = records.map((r) =>
     columns.map((c) => csvEscape(r.params[c.path])).join(','),
   )
-  return `\uFEFF${[header, ...lines].join('\r\n')}`
+  const queryComment = opts.query
+    ? `# Query: ${JSON.stringify(opts.query)}\r\n`
+    : ''
+  return `\uFEFF${queryComment}${[header, ...lines].join('\r\n')}`
 }
 
-/** Build a pretty-printed JSON document for the given records. */
+/** Build a pretty-printed JSON document for the given records.
+ *  When `opts.query` is set, a `// Query: ...` comment is prepended so the
+ *  export is self-documenting (JSONC — understood by VS Code, TypeScript, etc.) */
 export function recordsToJson(records: RecordJSON[], opts: SerializeOptions = {}): string {
   const paths = opts.properties?.map((p) => p.path)
   const items = records.map((r) => {
@@ -88,7 +98,8 @@ export function recordsToJson(records: RecordJSON[], opts: SerializeOptions = {}
     for (const p of paths) row[p] = r.params[p]
     return row
   })
-  return JSON.stringify(items, null, 2)
+  const json = JSON.stringify(items, null, 2)
+  return opts.query ? `// Query: ${JSON.stringify(opts.query)}\n${json}` : json
 }
 
 function columnsFromRecords(records: RecordJSON[]): { path: string; label: string }[] {

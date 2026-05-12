@@ -1,0 +1,52 @@
+{
+  "name": "@modern-admin/app-api-prisma",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch run src/main.ts",
+    "start": "bun run src/main.ts",
+    "build": "tsc -b",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
+    "prisma:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@better-auth/api-key": "1.6.9",
+    "@modern-admin/adapter-prisma": "workspace:*",
+    "@modern-admin/app-shared": "workspace:*",
+    "@modern-admin/auth-better-auth": "workspace:*",
+    "@modern-admin/cache-redis": "workspace:*",
+    "@modern-admin/core": "workspace:*",
+    "@modern-admin/feature-history": "workspace:*",
+    "@modern-admin/feature-logging": "workspace:*",
+    "@modern-admin/feature-webhooks": "workspace:*",
+    "@modern-admin/nest": "workspace:*",
+    "@modern-admin/queue": "workspace:*",
+    "@modern-admin/system-prisma": "workspace:*",
+    "@nestjs/bullmq": "^11.0.4",
+    "@nestjs/common": "^11.1.19",
+    "@nestjs/core": "^11.1.19",
+    "@nestjs/platform-express": "^11.1.19",
+    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "@prisma/client-runtime-utils": "^7.8.0",
+    "@prisma/internals": "^7.8.0",
+    "better-auth": "1.6.9",
+    "bullmq": "^5.76.6",
+    "dotenv": "^17.4.2",
+    "dotenv-expand": "^13.0.0",
+    "ioredis": "^5.10.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@modern-admin/tsconfig": "workspace:*",
+    "@types/bun": "^1.3.13",
+    "prisma": "^7.8.0",
+    "typescript": "^6.0.3"
+  }
+}

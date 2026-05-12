@@ -2,7 +2,9 @@ export type {
   Action,
   ActionContext,
   ActionDescriptor,
+  ActionGroup,
   ActionHandler,
+  ActionNesting,
   ActionRequest,
   ActionResponse,
   ActionType,
@@ -15,6 +17,7 @@ export type {
   NoticeMessage,
   RecordActionResponse,
 } from './action.js'
+export { normalizeActionNesting } from './action.js'
 export { BUILT_IN_ACTIONS } from './built-in'
 export {
   listAction,

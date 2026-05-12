@@ -9,6 +9,8 @@ import type {
   FindOptions,
   ParamsType,
   StreamOptions,
+  TimeSeriesQuery,
+  TimeSeriesResult,
 } from './types.js'
 
 /**
@@ -92,11 +94,42 @@ export abstract class BaseResource {
   }
 
   /**
+   * Time-series aggregation — returns one or more series of `{date, value}`
+   * points produced by `DATE_TRUNC(step, dateField)` (or the dialect-equivalent).
+   * Optional only because non-relational adapters cannot implement it
+   * efficiently; the dashboard UI degrades gracefully when the method is
+   * missing or rejects with `NotImplementedError`.
+   */
+  async aggregateTimeSeries(_filter: Filter, _query: TimeSeriesQuery): Promise<TimeSeriesResult> {
+    throw new NotImplementedError(`${this.constructor.name}#aggregateTimeSeries`)
+  }
+
+  /**
+   * Whether `aggregateTimeSeries` is implemented by this adapter. Used by
+   * the controller to advertise capability so the dashboard can hide the
+   * chart builder for unsupported sources.
+   */
+  supportsTimeSeries(): boolean {
+    return false
+  }
+
+  /**
    * Run a callback inside a transaction. Default impl just runs the callback;
    * adapters should override to provide real transactional semantics.
    */
   async transaction<T>(fn: () => Promise<T>): Promise<T> {
     return fn()
+  }
+
+  /**
+   * Returns the property path to use as the human-readable record title.
+   * Checks the decorator's `titleProperty` option first; falls back to the
+   * first property whose `isTitle()` returns true (TITLE_COLUMN_NAMES match).
+   */
+  titlePropertyPath(): string | null {
+    const override = (this._decorated?.options as { titleProperty?: string } | null)?.titleProperty
+    if (override) return override
+    return this.properties().find((p) => p.isTitle())?.path() ?? null
   }
 
   /** @internal */

@@ -25,10 +25,10 @@ export class PrismaDatabase extends BaseDatabase {
   }
 
   override resources(): PrismaResource[] {
-    const { client, dmmf } = this.config
+    const { client, dmmf, dialect } = this.config
     const enums = dmmf.datamodel.enums ?? []
     return dmmf.datamodel.models.map((model) => {
-      const cfg: PrismaResourceConfig = { model, client, enums }
+      const cfg: PrismaResourceConfig = { model, client, enums, dialect: dialect ?? 'pg' }
       return new PrismaResource(cfg)
     })
   }

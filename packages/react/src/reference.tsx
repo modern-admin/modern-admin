@@ -71,12 +71,15 @@ export function ReferenceCombobox({
   onChange,
   disabled,
   placeholder = 'Select…',
+  className,
 }: {
   referenceResourceId: string
   value: string | number | null | undefined
   onChange(next: string | null): void
   disabled?: boolean
   placeholder?: string
+  /** Extra classes applied to the trigger button (e.g. height override). */
+  className?: string
 }): React.ReactElement {
   const [open, setOpen] = React.useState(false)
   const [query, setQuery] = React.useState('')
@@ -111,9 +114,12 @@ export function ReferenceCombobox({
           role="combobox"
           aria-expanded={open}
           disabled={disabled}
-          className="w-full justify-between font-normal"
+          className={cn('w-full justify-between font-normal', className)}
         >
-          <span className={cn('truncate', !selectedLabel && 'text-muted-foreground')}>
+          <span
+            className={cn('truncate', !selectedLabel && 'text-muted-foreground')}
+            title={selectedLabel || undefined}
+          >
             {selectedLabel || placeholder}
           </span>
           <ChevronsUpDown className="size-4 shrink-0 opacity-50" />
@@ -157,7 +163,7 @@ export function ReferenceCombobox({
                     }}
                   >
                     <Check className={cn('size-4', isSelected ? 'opacity-100' : 'opacity-0')} />
-                    <span className="truncate">
+                    <span className="truncate" title={r.title ? `${r.title} <${r.id}>` : `#${r.id}`}>
                       {r.title ? `${r.title} <${r.id}>` : `#${r.id}`}
                     </span>
                   </CommandItem>
@@ -304,7 +310,7 @@ export function ReferenceMultiCombobox({
                       <Check
                         className={cn('size-4', isSelected ? 'opacity-100' : 'opacity-0')}
                       />
-                      <span className="truncate">
+                      <span className="truncate" title={r.title ? `${r.title} <${r.id}>` : `#${r.id}`}>
                         {r.title ? `${r.title} <${r.id}>` : `#${r.id}`}
                       </span>
                     </CommandItem>

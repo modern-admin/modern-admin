@@ -14,6 +14,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common'
+import { ApiCookieAuth, ApiTags } from '@nestjs/swagger'
 import {
   ForbiddenError,
   ActionNotFoundError,
@@ -45,6 +46,8 @@ interface AdminRequest {
  * funnels it through `admin.invoke()`, sharing hook/auth semantics with
  * GraphQL/WS transports.
  */
+@ApiTags('Admin / Resources')
+@ApiCookieAuth('session')
 @Controller('admin/api/resources/:resourceId')
 @UseGuards(ModernAdminAuthGuard)
 export class ResourceController {
@@ -149,6 +152,51 @@ export class ResourceController {
         params: { resourceId, action: 'search', query: q ?? '' },
         method: 'get',
         query: { q },
+      },
+      req,
+    )
+  }
+
+  // ── Custom actions ───────────────────────────────────────────────────────
+  // These parameterised routes sit AFTER all static routes so Nest's router
+  // matches `actions/list`, `actions/new`, `actions/bulkDelete`, `actions/search`
+  // as specific handlers first, and only falls through to the wildcard for
+  // truly custom action names.
+
+  /** Invoke a custom record-scoped action (actionType: 'record'). */
+  @Post('records/:recordId/actions/:action')
+  async invokeRecordAction(
+    @Param('resourceId') resourceId: string,
+    @Param('recordId') recordId: string,
+    @Param('action') action: string,
+    @Body() body: Record<string, unknown> | undefined,
+    @Req() req: AdminRequest,
+  ): Promise<ActionResponse> {
+    return this.run(
+      { params: { resourceId, recordId, action }, method: 'post', payload: body ?? {} },
+      req,
+    )
+  }
+
+  /** Invoke a custom resource- or bulk-scoped action.
+   *  For bulk actions pass `{ recordIds: string[] }` in the body. */
+  @Post('actions/:action')
+  async invokeResourceAction(
+    @Param('resourceId') resourceId: string,
+    @Param('action') action: string,
+    @Body() body: Record<string, unknown> | undefined,
+    @Req() req: AdminRequest,
+  ): Promise<ActionResponse> {
+    const { recordIds, ...payload } = (body ?? {}) as { recordIds?: string[]; [k: string]: unknown }
+    return this.run(
+      {
+        params: {
+          resourceId,
+          action,
+          ...(recordIds?.length ? { recordIds: recordIds.join(',') } : {}),
+        },
+        method: 'post',
+        payload,
       },
       req,
     )

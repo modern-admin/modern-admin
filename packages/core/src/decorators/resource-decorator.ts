@@ -1,15 +1,40 @@
-import type { BaseProperty, BaseResource } from '../adapters'
+import { BaseProperty, type BaseResource } from '../adapters'
+import type { PropertyType } from '../adapters/types.js'
 import {
   BUILT_IN_ACTIONS,
   type Action,
   type ActionResponse,
 } from '../actions'
 import { ActionDecorator } from './action-decorator.js'
-import { PropertyDecorator } from './property-decorator.js'
-import type { ResourceOptions } from './resource-options.js'
+import { PropertyDecorator, type PropertyJSON } from './property-decorator.js'
+import type { PropertyContextBase } from './property-options.js'
+import type { RelatedResource, ResourceOptions } from './resource-options.js'
 
 const humanize = (value: string): string =>
   value.replace(/[._-]/g, ' ').replace(/^./, (c) => c.toUpperCase())
+
+const DEFAULT_NAVIGATION_ICON = 'Database'
+
+type Navigation = NonNullable<Exclude<ResourceOptions['navigation'], null>>
+
+export interface ResourceJSON {
+  id: string
+  name: string
+  navigation: ResourceOptions['navigation']
+  relatedResources: ReadonlyArray<RelatedResource>
+  properties: PropertyJSON[]
+  actions: ReturnType<ActionDecorator['toDescriptor']>[]
+}
+
+const normalizeNavigation = (
+  navigation: ResourceOptions['navigation'] | undefined,
+): ResourceOptions['navigation'] => {
+  if (navigation === undefined || navigation === null) return navigation ?? null
+  return {
+    ...navigation,
+    icon: navigation.icon ?? DEFAULT_NAVIGATION_ICON,
+  } as Navigation
+}
 
 /**
  * Wraps a BaseResource with merged options + per-property/action decorators.
@@ -21,6 +46,7 @@ export class ResourceDecorator {
   public readonly properties: PropertyDecorator[]
   public readonly actions: Map<string, ActionDecorator<ActionResponse>>
   public readonly navigation: ResourceOptions['navigation']
+  public readonly relatedResources: ReadonlyArray<RelatedResource>
 
   constructor(
     public readonly resource: BaseResource,
@@ -28,16 +54,32 @@ export class ResourceDecorator {
   ) {
     this.id = options.id ?? resource.id()
     this.name = options.name ?? humanize(this.id)
-    this.navigation = options.navigation ?? null
+    this.navigation = normalizeNavigation(options.navigation)
+    this.relatedResources = options.relatedResources ?? []
     this.properties = this.buildPropertyDecorators(resource.properties())
     this.actions = this.buildActionDecorators(options.actions ?? {})
   }
 
   private buildPropertyDecorators(properties: BaseProperty[]): PropertyDecorator[] {
     const overrides = this.options.properties ?? {}
-    return properties.map(
+    const fromResource = properties.map(
       (p) => new PropertyDecorator(p, overrides[p.path()] ?? {}),
     )
+    // Promote option entries that don't match an existing resource property
+    // into virtual fields. Used by features (e.g. passwords) to expose
+    // form-only inputs that don't exist on the underlying table — paired
+    // with a `before` hook that strips them from the payload before save.
+    const knownPaths = new Set(properties.map((p) => p.path()))
+    const virtual: PropertyDecorator[] = []
+    for (const [path, opts] of Object.entries(overrides)) {
+      if (knownPaths.has(path)) continue
+      const synthetic = new BaseProperty({
+        path,
+        type: (opts.type as PropertyType | undefined) ?? 'string',
+      })
+      virtual.push(new PropertyDecorator(synthetic, opts))
+    }
+    return [...fromResource, ...virtual]
   }
 
   private buildActionDecorators(
@@ -63,6 +105,7 @@ export class ResourceDecorator {
         ...(c.after !== undefined ? { after: c.after } : {}),
         ...(c.isAccessible !== undefined ? { isAccessible: c.isAccessible } : {}),
         ...(c.isVisible !== undefined ? { isVisible: c.isVisible } : {}),
+        ...(c.nesting !== undefined ? { nesting: c.nesting } : {}),
         ...(c.guard !== undefined ? { guard: c.guard } : {}),
         ...(c.component !== undefined ? { component: c.component } : {}),
         ...(c.custom !== undefined ? { custom: c.custom } : {}),
@@ -117,17 +160,24 @@ export class ResourceDecorator {
       .sort((a, b) => a.position() - b.position())
   }
 
-  toJSON(): {
-    id: string
-    name: string
-    navigation: ResourceOptions['navigation']
-    properties: ReturnType<PropertyDecorator['toJSON']>[]
-    actions: ReturnType<ActionDecorator['toDescriptor']>[]
-  } {
+  toJSON(): ResourceJSON
+  toJSON(context: PropertyContextBase): Promise<ResourceJSON>
+  toJSON(context?: PropertyContextBase): ResourceJSON | Promise<ResourceJSON> {
+    if (context) {
+      return Promise.all(this.properties.map((p) => p.toJSON(context))).then((properties) => ({
+        id: this.id,
+        name: this.name,
+        navigation: this.navigation,
+        relatedResources: this.relatedResources,
+        properties: properties.filter((p): p is PropertyJSON => p !== null),
+        actions: Array.from(this.actions.values()).map((a) => a.toDescriptor()),
+      }))
+    }
     return {
       id: this.id,
       name: this.name,
       navigation: this.navigation,
+      relatedResources: this.relatedResources,
       properties: this.properties.map((p) => p.toJSON()),
       actions: Array.from(this.actions.values()).map((a) => a.toDescriptor()),
     }

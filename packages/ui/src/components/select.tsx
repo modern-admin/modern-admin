@@ -3,28 +3,68 @@ import * as SelectPrimitive from '@radix-ui/react-select'
 import { Check, ChevronDown, ChevronUp } from 'lucide-react'
 import { cn } from '../lib/utils.js'
 
-export const Select = SelectPrimitive.Root
+/**
+ * Thin wrapper around `SelectPrimitive.Root` that suppresses the spurious
+ * empty-string callback Radix fires through its hidden bubble-input while
+ * `SelectItem` nodes register lazily via Portal after an external `value`
+ * change (e.g. `form.reset()` after an async data load). Without this guard
+ * the externally-set value is immediately overwritten with `''`.
+ *
+ * The empty string is never a legitimate choice from a rendered `SelectItem`,
+ * so dropping it is always safe. Call sites should NOT add their own
+ * `if (v === '') return` guards — this component handles it centrally.
+ */
+function SelectRoot({
+  onValueChange,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof SelectPrimitive.Root>): React.ReactElement {
+  const handleValueChange = React.useCallback(
+    (value: string) => {
+      if (value !== '') onValueChange?.(value)
+    },
+    [onValueChange],
+  )
+  return <SelectPrimitive.Root onValueChange={handleValueChange} {...props} />
+}
+SelectRoot.displayName = 'Select'
+
+export const Select = SelectRoot
 export const SelectGroup = SelectPrimitive.Group
 export const SelectValue = SelectPrimitive.Value
 
 export const SelectTrigger = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Trigger>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>
->(({ className, children, ...props }, ref) => (
-  <SelectPrimitive.Trigger
-    ref={ref}
-    className={cn(
-      'flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1',
-      className,
-    )}
-    {...props}
-  >
-    {children}
-    <SelectPrimitive.Icon asChild>
-      <ChevronDown className="h-4 w-4 opacity-50" />
-    </SelectPrimitive.Icon>
-  </SelectPrimitive.Trigger>
-))
+>(({ className, children, onMouseEnter, ...props }, ref) => {
+  const handleMouseEnter = (e: React.MouseEvent<HTMLButtonElement>): void => {
+    // Set native title only when the value span is actually clipped so the
+    // tooltip doesn't appear redundantly on short values.
+    const valueSpan = e.currentTarget.querySelector<HTMLElement>('span')
+    if (valueSpan && valueSpan.scrollWidth > valueSpan.offsetWidth) {
+      e.currentTarget.title = valueSpan.textContent ?? ''
+    } else {
+      e.currentTarget.removeAttribute('title')
+    }
+    onMouseEnter?.(e)
+  }
+
+  return (
+    <SelectPrimitive.Trigger
+      ref={ref}
+      className={cn(
+        'flex h-9 w-full cursor-pointer items-center justify-between rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1',
+        className,
+      )}
+      onMouseEnter={handleMouseEnter}
+      {...props}
+    >
+      {children}
+      <SelectPrimitive.Icon asChild>
+        <ChevronDown className="h-4 w-4 opacity-50" />
+      </SelectPrimitive.Icon>
+    </SelectPrimitive.Trigger>
+  )
+})
 SelectTrigger.displayName = SelectPrimitive.Trigger.displayName
 
 export const SelectScrollUpButton = React.forwardRef<
@@ -106,9 +146,10 @@ export const SelectItem = React.forwardRef<
   <SelectPrimitive.Item
     ref={ref}
     className={cn(
-      'relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+      'relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
       className,
     )}
+    title={typeof children === 'string' ? children : undefined}
     {...props}
   >
     <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
@@ -116,7 +157,9 @@ export const SelectItem = React.forwardRef<
         <Check className="h-4 w-4" />
       </SelectPrimitive.ItemIndicator>
     </span>
-    <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+    <SelectPrimitive.ItemText>
+      <span className="block truncate">{children}</span>
+    </SelectPrimitive.ItemText>
   </SelectPrimitive.Item>
 ))
 SelectItem.displayName = SelectPrimitive.Item.displayName

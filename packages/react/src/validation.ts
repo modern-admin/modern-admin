@@ -13,6 +13,15 @@
 
 import { z, type ZodType } from 'zod'
 import type { PropertyJSON } from './types.js'
+import { evaluateShowWhen } from './show-when.js'
+
+/**
+ * Lazy form-snapshot reader. Passed by the caller (the edit page) so the
+ * schema can consult the live form values at validation time without taking
+ * a hard dependency on RHF. Returning `{}` is fine — every property defaults
+ * to "visible" then.
+ */
+export type FormValuesGetter = () => Record<string, unknown>
 
 export type Translator = (key: string, params?: Record<string, unknown>) => string
 
@@ -158,6 +167,15 @@ function multiReferenceSchema(p: PropertyJSON, t: Translator): ZodType {
     })
 }
 
+/** File validator: single-file values are storage keys (string/null), while
+ * multi-file values are arrays of storage keys. */
+function fileSchema(p: PropertyJSON, t: Translator): ZodType {
+  if (p.isArray) {
+    return multiReferenceSchema(p, t)
+  }
+  return stringSchema(p, t)
+}
+
 /** Enum validator from `availableValues`. Unmatched value → notInList. */
 function enumSchema(p: PropertyJSON, t: Translator): ZodType {
   const label = p.label
@@ -179,8 +197,69 @@ function enumSchema(p: PropertyJSON, t: Translator): ZodType {
     .transform((v) => (v === '' ? null : v))
 }
 
-/** Map a single PropertyJSON to its Zod schema, taking type + flags into account. */
-export function buildPropertySchema(p: PropertyJSON, t: Translator): ZodType {
+/** JSON validator: accepts any JSON-serializable value (object/array/null).
+ *
+ * Unlike string fields, json fields hold a parsed JavaScript value — the
+ * JsonEditor emits objects/arrays directly. The schema passes them through
+ * as-is; only the required check (null/undefined → error) is applied. */
+function jsonSchema(p: PropertyJSON, t: Translator): ZodType {
+  const label = p.label
+  return z
+    .unknown()
+    .superRefine((v, ctx) => {
+      if ((v == null || v === '') && p.isRequired) {
+        ctx.addIssue({ code: 'custom', message: t('validation:required', { label }) })
+      }
+    })
+    .transform((v) => (v === '' ? null : v))
+}
+
+/** Many-to-many validator: array of `{ id, ...extras }` items.
+ *
+ * The M2M editor emits an array of objects (id of the referenced record plus
+ * arbitrary junction extra fields, e.g. `addedAt`, `position`). Bare ids are
+ * also accepted and normalized into `{ id }` objects so legacy form state
+ * doesn't trip the schema. Extra fields are passed through untouched —
+ * the backend's m2m feature persists whatever it recognises and ignores
+ * the rest. */
+function m2mSchema(p: PropertyJSON, t: Translator): ZodType {
+  const label = p.label
+  const normalize = (raw: unknown): Array<Record<string, unknown>> => {
+    if (raw == null) return []
+    const items = Array.isArray(raw) ? raw : [raw]
+    const out: Array<Record<string, unknown>> = []
+    for (const item of items) {
+      if (item == null || item === '') continue
+      if (typeof item === 'string' || typeof item === 'number') {
+        out.push({ id: String(item) })
+        continue
+      }
+      if (typeof item === 'object') {
+        const obj = item as Record<string, unknown>
+        const id = obj.id ?? obj.value
+        if (id == null || id === '') continue
+        out.push({ ...obj, id: String(id) })
+      }
+    }
+    return out
+  }
+  return z
+    .preprocess(normalize, z.array(z.record(z.string(), z.unknown())))
+    .superRefine((value, ctx) => {
+      if (p.isRequired && value.length === 0) {
+        ctx.addIssue({ code: 'custom', message: t('validation:emptySelection', { label }) })
+      }
+    })
+}
+
+/** Build the Zod schema for a property without considering `showWhen`. */
+function buildPropertySchemaInner(p: PropertyJSON, t: Translator): ZodType {
+  // M2M is structurally different from a multi-reference — its values are
+  // `{ id, ...extras }` objects, not bare FKs. Branch first so the
+  // `p.reference` check below doesn't capture it.
+  if (p.type === 'm2m') {
+    return m2mSchema(p, t)
+  }
   // Enum-like properties always go through the availableValues path —
   // overrides the raw type (e.g. a string with a fixed set of options).
   if (p.availableValues && p.availableValues.length > 0) {
@@ -195,6 +274,7 @@ export function buildPropertySchema(p: PropertyJSON, t: Translator): ZodType {
     case 'number':
     case 'float':
     case 'currency':
+    case 'money':
       return numberSchema(p, t, false)
     case 'integer':
       return numberSchema(p, t, true)
@@ -208,30 +288,74 @@ export function buildPropertySchema(p: PropertyJSON, t: Translator): ZodType {
       return stringSchema(p, t, 'url')
     case 'uuid':
       return stringSchema(p, t, 'uuid')
+    case 'json':
+      return jsonSchema(p, t)
     case 'string':
     case 'text':
     case 'textarea':
     case 'password':
     case 'richtext':
-    case 'json':
+    case 'color':
+    case 'file':
+      return fileSchema(p, t)
     default:
       return stringSchema(p, t)
   }
+}
+
+/**
+ * Map a PropertyJSON to its Zod schema. When the property has a `showWhen`
+ * rule and a `getValues` getter is supplied, the schema short-circuits to
+ * a no-op while the rule does not match — letting hidden branches pass
+ * validation without their required/format checks tripping submission.
+ */
+export function buildPropertySchema(
+  p: PropertyJSON,
+  t: Translator,
+  getValues?: FormValuesGetter,
+): ZodType {
+  const inner = buildPropertySchemaInner(p, t)
+  if (!p.showWhen || !getValues) return inner
+
+  // Wrap: only forward to `inner` when visible. Hidden → accept anything,
+  // pass it through unchanged. We re-emit issues from `inner` so error
+  // messages and paths stay identical to the non-conditional case.
+  return z
+    .any()
+    .superRefine((value, ctx) => {
+      if (!evaluateShowWhen(p.showWhen, getValues())) return
+      const result = inner.safeParse(value)
+      if (!result.success) {
+        // Zod 4's `RefinementCtx.addIssue` accepts a structurally looser
+        // shape than `$ZodIssue`; spread into a plain object to satisfy
+        // the inferred parameter type.
+        for (const issue of result.error.issues) {
+          ctx.addIssue({ ...issue } as Parameters<typeof ctx.addIssue>[0])
+        }
+      }
+    })
+    .transform((value) => {
+      if (!evaluateShowWhen(p.showWhen, getValues())) return value
+      const result = inner.safeParse(value)
+      return result.success ? result.data : value
+    })
 }
 
 /** Build a Zod object schema covering every editable property in a resource. */
 export function buildValidationSchema(
   properties: PropertyJSON[],
   t: Translator,
+  getValues?: FormValuesGetter,
 ): z.ZodObject<Record<string, ZodType>> {
   const shape: Record<string, ZodType> = {}
-  for (const p of properties) shape[p.path] = buildPropertySchema(p, t)
+  for (const p of properties) shape[p.path] = buildPropertySchema(p, t, getValues)
   return z.object(shape)
 }
 
 /** Sensible empty default per type so RHF stays controlled from first render. */
 export function defaultValueFor(p: PropertyJSON): unknown {
   if (p.type === 'boolean') return false
+  if (p.type === 'json') return null
   if (p.isArray) return []
   return ''
 }

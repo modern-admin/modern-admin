@@ -1,27 +1,41 @@
 // Reference wiring of @modern-admin/nest. Demonstrates how a host app
 // composes adapter, auth provider, and cache provider into a single Nest
 // module that exposes /admin/api/*.
+//
+// Resources are split across per-feature modules under ./admin/* so a real
+// host app can scale to many resources by just adding new feature modules
+// — `forRoot()` declares only adapters/auth/cache, and each
+// `forFeature()` plugs its own resource(s) into the running ModernAdmin.
 
 import { Module } from '@nestjs/common'
-import { InMemoryRealtimeBus, type BaseDatabase, type BaseResource, type ICacheProvider, type IAuthProvider, type IRealtimeBus, type ResourceOptions } from '@modern-admin/core'
+import { InMemoryRealtimeBus, createMemorySystem, type BaseDatabase, type BaseResource, type ICacheProvider, type IAuthProvider, type IRealtimeBus } from '@modern-admin/core'
 import { ModernAdminModule } from '@modern-admin/nest'
 import { ModernAdminGraphqlModule } from '@modern-admin/graphql'
 import { ModernAdminRealtimeModule, RedisRealtimeBus } from '@modern-admin/realtime'
 import { RedisCacheProvider } from '@modern-admin/cache-redis'
-import { BetterAuthProvider } from '@modern-admin/auth-better-auth'
+import { ModernAdminUploadModule } from '@modern-admin/feature-upload/nest'
+import { uploadGraphqlExtension } from '@modern-admin/feature-upload/graphql'
+import { historyPlugin } from '@modern-admin/feature-history'
+import { actionLoggingPlugin } from '@modern-admin/feature-logging'
+import {
+  AdminsAdminModule,
+  buildAiAssistantConfig,
+  buildApiKeyService,
+  buildBetterAuthProvider,
+  CategoriesAdminModule,
+  CommentsAdminModule,
+  CustomersAdminModule,
+  PostsAdminModule,
+  ProductsAdminModule,
+  RegionalAdminModule,
+  RolesAdminModule,
+  TagsAdminModule,
+} from '@modern-admin/app-shared'
 import { Redis } from 'ioredis'
+// Side-effect import: registers InMemory tables with the shared admin
+// source registry before any `@AdminResource` decorator is evaluated.
+import './admin-sources.js'
 import { InMemoryDatabase, InMemoryResource } from './demo/in-memory-adapter.js'
-import { seed } from './demo/seed.js'
-
-const NAV: Record<string, ResourceOptions> = {
-  users:      { navigation: { icon: 'Users',          group: 'User Management' } },
-  categories: { navigation: { icon: 'FolderTree',     group: 'Content' } },
-  tags:       { navigation: { icon: 'Tag',             group: 'Content' } },
-  posts:      { navigation: { icon: 'FileText',        group: 'Content' } },
-  comments:   { navigation: { icon: 'MessageSquare',   group: 'Content' } },
-}
-
-const db = seed()
 
 const buildCache = (): ICacheProvider | undefined => {
   const url = process.env.REDIS_URL
@@ -48,32 +62,56 @@ const buildRealtime = (): IRealtimeBus => {
 }
 
 const realtimeBus = buildRealtime()
+const system = createMemorySystem()
 
-const buildAuth = (): IAuthProvider | undefined => {
-  // Reference app instantiates Better Auth in main.ts and stores it on
-  // globalThis before Nest boots. Set BETTER_AUTH_ENABLED=false to bypass
-  // (e.g. when running without a session DB writable).
-  if (process.env.BETTER_AUTH_ENABLED === 'false') return undefined
-  const auth = (globalThis as { __betterAuth?: unknown }).__betterAuth
-  if (!auth) return undefined
-  return new BetterAuthProvider({ auth: auth as never })
-}
+// `auth.ts` publishes the Better Auth instance onto globalThis as an
+// import-time side-effect; the helpers below pick it up here. Set
+// `BETTER_AUTH_ENABLED=false` to bypass (e.g. when running without a
+// writable session DB).
+const authProvider = buildBetterAuthProvider()
+const apiKeyService = buildApiKeyService(authProvider)
 
 @Module({
   imports: [
+    ModernAdminUploadModule.forRoot(),
     ModernAdminModule.forRoot({
       global: true,
-      resources: db.tables.map((t) => ({ resource: t, options: NAV[t.name] ?? {} })),
       adapters: [{
         Database: InMemoryDatabase as unknown as typeof BaseDatabase,
         Resource: InMemoryResource as unknown as typeof BaseResource,
       }],
       branding: { companyName: 'Modern Admin (demo)' },
+      // Enable role-based access control. Demo `roles` table seeds
+      // `admin`/`viewer`/`editor` and admins reference roles by name.
+      // Note: this in-memory `admins` table is a UI-only demo; real
+      // login still flows through Better Auth (bun:sqlite ma_user).
+      rolesResourceId: 'roles',
       realtime: realtimeBus,
+      configStore: system.configStore,
+      aiTaskStore: system.aiTaskStore,
+      historyStore: system.historyStore,
+      logStore: system.logStore,
+      plugins: [
+        historyPlugin({ store: system.historyStore }),
+        actionLoggingPlugin({ store: system.logStore }),
+      ],
+      aiAssistant: buildAiAssistantConfig(),
       ...(buildCache() ? { cache: buildCache()! } : {}),
-      ...(buildAuth() ? { auth: buildAuth()! } : {}),
+      ...(authProvider ? { auth: authProvider as IAuthProvider } : {}),
+      ...(apiKeyService ? { apiKeyService } : {}),
     }),
-    ModernAdminGraphqlModule.forRoot(),
+    AdminsAdminModule,
+    RolesAdminModule,
+    CustomersAdminModule,
+    CategoriesAdminModule,
+    TagsAdminModule,
+    PostsAdminModule,
+    CommentsAdminModule,
+    ProductsAdminModule,
+    RegionalAdminModule,
+    ModernAdminGraphqlModule.forRoot({
+      extensions: [uploadGraphqlExtension()],
+    }),
     ModernAdminRealtimeModule.forRoot({ bus: realtimeBus }),
   ],
 })

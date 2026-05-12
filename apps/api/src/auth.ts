@@ -1,23 +1,32 @@
-// Better Auth instance for the reference app. We use bun:sqlite (zero native
-// build) so the API boots without external services. Email + password is
-// always on; GitHub OAuth activates only when GITHUB_CLIENT_ID/SECRET are
-// set; passkeys mount when the optional plugin is available.
+// Better Auth instance for the bun:sqlite reference app.
+//
+// The flavour-specific bits live here:
+//   • bun:sqlite database handle (zero native build).
+//   • `admin` plugin for the role column (defaultRole drives demo signup).
+//   • Optional passkey plugin loaded lazily — missing dependency is silently skipped.
+//
+// Everything else (api-key plugin, social providers, baseURL/trustedOrigins,
+// email-and-password, globalThis publishing) comes from `@modern-admin/app-shared`.
 
-import { betterAuth, type BetterAuthOptions, type BetterAuthPlugin } from 'better-auth'
-import { getMigrations } from 'better-auth/db/migration'
+import type { BetterAuthPlugin } from 'better-auth'
+import { admin } from 'better-auth/plugins'
 import { Database } from 'bun:sqlite'
+import {
+  buildBetterAuth,
+  migrateAuth as runAuthMigrations,
+  seedDemoUser as runSeedDemoUser,
+} from '@modern-admin/app-shared'
 
 const SQLITE_PATH = process.env.AUTH_DB_PATH ?? ':memory:'
 
-const socialProviders: BetterAuthOptions['socialProviders'] = {}
-if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
-  socialProviders.github = {
-    clientId: process.env.GITHUB_CLIENT_ID,
-    clientSecret: process.env.GITHUB_CLIENT_SECRET,
-  }
-}
-
-const plugins: BetterAuthPlugin[] = []
+const extraPlugins: BetterAuthPlugin[] = [
+  // Adds `role` column to the `user` table. `defaultRole` is set to 'admin'
+  // so the seeded demo user automatically gets the admin role on signup.
+  // In production, set defaultRole to 'user' and assign roles explicitly.
+  admin({
+    defaultRole: process.env.DEMO_ADMIN_ROLE ?? 'admin',
+  }) as unknown as BetterAuthPlugin,
+]
 try {
   // Passkeys live in an optional subpath. Load lazily so a missing dependency
   // never breaks API boot. The unknown→callable cast keeps typecheck quiet
@@ -25,7 +34,7 @@ try {
   const mod = (await import('better-auth/plugins/passkey' as string)) as {
     passkey?: () => BetterAuthPlugin
   }
-  if (typeof mod.passkey === 'function') plugins.push(mod.passkey())
+  if (typeof mod.passkey === 'function') extraPlugins.push(mod.passkey())
 } catch {
   // passkey plugin unavailable — silently skip.
 }
@@ -34,23 +43,19 @@ try {
 // node:sqlite / better-sqlite3 instance for its built-in adapter. Cast
 // through `unknown` to keep the public type of `auth` from referencing
 // internal sqlite types.
-const sqlite = new Database(SQLITE_PATH) as unknown as BetterAuthOptions['database']
+const sqlite = new Database(SQLITE_PATH) as unknown as Parameters<
+  typeof buildBetterAuth
+>[0]['database']
 
-const authConfig: BetterAuthOptions = {
-  database: sqlite,
-  baseURL: process.env.AUTH_BASE_URL ?? `http://localhost:${process.env.API_PORT ?? 3001}`,
-  trustedOrigins: process.env.WEB_ORIGIN?.split(',') ?? ['http://localhost:5173'],
-  emailAndPassword: { enabled: true, autoSignIn: true },
-  ...(Object.keys(socialProviders).length ? { socialProviders } : {}),
-  ...(plugins.length ? { plugins } : {}),
-}
+const built = buildBetterAuth({ database: sqlite, extraPlugins })
 
-export const auth = betterAuth(authConfig)
+export const auth = built.auth
 
 /** Create Better Auth's expected tables on the configured SQLite store.
  * Runs against an empty :memory: DB on every boot, or once against a
  * persistent file at AUTH_DB_PATH. Idempotent. */
-export async function migrateAuth(): Promise<void> {
-  const { runMigrations } = await getMigrations(authConfig)
-  await runMigrations()
-}
+export const migrateAuth = (): Promise<void> => runAuthMigrations(built.config)
+
+/** Seed the reference demo admin so the login screen has known credentials. */
+export const seedDemoUser = (): Promise<void> =>
+  runSeedDemoUser({ auth: built.auth, label: 'modern-admin/api' })

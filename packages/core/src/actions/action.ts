@@ -5,6 +5,32 @@ import type { ModernAdmin } from '../modern-admin.js'
 
 export type ActionType = 'resource' | 'record' | 'bulk'
 
+export interface ActionGroup {
+  name: string
+  icon?: string
+}
+
+export type ActionNesting =
+  | string
+  | ActionGroup
+  | ReadonlyArray<string | ActionGroup>
+
+export const normalizeActionNesting = (
+  nesting: ActionNesting | undefined,
+): ActionGroup[] | undefined => {
+  if (nesting === undefined) return undefined
+  const items = Array.isArray(nesting) ? nesting : [nesting]
+  if (items.length === 0) return undefined
+  return items.map((item) =>
+    typeof item === 'string'
+      ? { name: item }
+      : {
+          name: item.name,
+          ...(item.icon !== undefined ? { icon: item.icon } : {}),
+        },
+  )
+}
+
 export type BuiltInActionName =
   | 'list'
   | 'show'
@@ -41,6 +67,13 @@ export interface ActionRequest {
   payload?: Record<string, unknown>
   query?: Record<string, unknown>
   method: 'get' | 'post' | 'put' | 'patch' | 'delete'
+  /**
+   * Free-form bag for transports to attach metadata that should travel
+   * with the action through hooks (logging, history, webhooks) without
+   * polluting the user-facing payload. Examples: revert `reason`, source
+   * IP, request id. Persisted as-is by `actionLoggingPlugin` when present.
+   */
+  meta?: Record<string, unknown>
 }
 
 export interface ActionResponse {
@@ -101,6 +134,7 @@ export interface Action<R extends ActionResponse = ActionResponse> {
   actionType: ActionType
   isVisible?: boolean | IsFunction
   isAccessible?: boolean | IsFunction
+  nesting?: ActionNesting
   /** Optional confirmation guard message key (translated client-side). */
   guard?: string
   /** Component name registered via ComponentLoader for the UI. */
@@ -120,6 +154,7 @@ export interface ActionDescriptor {
   name: string
   actionType: ActionType
   resourceId: string
+  nesting?: ActionGroup[]
   guard?: string
   component?: string | null
   custom?: Record<string, unknown>

@@ -1,0 +1,339 @@
+// Modern Admin — system tables (Prisma fragment)
+//
+// Copy these models into your application's `schema.prisma` (or include via
+// Prisma's multi-file schema). They power the auth & runtime subsystems
+// shipped in `@modern-admin/system-prisma`:
+//
+//   Better Auth (logical name → physical table):
+//     user         → ma_user            (MaUser)
+//     session      → ma_session         (MaSession)
+//     account      → ma_account         (MaAccount)
+//     verification → ma_verification    (MaVerification)
+//     apikey       → ma_apikey          (MaApiKey, from api-key plugin)
+//
+//   Modern Admin core:
+//     - MaRole             → configurable roles + permissions matrix
+//                            (consumed by `ModernAdmin.invoke()` when
+//                            `rolesResourceId` is set)
+//     - MaLog              → action log (feature-logging)
+//     - MaWebhook          → outgoing webhooks subscriptions
+//     - MaWebhookDelivery  → delivery attempts
+//     - MaConfig           → key-value config (global / user / resource)
+//     - MaHistory          → record revisions
+//     - MaAiTask           → AI task queue + results
+//     - MaAiTaskEvent      → streaming events for AI tasks
+//     - MaCache            → SQL fallback cache (when Redis isn't configured)
+//
+// Why Better Auth tables live here too: Modern Admin remaps Better Auth's
+// logical names to its `ma_*` namespace via `modelName: 'ma_user'` (etc.)
+// in the auth-builder, so the *physical* shapes are part of Modern Admin's
+// contract. Keeping them in this fragment means the bundled CLI (`bunx
+// @modern-admin/create-modern-admin generate`) can patch a host
+// `schema.prisma` with everything required in one shot — admins don't
+// need to run `@better-auth/cli generate` separately. Should you upgrade
+// Better Auth and find that the upstream column set drifted, re-run
+// the generator and reconcile the diff.
+//
+// Naming: every table is prefixed with `ma_`. To use a different prefix,
+// edit the `@@map(...)` directives below. To put everything in a separate
+// Postgres schema, add `@@schema("admin")` (and enable `multiSchema` in
+// generator client). The Prisma model identifiers (MaLog, MaWebhook, …)
+// stay the same — runtime stores look them up by Prisma's default
+// camelCase delegate names (`prisma.maLog`, `prisma.maWebhook`, …) unless
+// you override `models.*` in `setupPrismaSystem(prisma, { models })`.
+//
+// All flexible-shape fields are `Json` for portability across Postgres,
+// MySQL, and SQLite. Validation runs at the application boundary via the
+// Zod schemas in `@modern-admin/core/system/schemas`.
+
+// ─── Better Auth ──────────────────────────────────────────────────────────
+//
+// Logical Better Auth tables remapped to physical `ma_*` names. Better
+// Auth's admin plugin contributes the `role`/`banned`/`banReason`/
+// `banExpires` columns on MaUser; the api-key plugin contributes
+// MaApiKey. Both are declared explicitly here so Prisma codegen produces
+// accurate types without `prisma db pull` after every Better Auth release.
+
+model MaUser {
+  id            String    @id @default(uuid())
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  /// Role id (= name); resolves to a row in `ma_role` for permissions lookup.
+  role          String?
+  banned        Boolean?  @default(false)
+  banReason     String?
+  banExpires    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sessions MaSession[]
+  accounts MaAccount[]
+  apiKeys  MaApiKey[]
+
+  @@map("ma_user")
+}
+
+model MaSession {
+  id             String   @id @default(uuid())
+  expiresAt      DateTime
+  token          String   @unique
+  ipAddress      String?
+  userAgent      String?
+  userId         String
+  /// Active impersonation source; admin plugin uses this to track
+  /// "log in as" sessions so audit logs can attribute the real actor.
+  impersonatedBy String?
+
+  user MaUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("ma_session")
+}
+
+model MaAccount {
+  id                    String    @id @default(uuid())
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  /// Hashed password for the email/password strategy. OAuth/passkey rows
+  /// leave this null — credentials are encoded in the provider tokens.
+  password              String?
+
+  user MaUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("ma_account")
+}
+
+model MaVerification {
+  id         String   @id @default(uuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("ma_verification")
+}
+
+/// Better Auth api-key plugin storage. `permissions` is a JSON object
+/// `{ resourceId: action[] }` consumed by `ModernAdmin.invoke()`'s
+/// api-key gate (see also `MaRole.permissions` for the role-based gate —
+/// both share the same matching helper).
+model MaApiKey {
+  id                  String    @id @default(uuid())
+  configId            String    @default("default")
+  name                String?
+  start               String?
+  prefix              String?
+  key                 String
+  referenceId         String
+  refillInterval      Int?
+  refillAmount        Int?
+  lastRefillAt        DateTime?
+  enabled             Boolean   @default(true)
+  rateLimitEnabled    Boolean   @default(false)
+  rateLimitTimeWindow Int?
+  rateLimitMax        Int?
+  requestCount        Int       @default(0)
+  remaining           Int?
+  lastRequest         DateTime?
+  expiresAt           DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  permissions         Json?
+  metadata            Json?
+
+  user MaUser @relation(fields: [referenceId], references: [id], onDelete: Cascade)
+
+  @@index([configId])
+  @@index([referenceId])
+  @@map("ma_apikey")
+}
+
+// ─── Modern Admin core ────────────────────────────────────────────────────
+
+/// Configurable role with a permissions matrix.
+///
+/// `permissions` shape: `Record<resourceId, action[]>`, where `'*'` is a
+/// wildcard for actions or for a resource key (matches every resource).
+/// The `id` doubles as the user-visible role name — there is no separate
+/// `name` column. The string in `<panel-user>.role` (e.g. Better Auth's
+/// `ma_user.role`) references this `id` so the auth provider can resolve
+/// the row and attach `permissions` onto the principal for
+/// `ModernAdmin.invoke()` to gate every action.
+///
+/// Renames are not supported (would orphan every panel admin holding the
+/// role); Prisma treats `@id` columns as immutable, so the storage layer
+/// enforces this for free. To "rename", clone under a new id and reassign.
+model MaRole {
+  /// Application code supplies this on insert (`'admin'`, `'editor'`, …)
+  /// — there is no `@default(...)` because it's a meaningful business id,
+  /// not a surrogate UUID.
+  id          String   @id
+  description String?
+  permissions Json     @default("{}")
+  /// Built-in roles are seeded on boot and cannot be deleted via the UI.
+  isBuiltin   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("ma_role")
+}
+
+model MaLog {
+  id         String   @id @default(uuid())
+  resourceId String
+  action     String
+  recordId   String?
+  recordIds  Json?
+  userId     String?
+  payload    Json?
+  result     Json?
+  /// Unix-ms timestamp captured at the after-hook.
+  at         BigInt
+  createdAt  DateTime @default(now())
+
+  @@index([resourceId, action])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("ma_log")
+}
+
+model MaWebhook {
+  id            String   @id @default(uuid())
+  name          String
+  url           String
+  /// JSON array of dotted event names. Validated by `webhookZ`.
+  events        Json
+  /// Optional resource/model scope. Null means all resources.
+  resourceId    String?
+  enabled       Boolean  @default(true)
+  secret        String?
+  /// JSON object of extra HTTP headers.
+  headers       Json     @default("{}")
+  /// List-page-style filters matched against the mutation snapshot.
+  filters       Json     @default("{}")
+  /// Optional JSON array of field paths to include in outgoing payload.
+  payloadFields Json     @default("[]")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  deliveries MaWebhookDelivery[]
+
+  @@map("ma_webhook")
+}
+
+model MaWebhookDelivery {
+  id             String    @id @default(uuid())
+  webhookId      String
+  event          String
+  payload        Json
+  status         String
+  responseStatus Int?
+  responseBody   String?
+  error          String?
+  attempt        Int       @default(1)
+  createdAt      DateTime  @default(now())
+  deliveredAt    DateTime?
+
+  webhook MaWebhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([webhookId, createdAt])
+  @@map("ma_webhook_delivery")
+}
+
+model MaConfig {
+  /// Surrogate key. Application code MUST generate this with `uuidv7()`
+  /// from `@modern-admin/core` before insert (Prisma's `@default(uuid())`
+  /// generates v4, which the project policy disallows).
+  id        String   @id
+  scope     String
+  /// Empty string for global, userId for user, resourceId for resource.
+  scopeId   String   @default("")
+  key       String
+  value     Json
+  updatedAt DateTime @updatedAt
+
+  @@unique([scope, scopeId, key])
+  @@map("ma_config")
+}
+
+model MaHistory {
+  id             String   @id @default(uuid())
+  resourceId     String
+  recordId       String
+  op             String
+  userId         String?
+  snapshot       Json
+  /// Snapshot of the record _before_ this revision was applied. Used by
+  /// the history controller's revert endpoint to undo the change.
+  snapshotBefore Json?
+  createdAt      DateTime @default(now())
+
+  @@index([resourceId, recordId, createdAt])
+  @@map("ma_history")
+}
+
+model MaAiTask {
+  id         String    @id @default(uuid())
+  kind       String
+  resourceId String?
+  recordId   String?
+  userId     String?
+  status     String
+  input      Json      @default("{}")
+  output     Json?
+  error      String?
+  /// 0..100 or null for indeterminate progress.
+  progress   Int?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  startedAt  DateTime?
+  finishedAt DateTime?
+
+  events MaAiTaskEvent[]
+
+  @@index([kind, status])
+  @@index([userId])
+  @@index([resourceId, recordId])
+  @@map("ma_ai_task")
+}
+
+model MaAiTaskEvent {
+  id        String   @id @default(uuid())
+  taskId    String
+  type      String
+  data      Json     @default("{}")
+  createdAt DateTime @default(now())
+
+  task MaAiTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, createdAt])
+  @@map("ma_ai_task_event")
+}
+
+model MaCache {
+  key       String    @id
+  value     Json
+  /// JSON array of tag strings.
+  tags      Json      @default("[]")
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([expiresAt])
+  @@map("ma_cache")
+}

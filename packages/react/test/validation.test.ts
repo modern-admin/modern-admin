@@ -139,6 +139,28 @@ describe('buildPropertySchema', () => {
     expect(s.safeParse([]).success).toBe(true)
     expect(s.safeParse(null).success).toBe(true)
   })
+
+  test('single file accepts a storage key string', () => {
+    const s = buildPropertySchema(prop({ type: 'file', label: 'Thumbnail' }), t)
+    expect(s.safeParse('products/thumb/file.png').success).toBe(true)
+    expect(s.safeParse(null).success).toBe(true)
+  })
+
+  test('multi-file accepts an array of storage keys', () => {
+    const s = buildPropertySchema(prop({ type: 'file', isArray: true, label: 'Gallery' }), t)
+    expect(s.safeParse(['products/gallery/1.png', 'products/gallery/2.png']).success).toBe(true)
+    expect(s.safeParse([]).success).toBe(true)
+  })
+
+  test('required multi-file rejects an empty array', () => {
+    const s = buildPropertySchema(
+      prop({ type: 'file', isArray: true, isRequired: true, label: 'Gallery' }),
+      t,
+    )
+    const r = s.safeParse([]) as { success: boolean; error?: { issues: { message: string }[] } }
+    expect(r.success).toBe(false)
+    expect(message(r)).toContain('validation:emptySelection')
+  })
 })
 
 describe('buildValidationSchema', () => {

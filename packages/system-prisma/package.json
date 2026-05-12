@@ -1,0 +1,34 @@
+{
+  "name": "@modern-admin/system-prisma",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./schema": "./prisma/modern-admin.prisma"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@modern-admin/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "@prisma/client": ">=7"
+  },
+  "peerDependenciesMeta": {
+    "@prisma/client": { "optional": true }
+  },
+  "devDependencies": {
+    "@modern-admin/tsconfig": "workspace:*",
+    "@types/bun": "^1.3.13",
+    "typescript": "^6.0.3"
+  }
+}

@@ -5,14 +5,16 @@
 
 export interface DrizzleColumn {
   name: string
-  /** drizzle's runtime data tag — 'string', 'number', 'boolean', 'date', 'json', 'bigint', 'buffer'. */
+  /** drizzle's runtime data tag — 'string', 'number', 'boolean', 'date', 'json', 'bigint', 'buffer', 'array'. */
   dataType: string
-  /** specific column kind such as 'PgUUID', 'PgEnum', 'PgText'. Optional. */
+  /** specific column kind such as 'PgUUID', 'PgEnum', 'PgText', 'PgArray'. Optional. */
   columnType?: string
   primary?: boolean
   notNull?: boolean
   hasDefault?: boolean
   enumValues?: readonly string[]
+  /** For PgArray columns — points to the inner element column. */
+  baseColumn?: DrizzleColumn
 }
 
 export type DrizzleTable = Record<string, DrizzleColumn> & {
@@ -23,6 +25,7 @@ export type DrizzleTable = Record<string, DrizzleColumn> & {
 export interface DrizzleQueryBuilder<T> {
   where(condition: unknown): DrizzleQueryBuilder<T>
   orderBy(...columns: unknown[]): DrizzleQueryBuilder<T>
+  groupBy(...columns: unknown[]): DrizzleQueryBuilder<T>
   limit(n: number): DrizzleQueryBuilder<T>
   offset(n: number): DrizzleQueryBuilder<T>
   // The library returns a thenable at the end of the chain.
@@ -64,6 +67,8 @@ export interface DrizzleSchema {
   [tableName: string]: DrizzleTable
 }
 
+export type DrizzleDialect = 'pg' | 'mysql' | 'sqlite'
+
 export interface DrizzleResourceConfig {
   /** Override the resource id (defaults to drizzle's table name). */
   id?: string
@@ -74,6 +79,12 @@ export interface DrizzleDatabaseConfig {
   client: DrizzleClientLike
   /** drizzle schema (object exporting tables). */
   schema: DrizzleSchema
+  /**
+   * Database dialect. Required to build dialect-specific SQL for
+   * `aggregateTimeSeries` (DATE_TRUNC vs DATE_FORMAT vs strftime).
+   * Defaults to `'pg'` when omitted.
+   */
+  dialect?: DrizzleDialect
   /** Optional per-table overrides. */
   resources?: Record<string, DrizzleResourceConfig>
 }
