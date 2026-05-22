@@ -77,10 +77,11 @@ jobs:
         run: bun run typecheck
 
       - name: Build all publishable packages
-        # The release script also builds each package via publish-package.ts,
-        # but doing it upfront catches build errors fast (before touching
-        # the registry).
-        run: bun run build
+        # Build only the packages that will actually be published (packages/*).
+        # Apps are private and not published; docs requires a Next.js build
+        # that is not needed here. Using the path filter avoids the bun
+        # workspace glob `!apps/docs` exclusion not being honored.
+        run: bun run --filter './packages/*' build
 
       # Path A: stage changeset bumps in a PR if any pending changesets exist.
       # Path B: publish if no pending changesets (PR was just merged).
