@@ -39,6 +39,7 @@ export type BuiltInActionName =
   | 'delete'
   | 'bulkDelete'
   | 'search'
+  | 'values'
 
 export interface ActionContext {
   /** Owning ModernAdmin instance — useful for cross-resource lookups. */

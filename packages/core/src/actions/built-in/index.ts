@@ -5,6 +5,7 @@ import { editAction } from './edit.js'
 import { deleteAction } from './delete.js'
 import { bulkDeleteAction } from './bulk-delete.js'
 import { searchAction } from './search.js'
+import { valuesAction } from './values.js'
 
 import type { Action, ActionResponse, BuiltInActionName } from '../action.js'
 
@@ -20,6 +21,7 @@ export const BUILT_IN_ACTIONS: Readonly<
   delete: deleteAction as unknown as Action<ActionResponse>,
   bulkDelete: bulkDeleteAction as unknown as Action<ActionResponse>,
   search: searchAction as unknown as Action<ActionResponse>,
+  values: valuesAction as unknown as Action<ActionResponse>,
 })
 
 export {
@@ -30,4 +32,5 @@ export {
   deleteAction,
   bulkDeleteAction,
   searchAction,
+  valuesAction,
 }

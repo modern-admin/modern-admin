@@ -70,7 +70,7 @@ export function ReferenceCombobox({
   value,
   onChange,
   disabled,
-  placeholder = 'Select…',
+  placeholder,
   className,
 }: {
   referenceResourceId: string
@@ -86,6 +86,7 @@ export function ReferenceCombobox({
   const debounced = useDebounced(query, 250)
   const client = useAdminClient()
   const { t } = useI18n()
+  const resolvedPlaceholder = placeholder ?? t('common:select')
 
   // The currently-selected record (loaded once for the trigger label).
   const selected = useQuery({
@@ -120,7 +121,7 @@ export function ReferenceCombobox({
             className={cn('truncate', !selectedLabel && 'text-muted-foreground')}
             title={selectedLabel || undefined}
           >
-            {selectedLabel || placeholder}
+            {selectedLabel || resolvedPlaceholder}
           </span>
           <ChevronsUpDown className="size-4 shrink-0 opacity-50" />
         </Button>
@@ -206,7 +207,7 @@ export function ReferenceMultiCombobox({
   value,
   onChange,
   disabled,
-  placeholder = 'Select…',
+  placeholder,
 }: {
   referenceResourceId: string
   value: ReadonlyArray<string | number> | null | undefined
@@ -219,6 +220,7 @@ export function ReferenceMultiCombobox({
   const debounced = useDebounced(query, 250)
   const client = useAdminClient()
   const { t } = useI18n()
+  const resolvedPlaceholder = placeholder ?? t('common:select')
   const ids = React.useMemo(() => (value ?? []).map(String), [value])
 
   // Resolve labels per-id so adding/removing one item only fetches the new
@@ -262,7 +264,7 @@ export function ReferenceMultiCombobox({
               {s.title}
               <button
                 type="button"
-                aria-label={`Remove ${s.title}`}
+                aria-label={t('common:removeItem', { title: s.title })}
                 disabled={disabled}
                 onClick={() => remove(s.id)}
                 className="rounded-sm opacity-60 hover:opacity-100"
@@ -283,7 +285,7 @@ export function ReferenceMultiCombobox({
             className="w-full justify-between font-normal"
           >
             <span className="truncate text-muted-foreground">
-              {ids.length > 0 ? `${ids.length} selected — add more` : placeholder}
+              {ids.length > 0 ? t('common:nSelectedAddMore', { count: ids.length }) : resolvedPlaceholder}
             </span>
             <ChevronsUpDown className="size-4 shrink-0 opacity-50" />
           </Button>

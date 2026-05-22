@@ -25,9 +25,12 @@ import {
 import { ResourceListPage } from './pages/list-page.js'
 import { ResourceShowPage } from './pages/show-page.js'
 import { ResourceEditPage } from './pages/edit-page.js'
+import { ResourceWizardCreatePage } from './pages/wizard-create-page.js'
 import { HomePage } from './pages/home-page.js'
 import { SettingsPage } from './pages/settings-page.js'
 import { AuditLogPage } from './pages/audit-log-page.js'
+import { useI18n } from './i18n.js'
+import type { WizardStep } from './components/wizard-form.js'
 
 // ─── Route tree ───────────────────────────────────────────────────────────────
 
@@ -74,11 +77,25 @@ const resourceListRoute = createRoute({
   },
 })
 
+// Products new-record route uses a 3-step WizardForm as a showcase.
+// Step 3 has no `properties` list — it becomes the catch-all for every
+// property not claimed by steps 1 or 2 (thumbnail, accentColor, gallery, tags).
+function ProductsNewPage(): React.ReactElement {
+  const { t } = useI18n()
+  const steps: WizardStep[] = [
+    { label: t('wizard:products.step1'), properties: ['name', 'sku', 'inStock'] },
+    { label: t('wizard:products.step2'), properties: ['price', 'currencyCode', 'quantity'] },
+    { label: t('wizard:products.step3') }, // catch-all: thumbnail, accentColor, gallery, tags
+  ]
+  return <ResourceWizardCreatePage resourceId="products" steps={steps} />
+}
+
 const resourceNewRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/resources/$resourceId/new',
   component: function ResourceNewRouteComponent() {
     const { resourceId } = resourceNewRoute.useParams()
+    if (resourceId === 'products') return <ProductsNewPage />
     return <ResourceEditPage resourceId={resourceId} />
   },
 })

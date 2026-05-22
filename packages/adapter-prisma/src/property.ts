@@ -63,6 +63,14 @@ export class PrismaProperty extends BaseProperty {
     return this.field.relationFromFields ?? []
   }
 
+  override isVisible(): boolean {
+    // Relation fields (kind: 'object') duplicate data already exposed by
+    // the scalar FK column — hide them by default so list/show/filter
+    // don't render both "Author" and "authorId" simultaneously.
+    if (this.field.kind === 'object') return false
+    return super.isVisible()
+  }
+
   override isEditable(): boolean {
     if (this.field.kind === 'object') return false
     if (this.field.isReadOnly && this.reference() === null) return false

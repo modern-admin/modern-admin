@@ -13,10 +13,10 @@ import { generateText, stepCountIs } from 'ai'
 import { createOpenRouter } from '@openrouter/ai-sdk-provider'
 import type { Queue } from 'bullmq'
 import {
-  dashboardBlobZ,
-  EMPTY_DASHBOARD,
   type AiTask,
   type CurrentAdmin,
+  dashboardBlobZ,
+  EMPTY_DASHBOARD,
   type IAiTaskStore,
   type IConfigStore,
   type IDashboardStore,
@@ -63,7 +63,8 @@ export interface AiAssistantChatHistoryItem {
   updatedAt: string
 }
 
-const SETTINGS_KEY = 'modern-admin.ai-assistant'
+export const AI_ASSISTANT_SETTINGS_KEY = 'modern-admin.ai-assistant'
+const SETTINGS_KEY = AI_ASSISTANT_SETTINGS_KEY
 
 const isTruthyEnv = (value: string | undefined): boolean =>
   value !== undefined && ['1', 'true', 'yes', 'on', 'debug'].includes(value.toLowerCase())
@@ -190,7 +191,7 @@ export class AiAssistantService {
     }
     const tasks = await this.requireTaskStore().list({
       kind: 'assistant-chat',
-      ...(userId ? { userId } : {}),
+      ...(userId ? {userId} : {}),
       limit: 100,
     })
     const grouped = new Map<string, AiTask>()
@@ -305,7 +306,7 @@ export class AiAssistantService {
 
     try {
       const result = await generateText({
-        model: openrouter(settings.model ?? 'openai/gpt-4o-mini'),
+        model: openrouter(settings.model ?? 'google/gemini-3.1-flash-lite-preview'),
         system: this.buildSystemPrompt(settings, built.descriptors, built.sqlResources, data.clientContext),
         messages: data.messages.map((message) => ({
           role: message.role,
@@ -387,7 +388,7 @@ export class AiAssistantService {
     const defaults: AiAssistantStoredSettings = {
       enabled: this.options.aiAssistant?.enabled ?? true,
       provider: 'openrouter',
-      model: this.options.aiAssistant?.defaultModel ?? 'openai/gpt-4o-mini',
+      model: this.options.aiAssistant?.defaultModel ?? 'google/gemini-3.1-flash-lite-preview',
       apiKey: envApiKey,
       systemPrompt: this.options.aiAssistant?.systemPrompt ?? '',
     }
@@ -419,7 +420,7 @@ export class AiAssistantService {
       enabled: settings.enabled ?? true,
       configured: apiKey.length > 0,
       provider: 'openrouter',
-      model: settings.model ?? this.options.aiAssistant?.defaultModel ?? 'openai/gpt-4o-mini',
+      model: settings.model ?? this.options.aiAssistant?.defaultModel ?? 'google/gemini-3.1-flash-lite-preview',
       maskedApiKey: apiKey ? this.maskApiKey(apiKey) : null,
       systemPrompt: settings.systemPrompt ?? '',
       canManage: this.canManage(currentAdmin),
@@ -577,7 +578,7 @@ const titleFromTask = (task: AiTask): string => {
 }
 
 const translate = (locale: string | undefined, key: string, params?: Record<string, unknown>): string => {
-  const runtime = new I18n({ locales: builtinLocales, defaultLocale: locale ?? 'en', fallbackLocale: 'en' })
+  const runtime = new I18n({locales: builtinLocales, defaultLocale: locale ?? 'en', fallbackLocale: 'en'})
   return runtime.t(key, params)
 }
 
@@ -599,7 +600,7 @@ const summarizeToolResults = (
 
   const count = output.rowCount ?? output.total ?? rows.length
   const preview = rows.slice(0, 10).map((row, index) => `${index + 1}. ${formatToolRow(row)}`)
-  return [translate(locale, 'aiAssistant:fallback.rowsFound', { count }), ...preview].join('\n')
+  return [translate(locale, 'aiAssistant:fallback.rowsFound', {count}), ...preview].join('\n')
 }
 
 const formatToolRow = (row: unknown): string => {

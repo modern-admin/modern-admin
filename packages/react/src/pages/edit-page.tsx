@@ -12,7 +12,6 @@ import {
   Button,
   Card,
   CardContent,
-  CardFooter,
   CardHeader,
   CardTitle,
   Field,
@@ -27,7 +26,7 @@ import {
   TooltipTrigger,
   getModKeyLabel,
 } from '@modern-admin/ui'
-import { AlertCircle, Eye, Plus, Save, Trash2, X } from 'lucide-react'
+import { AlertCircle, Eye, Plus, Save, Sparkles, Trash2, X } from 'lucide-react'
 import { useCreateRecord, useDeleteRecord, useRecord, useResource, useUpdateRecord } from '../hooks.js'
 import { parseApiError } from '../client.js'
 import { PropertyEditor } from '../property-renderer.js'
@@ -42,6 +41,7 @@ import { evaluateShowWhen } from '../show-when.js'
 import type { PropertyJSON } from '../types.js'
 import { useDialogs } from '../dialogs.js'
 import { RevisionsButton } from '../components/revisions-button.js'
+import { AiFillDialog } from '../components/ai-fill-dialog.js'
 import { visibleRecordProperties } from '../relations.js'
 
 export interface ResourceEditPageProps {
@@ -105,13 +105,81 @@ export function ResourceEditPage({
   // don't overwrite user edits after the initial load.
   const hydratedRecordIdRef = React.useRef<string | undefined>(undefined)
 
+  const isNew = !recordId
+
+  // localStorage key for the per-resource new-record draft. We persist the
+  // form snapshot here whenever the user has typed anything but not yet
+  // submitted, so that closing the tab / navigating away doesn't lose work.
+  const draftKey = isNew ? `modern-admin:draft:${resourceId}` : null
+
+  // Once-per-resource init flag for the new-record form. Gates the whole
+  // initialisation block — without this, every dep change in the hydration
+  // effect (e.g. a background `useResource` refetch bumping the `defaults`
+  // reference) would re-run `form.reset(defaults)` and wipe the user's
+  // in-progress input (and any draft we just restored).
+  const newFormInitForRef = React.useRef<string | undefined>(undefined)
+
+  // When we programmatically reset the form (draft restore / undo), we don't
+  // want that synthetic change to trigger the persistence watcher and re-save
+  // a draft that we just decided not to keep.
+  const skipNextPersistRef = React.useRef(false)
+
   // Hydrate when the existing record arrives (edit mode) or after the resource
   // schema settles (new mode).
   React.useEffect(() => {
     if (!recordId) {
-      // New-record form: reset whenever defaults change (resource schema loaded).
+      // New-record form: initialise exactly once per resource. Second and
+      // later runs (triggered by background refetches changing `editable` /
+      // `defaults` references) must NOT touch the form — `form.reset(...)`
+      // would wipe the user's in-progress input.
       hydratedRecordIdRef.current = undefined
-      form.reset(defaults)
+      if (newFormInitForRef.current === resourceId) return
+      // Defer until the schema has loaded — otherwise we'd "initialise"
+      // against an empty defaults map and then refuse to ever re-init.
+      if (editable.length === 0) return
+      newFormInitForRef.current = resourceId
+
+      // Attempt to restore a saved draft. If we find one, reset to the
+      // merged snapshot and surface a bottom-center toast with an Undo
+      // action. If not, fall back to a single reset to defaults.
+      let draft: FormValues | null = null
+      if (draftKey && typeof window !== 'undefined') {
+        try {
+          const stored = window.localStorage.getItem(draftKey)
+          if (stored) draft = JSON.parse(stored) as FormValues
+        } catch {
+          /* corrupted JSON — ignore */
+        }
+      }
+
+      if (draft && typeof draft === 'object') {
+        const merged: FormValues = { ...defaults }
+        for (const p of editable) {
+          if (Object.prototype.hasOwnProperty.call(draft, p.path)) {
+            merged[p.path] = (draft as FormValues)[p.path]
+          }
+        }
+        skipNextPersistRef.current = true
+        form.reset(merged)
+        notify.raw(t('common:draftRestored'), {
+          position: 'bottom-center',
+          duration: 8000,
+          action: {
+            label: t('common:undoDraftRestore'),
+            onClick: () => {
+              skipNextPersistRef.current = true
+              form.reset(defaults)
+              try {
+                if (draftKey) window.localStorage.removeItem(draftKey)
+              } catch {
+                /* ignore */
+              }
+            },
+          },
+        })
+      } else {
+        form.reset(defaults)
+      }
       return
     }
     // Wait until both the resource schema and the record data are ready.
@@ -121,6 +189,11 @@ export function ResourceEditPage({
     // overwriting in-progress user edits.
     if (hydratedRecordIdRef.current === recordId) return
     hydratedRecordIdRef.current = recordId
+    // Switching into edit mode invalidates any prior new-form init — so the
+    // next visit to `/new` (potentially in a reused component instance)
+    // restores the draft / resets to defaults instead of keeping the edit
+    // record's values.
+    newFormInitForRef.current = undefined
 
     const params = existing.data.record.params
     const merged: FormValues = { ...defaults }
@@ -131,11 +204,108 @@ export function ResourceEditPage({
       else merged[p.path] = v
     }
     form.reset(merged)
-  }, [recordId, existing.data, editable, defaults, form])
+  }, [recordId, existing.data, editable, defaults, form, draftKey, resourceId, notify, t])
+
+  // Persist the form snapshot to localStorage on every change in new mode.
+  // We only write when at least one field deviates from defaults; when the
+  // form is back to pristine state we delete the key so the user isn't
+  // greeted with an "empty draft" toast on reopen.
+  React.useEffect(() => {
+    if (!isNew || !draftKey || editable.length === 0 || typeof window === 'undefined') return
+    const subscription = form.watch((values) => {
+      if (skipNextPersistRef.current) {
+        skipNextPersistRef.current = false
+        return
+      }
+      let isDirty = false
+      const sanitized: FormValues = {}
+      for (const p of editable) {
+        const v = (values as FormValues)[p.path]
+        // Skip non-serializable values (File objects from file inputs).
+        if (v instanceof File) continue
+        if (Array.isArray(v) && v.some((x) => x instanceof File)) continue
+        sanitized[p.path] = v
+        if (!valuesEqual(v, defaults[p.path])) isDirty = true
+      }
+      try {
+        if (isDirty) {
+          window.localStorage.setItem(draftKey, JSON.stringify(sanitized))
+        } else {
+          window.localStorage.removeItem(draftKey)
+        }
+      } catch {
+        /* quota / disabled storage — ignore */
+      }
+    })
+    return () => subscription.unsubscribe()
+  }, [isNew, draftKey, editable, defaults, form])
+
+  const clearDraft = React.useCallback((): void => {
+    // After a successful submit we navigate to the show page, but the
+    // component might be reused if the user clicks "back" or follows a
+    // Create link again. Clearing the init flag forces the next /new visit
+    // to fall back to defaults instead of retaining the just-submitted
+    // values.
+    newFormInitForRef.current = undefined
+    if (!draftKey || typeof window === 'undefined') return
+    try {
+      window.localStorage.removeItem(draftKey)
+    } catch {
+      /* ignore */
+    }
+  }, [draftKey])
 
   const [submitError, setSubmitError] = React.useState<string | null>(null)
+  const [aiFillOpen, setAiFillOpen] = React.useState(false)
 
-  const isNew = !recordId
+  // The `aiFill` feature plugin (packages/feature-ai-fill) registers a
+  // resource-scoped action whose `custom.aiFill === true` flag tells us
+  // the resource opts in. Absent the action, the button is hidden.
+  // Detect the aiFill plugin by the `custom.aiFill === true` marker, not by
+  // action name, so renaming the action in the future can't silently break this.
+  const aiFillEnabled = React.useMemo(
+    () =>
+      Boolean(
+        resource?.actions.find(
+          (a) => (a.custom as { aiFill?: boolean } | undefined)?.aiFill === true,
+        ),
+      ),
+    [resource],
+  )
+
+  const applyAiFillValues = React.useCallback(
+    (values: Record<string, unknown>): void => {
+      // Snapshot the current values of the fields that will be overwritten so
+      // the user can undo with a single toast action.
+      const known = new Set(editable.map((p) => p.path))
+      const snapshot: Record<string, unknown> = {}
+      const current = form.getValues()
+      for (const path of Object.keys(values)) {
+        if (!known.has(path)) continue
+        snapshot[path] = current[path]
+      }
+
+      for (const [path, value] of Object.entries(values)) {
+        if (!known.has(path)) continue
+        form.setValue(path, value as never, { shouldDirty: true, shouldValidate: false })
+      }
+
+      // Offer a quick undo via a bottom-center toast — same pattern as draft restore.
+      notify.raw(t('aiFill:applied'), {
+        position: 'bottom-center',
+        duration: 8000,
+        action: {
+          label: t('common:undoDraftRestore'),
+          onClick: () => {
+            for (const [path, prev] of Object.entries(snapshot)) {
+              form.setValue(path, prev as never, { shouldDirty: true, shouldValidate: false })
+            }
+          },
+        },
+      })
+    },
+    [editable, form, notify, t],
+  )
 
   const onSubmit: SubmitHandler<FormValues> = async (values) => {
     setSubmitError(null)
@@ -156,6 +326,9 @@ export function ResourceEditPage({
         notify.error({ key: 'toast:validationFailed' })
         return
       }
+      // Successful submit — drop the saved draft so we don't restore it on
+      // the next visit to the new-form route.
+      if (isNew) clearDraft()
       notify.success({ key: isNew ? 'toast:created' : 'toast:saved' })
       navigate({ name: 'show', resourceId, recordId: String(result.record.id) })
     } catch (err) {
@@ -211,7 +384,7 @@ export function ResourceEditPage({
           ? t('errors:forbidden')
           : t('errors:server')
     return (
-      <div className="space-y-4">
+      <div className="flex min-h-full flex-col gap-4">
         <PageBreadcrumbs
           items={[
             homeCrumb(t('common:home')),
@@ -262,119 +435,154 @@ export function ResourceEditPage({
   ]
 
   return (
-    <div className="space-y-4">
+    <div className="flex min-h-full flex-col gap-4">
       <PageBreadcrumbs items={crumbs} />
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between gap-3">
-        <CardTitle className="truncate">
-          {isNew ? `New ${resource.name}` : `Edit ${resource.name} #${recordId}`}
-        </CardTitle>
-        {!isNew && (
+      <Card className="flex-1">
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <CardTitle className="truncate">
+            {isNew
+              ? t('common:newRecord', { name: resource.name })
+              : t('common:editRecord', { name: resource.name, id: recordId ?? '' })}
+          </CardTitle>
           <div className="flex shrink-0 gap-2">
-            <RevisionsButton resourceId={resourceId} recordId={recordId!} />
-            <Link to={{ name: 'show', resourceId, recordId: recordId! }}>
-              <Button variant="outline" size="sm">
-                <Eye className="size-4" />
-                {t('common:show')}
-              </Button>
-            </Link>
-            <Button
-              variant="destructive"
-              size="sm"
-              disabled={remove.isPending || form.formState.isSubmitting || isHydrating}
-              onClick={() => void handleDelete()}
-            >
-              <Trash2 className="size-4" />
-              {t('common:delete')}
-            </Button>
-          </div>
-        )}
-      </CardHeader>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit, onInvalid)}>
-          <CardContent className="gap-4 [column-fill:_balance] md:columns-2">
-            {editable.map((property) => (
-              <ConditionalField
-                key={property.path}
-                control={form.control}
-                property={property}
+            {aiFillEnabled && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={form.formState.isSubmitting || isHydrating}
+                onClick={() => setAiFillOpen(true)}
               >
-                <FormField
+                <Sparkles className="size-4" />
+                <span className="hidden sm:inline">{t('aiFill:button')}</span>
+              </Button>
+            )}
+            {!isNew && (
+              <>
+                <RevisionsButton resourceId={resourceId} recordId={recordId!} />
+                <Link to={{ name: 'show', resourceId, recordId: recordId! }}>
+                  <Button variant="outline" size="sm">
+                    <Eye className="size-4" />
+                    {t('common:show')}
+                  </Button>
+                </Link>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={remove.isPending || form.formState.isSubmitting || isHydrating}
+                  onClick={() => void handleDelete()}
+                >
+                  <Trash2 className="size-4" />
+                  {t('common:delete')}
+                </Button>
+              </>
+            )}
+          </div>
+        </CardHeader>
+        <Form {...form}>
+          <form id="edit-record-form" onSubmit={form.handleSubmit(onSubmit, onInvalid)}>
+            <CardContent className="gap-4 pb-6 [column-fill:_balance] md:columns-2">
+              {editable.map((property) => (
+                <ConditionalField
+                  key={property.path}
                   control={form.control}
-                  name={property.path}
-                  render={({ field, fieldState }) => (
-                    <Field
-                      data-invalid={fieldState.error ? true : undefined}
-                      className="mb-8 break-inside-avoid"
-                    >
-                      <FieldLabel htmlFor={field.name}>
-                        {property.label}
-                        {property.description ? (
-                          <InfoTooltip
-                            content={property.description}
-                            ariaLabel={property.description}
-                          />
-                        ) : null}
-                        {property.isRequired && (
-                          <span className="ml-1 text-destructive">*</span>
+                  property={property}
+                >
+                  <FormField
+                    control={form.control}
+                    name={property.path}
+                    render={({ field, fieldState }) => (
+                      <Field
+                        data-invalid={fieldState.error ? true : undefined}
+                        className="mb-8 break-inside-avoid"
+                      >
+                        <FieldLabel htmlFor={field.name}>
+                          {property.label}
+                          {property.description ? (
+                            <InfoTooltip
+                              content={property.description}
+                              ariaLabel={property.description}
+                            />
+                          ) : null}
+                          {property.isRequired && (
+                            <span className="ml-1 text-destructive">*</span>
+                          )}
+                        </FieldLabel>
+                        <PropertyEditor
+                          property={property}
+                          value={field.value}
+                          onChange={field.onChange}
+                          disabled={form.formState.isSubmitting}
+                          resourceId={resourceId}
+                        />
+                        {fieldState.error?.message && (
+                          <FieldError>{fieldState.error.message}</FieldError>
                         )}
-                      </FieldLabel>
-                      <PropertyEditor
-                        property={property}
-                        value={field.value}
-                        onChange={field.onChange}
-                        disabled={form.formState.isSubmitting}
-                        resourceId={resourceId}
-                      />
-                      {fieldState.error?.message && (
-                        <FieldError>{fieldState.error.message}</FieldError>
-                      )}
-                    </Field>
-                  )}
-                />
-              </ConditionalField>
-            ))}
-          </CardContent>
-          <CardFooter className="justify-between">
+                      </Field>
+                    )}
+                  />
+                </ConditionalField>
+              ))}
+            </CardContent>
+          </form>
+        </Form>
+      </Card>
+      {/* Sticky action bar — sibling of Card, same pattern as the list-page
+          paginator. Pinned to the viewport bottom while the user scrolls.
+          `form="edit-record-form"` ties the submit button to the <form> above
+          even though it's not a descendant of that element. */}
+      {aiFillOpen && (
+        <AiFillDialog
+          resourceId={resourceId}
+          onClose={() => setAiFillOpen(false)}
+          onFilled={applyAiFillValues}
+        />
+      )}
+      <div className="sticky bottom-0 z-20 -mx-4 border-t border-border bg-card px-4 py-3 pr-16 sm:-mx-6 sm:px-6 sm:pr-16">
+        <div className="flex items-center justify-between">
+          <div>
             {submitError && (
               <span className="text-sm text-destructive">{submitError}</span>
             )}
-            <div className="ml-auto flex gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() =>
-                  navigate(
-                    isNew
-                      ? { name: 'list', resourceId }
-                      : { name: 'show', resourceId, recordId: recordId! },
-                  )
-                }
-              >
-                <X className="size-4" />
-                {t('common:cancel')}
-              </Button>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button type="submit" disabled={form.formState.isSubmitting || isHydrating}>
-                    {isNew ? <Plus className="size-4" /> : <Save className="size-4" />}
-                    {isNew ? t('common:create') : t('common:save')}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent className="flex items-center gap-1.5">
-                  <span>{isNew ? t('common:create') : t('common:save')}</span>
-                  <span className="inline-flex items-center gap-0.5">
-                    <Kbd>{modLabel}</Kbd>
-                    <span className="text-muted-foreground">+</span>
-                    <Kbd>S</Kbd>
-                  </span>
-                </TooltipContent>
-              </Tooltip>
-            </div>
-          </CardFooter>
-        </form>
-      </Form>
-    </Card>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() =>
+                navigate(
+                  isNew
+                    ? { name: 'list', resourceId }
+                    : { name: 'show', resourceId, recordId: recordId! },
+                )
+              }
+            >
+              <X className="size-4" />
+              {t('common:cancel')}
+            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="submit"
+                  form="edit-record-form"
+                  disabled={form.formState.isSubmitting || isHydrating}
+                >
+                  {isNew ? <Plus className="size-4" /> : <Save className="size-4" />}
+                  {isNew ? t('common:create') : t('common:save')}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent className="flex items-center gap-1.5">
+                <span>{isNew ? t('common:create') : t('common:save')}</span>
+                <span className="inline-flex items-center gap-0.5">
+                  <Kbd>{modLabel}</Kbd>
+                  <span className="text-muted-foreground">+</span>
+                  <Kbd>S</Kbd>
+                </span>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
@@ -407,4 +615,25 @@ function ConditionalField({
   const visible = evaluateShowWhen(rule, { [rule.field]: watched })
   if (!visible) return null
   return <>{children}</>
+}
+
+// Cheap structural equality for form values. Empty-ish primitives are treated
+// as equal (`''` ≈ `null` ≈ `undefined`) so the persistence watcher does not
+// store a draft for an untouched form whose defaults happen to be `''` vs
+// `undefined`. Falls back to JSON stringify for objects/arrays.
+function valuesEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true
+  const aEmpty = a == null || a === ''
+  const bEmpty = b == null || b === ''
+  if (aEmpty && bEmpty) return true
+  if (aEmpty || bEmpty) return false
+  if (typeof a !== typeof b) return false
+  if (typeof a === 'object') {
+    try {
+      return JSON.stringify(a) === JSON.stringify(b)
+    } catch {
+      return false
+    }
+  }
+  return false
 }

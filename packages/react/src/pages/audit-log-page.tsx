@@ -6,6 +6,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  DateRangeInput,
   DiffView,
   Input,
   Select,
@@ -16,11 +17,11 @@ import {
   Skeleton,
   cn,
 } from '@modern-admin/ui'
-import { ChevronDown, ChevronUp, ExternalLink, FilePlus, FileText, Key, KeyRound, LogIn, Pencil, Trash2 } from 'lucide-react'
-import { useAuditLog, useRecord, useRecordHistory, useResource, useResources } from '../hooks.js'
+import { ChevronDown, ChevronUp, ExternalLink, FilePlus, FileText, Key, KeyRound, Loader2, LogIn, Pencil, Trash2 } from 'lucide-react'
+import { useInfiniteAuditLog, useRecord, useRecordHistory, useResource, useResources } from '../hooks.js'
 import { useI18n } from '../i18n.js'
 import { Link } from '../router.js'
-import { useUserDirectory, userLabelOf } from '../user-directory.js'
+import { USERS_RESOURCE_ID, useUserDirectory, userLabelOf } from '../user-directory.js'
 import type {
   AuditLogEntry,
   AuditLogQuery,
@@ -135,18 +136,24 @@ const initialsOf = (label: string): string => {
   return (parts[0]![0]! + parts[1]![0]!).toUpperCase()
 }
 
+const PAGE_SIZE = 25
+
 export function AuditLogPage(): React.ReactElement {
   const { t, locale } = useI18n()
   const resources = useResources()
-  const [query, setQuery] = React.useState<AuditLogQuery>({ limit: 50 })
-  const log = useAuditLog(query)
+  const [filters, setFilters] = React.useState<Omit<AuditLogQuery, 'before' | 'limit' | 'offset'>>({})
 
-  const events = log.data?.events ?? []
-  const userIds = React.useMemo(
+  const log = useInfiniteAuditLog(filters, PAGE_SIZE)
+
+  // Flatten all pages into one list, trimming the sentinel "+1" entry from each page
+  const events = React.useMemo(
     () =>
-      Array.from(
-        new Set(events.map((e) => e.userId).filter((v): v is string => !!v)),
-      ),
+      (log.data?.pages ?? []).flatMap((page) => page.events.slice(0, PAGE_SIZE)),
+    [log.data],
+  )
+
+  const userIds = React.useMemo(
+    () => Array.from(new Set(events.map((e) => e.userId).filter((v): v is string => !!v))),
     [events],
   )
   const users = useUserDirectory(userIds)
@@ -157,20 +164,37 @@ export function AuditLogPage(): React.ReactElement {
     return map
   }, [resources])
 
+  const userResourceExists = resources.some((r) => r.id === USERS_RESOURCE_ID)
+
   const formatRelative = useRelativeTimeFormatter(locale)
   const formatAbsolute = React.useCallback(
     (value: number) =>
-      new Intl.DateTimeFormat(locale, {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-      }).format(new Date(value)),
+      new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)),
     [locale],
   )
 
-  // Pin "now" once per render-burst so all relative labels in a single
-  // render share a consistent reference. The audit log query refreshes
-  // every 30s (TanStack staleTime) so this lines up with data freshness.
   const now = React.useMemo(() => Date.now(), [events])
+
+  // IntersectionObserver sentinel — triggers next page load when visible
+  const sentinelRef = React.useRef<HTMLDivElement>(null)
+  React.useEffect(() => {
+    const el = sentinelRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && log.hasNextPage && !log.isFetchingNextPage) {
+          void log.fetchNextPage()
+        }
+      },
+      { rootMargin: '200px' },
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [log.hasNextPage, log.isFetchingNextPage, log.fetchNextPage])
+
+  const resetFilters = (patch: Partial<typeof filters>): void => {
+    setFilters((prev) => ({ ...prev, ...patch }))
+  }
 
   return (
     <div className="space-y-4">
@@ -178,15 +202,10 @@ export function AuditLogPage(): React.ReactElement {
         <CardHeader>
           <CardTitle>{t('audit:title')}</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-4">
+        <CardContent className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
           <Select
-            value={query.resourceId ?? ALL}
-            onValueChange={(v) =>
-              setQuery((prev) => ({
-                ...prev,
-                resourceId: v === ALL ? undefined : v,
-              }))
-            }
+            value={filters.resourceId ?? ALL}
+            onValueChange={(v) => resetFilters({ resourceId: v === ALL ? undefined : v })}
           >
             <SelectTrigger aria-label={t('audit:resource')}>
               <SelectValue />
@@ -194,25 +213,16 @@ export function AuditLogPage(): React.ReactElement {
             <SelectContent>
               <SelectItem value={ALL}>{t('audit:allResources')}</SelectItem>
               {Object.entries(VIRTUAL_RESOURCE_LABELS).map(([id, key]) => (
-                <SelectItem key={id} value={id}>
-                  {t(key)}
-                </SelectItem>
+                <SelectItem key={id} value={id}>{t(key)}</SelectItem>
               ))}
               {resources.map((resource) => (
-                <SelectItem key={resource.id} value={resource.id}>
-                  {resource.name}
-                </SelectItem>
+                <SelectItem key={resource.id} value={resource.id}>{resource.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
           <Select
-            value={query.actions?.[0] ?? ALL}
-            onValueChange={(v) =>
-              setQuery((prev) => ({
-                ...prev,
-                actions: v === ALL ? undefined : [v],
-              }))
-            }
+            value={filters.actions?.[0] ?? ALL}
+            onValueChange={(v) => resetFilters({ actions: v === ALL ? undefined : [v] })}
           >
             <SelectTrigger aria-label={t('audit:action')}>
               <SelectValue />
@@ -230,24 +240,27 @@ export function AuditLogPage(): React.ReactElement {
             </SelectContent>
           </Select>
           <Input
-            value={query.recordId ?? ''}
+            value={filters.recordId ?? ''}
             placeholder={t('audit:recordId')}
-            onChange={(e) =>
-              setQuery((prev) => ({
-                ...prev,
-                recordId: e.target.value || undefined,
-              }))
-            }
+            onChange={(e) => resetFilters({ recordId: e.target.value || undefined })}
           />
           <Input
-            value={query.userId ?? ''}
+            value={filters.userId ?? ''}
             placeholder={t('audit:userId')}
-            onChange={(e) =>
-              setQuery((prev) => ({
-                ...prev,
-                userId: e.target.value || undefined,
-              }))
+            onChange={(e) => resetFilters({ userId: e.target.value || undefined })}
+          />
+          <DateRangeInput
+            from={filters.from}
+            to={filters.to}
+            onChange={(from, to) =>
+              resetFilters({ from: from || undefined, to: to || undefined })
             }
+            className="sm:col-span-2 md:col-span-4"
+            labels={{
+              placeholder: t('audit:dateRangePlaceholder'),
+              apply: t('common:apply'),
+              clear: t('common:clear'),
+            }}
           />
         </CardContent>
       </Card>
@@ -275,12 +288,20 @@ export function AuditLogPage(): React.ReactElement {
                   entry={entry}
                   resource={resourceMap[entry.resourceId]}
                   user={entry.userId ? users.get(entry.userId) ?? null : null}
+                  userResourceId={userResourceExists ? USERS_RESOURCE_ID : undefined}
                   now={now}
                   formatRelative={formatRelative}
                   formatAbsolute={formatAbsolute}
                 />
               ))}
             </ol>
+          )}
+          {/* Sentinel div — observed by IntersectionObserver to trigger next page */}
+          <div ref={sentinelRef} className="h-1" aria-hidden />
+          {log.isFetchingNextPage && (
+            <div className="flex justify-center py-4">
+              <Loader2 className="size-5 animate-spin text-muted-foreground" />
+            </div>
           )}
         </CardContent>
       </Card>
@@ -292,6 +313,7 @@ interface AuditEntryCardProps {
   entry: AuditLogEntry
   resource: ResourceJSON | undefined
   user: RecordJSON | null | undefined
+  userResourceId?: string
   now: number
   formatRelative: (atMs: number, nowMs: number) => string
   formatAbsolute: (value: number) => string
@@ -301,6 +323,7 @@ function AuditEntryCard({
   entry,
   resource,
   user,
+  userResourceId,
   now,
   formatRelative,
   formatAbsolute,
@@ -314,6 +337,11 @@ function AuditEntryCard({
 
   const userFallback = entry.userId ?? t('history:unknownUser')
   const userLabel = userLabelOf(user, userFallback)
+
+  const byTpl = t('audit:by', { user: '\u0000' })
+  const byParts = byTpl.split('\u0000')
+  const byPrefix = byParts[0] ?? ''
+  const bySuffix = byParts[1] ?? ''
 
   const virtualResourceKey = VIRTUAL_RESOURCE_LABELS[entry.resourceId]
   const resourceLabel = virtualResourceKey
@@ -387,7 +415,18 @@ function AuditEntryCard({
                   {initialsOf(userLabel)}
                 </span>
                 <span className="truncate">
-                  {t('audit:by', { user: userLabel })}
+                  {byPrefix}
+                  {userResourceId && entry.userId ? (
+                    <Link
+                      to={{ name: 'show', resourceId: userResourceId, recordId: entry.userId }}
+                      className="font-medium text-foreground hover:underline"
+                    >
+                      {userLabel}
+                    </Link>
+                  ) : (
+                    userLabel
+                  )}
+                  {bySuffix}
                 </span>
               </p>
             </div>

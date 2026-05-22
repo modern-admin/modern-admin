@@ -46,6 +46,7 @@ import {
   Menu,
   MessageSquare,
   Package,
+  Search,
   Settings,
   ShoppingCart,
   Tag,
@@ -66,6 +67,8 @@ import { HotkeyRegistryProvider } from './hotkey-registry.js'
 import { HotkeyHelpButton } from './hotkey-help.js'
 import type { ResourceJSON } from './types.js'
 import { AiAssistantWidget } from './components/ai-assistant-widget.js'
+import { GlobalSearchDialog } from './components/global-search-dialog.js'
+import { useHotkey } from './use-hotkey.js'
 
 // ─── Icon registry ────────────────────────────────────────────────────────────
 
@@ -368,9 +371,63 @@ function UserMenu({ user }: { user: CurrentUser }): React.ReactElement {
   )
 }
 
+/** Header trigger that opens the cross-resource command palette. Renders
+ *  as a full-width "search" button on desktop (with a ⌘K hint) and collapses
+ *  to an icon-only button on mobile. */
+function GlobalSearchTrigger({
+  onOpen,
+}: {
+  onOpen(): void
+}): React.ReactElement {
+  const { t } = useI18n()
+  // Detect macOS so the keyboard hint reads ⌘K vs Ctrl+K. Falls back to
+  // platform-agnostic mod key on SSR / unknown UAs.
+  const isMac = React.useMemo(() => {
+    if (typeof navigator === 'undefined') return false
+    return /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent)
+  }, [])
+  return (
+    <>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onOpen}
+        aria-label={t('globalSearch:title')}
+        className="hidden h-9 w-full max-w-xs justify-start gap-2 px-3 text-muted-foreground sm:inline-flex"
+      >
+        <Search className="size-4" />
+        <span className="flex-1 truncate text-left text-sm">
+          {t('globalSearch:trigger')}
+        </span>
+        <kbd className="pointer-events-none ml-2 inline-flex h-5 select-none items-center gap-0.5 rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium">
+          {isMac ? <span aria-hidden="true">⌘</span> : <span aria-hidden="true">Ctrl</span>}
+          <span aria-hidden="true">K</span>
+        </kbd>
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={onOpen}
+        aria-label={t('globalSearch:title')}
+        className="sm:hidden"
+      >
+        <Search className="size-4" />
+      </Button>
+    </>
+  )
+}
+
 function Header({ user }: { user: CurrentUser | null }): React.ReactElement {
   const { t } = useI18n()
   const { setOpenMobile } = useSidebar()
+  const [searchOpen, setSearchOpen] = React.useState(false)
+  // Cmd+K on macOS, Ctrl+K elsewhere — both expressed via `mod`. Allowed in
+  // input contexts so users can pop the palette while typing in any field.
+  useHotkey('mod+k', () => setSearchOpen((prev) => !prev), {
+    allowInInput: true,
+    description: t('globalSearch:hotkey'),
+    group: t('common:search'),
+  })
   return (
     <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-card px-4 sm:px-6">
       <Button
@@ -382,6 +439,7 @@ function Header({ user }: { user: CurrentUser | null }): React.ReactElement {
       >
         <Menu className="size-5" />
       </Button>
+      <GlobalSearchTrigger onOpen={() => setSearchOpen(true)} />
       <div className="ml-auto flex items-center gap-1">
         <HotkeyHelpButton />
         <LanguageSwitcher />
@@ -394,6 +452,7 @@ function Header({ user }: { user: CurrentUser | null }): React.ReactElement {
           </Button>
         )}
       </div>
+      <GlobalSearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
     </header>
   )
 }
@@ -442,9 +501,28 @@ function ShellLayout({ children }: { children: React.ReactNode }): React.ReactEl
       <DialogsProvider>
         <SidebarProvider>
           <AppSidebar />
-          <SidebarInset className="min-w-0">
+          {/* `h-svh` on SidebarInset is the key to the scroll layout: it
+              constrains the inset to exactly the viewport height, which lets
+              the inner `<main overflow-auto>` (flex-1) actually scroll
+              internally instead of letting the whole page scroll. Without
+              this, `min-h-svh` made the inset grow with content, the main
+              never overflowed, and `position: sticky` inside it had no
+              scrolling ancestor to pin against.
+
+              `overflow-hidden` is also required: without it, the inner
+              `<main overflow-auto>`'s clipped descendant layout boxes still
+              propagate into the SidebarInset's (and document's) scrollHeight,
+              producing a second, page-level scrollbar that scrolls the whole
+              SidebarInset out of view into empty background. */}
+          <SidebarInset className="h-svh min-w-0 overflow-hidden">
             <Header user={user} />
-            <main className="min-w-0 flex-1 overflow-auto p-4 sm:p-6">
+            {/* Padding has no `pb`: sticky footers (e.g. list-page paginator)
+                must be able to reach the viewport bottom, but `position: sticky`
+                is bounded by its containing block, which lives inside `<main>`'s
+                padding. With `pb-0`, the sticky element can extend all the way
+                down. Children that don't have a sticky footer add their own
+                bottom spacing via the `pb-4 sm:pb-6` class. */}
+            <main className="min-h-0 min-w-0 flex-1 overflow-auto px-4 pt-4 sm:px-6 sm:pt-6">
               {children}
             </main>
             <AiAssistantWidget />

@@ -13,6 +13,7 @@ import { ModernAdminModule } from '@modern-admin/nest'
 import { ModernAdminGraphqlModule } from '@modern-admin/graphql'
 import { ModernAdminRealtimeModule, RedisRealtimeBus } from '@modern-admin/realtime'
 import { RedisCacheProvider } from '@modern-admin/cache-redis'
+import { ModernAdminAiFillModule } from '@modern-admin/feature-ai-fill/nest'
 import { ModernAdminUploadModule } from '@modern-admin/feature-upload/nest'
 import { uploadGraphqlExtension } from '@modern-admin/feature-upload/graphql'
 import { historyPlugin } from '@modern-admin/feature-history'
@@ -73,6 +74,7 @@ const apiKeyService = buildApiKeyService(authProvider)
 
 @Module({
   imports: [
+    ModernAdminAiFillModule.forRoot(),
     ModernAdminUploadModule.forRoot(),
     ModernAdminModule.forRoot({
       global: true,

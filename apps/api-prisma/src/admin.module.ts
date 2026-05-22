@@ -23,6 +23,8 @@ import { Module } from '@nestjs/common'
 import { type BaseDatabase, type BaseResource, type IAuthProvider } from '@modern-admin/core'
 import { ModernAdminModule } from '@modern-admin/nest'
 import { PrismaDatabase, PrismaResource } from '@modern-admin/adapter-prisma'
+import { ModernAdminAiFillModule } from '@modern-admin/feature-ai-fill/nest'
+import { ModernAdminUploadModule } from '@modern-admin/feature-upload/nest'
 import { historyPlugin } from '@modern-admin/feature-history'
 import { actionLoggingPlugin } from '@modern-admin/feature-logging'
 import {
@@ -75,6 +77,8 @@ const webhookDispatcher = webhookQueue
         WebhookQueueModule.register({ store: system.webhookStore }),
       ]
       : []),
+    ModernAdminAiFillModule.forRoot(),
+    ModernAdminUploadModule.forRoot(),
     ModernAdminModule.forRoot({
       global: true,
       adapters: [{

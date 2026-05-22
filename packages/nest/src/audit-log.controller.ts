@@ -29,6 +29,7 @@ const queryZ = z.object({
   to: z.iso.datetime().optional(),
   limit: z.coerce.number().int().min(1).max(200).optional(),
   offset: z.coerce.number().int().min(0).optional(),
+  before: z.coerce.number().int().min(0).optional(),
 })
 
 export interface AuditLogResponse {
@@ -64,6 +65,7 @@ export class AuditLogController {
         : {}),
       ...(query.from ? { from: new Date(query.from) } : {}),
       ...(query.to ? { to: new Date(query.to) } : {}),
+      ...(query.before != null ? { before: query.before } : {}),
       limit: query.limit ?? 50,
       offset: query.offset ?? 0,
     })

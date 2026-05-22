@@ -1,0 +1,55 @@
+{
+  "name": "@modern-admin/feature-ai-fill",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./nest": {
+      "types": "./src/nest/index.ts",
+      "default": "./src/nest/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@modern-admin/core": "workspace:*",
+    "@nestjs/common": "^11.1.19",
+    "@nestjs/core": "^11.1.19",
+    "@nestjs/throttler": "^6.5.0",
+    "@openrouter/ai-sdk-provider": "^2.9.0",
+    "ai": "^6.0.177",
+    "busboy": "^1.6.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "zod": "^4.0.0"
+  },
+  "peerDependencies": {
+    "@modern-admin/nest": "workspace:*",
+    "@nestjs/swagger": "^11.4.2"
+  },
+  "peerDependenciesMeta": {
+    "@modern-admin/nest": {
+      "optional": true
+    },
+    "@nestjs/swagger": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@modern-admin/nest": "workspace:*",
+    "@modern-admin/tsconfig": "workspace:*",
+    "@nestjs/swagger": "^11.4.2",
+    "@types/bun": "^1.3.13",
+    "@types/busboy": "^1.5.4",
+    "typescript": "^6.0.3"
+  }
+}

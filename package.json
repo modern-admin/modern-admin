@@ -12,6 +12,10 @@
   "scripts": {
     "dev:api": "bun run --cwd apps/api dev",
     "dev:web": "bun run --cwd apps/web dev",
+    "dev:start": "scripts/dev.sh start",
+    "dev:stop": "scripts/dev.sh stop",
+    "dev:restart": "scripts/dev.sh restart",
+    "dev:status": "scripts/dev.sh status",
     "build": "bun run --filter '!@modern-admin/docs' --filter '*' build",
     "test": "bun --filter '!@modern-admin/docs' --filter '*' test",
     "e2e": "bun run --cwd apps/e2e e2e",

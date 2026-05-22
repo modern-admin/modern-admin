@@ -31,7 +31,7 @@ export type ChartWidth = z.infer<typeof chartWidthZ>
  * render time so cards always reflect "now" without re-saving.
  */
 export const timeRangeZ = z.discriminatedUnion('preset', [
-  z.object({ preset: z.enum(['7d', '30d', '90d', '1y', 'all']) }),
+  z.object({preset: z.enum(['7d', '30d', '90d', '1y', 'all'])}),
   z.object({
     preset: z.literal('custom'),
     from: z.iso.date(),
@@ -124,7 +124,7 @@ export const dashboardBlobZ = z.object({
 })
 export type DashboardBlob = z.infer<typeof dashboardBlobZ>
 
-export const EMPTY_DASHBOARD: DashboardBlob = { version: 1, charts: [], groups: [] }
+export const EMPTY_DASHBOARD: DashboardBlob = {version: 1, charts: [], groups: []}
 
 /**
  * Per-user dashboard storage port. Default implementation in
@@ -133,5 +133,6 @@ export const EMPTY_DASHBOARD: DashboardBlob = { version: 1, charts: [], groups: 
  */
 export interface IDashboardStore {
   load(userId: string): Promise<DashboardBlob> | DashboardBlob
+
   save(userId: string, blob: DashboardBlob): Promise<void> | void
 }

@@ -42,6 +42,7 @@ import {
   ReferenceLinkList,
   ReferenceMultiCombobox,
 } from './reference.js'
+import { ReferenceMultiTableDialog } from './components/reference-multi-table-dialog.js'
 import { useResource } from './hooks.js'
 
 const formatDate = (value: unknown): string => {
@@ -158,7 +159,7 @@ function ListCellText({ children }: { children: React.ReactNode }): React.ReactE
 export function PropertyDisplay({ property, value, view = 'list' }: PropertyDisplayProps): React.ReactElement | null {
   const { components } = useAdminContext()
   const { t, locale } = useI18n()
-  const copiable = view === 'show' && property.custom?.copiable === true
+  const copiable = view === 'show' && (property.isId === true || property.custom?.copiable === true)
   const withCopy = (content: React.ReactElement): React.ReactElement =>
     copiable ? <CopiableDisplay text={String(value)}>{content}</CopiableDisplay> : content
   const componentName = property.components?.[view]
@@ -653,9 +654,15 @@ function M2MPropertyEditor({
     onChange(items.map((it) => (String(it.id) === id ? { ...it, [field]: val } : it)))
   }
 
+  // m2m relations are typically large tables, so default to the table-driven
+  // dialog picker. Opt back into the combobox via `m2m.picker = 'combobox'`.
+  const Picker =
+    (m2m as { picker?: string } | undefined)?.picker === 'combobox'
+      ? ReferenceMultiCombobox
+      : ReferenceMultiTableDialog
   return (
     <div className="space-y-3">
-      <ReferenceMultiCombobox
+      <Picker
         referenceResourceId={m2m.reference}
         value={ids}
         onChange={setIds}
@@ -856,8 +863,13 @@ export function PropertyEditor({
       const arr = Array.isArray(value)
         ? (value as Array<string | number>)
         : []
+      // Opt into the table-driven dialog picker via `custom.picker = 'dialog'`;
+      // default stays as the compact combobox for plain reference arrays.
+      const pickerKind = (property.custom as { picker?: string } | undefined)?.picker
+      const ArrayPicker =
+        pickerKind === 'dialog' ? ReferenceMultiTableDialog : ReferenceMultiCombobox
       return (
-        <ReferenceMultiCombobox
+        <ArrayPicker
           referenceResourceId={property.reference}
           value={arr}
           onChange={(next) => onChange(next)}

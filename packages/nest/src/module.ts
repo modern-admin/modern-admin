@@ -28,6 +28,7 @@ import { ApiKeysController } from './api-keys.controller.js'
 import { AnalyticsController } from './analytics.controller.js'
 import { HistoryController } from './history.controller.js'
 import { AuditLogController } from './audit-log.controller.js'
+import { GlobalSearchController } from './global-search.controller.js'
 import { WebhooksController } from './webhooks.controller.js'
 import { DashboardController } from './dashboard.controller.js'
 import { ModernAdminAuthGuard } from './auth.guard.js'
@@ -199,6 +200,7 @@ export class ModernAdminModule {
         AnalyticsController,
         HistoryController,
         AuditLogController,
+        GlobalSearchController,
         WebhooksController,
         DashboardController,
       ],
@@ -214,6 +216,7 @@ export class ModernAdminModule {
       ],
       exports: [
         MODERN_ADMIN,
+        MODERN_ADMIN_OPTIONS,
         AdminControllerScanner,
         ModernAdminAuthGuard,
         ModernAdminCacheInterceptor,
@@ -289,6 +292,7 @@ export class ModernAdminModule {
         AnalyticsController,
         HistoryController,
         AuditLogController,
+        GlobalSearchController,
         WebhooksController,
         DashboardController,
       ],
@@ -312,6 +316,7 @@ export class ModernAdminModule {
       ],
       exports: [
         MODERN_ADMIN,
+        MODERN_ADMIN_OPTIONS,
         AdminControllerScanner,
         ModernAdminAuthGuard,
         ModernAdminCacheInterceptor,

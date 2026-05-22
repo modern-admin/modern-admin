@@ -1,4 +1,4 @@
-import { and, asc, count as countFn, eq, gte, inArray, lte, sql } from 'drizzle-orm'
+import { and, asc, count as countFn, eq, gte, ilike, inArray, isNotNull, like, lte, ne, sql } from 'drizzle-orm'
 import {
   BaseRecord,
   BaseResource,
@@ -112,6 +112,41 @@ export class DrizzleResource extends BaseResource {
       if (path in params) out[path] = params[path]
     }
     return out
+  }
+
+  override async distinct(
+    field: string,
+    options?: { limit?: number; search?: string },
+  ): Promise<string[]> {
+    const column = this.table[field] as DrizzleColumn | undefined
+    if (!column) return []
+    const prop = this.property(field)
+    if (!prop || prop.type() !== 'string') return []
+
+    const limit = options?.limit ?? 100
+    const conds: unknown[] = [
+      isNotNull(column as never),
+      ne(column as never, '' as never),
+    ]
+    if (options?.search) {
+      const op = (column as DrizzleColumn).columnType?.startsWith('Pg') ? ilike : like
+      conds.push(op(column as never, `%${options.search}%` as never))
+    }
+    const where = and(...(conds as never[]))
+
+    // Use select + groupBy for DISTINCT — avoids requiring selectDistinct
+    // on the client interface while producing the same SQL result.
+    const rows = (await this.client
+      .select({ value: column })
+      .from(this.table)
+      .where(where as unknown)
+      .groupBy(column as never)
+      .orderBy(asc(column as never))
+      .limit(limit)) as Array<{ value: unknown }>
+
+    return rows
+      .map((r) => r.value)
+      .filter((v): v is string => typeof v === 'string')
   }
 
   override async count(filter: Filter): Promise<number> {

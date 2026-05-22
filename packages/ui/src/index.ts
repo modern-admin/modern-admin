@@ -31,6 +31,11 @@ export {
   type DatePickerMode,
 } from './components/date-picker.js'
 export {
+  DateRangeInput,
+  type DateRangeInputProps,
+  type DateRangeInputLabels,
+} from './components/date-range-input.js'
+export {
   Select,
   SelectGroup,
   SelectValue,

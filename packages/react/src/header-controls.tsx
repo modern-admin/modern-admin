@@ -68,19 +68,19 @@ export function ThemeToggle(): React.ReactElement {
         <DropdownMenuSeparator />
         <MenuOption
           icon={<Sun className="size-4" />}
-          label="Light"
+          label={t('common:themeLight')}
           active={mode === 'light'}
           onSelect={() => apply('light')}
         />
         <MenuOption
           icon={<Moon className="size-4" />}
-          label="Dark"
+          label={t('common:themeDark')}
           active={mode === 'dark'}
           onSelect={() => apply('dark')}
         />
         <MenuOption
           icon={<Monitor className="size-4" />}
-          label="System"
+          label={t('common:themeSystem')}
           active={mode === 'system'}
           onSelect={() => apply('system')}
         />

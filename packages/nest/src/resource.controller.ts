@@ -141,6 +141,28 @@ export class ResourceController {
     )
   }
 
+  @Get('actions/values')
+  async values(
+    @Param('resourceId') resourceId: string,
+    @Query('field') field: string | undefined,
+    @Query('search') search: string | undefined,
+    @Query('limit') limit: string | undefined,
+    @Req() req: AdminRequest,
+  ): Promise<ActionResponse> {
+    return this.run(
+      {
+        params: { resourceId, action: 'values' },
+        method: 'get',
+        query: {
+          field: field ?? '',
+          search: search ?? '',
+          ...(limit ? { limit } : {}),
+        },
+      },
+      req,
+    )
+  }
+
   @Get('actions/search')
   async search(
     @Param('resourceId') resourceId: string,

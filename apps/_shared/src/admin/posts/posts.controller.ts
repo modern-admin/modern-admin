@@ -66,6 +66,13 @@ const slugify = (text: string): string =>
     },
   },
   features: [
+    // Tags relation — uses the table-driven picker dialog
+    // (`ReferenceMultiTableDialog`). The dialog embeds the full tags list
+    // page with sorting, header filters, column visibility, and pagination,
+    // so editors can locate tags the same way they would on the main list.
+    // `picker: 'dialog'` is the default for m2m; spelled out here for
+    // demonstration. Swap to `'combobox'` for small bounded sets (see
+    // `products.controller.ts`).
     m2mFeature({
       property: 'tags',
       through: 'postTags',
@@ -73,6 +80,7 @@ const slugify = (text: string): string =>
       foreignKey: 'tagId',
       reference: 'tags',
       extraFields: ['addedAt'],
+      picker: 'dialog',
     }),
   ],
 })

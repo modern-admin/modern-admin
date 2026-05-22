@@ -9,3 +9,5 @@ src/generated/
 # Migrations stay tracked, but the dev seeds local artefacts
 prisma/dev.db
 prisma/dev.db-journal
+
+uploads

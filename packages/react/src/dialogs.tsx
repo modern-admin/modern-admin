@@ -212,7 +212,7 @@ export function DialogsProvider({ children }: DialogsProviderProps): React.React
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogAction onClick={() => closeEntry(entry.id, undefined)}>
-                    {entry.opts.okLabel ?? 'OK'}
+                    {entry.opts.okLabel ?? t('common:ok')}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>

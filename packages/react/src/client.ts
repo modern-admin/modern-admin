@@ -231,10 +231,35 @@ export class AdminClient {
     )
   }
 
+  /** Fetch distinct values for a field — used by the filter value picker.
+   *  Returns `{ values, hasMore }`. */
+  distinctValues(
+    resourceId: string,
+    field: string,
+    options?: { search?: string; limit?: number },
+  ): Promise<{ values: string[]; hasMore: boolean }> {
+    const params = new URLSearchParams({ field })
+    if (options?.search) params.set('search', options.search)
+    if (options?.limit != null) params.set('limit', String(options.limit))
+    return this.request<{ values: string[]; hasMore: boolean }>(
+      `/admin/api/resources/${encodeURIComponent(resourceId)}/actions/values?${params.toString()}`,
+    )
+  }
+
   search(resourceId: string, query: string): Promise<ListResponse> {
     const qs = query ? `?q=${encodeURIComponent(query)}` : ''
     return this.request<ListResponse>(
       `/admin/api/resources/${encodeURIComponent(resourceId)}/actions/search${qs}`,
+    )
+  }
+
+  /** Cross-resource search. Fans `query` out to every registered resource's
+   *  `search` action; resources the principal cannot access are omitted. */
+  globalSearch(query: string, perResourceLimit?: number): Promise<GlobalSearchResponse> {
+    const params = new URLSearchParams({ q: query })
+    if (perResourceLimit != null) params.set('perResourceLimit', String(perResourceLimit))
+    return this.request<GlobalSearchResponse>(
+      `/admin/api/global-search?${params.toString()}`,
     )
   }
 
@@ -348,6 +373,7 @@ export class AdminClient {
     if (query.to) params.set('to', toIsoDateTime(query.to, 'end'))
     if (query.limit != null) params.set('limit', String(query.limit))
     if (query.offset != null) params.set('offset', String(query.offset))
+    if (query.before != null) params.set('before', String(query.before))
     const qs = params.toString() ? `?${params.toString()}` : ''
     return this.request<AuditLogResponse>(`/admin/api/audit-log${qs}`)
   }
@@ -572,6 +598,56 @@ export class AdminClient {
     }
   }
 
+  /**
+   * Send a single image to the resource's `aiFill` action and receive a
+   * `values` map the edit form can hydrate from. Uses multipart/form-data
+   * because vision models expect raw bytes, not base64-stringified payloads.
+   *
+   * Supports an optional `signal` for cancellation and the demo-session 401
+   * auto-restore logic (matching the behaviour of `request()`). Cannot use
+   * `requestOnce` directly because that always sets `Content-Type: application/json`,
+   * which would override the browser-generated multipart boundary.
+   */
+  async aiFillFromImage(
+    resourceId: string,
+    file: File,
+    options: { signal?: AbortSignal } = {},
+  ): Promise<AiFillResponse> {
+    const url = `${this.baseUrl}/admin/api/resources/${encodeURIComponent(resourceId)}/ai-fill`
+
+    const doFetch = async (): Promise<AiFillResponse> => {
+      const form = new FormData()
+      form.append('image', file)
+      const res = await fetch(url, {
+        method: 'POST',
+        credentials: this.credentials,
+        // Intentionally omit Content-Type — the browser sets it automatically
+        // with the correct multipart/form-data boundary.
+        headers: this.headers,
+        body: form,
+        signal: options.signal,
+      })
+      if (!res.ok) {
+        const text = await res.text().catch(() => '')
+        throw new AdminApiError(res.status, text || res.statusText)
+      }
+      return (await res.json()) as AiFillResponse
+    }
+
+    try {
+      return await doFetch()
+    } catch (err) {
+      const canRestore =
+        err instanceof AdminApiError &&
+        err.status === 401 &&
+        !options.signal?.aborted
+      if (!canRestore) throw err
+      const restored = await this.restoreDemoSession()
+      if (!restored) throw err
+      return doFetch()
+    }
+  }
+
   getAiAssistantSettings(): Promise<AiAssistantSettings> {
     return this.request<AiAssistantSettings>('/admin/api/ai-assistant/settings')
   }
@@ -614,17 +690,6 @@ export class AdminClient {
   async getAiAssistantTask(taskId: string): Promise<AiAssistantTask> {
     return this.request<AiAssistantTask>(`/admin/api/ai-assistant/tasks/${encodeURIComponent(taskId)}`)
   }
-
-  /**
-   * Upload a single file for a `type: 'file'` property, reporting progress
-   * via `options.onProgress`. Uses `XMLHttpRequest` because the fetch API
-   * does not expose upload-side progress events.
-   *
-   * Returns the metadata record for the uploaded file. The server endpoint
-   * (`POST /admin/api/resources/:id/actions/upload`) accepts batch uploads
-   * and replies with an array; we send one file per request and unwrap the
-   * single result so the caller gets per-file progress and per-file errors.
-   */
 
 }
 
@@ -746,6 +811,8 @@ export interface AuditLogQuery {
   to?: string
   limit?: number
   offset?: number
+  /** Cursor: fetch only entries with `at` strictly before this unix-ms value. */
+  before?: number
 }
 
 export interface AuditLogResponse {
@@ -887,6 +954,13 @@ export interface AiAssistantTask {
   finishedAt?: string
 }
 
+export interface AiFillResponse {
+  /** Map of property path → extracted value. Only fields the model could
+   *  confidently extract are present; the form merges them into existing
+   *  values without clobbering unrelated columns. */
+  values: Record<string, unknown>
+}
+
 /** Metadata returned by `POST /upload` for one file. */
 export interface UploadedFileInfo {
   key: string
@@ -917,6 +991,25 @@ export interface UploadFilesOptions {
   onItemProgress?: (index: number, file: File, p: UploadProgress) => void
   onItemComplete?: (index: number, file: File, info: UploadedFileInfo) => void
   onItemError?: (index: number, file: File, error: Error) => void
+}
+
+export interface GlobalSearchHit {
+  resourceId: string
+  resourceName: string
+  recordId: string
+  title: string
+}
+
+export interface GlobalSearchGroup {
+  resourceId: string
+  resourceName: string
+  records: GlobalSearchHit[]
+}
+
+export interface GlobalSearchResponse {
+  query: string
+  groups: GlobalSearchGroup[]
+  total: number
 }
 
 export class AdminApiError extends Error {

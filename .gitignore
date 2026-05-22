@@ -21,6 +21,9 @@ yarn-error.log*
 
 .playwright-mcp
 
+# dev server logs captured by scripts/dev.sh
+.dev-logs
+
 # env
 .env
 .env.*

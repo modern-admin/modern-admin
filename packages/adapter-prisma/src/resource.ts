@@ -1,7 +1,6 @@
 import {
   BaseRecord,
   BaseResource,
-  ValidationError,
   type Filter,
   type FindOptions,
   type ParamsType,
@@ -9,6 +8,7 @@ import {
   type TimeSeriesResult,
   type TimeSeriesSeries,
   type TimeSeriesStep,
+  ValidationError,
 } from '@modern-admin/core'
 import { PrismaProperty } from './property.js'
 import { filterToWhere, findOptionsToPrisma } from './converters.js'
@@ -113,7 +113,7 @@ export class PrismaResource extends BaseResource {
   }
 
   private idClause(id: string | number): Record<string, unknown> {
-    return { [this.idField.name]: this.castId(id) }
+    return {[this.idField.name]: this.castId(id)}
   }
 
   private castId(id: string | number): unknown {
@@ -136,6 +136,11 @@ export class PrismaResource extends BaseResource {
       if (field.isReadOnly && !field.isId && !this.writableForeignKeys.has(field.name)) continue
       if (!(field.name in params)) continue
       const raw = params[field.name]
+      // Required (non-nullable) fields must not receive null — Prisma 7 treats
+      // that as a validation error.  Omitting the key lets the DB @default fire
+      // (e.g. enum defaults) or surfaces a clear "missing required field" error
+      // instead of the unhelpful "must not be null" one.
+      if (field.isRequired && raw === null) continue
       // datetime-local inputs produce "YYYY-MM-DDTHH:mm" (no seconds / no tz).
       // Prisma 7 requires a complete ISO-8601 DateTime string, so we round-trip
       // through Date to normalise any partial string.  Invalid strings are
@@ -150,8 +155,42 @@ export class PrismaResource extends BaseResource {
     return out
   }
 
+  override async distinct(
+    field: string,
+    options?: { limit?: number; search?: string },
+  ): Promise<string[]> {
+    const modelField = this.model.fields.find((f) => f.name === field)
+    if (!modelField) return []
+    // Only string-like fields make sense for distinct value pickers.
+    if (modelField.type !== 'String' && modelField.kind !== 'enum') return []
+
+    const limit = options?.limit ?? 100
+    // Prisma 7: `not: null` is only valid for nullable (optional) fields.
+    // Never mix `contains` + `not: null` in the same filter object — use AND.
+    const isNullable = !modelField.isRequired
+    const conditions: Record<string, unknown>[] = []
+    if (isNullable) conditions.push({[field]: {not: null}})
+    if (options?.search) conditions.push({[field]: {contains: options.search, mode: 'insensitive'}})
+    const where: Record<string, unknown> =
+      conditions.length === 0 ? {}
+      : conditions.length === 1 ? conditions[0]!
+      : {AND: conditions}
+
+    const rows = (await this.delegate().findMany({
+      where,
+      select: {[field]: true},
+      distinct: [field],
+      orderBy: {[field]: 'asc'},
+      take: limit,
+    })) as Array<Record<string, unknown>>
+
+    return rows
+      .map((r) => r[field])
+      .filter((v): v is string => typeof v === 'string' && v !== '')
+  }
+
   override async count(filter: Filter): Promise<number> {
-    return this.delegate().count({ where: filterToWhere(filter) })
+    return this.delegate().count({where: filterToWhere(filter)})
   }
 
   override async find(filter: Filter, options: FindOptions): Promise<BaseRecord[]> {
@@ -172,14 +211,14 @@ export class PrismaResource extends BaseResource {
   override async findMany(ids: Array<string | number>): Promise<BaseRecord[]> {
     if (ids.length === 0) return []
     const rows = (await this.delegate().findMany({
-      where: { [this.idField.name]: { in: ids.map((id) => this.castId(id)) } },
+      where: {[this.idField.name]: {in: ids.map((id) => this.castId(id))}},
     })) as ParamsType[]
     return rows.map((row) => new BaseRecord(row, this))
   }
 
   override async create(params: ParamsType): Promise<ParamsType> {
     try {
-      return (await this.delegate().create({ data: this.writableData(params) })) as ParamsType
+      return (await this.delegate().create({data: this.writableData(params)})) as ParamsType
     } catch (err) {
       throw this.toValidationError(err)
     }
@@ -197,7 +236,7 @@ export class PrismaResource extends BaseResource {
   }
 
   override async delete(id: string): Promise<void> {
-    await this.delegate().delete({ where: this.idClause(id) })
+    await this.delegate().delete({where: this.idClause(id)})
   }
 
   override supportsTimeSeries(): boolean {
@@ -215,12 +254,12 @@ export class PrismaResource extends BaseResource {
       const prevTo = new Date(query.from.getTime())
       const prevFrom = new Date(query.from.getTime() - span)
       previous = (
-        await this.runTimeSeries(filter, { ...query, from: prevFrom, to: prevTo })
+        await this.runTimeSeries(filter, {...query, from: prevFrom, to: prevTo})
       ).series
     }
     return {
       series: series.series,
-      ...(previous ? { previous } : {}),
+      ...(previous ? {previous} : {}),
       sql: series.sql,
     }
   }
@@ -255,9 +294,9 @@ export class PrismaResource extends BaseResource {
     const baseWhere = filterToWhere(filter)
     const where: Record<string, unknown> = {
       ...baseWhere,
-      [query.dateField]: { gte: query.from, lte: query.to },
+      [query.dateField]: {gte: query.from, lte: query.to},
     }
-    const select: Record<string, true> = { [query.dateField]: true }
+    const select: Record<string, true> = {[query.dateField]: true}
     if (query.field) select[query.field] = true
     if (query.groupBy) select[query.groupBy] = true
 
@@ -332,7 +371,7 @@ export class PrismaResource extends BaseResource {
       for (const [bucket, e] of inner) {
         const cur = otherInner.get(bucket)
         if (!cur) {
-          otherInner.set(bucket, { ...e })
+          otherInner.set(bucket, {...e})
         } else {
           cur.sum += e.sum
           cur.count += e.count
@@ -347,9 +386,9 @@ export class PrismaResource extends BaseResource {
     const seriesOut: TimeSeriesSeries[] = []
     for (const [key, inner] of seriesMap) {
       const points = Array.from(inner.entries())
-        .map(([date, e]) => ({ date, value: reduce(e) }))
+        .map(([date, e]) => ({date, value: reduce(e)}))
         .sort((a, b) => a.date.localeCompare(b.date))
-      seriesOut.push({ key, points })
+      seriesOut.push({key, points})
     }
 
     return {
@@ -374,13 +413,13 @@ export class PrismaResource extends BaseResource {
       const fields = e.meta.target
       return new ValidationError(
         Object.fromEntries(
-          fields.map((f) => [f, { type: 'unique', message: `${f} must be unique` }]),
+          fields.map((f) => [f, {type: 'unique', message: `${f} must be unique`}]),
         ),
       )
     }
     if (e.code === 'P2003' && e.meta?.field_name) {
       return new ValidationError({
-        [e.meta.field_name]: { type: 'foreignKey', message: 'related record not found' },
+        [e.meta.field_name]: {type: 'foreignKey', message: 'related record not found'},
       })
     }
     return err
@@ -439,10 +478,10 @@ const buildPrismaDisplaySql = (
     query.step === 'all'
       ? `MIN(${dateCol})`
       : dialect === 'pg'
-      ? `DATE_TRUNC('${query.step}', ${dateCol})`
-      : dialect === 'mysql'
-      ? `DATE_FORMAT(${dateCol}, ${mysqlFmt(query.step)})`
-      : `STRFTIME(${sqliteFmt(query.step)}, ${dateCol})`
+        ? `DATE_TRUNC('${query.step}', ${dateCol})`
+        : dialect === 'mysql'
+          ? `DATE_FORMAT(${dateCol}, ${mysqlFmt(query.step)})`
+          : `STRFTIME(${sqliteFmt(query.step)}, ${dateCol})`
   const metric =
     query.metric === 'count'
       ? 'COUNT(*)'
@@ -476,16 +515,16 @@ const mysqlFmt = (step: TimeSeriesStep): string =>
   step === 'day'
     ? "'%Y-%m-%d'"
     : step === 'week'
-    ? "'%x-W%v'"
-    : step === 'month'
-    ? "'%Y-%m-01'"
-    : "'%Y-01-01'"
+      ? "'%x-W%v'"
+      : step === 'month'
+        ? "'%Y-%m-01'"
+        : "'%Y-01-01'"
 
 const sqliteFmt = (step: TimeSeriesStep): string =>
   step === 'day'
     ? "'%Y-%m-%d'"
     : step === 'week'
-    ? "'%Y-W%W'"
-    : step === 'month'
-    ? "'%Y-%m-01'"
-    : "'%Y-01-01'"
+      ? "'%Y-W%W'"
+      : step === 'month'
+        ? "'%Y-%m-01'"
+        : "'%Y-01-01'"

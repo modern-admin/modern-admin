@@ -27,7 +27,7 @@ export interface AiAssistantConfigBase {
 }
 
 export interface BuildAiAssistantConfigOptions {
-  /** Override model id. Defaults to `openai/gpt-4o-mini`. */
+  /** Override model id. Defaults to `google/gemini-3.1-flash-lite-preview`. */
   defaultModel?: string
   /** Roles allowed to view/edit AI assistant settings. Defaults to `['admin']`. */
   manageRoles?: string[]

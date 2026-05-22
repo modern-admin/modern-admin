@@ -10,6 +10,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  InfoTooltip,
   Input,
   Label,
 } from '@modern-admin/ui'
@@ -66,7 +67,10 @@ export function GroupSettingsDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="group-order">{t('chart:groupOrder')}</Label>
+            <div className="flex items-center gap-1.5">
+              <Label htmlFor="group-order">{t('chart:groupOrder')}</Label>
+              <InfoTooltip content={t('chart:orderHint')} />
+            </div>
             <Input
               id="group-order"
               type="number"
@@ -76,7 +80,6 @@ export function GroupSettingsDialog({
                 setOrder(Number.isFinite(Number(e.target.value)) ? Math.trunc(Number(e.target.value)) : 0)
               }
             />
-            <p className="text-xs text-muted-foreground">{t('chart:orderHint')}</p>
           </div>
         </div>
 

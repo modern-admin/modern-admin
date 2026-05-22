@@ -306,7 +306,14 @@ export const m2mFeature = (input: M2MRelationInput): FeatureFn => {
   const { property, through, localKey, foreignKey, reference, extraFields = [] } = relation
 
   const customData: M2MCustomData = {
-    m2m: { reference, through, localKey, foreignKey, extraFields },
+    m2m: {
+      reference,
+      through,
+      localKey,
+      foreignKey,
+      extraFields,
+      ...(relation.picker ? { picker: relation.picker } : {}),
+    },
   }
 
   const readHook = buildReadHook(relation)

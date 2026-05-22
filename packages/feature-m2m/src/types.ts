@@ -52,6 +52,20 @@ export const m2mRelationZ = z.object({
    * an i18n key via the resource options' `properties[<property>].label`.
    */
   label: z.string().optional(),
+  /**
+   * Which UI control to render the m2m picker with.
+   *
+   *  - `'dialog'` (default) — opens a modal containing the full embedded
+   *    list page of the referenced resource with row-level multi-select,
+   *    sorting, header filters, column visibility, and pagination.
+   *    Best for large reference tables (tags, categories, users).
+   *  - `'combobox'` — compact inline multi-select popover. Best for
+   *    small bounded sets that fit comfortably in a dropdown.
+   *
+   * Stored on `property.custom.m2m.picker`; the React property renderer
+   * dispatches on this value at edit-form time.
+   */
+  picker: z.enum(['dialog', 'combobox']).optional(),
 })
 
 /**
@@ -92,5 +106,7 @@ export interface M2MCustomData {
     localKey: string
     foreignKey: string
     extraFields: string[]
+    /** UI picker variant — see `m2mRelationZ.picker`. */
+    picker?: 'dialog' | 'combobox'
   }
 }

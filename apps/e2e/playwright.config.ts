@@ -42,15 +42,50 @@ export default defineConfig({
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
       env: {
+        // `apps/web/vite.config.ts` reads `WEB_PORT` (defaults to 3000) and
+        // `VITE_API_URL` is consumed by the SPA. Without `WEB_PORT` set,
+        // vite picks port 3000 which collides with the docs dev server.
+        WEB_PORT: String(WEB_PORT),
         VITE_API_URL: `http://localhost:${API_PORT}`,
       },
     },
   ],
 
   projects: [
+    // API/GraphQL tests only need an APIRequestContext — no browser, no auth.
+    // Splitting them into their own project keeps the browser projects free of
+    // the login dependency and lets you run them with --project=api in CI.
+    {
+      name: 'api',
+      testMatch: /(api|graphql)\.spec\.ts$/,
+    },
+    // One-shot login that captures storage state. Browser projects depend on
+    // it so they start already authenticated.
+    {
+      name: 'setup',
+      testMatch: /auth\.setup\.ts$/,
+      use: {
+        ...devices['Desktop Chrome'],
+        ...(process.env.PLAYWRIGHT_CHANNEL
+          ? { channel: process.env.PLAYWRIGHT_CHANNEL }
+          : {}),
+      },
+    },
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      testIgnore: /(api|graphql)\.spec\.ts$/,
+      dependencies: ['setup'],
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'playwright/.auth/admin.json',
+        // Allow switching to a system-installed Chrome/Chromium via env var
+        // (`PLAYWRIGHT_CHANNEL=chrome` etc.). Useful on platforms where
+        // Playwright's bundled chromium binaries aren't published (e.g.
+        // pre-release Ubuntu) and a locally-installed browser is available.
+        ...(process.env.PLAYWRIGHT_CHANNEL
+          ? { channel: process.env.PLAYWRIGHT_CHANNEL }
+          : {}),
+      },
     },
   ],
 })

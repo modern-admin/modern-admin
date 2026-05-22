@@ -51,6 +51,7 @@ export class MemoryLogStore implements IQueryableLogStore {
     }
     if (filter.from) result = result.filter((e) => e.at >= filter.from!.getTime())
     if (filter.to) result = result.filter((e) => e.at <= filter.to!.getTime())
+    if (filter.before != null) result = result.filter((e) => e.at < filter.before!)
     result.sort((a, b) => b.at - a.at)
     if (filter.offset) result = result.slice(filter.offset)
     if (filter.limit !== undefined) result = result.slice(0, filter.limit)

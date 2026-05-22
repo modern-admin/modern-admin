@@ -72,6 +72,10 @@ const productKeyer = (subdir: string) => (filename: string): string => {
         },
       },
     }),
+    // Contrast with posts.tags: same m2m mechanics, but rendered as a
+    // compact inline combobox instead of the table-driven dialog. Useful
+    // when the reference table is small enough to fit in a dropdown and
+    // you'd rather not steal the screen with a modal.
     m2mFeature({
       property: 'tags',
       through: 'productTags',
@@ -79,6 +83,7 @@ const productKeyer = (subdir: string) => (filename: string): string => {
       foreignKey: 'tagId',
       reference: 'tags',
       extraFields: ['position'],
+      picker: 'combobox',
     }),
   ],
 })

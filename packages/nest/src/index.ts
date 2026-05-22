@@ -6,7 +6,12 @@ export { ConfigController } from './config.controller.js'
 export { AuthController } from './auth.controller.js'
 export { ApiKeysController, type IApiKeyService, type ApiKeyResponse } from './api-keys.controller.js'
 export { AiAssistantController } from './ai-assistant.controller.js'
-export { AiAssistantService, type AiAssistantPublicSettings, type AiAssistantStoredSettings } from './ai-assistant.service.js'
+export {
+  AiAssistantService,
+  AI_ASSISTANT_SETTINGS_KEY,
+  type AiAssistantPublicSettings,
+  type AiAssistantStoredSettings,
+} from './ai-assistant.service.js'
 export { AiAssistantProcessor } from './ai-assistant.processor.js'
 export { AI_ASSISTANT_QUEUE, AI_ASSISTANT_CHAT_JOB } from './ai-assistant.constants.js'
 export type { AiAssistantChatJobData, AiAssistantChatMessageInput, AiAssistantTaskOutput } from './ai-assistant.types.js'
@@ -21,6 +26,12 @@ export {
   type HistoryRevisionResponse,
 } from './history.controller.js'
 export { AuditLogController, type AuditLogResponse } from './audit-log.controller.js'
+export {
+  GlobalSearchController,
+  type GlobalSearchGroup,
+  type GlobalSearchHit,
+  type GlobalSearchResponse,
+} from './global-search.controller.js'
 export {
   WebhooksController,
   type WebhookDeliveriesResponse,

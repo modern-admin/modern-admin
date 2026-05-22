@@ -19,6 +19,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  InfoTooltip,
   Input,
   Label,
   Select,
@@ -247,7 +248,10 @@ export function ChartBuilderDialog({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="chart-order">{t('chart:order')}</Label>
+              <div className="flex items-center gap-1.5">
+                <Label htmlFor="chart-order">{t('chart:order')}</Label>
+                <InfoTooltip content={t('chart:orderHint')} />
+              </div>
               <Input
                 id="chart-order"
                 type="number"
@@ -255,7 +259,6 @@ export function ChartBuilderDialog({
                 value={order}
                 onChange={(e) => setOrder(Number.isFinite(Number(e.target.value)) ? Math.trunc(Number(e.target.value)) : 0)}
               />
-              <p className="text-xs text-muted-foreground">{t('chart:orderHint')}</p>
             </div>
           </div>
 

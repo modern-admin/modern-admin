@@ -3,9 +3,12 @@
 
 import * as React from 'react'
 import {
+  useInfiniteQuery,
   useMutation,
   useQuery,
   useQueryClient,
+  type InfiniteData,
+  type UseInfiniteQueryResult,
   type UseMutationResult,
   type UseQueryResult,
 } from '@tanstack/react-query'
@@ -23,6 +26,7 @@ import {
   AdminApiError,
   type AuditLogQuery,
   type AuditLogResponse,
+  type GlobalSearchResponse,
   type HistoryListResponse,
   type HistoryRevisionResponse,
   type TimeSeriesQuery,
@@ -63,6 +67,28 @@ export const useResources = (): ResourceJSON[] => {
     () => (data?.resources ?? []).map((resource) => localizeResource(resource)),
     [data?.resources, localizeResource],
   )
+}
+
+/**
+ * Fetch distinct values for a field, cached for 5 minutes.
+ * Used by the filter value picker to offer multi-select when cardinality is low.
+ * The `enabled` flag allows lazy loading only when the filter UI is open.
+ */
+export const useDistinctValues = (
+  resourceId: string,
+  field: string,
+  options?: { search?: string; limit?: number; enabled?: boolean },
+): UseQueryResult<{ values: string[]; hasMore: boolean }> => {
+  const client = useAdminClient()
+  return useQuery({
+    queryKey: ['modern-admin', resourceId, 'values', field, options?.search ?? '', options?.limit ?? 100] as const,
+    queryFn: () => client.distinctValues(resourceId, field, {
+      search: options?.search,
+      limit: options?.limit,
+    }),
+    staleTime: 5 * 60_000, // 5 min cache
+    enabled: options?.enabled !== false,
+  })
 }
 
 export const useRecords = (
@@ -277,6 +303,25 @@ export const useInvokeResourceAction = (
   })
 }
 
+/**
+ * Cross-resource search hook. Fires a single batched request that fans out
+ * to every registered resource's `search` action; results are grouped by
+ * resource. The empty-query case is handled by the caller (skip render);
+ * `enabled` allows lazy activation while the dialog is closed.
+ */
+export const useGlobalSearch = (
+  query: string,
+  enabled = true,
+): UseQueryResult<GlobalSearchResponse> => {
+  const client = useAdminClient()
+  return useQuery({
+    queryKey: ['modern-admin', 'global-search', query] as const,
+    queryFn: () => client.globalSearch(query),
+    enabled: enabled && query.trim().length > 0,
+    staleTime: 30_000,
+  })
+}
+
 export const useSearchRecords = (
   resourceId: string | undefined,
   query: string,
@@ -392,6 +437,34 @@ export const useAuditLog = (
   return useQuery({
     queryKey: keyAuditLog(query),
     queryFn: () => client.listAuditLog(query),
+    staleTime: 30_000,
+  })
+}
+
+/**
+ * Cursor-based infinite scroll variant of `useAuditLog`.
+ * Each page passes the `at` timestamp of the last entry as the `before` cursor.
+ * `pageSize` entries are requested; if the response is full, there are more pages.
+ */
+export const useInfiniteAuditLog = (
+  filters: Omit<AuditLogQuery, 'before' | 'offset' | 'limit'>,
+  pageSize: number,
+): UseInfiniteQueryResult<InfiniteData<AuditLogResponse>, Error> => {
+  const client = useAdminClient()
+  return useInfiniteQuery({
+    queryKey: ['modern-admin', 'audit-log-infinite', filters],
+    queryFn: ({ pageParam }) =>
+      client.listAuditLog({
+        ...filters,
+        limit: pageSize + 1,
+        before: pageParam as number | undefined,
+      }),
+    initialPageParam: undefined as number | undefined,
+    getNextPageParam: (lastPage) => {
+      const events = lastPage.events
+      if (events.length <= pageSize) return undefined
+      return events[pageSize - 1]!.at
+    },
     staleTime: 30_000,
   })
 }

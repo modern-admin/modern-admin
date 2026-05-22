@@ -7,14 +7,14 @@
 
 import * as React from 'react'
 import {
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
   type ColumnDef,
   type ColumnFiltersState,
   type ColumnSizingState,
+  flexRender,
+  getCoreRowModel,
   type RowSelectionState,
   type SortingState,
+  useReactTable,
   type VisibilityState,
 } from '@tanstack/react-table'
 import {
@@ -25,6 +25,7 @@ import {
   CardHeader,
   CardTitle,
   Checkbox,
+  cn,
   DatePicker,
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -33,21 +34,28 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
   Input,
+  Kbd,
   Label,
   Popover,
   PopoverContent,
   PopoverTrigger,
   ScrollArea,
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
   Skeleton,
   Table,
   TableBody,
@@ -55,43 +63,36 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-  Kbd,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-  cn,
 } from '@modern-admin/ui'
 import {
-  AlertCircle,
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
-  Inbox,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
   Download,
   Eye,
+  Inbox,
   ListFilter,
   MoreHorizontal,
   Pencil,
   Plus,
   RefreshCw,
+  Search,
   SlidersHorizontal,
   Trash2,
   X,
-  Zap,
+  Zap
 } from 'lucide-react'
 import {
   useBulkDeleteRecords,
   useDeleteRecord,
+  useDistinctValues,
   useInvokeBulkAction,
   useInvokeRecordAction,
   useInvokeResourceAction,
@@ -99,13 +100,13 @@ import {
   useResource,
 } from '../hooks.js'
 import { PropertyDisplay } from '../property-renderer.js'
-import { ReferenceLink, ReferenceLinkList, ReferenceCombobox } from '../reference.js'
-import { Link, buildHref, useNavigate, useRoute, type ListQueryState, type Route } from '../router.js'
+import { ReferenceCombobox, ReferenceLink, ReferenceLinkList } from '../reference.js'
+import { buildHref, Link, type ListQueryState, type Route, useNavigate, useRoute } from '../router.js'
 import { useI18n } from '../i18n.js'
 import { useNotify } from '../notify.js'
 import { useDialogs } from '../dialogs.js'
 import { useHotkey } from '../use-hotkey.js'
-import { PageBreadcrumbs, homeCrumb } from '../breadcrumbs.js'
+import { homeCrumb, PageBreadcrumbs } from '../breadcrumbs.js'
 import { ExportDialog } from './export-dialog.js'
 import { ActionMenu, ActionMenuItems } from '../action-menu.js'
 import { visibleRecordProperties } from '../relations.js'
@@ -123,33 +124,125 @@ function openRouteInNewTab(route: Route): void {
   window.open(buildHref(route), '_blank', 'noopener,noreferrer')
 }
 
+/** Attach click-and-drag horizontal scrolling to a scroll container.
+ *
+ *  Used on the table wrapper and the pagination buttons row so users on a
+ *  mouse can drag horizontally without first scrolling to the native scroll-
+ *  bar. Mouse-only — touch devices already get smooth native momentum
+ *  scrolling. Engages only after a small movement threshold so plain clicks
+ *  on rows/buttons still fire, and swallows the synthetic post-drag click to
+ *  avoid accidental navigation. Returns a cleanup function. */
+function attachDragScroll(el: HTMLElement): () => void {
+  const DRAG_THRESHOLD = 5
+  let startX = 0
+  let startScrollLeft = 0
+  let pointerId: number | null = null
+  let dragging = false
+  let armed = false
+
+  const onPointerDown = (e: PointerEvent) => {
+    if (e.pointerType !== 'mouse') return
+    const target = e.target as HTMLElement | null
+    if (!target) return
+    if (e.button !== 0) return
+    if (
+      target.closest(
+        'button, a, input, label, [role="checkbox"], [role="menuitem"], [data-resize-handle], [contenteditable="true"]',
+      )
+    )
+      return
+    if (el.scrollWidth <= el.clientWidth) return
+    armed = true
+    dragging = false
+    pointerId = e.pointerId
+    startX = e.clientX
+    startScrollLeft = el.scrollLeft
+  }
+
+  const onPointerMove = (e: PointerEvent) => {
+    if (!armed || pointerId !== e.pointerId) return
+    const dx = e.clientX - startX
+    if (!dragging) {
+      if (Math.abs(dx) < DRAG_THRESHOLD) return
+      dragging = true
+      el.setPointerCapture(pointerId)
+      el.style.cursor = 'grabbing'
+      el.style.userSelect = 'none'
+    }
+    el.scrollLeft = startScrollLeft - dx
+    e.preventDefault()
+  }
+
+  const endDrag = (e: PointerEvent) => {
+    if (pointerId !== e.pointerId) return
+    armed = false
+    if (dragging) {
+      dragging = false
+      if (el.hasPointerCapture(pointerId)) el.releasePointerCapture(pointerId)
+      el.style.cursor = ''
+      el.style.userSelect = ''
+      const swallow = (ev: MouseEvent) => {
+        ev.stopPropagation()
+        ev.preventDefault()
+      }
+      el.addEventListener('click', swallow, { capture: true, once: true })
+    }
+    pointerId = null
+  }
+
+  el.addEventListener('pointerdown', onPointerDown)
+  el.addEventListener('pointermove', onPointerMove)
+  el.addEventListener('pointerup', endDrag)
+  el.addEventListener('pointercancel', endDrag)
+  return () => {
+    el.removeEventListener('pointerdown', onPointerDown)
+    el.removeEventListener('pointermove', onPointerMove)
+    el.removeEventListener('pointerup', endDrag)
+    el.removeEventListener('pointercancel', endDrag)
+  }
+}
+
 /** Reasonable starting width per property type. Users can resize from there
  *  and the chosen widths are persisted per-resource in localStorage. */
 function defaultColumnSize(property: PropertyJSON): number {
   if (property.isId) return 100
   switch (property.type) {
-    case 'boolean': return 110
-    case 'date': return 140
-    case 'datetime': return 180
+    case 'boolean':
+      return 110
+    case 'date':
+      return 140
+    case 'datetime':
+      return 180
     case 'number':
     case 'float':
     case 'money':
-    case 'currency': return 120
-    case 'color': return 140
-    case 'reference': return 200
+    case 'currency':
+      return 120
+    case 'color':
+      return 140
+    case 'reference':
+      return 200
     case 'richtext':
-    case 'textarea': return 320
-    default: return 200
+    case 'textarea':
+      return 320
+    default:
+      return 200
   }
 }
 
 const COLUMN_SIZE_STORAGE_PREFIX = 'modern-admin:colSizes:'
 
+// Internal system columns (_select, _actions) must never have their sizes
+// persisted — their widths are determined by the layout logic, not the user.
+const isSystemCol = (id: string) => id.startsWith('_')
+
 function loadColumnSizing(resourceId: string): ColumnSizingState {
   if (typeof window === 'undefined') return {}
   try {
     const raw = window.localStorage.getItem(COLUMN_SIZE_STORAGE_PREFIX + resourceId)
-    return raw ? JSON.parse(raw) as ColumnSizingState : {}
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as ColumnSizingState
+    return Object.fromEntries(Object.entries(parsed).filter(([k]) => !isSystemCol(k)))
   } catch {
     return {}
   }
@@ -158,11 +251,10 @@ function loadColumnSizing(resourceId: string): ColumnSizingState {
 function saveColumnSizing(resourceId: string, sizing: ColumnSizingState): void {
   if (typeof window === 'undefined') return
   try {
-    window.localStorage.setItem(
-      COLUMN_SIZE_STORAGE_PREFIX + resourceId,
-      JSON.stringify(sizing),
-    )
-  } catch { /* quota / private mode — ignore */ }
+    const toSave = Object.fromEntries(Object.entries(sizing).filter(([k]) => !isSystemCol(k)))
+    window.localStorage.setItem(COLUMN_SIZE_STORAGE_PREFIX + resourceId, JSON.stringify(toSave))
+  } catch { /* quota / private mode — ignore */
+  }
 }
 
 /** Toggles for individual chrome / toolbar pieces. All default to `true`. */
@@ -175,6 +267,8 @@ export interface ResourceListFeatures {
   export?: boolean
   create?: boolean
   bulk?: boolean
+  /** Toolbar-level "Actions" dropdown for resource-scoped custom actions. */
+  actions?: boolean
   /** Per-column filter popovers in the table header. */
   headerFilters?: boolean
   /** Wrap table + toolbar in a Card. Set false when embedding inside another card. */
@@ -193,15 +287,26 @@ export interface ResourceListPageProps {
    *  view filtered by a parent record's id. */
   lockedFilters?: Record<string, string>
   features?: ResourceListFeatures
+  /** When provided, row selection is controlled from outside. The
+   *  internal bulk action bar should be hidden (`features.bulk = false`)
+   *  in this mode — the parent is consuming the selection. */
+  selectedIds?: ReadonlyArray<string>
+  onSelectionChange?: (next: string[]) => void
+  /** Disable row click → edit and link cells. Used by the picker dialog
+   *  so clicking a row just toggles selection. */
+  disableRowNavigation?: boolean
 }
 
 export function ResourceListPage({
-  resourceId,
-  query: controlledQuery,
-  onQueryChange,
-  lockedFilters,
-  features,
-}: ResourceListPageProps): React.ReactElement {
+                                   resourceId,
+                                   query: controlledQuery,
+                                   onQueryChange,
+                                   lockedFilters,
+                                   features,
+                                   selectedIds: controlledSelectedIds,
+                                   onSelectionChange,
+                                   disableRowNavigation,
+                                 }: ResourceListPageProps): React.ReactElement {
   const resource = useResource(resourceId)
   const navigate = useNavigate()
   const route = useRoute()
@@ -210,11 +315,37 @@ export function ResourceListPage({
   const invokeRecord = useInvokeRecordAction(resourceId)
   const invokeBulk = useInvokeBulkAction(resourceId)
   const invokeResource = useInvokeResourceAction(resourceId)
-  const { t } = useI18n()
+  const {t} = useI18n()
   const notify = useNotify()
   const dialogs = useDialogs()
 
-  const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({})
+  const isSelectionControlled = controlledSelectedIds !== undefined && onSelectionChange !== undefined
+  const [internalRowSelection, setInternalRowSelection] = React.useState<RowSelectionState>({})
+  const controlledRowSelection = React.useMemo<RowSelectionState>(() => {
+    if (!isSelectionControlled) return {}
+    const next: RowSelectionState = {}
+    for (const id of controlledSelectedIds!) next[id] = true
+    return next
+  }, [isSelectionControlled, controlledSelectedIds])
+  const rowSelection = isSelectionControlled ? controlledRowSelection : internalRowSelection
+  const setRowSelection = React.useCallback(
+    (
+      updater:
+        | RowSelectionState
+        | ((prev: RowSelectionState) => RowSelectionState),
+    ) => {
+      if (isSelectionControlled) {
+        const prev = controlledRowSelection
+        const next = typeof updater === 'function'
+          ? (updater as (p: RowSelectionState) => RowSelectionState)(prev)
+          : updater
+        onSelectionChange!(Object.keys(next).filter((id) => next[id]))
+        return
+      }
+      setInternalRowSelection(updater)
+    },
+    [isSelectionControlled, controlledRowSelection, onSelectionChange],
+  )
 
   const isControlled = controlledQuery !== undefined && onQueryChange !== undefined
   const f = React.useMemo(
@@ -227,6 +358,7 @@ export function ResourceListPage({
       export: features?.export ?? true,
       create: features?.create ?? true,
       bulk: features?.bulk ?? true,
+      actions: features?.actions ?? true,
       headerFilters: features?.headerFilters ?? true,
       card: features?.card ?? true,
     }),
@@ -249,14 +381,14 @@ export function ResourceListPage({
   const sorting = React.useMemo<SortingState>(
     () =>
       urlQuery.sortBy
-        ? [{ id: urlQuery.sortBy, desc: urlQuery.direction === 'desc' }]
+        ? [{id: urlQuery.sortBy, desc: urlQuery.direction === 'desc'}]
         : [],
     [urlQuery.sortBy, urlQuery.direction],
   )
   const columnFilters = React.useMemo<ColumnFiltersState>(
     () =>
       urlQuery.filters
-        ? Object.entries(urlQuery.filters).map(([id, value]) => ({ id, value }))
+        ? Object.entries(urlQuery.filters).map(([id, value]) => ({id, value}))
         : [],
     [urlQuery.filters],
   )
@@ -288,25 +420,38 @@ export function ResourceListPage({
   // Track the wrapper width so the last visible column can flex to fill any
   // leftover space (mirrors unitify's "distribute remaining space" pattern
   // without re-layouting all columns on every observe).
-  const tableWrapperRef = React.useRef<HTMLDivElement | null>(null)
   const [wrapperWidth, setWrapperWidth] = React.useState(0)
-  React.useEffect(() => {
-    const el = tableWrapperRef.current
+  const roRef = React.useRef<ResizeObserver | null>(null)
+  const dragCleanupRef = React.useRef<(() => void) | null>(null)
+  // Callback ref: re-attaches ResizeObserver and click-and-drag handlers
+  // whenever the wrapper mounts. (Plain useRef + useEffect runs only once,
+  // so if the wrapper is initially unmounted due to conditional rendering,
+  // the observer never attaches.)
+  const tableWrapperRef = React.useCallback((el: HTMLDivElement | null) => {
+    if (roRef.current) {
+      roRef.current.disconnect()
+      roRef.current = null
+    }
+    if (dragCleanupRef.current) {
+      dragCleanupRef.current()
+      dragCleanupRef.current = null
+    }
     if (!el) return
     const ro = new ResizeObserver((entries) => {
       const w = entries[0]?.contentRect.width ?? 0
       setWrapperWidth(w)
     })
     ro.observe(el)
+    roRef.current = ro
     setWrapperWidth(el.clientWidth)
-    return () => ro.disconnect()
+    dragCleanupRef.current = attachDragScroll(el)
   }, [])
 
   const [filterOpen, setFilterOpen] = React.useState(false)
 
   const updateUrlQuery = React.useCallback(
     (changes: Partial<ListQueryState>) => {
-      const merged: ListQueryState = { ...urlQuery, ...changes }
+      const merged: ListQueryState = {...urlQuery, ...changes}
       const next: ListQueryState = {}
       if (merged.page && merged.page > 1) next.page = merged.page
       if (merged.perPage && merged.perPage !== 20) next.perPage = merged.perPage
@@ -320,7 +465,7 @@ export function ResourceListPage({
       navigate({
         name: 'list',
         resourceId,
-        ...(Object.keys(next).length > 0 ? { query: next } : {}),
+        ...(Object.keys(next).length > 0 ? {query: next} : {}),
       })
     },
     [isControlled, onQueryChange, navigate, resourceId, urlQuery],
@@ -362,13 +507,15 @@ export function ResourceListPage({
   // in the `columns` useMemo dependency array (which would recreate all columns
   // on every filter change).
   const columnFiltersRef = React.useRef(columnFilters)
-  React.useEffect(() => { columnFiltersRef.current = columnFilters }, [columnFilters])
+  React.useEffect(() => {
+    columnFiltersRef.current = columnFilters
+  }, [columnFilters])
 
   const handleColumnFilterApply = React.useCallback(
     (updates: Record<string, string>) => {
       const next = columnFiltersRef.current.filter((f) => !(f.id in updates))
       for (const [id, value] of Object.entries(updates)) {
-        if (value) next.push({ id, value })
+        if (value) next.push({id, value})
       }
       handleFilterChange(next)
     },
@@ -380,9 +527,9 @@ export function ResourceListPage({
       updater:
         | { pageIndex: number; pageSize: number }
         | ((prev: { pageIndex: number; pageSize: number }) => {
-            pageIndex: number
-            pageSize: number
-          }),
+        pageIndex: number
+        pageSize: number
+      }),
     ) => {
       const next = typeof updater === 'function' ? updater(pagination) : updater
       updateUrlQuery({
@@ -395,17 +542,17 @@ export function ResourceListPage({
 
   const query = React.useMemo<ListQuery>(() => {
     // Locked filters are merged in but never written to URL or column state.
-    const mergedFilters = { ...(lockedFilters ?? {}), ...(urlQuery.filters ?? {}) }
+    const mergedFilters = {...(lockedFilters ?? {}), ...(urlQuery.filters ?? {})}
     return {
       page: urlQuery.page ?? 1,
       perPage: urlQuery.perPage ?? 20,
       ...(urlQuery.sortBy
         ? {
-            sortBy: urlQuery.sortBy,
-            ...(urlQuery.direction ? { direction: urlQuery.direction } : {}),
-          }
+          sortBy: urlQuery.sortBy,
+          ...(urlQuery.direction ? {direction: urlQuery.direction} : {}),
+        }
         : {}),
-      ...(Object.keys(mergedFilters).length > 0 ? { filters: mergedFilters } : {}),
+      ...(Object.keys(mergedFilters).length > 0 ? {filters: mergedFilters} : {}),
     }
   }, [
     urlQuery.page,
@@ -438,9 +585,10 @@ export function ResourceListPage({
     (a) => a.actionType === 'bulk' && !builtInActionNames.has(a.name),
   )
 
+  const showSelectColumn = f.bulk || isSelectionControlled
   const columns = React.useMemo<ColumnDef<RecordJSON>[]>(() => {
     const cols: ColumnDef<RecordJSON>[] = []
-    if (f.bulk) {
+    if (showSelectColumn) {
       cols.push({
         id: '_select',
         enableSorting: false,
@@ -448,7 +596,7 @@ export function ResourceListPage({
         enableResizing: false,
         size: 40,
         minSize: 0,
-        header: ({ table }) => {
+        header: ({table}) => {
           const all = table.getIsAllPageRowsSelected()
           const some = table.getIsSomePageRowsSelected()
           return (
@@ -459,7 +607,7 @@ export function ResourceListPage({
             />
           )
         },
-        cell: ({ row }) => (
+        cell: ({row}) => (
           <Checkbox
             checked={row.getIsSelected()}
             onCheckedChange={(v) => row.toggleSelected(!!v)}
@@ -474,7 +622,7 @@ export function ResourceListPage({
       accessorFn: (row) => row.params[property.path],
       size: defaultColumnSize(property),
       minSize: 80,
-      header: ({ column }) => (
+      header: ({column}) => (
         <div className="flex items-center gap-0.5">
           <SortHeader
             property={property}
@@ -498,13 +646,14 @@ export function ResourceListPage({
               property={property}
               getFilters={() => columnFiltersRef.current}
               onApply={handleColumnFilterApply}
+              resourceId={resourceId}
               t={t}
             />
           )}
         </div>
       ),
       enableSorting: property.isSortable,
-      cell: ({ row }) => (
+      cell: ({row}) => (
         <CellContent
           resourceId={resourceId}
           recordId={row.original.id}
@@ -513,22 +662,23 @@ export function ResourceListPage({
         />
       ),
     })))
-    cols.push({
+    if (!disableRowNavigation) cols.push({
       id: '_actions',
-      header: () => <span className="text-right">{t('common:actions')}</span>,
+      header: () => null,
       enableSorting: false,
       enableHiding: false,
       enableResizing: false,
-      size: 64,
-      cell: ({ row }) => (
+      size: 44,
+      minSize: 0,
+      cell: ({row}) => (
         <RowActions
           t={t}
           customActions={customRecordActions}
           onView={() =>
-            navigate({ name: 'show', resourceId, recordId: row.original.id })
+            navigate({name: 'show', resourceId, recordId: row.original.id})
           }
           onEdit={() =>
-            navigate({ name: 'edit', resourceId, recordId: row.original.id })
+            navigate({name: 'edit', resourceId, recordId: row.original.id})
           }
           onDelete={async () => {
             const ok = await dialogs.confirm({
@@ -539,28 +689,28 @@ export function ResourceListPage({
             })
             if (!ok) return
             remove.mutate(row.original.id, {
-              onSuccess: () => notify.success({ key: 'toast:deleted' }),
+              onSuccess: () => notify.success({key: 'toast:deleted'}),
               onError: (err) =>
                 notify.error(
-                  { key: 'toast:deleteFailed' },
-                  { description: err instanceof Error ? err.message : String(err) },
+                  {key: 'toast:deleteFailed'},
+                  {description: err instanceof Error ? err.message : String(err)},
                 ),
             })
           }}
           onInvokeAction={(actionName) => {
             invokeRecord.mutate(
-              { recordId: row.original.id, actionName },
+              {recordId: row.original.id, actionName},
               {
                 onSuccess: (res) => {
                   if (res.notice) {
                     const type = res.notice.type === 'error' ? 'error'
                       : res.notice.type === 'warning' ? 'warning'
-                      : res.notice.type === 'info' ? 'info'
-                      : 'success'
-                    notify[type]({ message: res.notice.message })
+                        : res.notice.type === 'info' ? 'info'
+                          : 'success'
+                    notify[type]({message: res.notice.message})
                   }
                 },
-                onError: (err) => notify.error({ message: err.message }),
+                onError: (err) => notify.error({message: err.message}),
               },
             )
           }}
@@ -578,7 +728,8 @@ export function ResourceListPage({
     dialogs,
     handleColumnFilterApply,
     f.headerFilters,
-    f.bulk,
+    showSelectColumn,
+    disableRowNavigation,
     customRecordActions,
     invokeRecord,
   ])
@@ -590,7 +741,7 @@ export function ResourceListPage({
     data: records.data?.records ?? [],
     columns,
     pageCount,
-    state: { sorting, columnFilters, columnVisibility, pagination, rowSelection, columnSizing },
+    state: {sorting, columnFilters, columnVisibility, pagination, rowSelection, columnSizing},
     onSortingChange: handleSortingChange,
     onColumnFiltersChange: handleFilterChange,
     onColumnVisibilityChange: setColumnVisibility,
@@ -605,7 +756,7 @@ export function ResourceListPage({
     // 'onEnd' commits the new size only when the user releases the handle,
     // avoiding a re-render storm that 'onChange' triggers on every mousemove.
     columnResizeMode: 'onEnd',
-    defaultColumn: { minSize: 80, size: 200, maxSize: 800 },
+    defaultColumn: {minSize: 80, size: 200, maxSize: 800},
     getCoreRowModel: getCoreRowModel(),
     getRowId: (row) => row.id,
   })
@@ -626,28 +777,28 @@ export function ResourceListPage({
   useHotkey(
     'n',
     () => {
-      navigate({ name: 'new', resourceId })
+      navigate({name: 'new', resourceId})
     },
-    { enabled: f.create, description: t('common:new') },
+    {enabled: f.create, description: t('common:new')},
   )
   useHotkey(
     'r',
     () => {
       if (!records.isFetching) records.refetch()
     },
-    { enabled: f.refresh, description: t('common:refresh') },
+    {enabled: f.refresh, description: t('common:refresh')},
   )
   useHotkey(
     'f',
     () => {
       setFilterOpen((v) => !v)
     },
-    { enabled: f.filters, description: t('common:filters') },
+    {enabled: f.filters, description: t('common:filters')},
   )
 
   const handleBulkDelete = React.useCallback(async () => {
     const ok = await dialogs.confirm({
-      title: t('common:bulkDeleteConfirm', { count: selectedCount }),
+      title: t('common:bulkDeleteConfirm', {count: selectedCount}),
       confirmLabel: t('common:delete'),
       destructive: true,
     })
@@ -655,12 +806,12 @@ export function ResourceListPage({
     bulkRemove.mutate(selectedIds, {
       onSuccess: () => {
         setRowSelection({})
-        notify.success({ key: 'toast:bulkDeleted', params: { count: selectedCount } })
+        notify.success({key: 'toast:bulkDeleted', params: {count: selectedCount}})
       },
       onError: (err) =>
         notify.error(
-          { key: 'toast:bulkDeleteFailed' },
-          { description: err instanceof Error ? err.message : String(err) },
+          {key: 'toast:bulkDeleteFailed'},
+          {description: err instanceof Error ? err.message : String(err)},
         ),
     })
   }, [bulkRemove, dialogs, notify, selectedCount, selectedIds, t])
@@ -669,14 +820,15 @@ export function ResourceListPage({
     return (
       <Card>
         <CardContent className="p-6">
-          <Skeleton className="h-6 w-1/3" />
+          <Skeleton className="h-6 w-1/3"/>
         </CardContent>
       </Card>
     )
   }
 
+  const showCustomResourceActions = f.actions && customResourceActions.length > 0
   const hasToolbarActions = !showStandaloneEmptyState && (
-    f.refresh || f.filters || f.columns || f.export || f.create || customResourceActions.length > 0
+    f.refresh || f.filters || f.columns || f.export || f.create || showCustomResourceActions
   )
   const hasHeader = f.title || hasToolbarActions || (!showStandaloneEmptyState && visible.some((p) => p.isSortable))
 
@@ -699,12 +851,13 @@ export function ResourceListPage({
           properties={visible}
           filters={columnFilters}
           onChange={handleFilterChange}
+          resourceId={resourceId}
           t={t}
         />
       )}
       {hasHeader && (
         <HeaderEl className={headerCls}>
-          {f.title ? <CardTitle>{resource.name}</CardTitle> : <span />}
+          {f.title ? <CardTitle>{resource.name}</CardTitle> : <span/>}
           {hasToolbarActions && (
             <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
               {f.refresh && (
@@ -717,7 +870,7 @@ export function ResourceListPage({
                       disabled={records.isFetching}
                       aria-label={t('common:refresh')}
                     >
-                      <RefreshCw className={records.isFetching ? 'size-4 animate-spin' : 'size-4'} />
+                      <RefreshCw className={records.isFetching ? 'size-4 animate-spin' : 'size-4'}/>
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent className="flex items-center gap-1.5">
@@ -730,7 +883,7 @@ export function ResourceListPage({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button variant="outline" size="sm" onClick={() => setFilterOpen(true)}>
-                      <ListFilter className="size-4" />
+                      <ListFilter className="size-4"/>
                       <span className="hidden sm:inline">{t('common:filters')}</span>
                       {columnFilters.length > 0 && (
                         <Badge className="ml-1 h-5 rounded-full px-1.5 text-xs">
@@ -746,7 +899,7 @@ export function ResourceListPage({
                 </Tooltip>
               )}
               {f.columns && (
-                <ColumnVisibilityMenu table={table} properties={visible} t={t} />
+                <ColumnVisibilityMenu table={table} properties={visible} t={t}/>
               )}
               {f.export && (
                 <Button
@@ -754,7 +907,7 @@ export function ResourceListPage({
                   size="sm"
                   onClick={() =>
                     dialogs.open({
-                      render: ({ close }) => (
+                      render: ({close}) => (
                         <ExportDialog
                           resourceId={resourceId}
                           resourceLabel={resource.name}
@@ -766,34 +919,34 @@ export function ResourceListPage({
                     })
                   }
                 >
-                  <Download className="size-4" />
+                  <Download className="size-4"/>
                   <span className="hidden sm:inline">{t('common:export')}</span>
                 </Button>
               )}
-              {customResourceActions.length > 0 && (
+              {showCustomResourceActions && (
                 <ActionMenu
                   actions={customResourceActions}
                   onAction={(action) => {
                     invokeResource.mutate(
-                      { actionName: action.name },
+                      {actionName: action.name},
                       {
                         onSuccess: (res) => {
                           if (res.notice) {
                             const type = res.notice.type === 'error' ? 'error'
                               : res.notice.type === 'warning' ? 'warning'
-                              : res.notice.type === 'info' ? 'info'
-                              : 'success'
-                            notify[type]({ message: res.notice.message })
+                                : res.notice.type === 'info' ? 'info'
+                                  : 'success'
+                            notify[type]({message: res.notice.message})
                           }
                         },
-                        onError: (err) => notify.error({ message: err.message }),
+                        onError: (err) => notify.error({message: err.message}),
                       },
                     )
                   }}
                   t={t}
                   trigger={(
                     <Button variant="outline" size="sm" disabled={invokeResource.isPending}>
-                      <Zap className="size-4" />
+                      <Zap className="size-4"/>
                       <span className="hidden sm:inline">{t('common:actions')}</span>
                     </Button>
                   )}
@@ -802,8 +955,8 @@ export function ResourceListPage({
               {f.create && (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button size="sm" onClick={() => navigate({ name: 'new', resourceId })}>
-                      <Plus className="size-4" />
+                    <Button size="sm" onClick={() => navigate({name: 'new', resourceId})}>
+                      <Plus className="size-4"/>
                       <span className="hidden sm:inline">{t('common:new')}</span>
                     </Button>
                   </TooltipTrigger>
@@ -818,7 +971,7 @@ export function ResourceListPage({
           {/* Mobile-only sort selector — desktop uses column header clicks */}
           {visible.some((p) => p.isSortable) && (
             <div className="flex w-full items-center gap-2 sm:hidden">
-              <ArrowUpDown className="size-4 shrink-0 text-muted-foreground" />
+              <ArrowUpDown className="size-4 shrink-0 text-muted-foreground"/>
               <Select
                 value={
                   sorting[0]
@@ -826,13 +979,16 @@ export function ResourceListPage({
                     : '_none_'
                 }
                 onValueChange={(v) => {
-                  if (v === '_none_') { handleSortingChange([]); return }
+                  if (v === '_none_') {
+                    handleSortingChange([]);
+                    return
+                  }
                   const sep = v.lastIndexOf(':')
-                  handleSortingChange([{ id: v.slice(0, sep), desc: v.slice(sep + 1) === 'desc' }])
+                  handleSortingChange([{id: v.slice(0, sep), desc: v.slice(sep + 1) === 'desc'}])
                 }}
               >
                 <SelectTrigger className="h-8 flex-1">
-                  <SelectValue placeholder={t('common:sortBy')} />
+                  <SelectValue placeholder={t('common:sortBy')}/>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="_none_">{t('common:sortBy')}: —</SelectItem>
@@ -852,24 +1008,24 @@ export function ResourceListPage({
           )}
         </HeaderEl>
       )}
-      <ContentEl className="space-y-3">
+      <ContentEl className="flex flex-1 flex-col gap-3">
         {showStandaloneEmptyState ? (
           <Empty>
             <EmptyHeader>
               <EmptyMedia>
-                <Inbox />
+                <Inbox/>
               </EmptyMedia>
               <EmptyTitle>{t('common:noRecords')}</EmptyTitle>
               {f.create && (
                 <EmptyDescription>
-                  {t('common:noRecordsHint', { resource: resource.name })}
+                  {t('common:noRecordsHint', {resource: resource.name})}
                 </EmptyDescription>
               )}
             </EmptyHeader>
             {f.create && (
               <EmptyContent>
-                <Button size="sm" onClick={() => navigate({ name: 'new', resourceId })}>
-                  <Plus className="size-4" />
+                <Button size="sm" onClick={() => navigate({name: 'new', resourceId})}>
+                  <Plus className="size-4"/>
                   {t('common:new')}
                 </Button>
               </EmptyContent>
@@ -881,9 +1037,10 @@ export function ResourceListPage({
                 Sits above the list so the user can act on the selection without
                 having to scroll. Mirrors a typical email-client multi-select. */}
             {f.bulk && selectedCount > 0 && (
-              <div className="flex flex-row items-center justify-between gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2">
+              <div
+                className="flex flex-row items-center justify-between gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2">
                 <div className="min-w-0 truncate text-sm font-medium">
-                  {t('common:selectedCount', { count: selectedCount })}
+                  {t('common:selectedCount', {count: selectedCount})}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <Button
@@ -892,7 +1049,7 @@ export function ResourceListPage({
                     onClick={() => setRowSelection({})}
                     disabled={bulkRemove.isPending}
                   >
-                    <X className="size-4" />
+                    <X className="size-4"/>
                     <span className="hidden sm:inline">{t('common:clearSelection')}</span>
                   </Button>
                   {customBulkActions.length > 0 && (
@@ -900,26 +1057,26 @@ export function ResourceListPage({
                       actions={customBulkActions}
                       onAction={(action) => {
                         invokeBulk.mutate(
-                          { actionName: action.name, ids: selectedIds },
+                          {actionName: action.name, ids: selectedIds},
                           {
                             onSuccess: (res) => {
                               setRowSelection({})
                               if (res.notice) {
                                 const type = res.notice.type === 'error' ? 'error'
                                   : res.notice.type === 'warning' ? 'warning'
-                                  : res.notice.type === 'info' ? 'info'
-                                  : 'success'
-                                notify[type]({ message: res.notice.message })
+                                    : res.notice.type === 'info' ? 'info'
+                                      : 'success'
+                                notify[type]({message: res.notice.message})
                               }
                             },
-                            onError: (err) => notify.error({ message: err.message }),
+                            onError: (err) => notify.error({message: err.message}),
                           },
                         )
                       }}
                       t={t}
                       trigger={(
                         <Button variant="outline" size="sm" disabled={invokeBulk.isPending}>
-                          <Zap className="size-4" />
+                          <Zap className="size-4"/>
                           <span className="hidden sm:inline">{t('common:actions')}</span>
                         </Button>
                       )}
@@ -931,7 +1088,7 @@ export function ResourceListPage({
                     onClick={handleBulkDelete}
                     disabled={bulkRemove.isPending}
                   >
-                    <Trash2 className="size-4" />
+                    <Trash2 className="size-4"/>
                     <span className="hidden sm:inline">{t('common:deleteSelected')}</span>
                   </Button>
                 </div>
@@ -939,23 +1096,23 @@ export function ResourceListPage({
             )}
             {/* Mobile: card-per-record stack. Hidden ≥ sm. */}
             <div className="space-y-2 sm:hidden">
-              {records.isFetching && Array.from({ length: pagination.pageSize }, (_, i) => (
+              {records.isFetching && Array.from({length: pagination.pageSize}, (_, i) => (
                 <div key={`skel-card-${i}`} className="rounded-lg border border-border bg-card p-3">
                   <div className="flex items-start gap-3">
-                    <Skeleton className="mt-1 h-4 w-4 flex-none rounded" />
+                    <Skeleton className="mt-1 h-4 w-4 flex-none rounded"/>
                     <div className="flex-1 space-y-2">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 space-y-1.5">
-                          <Skeleton className="h-4 w-32" />
-                          <Skeleton className="h-3 w-16" />
+                          <Skeleton className="h-4 w-32"/>
+                          <Skeleton className="h-3 w-16"/>
                         </div>
-                        <Skeleton className="h-7 w-7 shrink-0 rounded" />
+                        <Skeleton className="h-7 w-7 shrink-0 rounded"/>
                       </div>
                       <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2">
-                        {Array.from({ length: 4 }, (_, j) => (
+                        {Array.from({length: 4}, (_, j) => (
                           <div key={j} className="space-y-1">
-                            <Skeleton className="h-2.5 w-14" />
-                            <Skeleton className={`h-4 ${SKEL_WIDTHS[(i * 3 + j) % SKEL_WIDTHS.length]}`} />
+                            <Skeleton className="h-2.5 w-14"/>
+                            <Skeleton className={`h-4 ${SKEL_WIDTHS[(i * 3 + j) % SKEL_WIDTHS.length]}`}/>
                           </div>
                         ))}
                       </div>
@@ -964,8 +1121,8 @@ export function ResourceListPage({
                 </div>
               ))}
               {!records.isFetching && records.isError && (
-                <div className="rounded-md border py-8 text-center text-destructive">
-                  {t('common:loadFailed', { error: String(records.error) })}
+                <div className="rounded-md border border-border px-4 py-8 text-left text-destructive">
+                  {t('common:loadFailed', {error: String(records.error)})}
                 </div>
               )}
               {!records.isFetching && table.getRowModel().rows.map((row) => (
@@ -976,11 +1133,11 @@ export function ResourceListPage({
                     table.getColumn(p.path)?.getIsVisible() ?? true,
                   )}
                   resourceId={resourceId}
-                  showSelect={f.bulk}
+                  showSelect={showSelectColumn}
                   selected={row.getIsSelected()}
                   onToggleSelect={(v) => row.toggleSelected(v)}
-                  onView={() => navigate({ name: 'show', resourceId, recordId: row.original.id })}
-                  onEdit={() => navigate({ name: 'edit', resourceId, recordId: row.original.id })}
+                  onView={() => navigate({name: 'show', resourceId, recordId: row.original.id})}
+                  onEdit={() => navigate({name: 'edit', resourceId, recordId: row.original.id})}
                   onDelete={async () => {
                     const ok = await dialogs.confirm({
                       title: t('common:confirmDelete'),
@@ -990,29 +1147,29 @@ export function ResourceListPage({
                     })
                     if (!ok) return
                     remove.mutate(row.original.id, {
-                      onSuccess: () => notify.success({ key: 'toast:deleted' }),
+                      onSuccess: () => notify.success({key: 'toast:deleted'}),
                       onError: (err) =>
                         notify.error(
-                          { key: 'toast:deleteFailed' },
-                          { description: err instanceof Error ? err.message : String(err) },
+                          {key: 'toast:deleteFailed'},
+                          {description: err instanceof Error ? err.message : String(err)},
                         ),
                     })
                   }}
                   customActions={customRecordActions}
                   onInvokeAction={(actionName) => {
                     invokeRecord.mutate(
-                      { recordId: row.original.id, actionName },
+                      {recordId: row.original.id, actionName},
                       {
                         onSuccess: (res) => {
                           if (res.notice) {
                             const type = res.notice.type === 'error' ? 'error'
                               : res.notice.type === 'warning' ? 'warning'
-                              : res.notice.type === 'info' ? 'info'
-                              : 'success'
-                            notify[type]({ message: res.notice.message })
+                                : res.notice.type === 'info' ? 'info'
+                                  : 'success'
+                            notify[type]({message: res.notice.message})
                           }
                         },
-                        onError: (err) => notify.error({ message: err.message }),
+                        onError: (err) => notify.error({message: err.message}),
                       },
                     )
                   }}
@@ -1021,28 +1178,66 @@ export function ResourceListPage({
               ))}
             </div>
 
-            {/* Desktop: tabular layout. Hidden < sm. */}
+            {/* Desktop: tabular layout. Hidden < sm.
+                `cursor-grab` is a hint that the table can be dragged
+                horizontally; the actual drag handlers live in
+                `tableWrapperRef`. The grip on column resize handles takes
+                precedence (cursor-col-resize is set on a child) so users
+                still get the right cursor while resizing. */}
             <div
               ref={tableWrapperRef}
-              className="relative hidden overflow-x-auto rounded-md border border-border sm:block"
+              className="relative hidden cursor-grab overflow-x-auto rounded-md border border-border sm:block"
             >
               {(() => {
-                // Distribute leftover wrapper space to the last visible leaf column
-                // so the table always reaches the right edge — without changing the
-                // stored size (resetSize / persistence stay clean).
+                // Distribute leftover wrapper space proportionally across data columns
+                // so the table always fills the full wrapper width.
+                // _select and _actions keep their fixed sizes; only data columns stretch.
                 const leafCols = table.getVisibleLeafColumns()
                 const totalSize = table.getCenterTotalSize()
-                const lastCol = leafCols[leafCols.length - 1]
-                const lastBoost = lastCol && wrapperWidth > totalSize
-                  ? wrapperWidth - totalSize
-                  : 0
-                const renderedTotal = totalSize + lastBoost
+                const wrapperW = wrapperWidth > 0 ? wrapperWidth : totalSize
+                const extra = Math.max(0, wrapperW - totalSize)
+
+                // _select (checkbox) and _actions stay fixed-width; only data
+                // columns participate in proportional stretch.
+                const fixedIds = new Set(['_select', '_actions'])
+                const stretchCols = leafCols.filter((c) => !fixedIds.has(c.id))
+                const stretchBaseTotal = stretchCols.reduce((s, c) => s + c.getSize(), 0)
+
+                // Pre-compute each column's rendered pixel width (base + proportional boost).
+                const renderedWidth = new Map<string, number>(
+                  leafCols.map((c) => [c.id, c.getSize()]),
+                )
+                if (extra > 0 && stretchBaseTotal > 0) {
+                  let assigned = 0
+                  stretchCols.forEach((c, i) => {
+                    const share =
+                      i === stretchCols.length - 1
+                        ? extra - assigned
+                        : Math.floor((extra * c.getSize()) / stretchBaseTotal)
+                    renderedWidth.set(c.id, c.getSize() + share)
+                    assigned += share
+                  })
+                }
+
+                const renderedTotal = totalSize + extra
                 const sizeOf = (colId: string, base: number): number =>
-                  colId === lastCol?.id ? base + lastBoost : base
+                  renderedWidth.get(colId) ?? base
+
+                // Resize guide: compute left offset using rendered (boosted) widths.
                 const resizingHeader = table.getHeaderGroups()
                   .flatMap((hg) => hg.headers)
                   .find((h) => h.column.getIsResizing())
                 const deltaOffset = table.getState().columnSizingInfo.deltaOffset ?? 0
+                const resizeLeft = resizingHeader
+                  ? leafCols
+                    .slice(
+                      0,
+                      leafCols.findIndex((c) => c.id === resizingHeader.column.id) + 1,
+                    )
+                    .reduce((s, c) => s + (renderedWidth.get(c.id) ?? c.getSize()), 0) +
+                  deltaOffset
+                  : 0
+
                 return (
                   <div className="relative" style={{ width: renderedTotal }}>
                     <Table style={{ tableLayout: 'fixed', width: renderedTotal }}>
@@ -1052,10 +1247,10 @@ export function ResourceListPage({
                             {hg.headers.map((header) => (
                               <TableHead
                                 key={header.id}
-                                style={{ width: sizeOf(header.column.id, header.getSize()) }}
+                                style={{width: sizeOf(header.column.id, header.getSize())}}
                                 className={cn(
                                   'relative select-none',
-                                  header.column.id === '_actions' && 'text-right',
+                                  header.column.id === '_actions' && 'px-1',
                                 )}
                               >
                                 {header.isPlaceholder
@@ -1063,6 +1258,7 @@ export function ResourceListPage({
                                   : flexRender(header.column.columnDef.header, header.getContext())}
                                 {header.column.getCanResize() && (
                                   <div
+                                    data-resize-handle=""
                                     onMouseDown={header.getResizeHandler()}
                                     onTouchStart={header.getResizeHandler()}
                                     onClick={(e) => e.stopPropagation()}
@@ -1081,20 +1277,20 @@ export function ResourceListPage({
                       </TableHeader>
                       <TableBody>
                         {records.isFetching ? (
-                          Array.from({ length: pagination.pageSize }, (_, i) => (
+                          Array.from({length: pagination.pageSize}, (_, i) => (
                             <TableRow key={`skel-${i}`} className="pointer-events-none">
                               {table.getVisibleLeafColumns().map((col, j) => (
                                 <TableCell
                                   key={col.id}
-                                  style={{ width: sizeOf(col.id, col.getSize()) }}
-                                  className={col.id === '_actions' ? 'text-right' : ''}
+                                  style={{width: sizeOf(col.id, col.getSize())}}
+                                  className={col.id === '_actions' ? 'px-1' : ''}
                                 >
                                   {col.id === '_select' ? (
-                                    <Skeleton className="h-4 w-4 rounded" />
+                                    <Skeleton className="h-4 w-4 rounded"/>
                                   ) : col.id === '_actions' ? (
-                                    <Skeleton className="ml-auto h-7 w-7 rounded" />
+                                    <Skeleton className="h-8 w-8 rounded"/>
                                   ) : (
-                                    <Skeleton className={`h-4 ${SKEL_WIDTHS[(i * 3 + j) % SKEL_WIDTHS.length]}`} />
+                                    <Skeleton className={`h-4 ${SKEL_WIDTHS[(i * 3 + j) % SKEL_WIDTHS.length]}`}/>
                                   )}
                                 </TableCell>
                               ))}
@@ -1102,8 +1298,10 @@ export function ResourceListPage({
                           ))
                         ) : records.isError ? (
                           <TableRow>
-                            <TableCell colSpan={columns.length} className="py-8 text-center text-destructive">
-                              {t('common:loadFailed', { error: String(records.error) })}
+                            <TableCell colSpan={columns.length} className="py-8">
+                              <div className="sticky left-4 w-fit text-destructive">
+                                {t('common:loadFailed', {error: String(records.error)})}
+                              </div>
                             </TableCell>
                           </TableRow>
                         ) : (
@@ -1114,15 +1312,20 @@ export function ResourceListPage({
                               className="cursor-pointer"
                               onClick={(e) => {
                                 const target = e.target as HTMLElement
-                                if (target.closest('a, button, [role="menuitem"]')) return
-                                navigate({ name: 'edit', resourceId, recordId: row.original.id })
+                                if (target.closest('a, button, [role="menuitem"], [role="checkbox"]')) return
+                                if (disableRowNavigation) {
+                                  row.toggleSelected(!row.getIsSelected())
+                                  return
+                                }
+                                navigate({name: 'edit', resourceId, recordId: row.original.id})
                               }}
                               onAuxClick={(e) => {
                                 if (e.button !== 1) return
                                 const target = e.target as HTMLElement
                                 if (target.closest('a, button, [role="menuitem"]')) return
+                                if (disableRowNavigation) return
                                 e.preventDefault()
-                                openRouteInNewTab({ name: 'edit', resourceId, recordId: row.original.id })
+                                openRouteInNewTab({name: 'edit', resourceId, recordId: row.original.id})
                               }}
                               onMouseDown={(e) => {
                                 if (e.button === 1) {
@@ -1135,10 +1338,10 @@ export function ResourceListPage({
                               {row.getVisibleCells().map((cell) => (
                                 <TableCell
                                   key={cell.id}
-                                  style={{ width: sizeOf(cell.column.id, cell.column.getSize()) }}
+                                  style={{width: sizeOf(cell.column.id, cell.column.getSize())}}
                                   className={cn(
                                     'overflow-hidden',
-                                    cell.column.id === '_actions' && 'text-right',
+                                    cell.column.id === '_actions' && 'px-1',
                                   )}
                                 >
                                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -1150,21 +1353,18 @@ export function ResourceListPage({
                       </TableBody>
                     </Table>
                     {/* Vertical guide line follows the cursor while a column is being
-                        resized. Uses left = (header right edge) + deltaOffset. */}
+                        resized. Position is computed from rendered (boosted) widths. */}
                     {resizingHeader && (
                       <div
                         aria-hidden="true"
                         className="pointer-events-none absolute top-0 z-20 h-full w-px bg-primary"
-                        style={{
-                          left: resizingHeader.getStart() + resizingHeader.getSize() + deltaOffset,
-                        }}
+                        style={{left: resizeLeft}}
                       />
                     )}
                   </div>
                 )
               })()}
             </div>
-            <Paginator table={table} total={total} t={t} />
           </>
         )}
       </ContentEl>
@@ -1172,22 +1372,56 @@ export function ResourceListPage({
   )
 
   return (
-    <div className="space-y-4">
+    <div className={cn('flex flex-col', f.card ? 'min-h-full gap-4' : 'h-full')}>
       {f.breadcrumbs && (
         <PageBreadcrumbs
-          items={[homeCrumb(t('common:home')), { label: resource.name }]}
+          items={[homeCrumb(t('common:home')), {label: resource.name}]}
         />
       )}
-      {f.card ? <Card>{inner}</Card> : inner}
+      {f.card ? (
+        <Card className="flex flex-1 flex-col">{inner}</Card>
+      ) : (
+        // Embedded mode (e.g. picker dialog): the table area scrolls
+        // internally so the paginator below can sit flush at the host's
+        // bottom edge, full-width, without a scrollbar gutter eating its
+        // right side. `min-h-0` is required for `flex-1 overflow-y-auto`
+        // inside a flex column to actually constrain its height. Horizontal
+        // + top padding lives on the scroll container — the paginator is
+        // a sibling so it stays edge-to-edge.
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pt-4">{inner}</div>
+      )}
+      {!showStandaloneEmptyState && (
+        // Standalone page mode: sticky at the page-wrapper level so the
+        // paginator pins to the viewport bottom while the user scrolls
+        // through the list. Right padding (`pr-16`) reserves space for the
+        // floating AI assistant widget (`fixed bottom-4 right-4`, ~40px
+        // wide) so pagination buttons never slide under it.
+        //
+        // Embedded mode (`card: false`, e.g. picker dialog): plain flex
+        // child below the scrollable table area. No sticky, no scrollbar
+        // gutter interference — the bar spans the host's full width and
+        // sits directly above whatever the host renders next (e.g.
+        // DialogFooter).
+        <div
+          className={cn(
+            'border-t border-border bg-card py-3',
+            f.card
+              ? 'sticky bottom-0 z-20 -mx-4 px-4 pr-16 sm:-mx-6 sm:px-6 sm:pr-16'
+              : 'shrink-0 px-6',
+          )}
+        >
+          <Paginator table={table} total={total} t={t}/>
+        </div>
+      )}
     </div>
   )
 }
 
 function SortHeader({
-  property,
-  state,
-  onSort,
-}: {
+                      property,
+                      state,
+                      onSort,
+                    }: {
   property: PropertyJSON
   state: 'none' | 'asc' | 'desc'
   onSort(): void
@@ -1203,17 +1437,17 @@ function SortHeader({
       className="-ml-2 inline-flex h-8 items-center gap-1 rounded-md px-2 font-semibold hover:bg-accent hover:text-accent-foreground"
     >
       {property.label}
-      <Icon className="size-3.5 opacity-60" />
+      <Icon className="size-3.5 opacity-60"/>
     </button>
   )
 }
 
 function CellContent({
-  resourceId,
-  recordId,
-  property,
-  value,
-}: {
+                       resourceId,
+                       recordId,
+                       property,
+                       value,
+                     }: {
   resourceId: string
   recordId: string
   property: PropertyJSON
@@ -1222,7 +1456,7 @@ function CellContent({
   if (property.isId) {
     return (
       <Link
-        to={{ name: 'show', resourceId, recordId }}
+        to={{name: 'show', resourceId, recordId}}
         className="font-mono text-sm font-medium text-foreground hover:underline"
         onClick={(e) => e.stopPropagation()}
       >
@@ -1236,7 +1470,7 @@ function CellContent({
   if (property.reference && property.type !== 'm2m' && value != null && value !== '') {
     if (property.isArray) {
       const ids = Array.isArray(value) ? (value as Array<string | number>) : []
-      return <ReferenceLinkList resourceId={property.reference} recordIds={ids} />
+      return <ReferenceLinkList resourceId={property.reference} recordIds={ids}/>
     }
     return (
       <ReferenceLink
@@ -1245,17 +1479,17 @@ function CellContent({
       />
     )
   }
-  return <PropertyDisplay property={property} value={value} view="list" />
+  return <PropertyDisplay property={property} value={value} view="list"/>
 }
 
 function RowActions({
-  onView,
-  onEdit,
-  onDelete,
-  onInvokeAction,
-  customActions = [],
-  t,
-}: {
+                      onView,
+                      onEdit,
+                      onDelete,
+                      onInvokeAction,
+                      customActions = [],
+                      t,
+                    }: {
   onView(): void
   onEdit(): void
   onDelete(): void
@@ -1267,31 +1501,31 @@ function RowActions({
     <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm">
-            <MoreHorizontal className="size-4" />
+          <Button variant="ghost" size="icon" className="size-8">
+            <MoreHorizontal className="size-4"/>
             <span className="sr-only">{t('common:openMenu')}</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>{t('common:actions')}</DropdownMenuLabel>
           <DropdownMenuItem onSelect={onView}>
-            <Eye className="size-4" /> {t('common:show')}
+            <Eye className="size-4"/> {t('common:show')}
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={onEdit}>
-            <Pencil className="size-4" /> {t('common:edit')}
+            <Pencil className="size-4"/> {t('common:edit')}
           </DropdownMenuItem>
           {customActions.length > 0 && (
             <>
-              <DropdownMenuSeparator />
+              <DropdownMenuSeparator/>
               <ActionMenuItems
                 actions={customActions}
                 onAction={(action) => onInvokeAction?.(action.name)}
               />
             </>
           )}
-          <DropdownMenuSeparator />
+          <DropdownMenuSeparator/>
           <DropdownMenuItem onSelect={onDelete} className="text-destructive focus:text-destructive">
-            <Trash2 className="size-4" /> {t('common:delete')}
+            <Trash2 className="size-4"/> {t('common:delete')}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -1300,10 +1534,10 @@ function RowActions({
 }
 
 function ColumnVisibilityMenu<TData>({
-  table,
-  properties,
-  t,
-}: {
+                                       table,
+                                       properties,
+                                       t,
+                                     }: {
   table: ReturnType<typeof useReactTable<TData>>
   properties: PropertyJSON[]
   t: (key: string, params?: Record<string, string | number>) => string
@@ -1313,13 +1547,13 @@ function ColumnVisibilityMenu<TData>({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm">
-          <SlidersHorizontal className="size-4" />
+          <SlidersHorizontal className="size-4"/>
           <span className="hidden sm:inline">{t('common:columns')}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
         <DropdownMenuLabel>{t('common:toggleColumns')}</DropdownMenuLabel>
-        <DropdownMenuSeparator />
+        <DropdownMenuSeparator/>
         {table
           .getAllColumns()
           .filter((c) => c.getCanHide())
@@ -1344,60 +1578,89 @@ function getPageRange(pageIndex: number, pageCount: number, windowSize = 10): nu
   const half = Math.floor(windowSize / 2)
   let start = pageIndex - half
   let end = start + windowSize
-  if (start < 0) { start = 0; end = windowSize }
-  if (end > pageCount) { end = pageCount; start = Math.max(0, end - windowSize) }
-  return Array.from({ length: end - start }, (_, i) => start + i)
+  if (start < 0) {
+    start = 0;
+    end = windowSize
+  }
+  if (end > pageCount) {
+    end = pageCount;
+    start = Math.max(0, end - windowSize)
+  }
+  return Array.from({length: end - start}, (_, i) => start + i)
 }
 
 function Paginator<TData>({
-  table,
-  total,
-  t,
-}: {
+                            table,
+                            total,
+                            t,
+                          }: {
   table: ReturnType<typeof useReactTable<TData>>
   total: number
   t: (key: string, params?: Record<string, string | number>) => string
 }): React.ReactElement {
-  const { pageIndex, pageSize } = table.getState().pagination
+  const {pageIndex, pageSize} = table.getState().pagination
   const pageCount = table.getPageCount()
   const pages = getPageRange(pageIndex, pageCount)
+  // Click-and-drag horizontal scroll on the page-buttons row, mirroring the
+  // table wrapper. Callback ref returns a cleanup so React 19 detaches the
+  // pointer listeners automatically when the row unmounts.
+  const paginationScrollRef = React.useCallback((el: HTMLDivElement | null) => {
+    if (!el) return
+    return attachDragScroll(el)
+  }, [])
+  const perPageSelect = (
+    <Select
+      value={String(pageSize)}
+      onValueChange={(v) => table.setPageSize(Number(v))}
+    >
+      <SelectTrigger className="h-8 w-[72px]">
+        <SelectValue/>
+      </SelectTrigger>
+      <SelectContent>
+        {PAGE_SIZES.map((s) => (
+          <SelectItem key={s} value={String(s)}>
+            {s}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
   return (
-    <div className="flex flex-col gap-3 px-1 sm:flex-row sm:items-center sm:justify-between">
-      <div className="text-center text-sm text-muted-foreground sm:text-left">
-        {t('common:recordsCount', { count: total })}
+    <div className="flex w-full min-w-0 flex-col gap-3 px-1 sm:flex-row sm:items-center sm:justify-between">
+      {/* Top row on mobile (records count + per-page select side-by-side);
+          on desktop just the records-count label on the left. */}
+      <div className="flex items-center justify-between gap-3 sm:justify-start">
+        <div className="text-sm text-muted-foreground">
+          {t('common:recordsCount', {count: total})}
+        </div>
+        {/* Mobile-only per-page select inline with records count. */}
+        <div className="sm:hidden">{perPageSelect}</div>
       </div>
-      <div className="flex flex-col items-center gap-2 sm:flex-row">
-        <div className="flex items-center gap-2">
-          <span className="hidden text-sm text-muted-foreground sm:inline">
+      {/* `min-w-0` on the right block is critical: without it, the flex item
+          takes its content's intrinsic width on mobile (the buttons row is
+          ~460px) and overflows the panel to the left. */}
+      <div className="flex min-w-0 flex-col items-center gap-2 sm:flex-row">
+        {/* Desktop-only per-page label + select next to the pagination buttons. */}
+        <div className="hidden items-center gap-2 sm:flex">
+          <span className="text-sm text-muted-foreground">
             {t('common:rowsPerPage')}
           </span>
-          <Select
-            value={String(pageSize)}
-            onValueChange={(v) => table.setPageSize(Number(v))}
-          >
-            <SelectTrigger className="h-8 w-[72px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PAGE_SIZES.map((s) => (
-                <SelectItem key={s} value={String(s)}>
-                  {s}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {perPageSelect}
         </div>
-        {/* Page navigation — scrollable on narrow screens */}
-        <div className="overflow-x-auto">
+        {/* Page navigation — scrollable + drag-scrollable on narrow screens.
+            `max-w-full` clamps to parent width so overflow-x-auto actually
+            activates; without it the inner buttons row would expand the
+            container instead of scrolling internally. `cursor-grab` hints the
+            drag affordance; buttons keep their own `cursor-pointer`. */}
+        <div ref={paginationScrollRef} className="max-w-full cursor-grab overflow-x-auto">
           <div className="flex items-center gap-1">
             <Button
               variant="outline"
               size="sm"
-              className="hidden sm:inline-flex"
               onClick={() => table.setPageIndex(0)}
               disabled={!table.getCanPreviousPage()}
             >
-              <ChevronsLeft className="size-4" />
+              <ChevronsLeft className="size-4"/>
             </Button>
             <Button
               variant="outline"
@@ -1405,7 +1668,7 @@ function Paginator<TData>({
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
             >
-              <ChevronLeft className="size-4" />
+              <ChevronLeft className="size-4"/>
             </Button>
             {pages.map((p) => (
               <Button
@@ -1425,16 +1688,15 @@ function Paginator<TData>({
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
             >
-              <ChevronRight className="size-4" />
+              <ChevronRight className="size-4"/>
             </Button>
             <Button
               variant="outline"
               size="sm"
-              className="hidden sm:inline-flex"
               onClick={() => table.setPageIndex(pageCount - 1)}
               disabled={!table.getCanNextPage()}
             >
-              <ChevronsRight className="size-4" />
+              <ChevronsRight className="size-4"/>
             </Button>
           </div>
         </div>
@@ -1443,23 +1705,163 @@ function Paginator<TData>({
   )
 }
 
-function FilterPanel({
-  open,
-  onOpenChange,
-  properties,
-  filters,
+// ─── Filter operator helpers ─────────────────────────────────────────────────
+// Operators are encoded in the filter value string: `OPERATOR:VALUE`.
+// Legacy values (no prefix) default to `co` (contains) for strings.
+
+type StringFilterOp = 'co' | 'nco' | 'sw' | 'ew' | 'eq' | 'neq' | 'empty' | 'nempty' | 'in'
+
+const STRING_OPS: ReadonlySet<string> = new Set(['co', 'nco', 'sw', 'ew', 'eq', 'neq', 'empty', 'nempty', 'in'])
+const ALL_STRING_OPS: StringFilterOp[] = ['co', 'nco', 'sw', 'ew', 'in', 'empty', 'nempty']
+const NULLARY_OPS: ReadonlySet<string> = new Set(['empty', 'nempty'])
+
+function parseFilterString(raw: string): { op: StringFilterOp; val: string } {
+  if (!raw) return {op: 'co', val: ''}
+  const colonIdx = raw.indexOf(':')
+  if (colonIdx === -1) return {op: 'co', val: raw}
+  const prefix = raw.slice(0, colonIdx)
+  if (STRING_OPS.has(prefix)) return {op: prefix as StringFilterOp, val: raw.slice(colonIdx + 1)}
+  return {op: 'co', val: raw}
+}
+
+function encodeFilter(op: StringFilterOp, val: string): string {
+  if (op === 'empty' || op === 'nempty') return `${op}:`
+  // Preserve `in:` even when no items are selected, so the operator doesn't
+  // reset to 'co' when the last checkbox is unchecked.
+  if (op === 'in') return `in:${val}`
+  if (!val) return ''
+  return `${op}:${val}`
+}
+
+// ─── Numeric filter with operator selector ────────────────────────────────────
+
+type NumericFilterOp = 'eq' | 'neq' | 'gt' | 'lt' | 'between' | 'empty' | 'nempty'
+
+const NUMERIC_OP_SET = new Set<string>(['eq', 'neq', 'gt', 'lt', 'between', 'empty', 'nempty'])
+const ALL_NUMERIC_OPS: NumericFilterOp[] = ['eq', 'neq', 'gt', 'lt', 'between', 'empty', 'nempty']
+const NUMERIC_NULLARY: ReadonlySet<string> = new Set(['empty', 'nempty'])
+
+function parseNumericFilter(raw: string): { op: NumericFilterOp; from: string; to: string } {
+  if (!raw) return { op: 'eq', from: '', to: '' }
+  const colonIdx = raw.indexOf(':')
+  if (colonIdx === -1) return { op: 'eq', from: raw, to: '' }
+  const prefix = raw.slice(0, colonIdx)
+  if (!NUMERIC_OP_SET.has(prefix)) return { op: 'eq', from: raw, to: '' }
+  const rest = raw.slice(colonIdx + 1)
+  if (prefix === 'between') {
+    const commaIdx = rest.indexOf(',')
+    return commaIdx !== -1
+      ? { op: 'between', from: rest.slice(0, commaIdx), to: rest.slice(commaIdx + 1) }
+      : { op: 'between', from: rest, to: '' }
+  }
+  return { op: prefix as NumericFilterOp, from: rest, to: '' }
+}
+
+function encodeNumericFilter(op: NumericFilterOp, from: string, to: string): string {
+  if (op === 'empty' || op === 'nempty') return `${op}:`
+  if (op === 'between') return (from || to) ? `between:${from},${to}` : ''
+  return from ? `${op}:${from}` : ''
+}
+
+function NumericFilterField({
+  value,
   onChange,
   t,
 }: {
+  value: string
+  onChange(v: unknown): void
+  t: (key: string, params?: Record<string, string | number>) => string
+}): React.ReactElement {
+  const parsed = parseNumericFilter(value)
+  const [op, setOp] = React.useState<NumericFilterOp>(parsed.op)
+  const [from, setFrom] = React.useState(parsed.from)
+  const [to, setTo] = React.useState(parsed.to)
+
+  React.useEffect(() => {
+    const next = parseNumericFilter(value)
+    setOp(next.op)
+    setFrom(next.from)
+    setTo(next.to)
+  }, [value])
+
+  const emit = (nextOp: NumericFilterOp, nextFrom: string, nextTo: string) => {
+    setOp(nextOp)
+    setFrom(nextFrom)
+    setTo(nextTo)
+    onChange(encodeNumericFilter(nextOp, nextFrom, nextTo))
+  }
+
+  const handleOpChange = (nextOp: NumericFilterOp) => {
+    if (NUMERIC_NULLARY.has(nextOp)) {
+      emit(nextOp, '', '')
+    } else {
+      emit(nextOp, from, nextOp === 'between' ? to : '')
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <Select value={op} onValueChange={(v) => handleOpChange(v as NumericFilterOp)}>
+        <SelectTrigger className="h-7 text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {ALL_NUMERIC_OPS.map((o) => (
+            <SelectItem key={o} value={o} className="text-xs">
+              {t(`filter:op.${o}`)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {op === 'between' ? (
+        <div className="flex gap-2">
+          <Input
+            type="number"
+            className="h-8"
+            value={from}
+            placeholder={t('common:from')}
+            onChange={(e) => emit('between', e.target.value, to)}
+          />
+          <Input
+            type="number"
+            className="h-8"
+            value={to}
+            placeholder={t('common:to')}
+            onChange={(e) => emit('between', from, e.target.value)}
+          />
+        </div>
+      ) : !NUMERIC_NULLARY.has(op) ? (
+        <Input
+          type="number"
+          className="h-8"
+          value={from}
+          placeholder={t('common:any')}
+          onChange={(e) => emit(op, e.target.value, '')}
+        />
+      ) : null}
+    </div>
+  )
+}
+
+// ─── Filter panel (side sheet) ───────────────────────────────────────────────
+
+function FilterPanel({
+                       open,
+                       onOpenChange,
+                       properties,
+                       filters,
+                       onChange,
+                       resourceId,
+                       t,
+                     }: {
   open: boolean
   onOpenChange(open: boolean): void
   properties: PropertyJSON[]
   filters: ColumnFiltersState
   onChange(next: ColumnFiltersState): void
+  resourceId: string
   t: (key: string, params?: Record<string, string | number>) => string
 }): React.ReactElement {
-  // Local draft — edits stay here until the user clicks Apply. Reset whenever
-  // the sheet opens so the draft mirrors the current applied filters.
   const [draft, setDraft] = React.useState<ColumnFiltersState>(filters)
   React.useEffect(() => {
     if (open) setDraft(filters)
@@ -1468,7 +1870,7 @@ function FilterPanel({
 
   const setDraftFilter = (id: string, value: unknown) => {
     const without = draft.filter((f) => f.id !== id)
-    setDraft(value != null && value !== '' ? [...without, { id, value }] : without)
+    setDraft(value != null && value !== '' ? [...without, {id, value}] : without)
   }
 
   const handleApply = () => {
@@ -1488,7 +1890,8 @@ function FilterPanel({
         className="flex w-full flex-col gap-0 p-0 sm:max-w-md"
         aria-describedby={undefined}
       >
-        <SheetHeader className="flex-none flex-row items-center justify-between space-y-0 border-b border-border px-4 py-3 pr-12">
+        <SheetHeader
+          className="flex-none flex-row items-center justify-between space-y-0 border-b border-border px-4 py-3 pr-12">
           <div className="flex items-center gap-2">
             <SheetTitle>{t('common:filters')}</SheetTitle>
             {draft.length > 0 && (
@@ -1502,7 +1905,6 @@ function FilterPanel({
           )}
         </SheetHeader>
 
-        {/* Fields — id is intentionally included so users can filter by id. */}
         <ScrollArea className="min-h-0 flex-1">
           <div className="space-y-5 px-4 py-4">
             {properties.map((p) => (
@@ -1515,6 +1917,7 @@ function FilterPanel({
                 valueTo={draftMap.get(p.path + '~~to') as string | undefined}
                 onChangeFrom={(v) => setDraftFilter(p.path + '~~from', v)}
                 onChangeTo={(v) => setDraftFilter(p.path + '~~to', v)}
+                resourceId={resourceId}
                 t={t}
               />
             ))}
@@ -1531,16 +1934,19 @@ function FilterPanel({
   )
 }
 
+// ─── Filter field (generic wrapper per property) ─────────────────────────────
+
 function FilterField({
-  property,
-  value,
-  onChange,
-  valueFrom,
-  valueTo,
-  onChangeFrom,
-  onChangeTo,
-  t,
-}: {
+                       property,
+                       value,
+                       onChange,
+                       valueFrom,
+                       valueTo,
+                       onChangeFrom,
+                       onChangeTo,
+                       resourceId,
+                       t,
+                     }: {
   property: PropertyJSON
   value: string | undefined
   onChange(v: unknown): void
@@ -1548,6 +1954,7 @@ function FilterField({
   valueTo?: string
   onChangeFrom?(v: unknown): void
   onChangeTo?(v: unknown): void
+  resourceId: string
   t: (key: string, params?: Record<string, string | number>) => string
 }): React.ReactElement {
   const isDateType = property.type === 'date' || property.type === 'datetime'
@@ -1564,20 +1971,26 @@ function FilterField({
           t={t}
         />
       ) : (
-        <FilterInput property={property} value={value ?? ''} onChange={onChange} t={t} />
+        <FilterInput
+          property={property}
+          value={value ?? ''}
+          onChange={onChange}
+          resourceId={resourceId}
+          t={t}
+        />
       )}
     </div>
   )
 }
 
 function DateRangeFilter({
-  mode,
-  from,
-  to,
-  onFromChange,
-  onToChange,
-  t,
-}: {
+                           mode,
+                           from,
+                           to,
+                           onFromChange,
+                           onToChange,
+                           t,
+                         }: {
   mode: 'date' | 'datetime'
   from: string | undefined
   to: string | undefined
@@ -1609,15 +2022,19 @@ function DateRangeFilter({
   )
 }
 
+// ─── Filter input (dispatches to type-specific UIs) ──────────────────────────
+
 function FilterInput({
-  property,
-  value,
-  onChange,
-  t,
-}: {
+                       property,
+                       value,
+                       onChange,
+                       resourceId,
+                       t,
+                     }: {
   property: PropertyJSON
   value: string
   onChange(v: unknown): void
+  resourceId: string
   t: (key: string, params?: Record<string, string | number>) => string
 }): React.ReactElement {
   // Reference field → combobox backed by the referenced resource's search action
@@ -1637,7 +2054,7 @@ function FilterInput({
     return (
       <Select value={value || '_any_'} onValueChange={(v) => onChange(v === '_any_' ? '' : v)}>
         <SelectTrigger className="h-8">
-          <SelectValue placeholder={t('common:any')} />
+          <SelectValue placeholder={t('common:any')}/>
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="_any_">{t('common:any')}</SelectItem>
@@ -1650,12 +2067,13 @@ function FilterInput({
       </Select>
     )
   }
+
   switch (property.type) {
     case 'boolean':
       return (
         <Select value={value || '_any_'} onValueChange={(v) => onChange(v === '_any_' ? '' : v)}>
           <SelectTrigger className="h-8">
-            <SelectValue placeholder={t('common:any')} />
+            <SelectValue placeholder={t('common:any')}/>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="_any_">{t('common:any')}</SelectItem>
@@ -1669,24 +2087,253 @@ function FilterInput({
     case 'money':
     case 'currency':
       return (
-        <Input
-          type="number"
-          className="h-8"
+        <NumericFilterField
           value={value}
-          placeholder={t('common:any')}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={onChange}
+          t={t}
         />
       )
     default:
       return (
-        <Input
-          className="h-8"
+        <StringFilterField
+          property={property}
           value={value}
-          placeholder={t('common:filterPlaceholder')}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={onChange}
+          resourceId={resourceId}
+          t={t}
         />
       )
   }
+}
+
+// ─── String filter with operator selector + value picker ─────────────────────
+
+function StringFilterField({
+                             property,
+                             value,
+                             onChange,
+                             resourceId,
+                             t,
+                           }: {
+  property: PropertyJSON
+  value: string
+  onChange(v: unknown): void
+  resourceId: string
+  t: (key: string, params?: Record<string, string | number>) => string
+}): React.ReactElement {
+  const parsed = parseFilterString(value)
+  const [op, setOp] = React.useState<StringFilterOp>(parsed.op)
+  const [val, setVal] = React.useState(parsed.val)
+
+  // Sync local state when external value changes (e.g. from URL update).
+  React.useEffect(() => {
+    const next = parseFilterString(value)
+    setOp(next.op)
+    setVal(next.val)
+  }, [value])
+
+  // Auto-detect: fetch distinct values to see if field is low-cardinality.
+  const {data: distinctData} = useDistinctValues(resourceId, property.path, {
+    limit: 101,
+  })
+  const isLowCardinality = distinctData != null && !distinctData.hasMore
+  const distinctValues = distinctData?.values ?? []
+
+  // If low cardinality, no existing filter, and default op (co with empty val):
+  // auto-switch to "is one of" mode to match Metabase behavior.
+  const autoSwitchedRef = React.useRef(false)
+  React.useEffect(() => {
+    if (autoSwitchedRef.current) return
+    if (isLowCardinality && !value && op === 'co' && val === '') {
+      autoSwitchedRef.current = true
+      setOp('in')
+    }
+  }, [isLowCardinality, value, op, val])
+
+  const emit = (nextOp: StringFilterOp, nextVal: string) => {
+    setOp(nextOp)
+    setVal(nextVal)
+    onChange(encodeFilter(nextOp, nextVal))
+  }
+
+  const handleOpChange = (nextOp: StringFilterOp) => {
+    if (NULLARY_OPS.has(nextOp)) {
+      emit(nextOp, '')
+    } else if (nextOp === 'in') {
+      // Switching to multi-select: clear text value
+      emit(nextOp, '')
+    } else {
+      // Switching from multi-select to text: clear value
+      emit(nextOp, op === 'in' ? '' : val)
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      {/* Operator selector */}
+      <Select value={op} onValueChange={(v) => handleOpChange(v as StringFilterOp)}>
+        <SelectTrigger className="h-7 text-xs">
+          <SelectValue/>
+        </SelectTrigger>
+        <SelectContent>
+          {ALL_STRING_OPS.map((o) => (
+            <SelectItem key={o} value={o} className="text-xs">
+              {t(`filter:op.${o}`)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      {/* Value input based on operator */}
+      {op === 'in' ? (
+        <FilterValuePicker
+          resourceId={resourceId}
+          field={property.path}
+          selected={val ? val.split(',') : []}
+          onChange={(selected) => emit('in', selected.join(','))}
+          preloadedValues={isLowCardinality ? distinctValues : undefined}
+          t={t}
+        />
+      ) : !NULLARY_OPS.has(op) ? (
+        <Input
+          className="h-8"
+          value={val}
+          placeholder={t('common:filterPlaceholder')}
+          onChange={(e) => emit(op, e.target.value)}
+        />
+      ) : null}
+    </div>
+  )
+}
+
+// ─── Value picker (checkbox list with search, Metabase-style) ────────────────
+
+function FilterValuePicker({
+                             resourceId,
+                             field,
+                             selected,
+                             onChange,
+                             preloadedValues,
+                             t,
+                           }: {
+  resourceId: string
+  field: string
+  selected: string[]
+  onChange(selected: string[]): void
+  /** Pre-fetched values for low-cardinality fields (avoids duplicate request). */
+  preloadedValues?: string[]
+  t: (key: string, params?: Record<string, string | number>) => string
+}): React.ReactElement {
+  const [search, setSearch] = React.useState('')
+  const selectedSet = React.useMemo(() => new Set(selected), [selected])
+
+  // Fetch values from server (skipped when preloaded values are available).
+  const needsServerSearch = preloadedValues == null
+  const {data: serverData, isLoading} = useDistinctValues(
+    resourceId,
+    field,
+    {search: needsServerSearch ? search : undefined, limit: 100, enabled: needsServerSearch},
+  )
+
+  // Use preloaded values or server data.
+  const allValues = preloadedValues ?? serverData?.values ?? []
+  // Client-side filter when using preloaded values.
+  const displayValues = React.useMemo(() => {
+    if (!preloadedValues || !search) return allValues
+    const lower = search.toLowerCase()
+    return allValues.filter((v) => v.toLowerCase().includes(lower))
+  }, [allValues, preloadedValues, search])
+
+  const toggle = (val: string) => {
+    if (selectedSet.has(val)) {
+      onChange(selected.filter((v) => v !== val))
+    } else {
+      onChange([...selected, val])
+    }
+  }
+
+  const handleSelectAll = () => {
+    const allSelected = displayValues.length > 0 && displayValues.every((v) => selectedSet.has(v))
+    if (allSelected) {
+      // Deselect all currently visible values
+      const visibleSet = new Set(displayValues)
+      onChange(selected.filter((v) => !visibleSet.has(v)))
+    } else {
+      const allSet = new Set([...selected, ...displayValues])
+      onChange(Array.from(allSet))
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      {/* Search input */}
+      <div className="relative">
+        <Search
+          className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"/>
+        <Input
+          className="h-7 pl-7 text-xs"
+          value={search}
+          placeholder={t('filter:searchValues')}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+
+      {/* Select all */}
+      {displayValues.length > 0 && (
+        <button
+          type="button"
+          className="flex w-full items-center gap-2 rounded px-1 py-0.5 text-xs text-muted-foreground hover:text-foreground"
+          onClick={handleSelectAll}
+        >
+          <Checkbox
+            className="size-3.5"
+            checked={
+              displayValues.length > 0 && displayValues.every((v) => selectedSet.has(v))
+                ? true
+                : displayValues.some((v) => selectedSet.has(v))
+                  ? 'indeterminate'
+                  : false
+            }
+          />
+          {t('filter:selectAll')}
+        </button>
+      )}
+
+      {/* Value list */}
+      <div className="max-h-48 overflow-y-auto">
+        <div className="space-y-0.5">
+          {isLoading && !preloadedValues ? (
+            <div className="py-2 text-center text-xs text-muted-foreground">
+              {t('common:loading')}
+            </div>
+          ) : displayValues.length === 0 ? (
+            <div className="py-2 text-center text-xs text-muted-foreground">
+              {t('filter:noValues')}
+            </div>
+          ) : (
+            displayValues.map((v) => (
+              <button
+                key={v}
+                type="button"
+                className="flex w-full items-center gap-2 rounded px-1 py-0.5 text-left text-sm hover:bg-accent"
+                onClick={() => toggle(v)}
+              >
+                <Checkbox className="size-3.5" checked={selectedSet.has(v)}/>
+                <span className="truncate">{v}</span>
+              </button>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Selected count */}
+      {selected.length > 0 && (
+        <div className="text-xs text-muted-foreground">
+          {t('common:selectedCount', {count: selected.length})}
+        </div>
+      )}
+    </div>
+  )
 }
 
 // ─── Per-column filter popover in table header ───────────────────────────────
@@ -1694,14 +2341,16 @@ function FilterInput({
 // Popover with the same full filter controls as the side panel (FilterField).
 // The icon is highlighted when a filter for this column is active.
 function ColumnFilterPopover({
-  property,
-  getFilters,
-  onApply,
-  t,
-}: {
+                               property,
+                               getFilters,
+                               onApply,
+                               resourceId,
+                               t,
+                             }: {
   property: PropertyJSON
   getFilters(): ColumnFiltersState
   onApply(updates: Record<string, string>): void
+  resourceId: string
   t: (key: string, params?: Record<string, string | number>) => string
 }): React.ReactElement {
   const [open, setOpen] = React.useState(false)
@@ -1721,7 +2370,7 @@ function ColumnFilterPopover({
     } else {
       setValue(map.get(property.path) ?? '')
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   // Icon is highlighted when any filter for this property is set.
@@ -1765,12 +2414,12 @@ function ColumnFilterPopover({
             'inline-flex h-6 w-6 shrink-0 items-center justify-center rounded hover:bg-accent',
             isActive ? 'text-primary' : 'text-muted-foreground opacity-50 hover:opacity-100',
           )}
-          aria-label={t('common:filter', { label: property.label })}
+          aria-label={t('common:filter', {label: property.label})}
         >
-          <ListFilter className="size-3.5" />
+          <ListFilter className="size-3.5"/>
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-64 border-border p-3" align="start">
+      <PopoverContent className="w-72 border-border p-3" align="start">
         <div className="space-y-3">
           <FilterField
             property={property}
@@ -1780,6 +2429,7 @@ function ColumnFilterPopover({
             valueTo={valueTo}
             onChangeFrom={(v) => setValueFrom(String(v ?? ''))}
             onChangeTo={(v) => setValueTo(String(v ?? ''))}
+            resourceId={resourceId}
             t={t}
           />
           <div className="flex gap-2">
@@ -1800,19 +2450,19 @@ function ColumnFilterPopover({
 // Renders a single record as a tap-to-edit card with a header (avatar + title +
 // id), a 2-column grid of property values, and a contextual menu.
 function RecordCard({
-  record,
-  properties,
-  resourceId,
-  showSelect,
-  selected,
-  onToggleSelect,
-  onView,
-  onEdit,
-  onDelete,
-  customActions = [],
-  onInvokeAction,
-  t,
-}: {
+                      record,
+                      properties,
+                      resourceId,
+                      showSelect,
+                      selected,
+                      onToggleSelect,
+                      onView,
+                      onEdit,
+                      onDelete,
+                      customActions = [],
+                      onInvokeAction,
+                      t,
+                    }: {
   record: RecordJSON
   properties: PropertyJSON[]
   resourceId: string
@@ -1859,7 +2509,7 @@ function RecordCard({
     const target = e.target as HTMLElement
     if (target.closest('a, button, [role="menuitem"]')) return
     e.preventDefault()
-    openRouteInNewTab({ name: 'edit', resourceId, recordId: record.id })
+    openRouteInNewTab({name: 'edit', resourceId, recordId: record.id})
   }
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.button !== 1) return

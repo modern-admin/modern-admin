@@ -60,6 +60,20 @@ export abstract class BaseResource {
 
   abstract delete(id: string): Promise<void>
 
+  /**
+   * Return distinct (unique) non-null string values for a given field,
+   * ordered ascending, limited to `options.limit` results. When `search`
+   * is provided, only values matching the substring (case-insensitive)
+   * are returned. Default implementation returns an empty array —
+   * adapters should override for real support.
+   */
+  async distinct(
+    _field: string,
+    _options?: { limit?: number; search?: string },
+  ): Promise<string[]> {
+    return []
+  }
+
   /** Build an in-memory record without persisting it. */
   build(params: ParamsType): BaseRecord {
     return new BaseRecord(params, this)

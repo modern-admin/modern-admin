@@ -42,6 +42,8 @@ export interface IQueryableLogStore extends ILogStore {
     to?: Date
     limit?: number
     offset?: number
+    /** Cursor: return only entries with `at` strictly before this unix-ms value. */
+    before?: number
   }): Promise<ActionLogEntry[]>
 }
 

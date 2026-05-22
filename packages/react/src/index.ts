@@ -110,6 +110,16 @@ export {
 export { ResourceListPage } from './pages/list-page.js'
 export { ResourceShowPage } from './pages/show-page.js'
 export { ResourceEditPage } from './pages/edit-page.js'
+export {
+  ResourceWizardCreatePage,
+  type ResourceWizardCreatePageProps,
+} from './pages/wizard-create-page.js'
+export {
+  WizardForm,
+  type WizardStep,
+  type WizardFormLabels,
+  type WizardFormProps,
+} from './components/wizard-form.js'
 export { HomePage } from './pages/home-page.js'
 export { ExportDialog, type ExportDialogProps } from './pages/export-dialog.js'
 export {
@@ -144,6 +154,10 @@ export type {
   View,
 } from './types.js'
 export { RelatedRecordsTabs } from './components/related-records-tabs.js'
+export {
+  ReferenceMultiTableDialog,
+  type ReferenceMultiTableDialogProps,
+} from './components/reference-multi-table-dialog.js'
 export {
   LocalStorageDashboardStore,
   ServerDashboardStore,
