@@ -1,10 +1,20 @@
 {
   "name": "@modern-admin/tsconfig",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
+  "description": "Shared TypeScript configuration presets for the Modern Admin monorepo.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/modern-admin/modern-admin.git",
+    "directory": "packages/tsconfig"
+  },
   "files": [
     "base.json",
     "node.json",
     "react.json"
-  ]
+  ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "restricted"
+  }
 }

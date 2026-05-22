@@ -1,8 +1,14 @@
 {
   "name": "@modern-admin/queue",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
+  "description": "BullMQ-based queue + cron module for Modern Admin (NestJS).",
   "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/modern-admin/modern-admin.git",
+    "directory": "packages/queue"
+  },
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
@@ -11,16 +17,26 @@
       "default": "./src/index.ts"
     }
   },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "restricted",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
   "scripts": {
-    "build": "tsc -b",
+    "build": "bun ../../scripts/clean.ts dist .tsbuildinfo && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "bun test"
-  },
-  "peerDependencies": {
-    "@nestjs/bullmq": "^11.0.4",
-    "@nestjs/common": "^11.0.0",
-    "@nestjs/core": "^11.0.0",
-    "bullmq": "^5.0.0"
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
@@ -33,5 +49,11 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "typescript": "^6.0.3"
+  },
+  "peerDependencies": {
+    "@nestjs/bullmq": "^11.0.4",
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "bullmq": "^5.0.0"
   }
 }

@@ -4,6 +4,10 @@
   "private": true,
   "type": "module",
   "description": "Universal modern admin panel framework",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/modern-admin/modern-admin.git"
+  },
   "workspaces": [
     "apps/*",
     "packages/*",
@@ -24,9 +28,14 @@
     "docs:dev": "bun --filter @modern-admin/docs dev",
     "docs:build": "bun --filter @modern-admin/docs build",
     "docker:up": "docker compose up -d",
-    "docker:down": "docker compose down"
+    "docker:down": "docker compose down",
+    "changeset": "changeset",
+    "version-packages": "changeset version && bun install --lockfile-only",
+    "release": "bun scripts/release.ts"
   },
   "devDependencies": {
+    "@changesets/changelog-github": "^0.5.1",
+    "@changesets/cli": "^2.27.10",
     "@eslint/js": "^9.39.1",
     "@types/bun": "^1.3.13",
     "eslint": "^9.39.1",

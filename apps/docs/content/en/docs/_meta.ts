@@ -4,6 +4,7 @@
  */
 export default {
   'getting-started': 'Getting started',
+  'integration-standalone': 'Standalone admin service',
   cli: 'CLI',
   architecture: 'Architecture',
   resources: 'Resources',

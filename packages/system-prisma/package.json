@@ -1,34 +1,57 @@
 {
   "name": "@modern-admin/system-prisma",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
+  "description": "Prisma-backed implementation of Modern Admin system stores (logs, history, webhooks, AI tasks).",
   "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/modern-admin/modern-admin.git",
+    "directory": "packages/system-prisma"
+  },
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
-    },
-    "./schema": "./prisma/modern-admin.prisma"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "restricted",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
   },
   "scripts": {
-    "build": "tsc -b",
+    "build": "bun ../../scripts/clean.ts dist .tsbuildinfo && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "bun test"
   },
   "dependencies": {
     "@modern-admin/core": "workspace:*"
   },
-  "peerDependencies": {
-    "@prisma/client": ">=7"
-  },
-  "peerDependenciesMeta": {
-    "@prisma/client": { "optional": true }
-  },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
     "@types/bun": "^1.3.13",
     "typescript": "^6.0.3"
+  },
+  "peerDependencies": {
+    "@prisma/client": ">=7"
+  },
+  "peerDependenciesMeta": {
+    "@prisma/client": {
+      "optional": true
+    }
   }
 }

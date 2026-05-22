@@ -6,6 +6,7 @@
     { "path": "./packages/nest" },
     { "path": "./packages/react" },
     { "path": "./packages/ui" },
+    { "path": "./packages/web" },
     { "path": "./packages/adapter-prisma" },
     { "path": "./packages/adapter-drizzle" },
     { "path": "./packages/auth-better-auth" },

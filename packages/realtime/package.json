@@ -1,8 +1,14 @@
 {
   "name": "@modern-admin/realtime",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
+  "description": "WebSocket gateway + realtime bus implementations for Modern Admin.",
   "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/modern-admin/modern-admin.git",
+    "directory": "packages/realtime"
+  },
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
@@ -11,20 +17,26 @@
       "default": "./src/index.ts"
     }
   },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "restricted",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
   "scripts": {
-    "build": "tsc -b",
+    "build": "bun ../../scripts/clean.ts dist .tsbuildinfo && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "bun test"
-  },
-  "peerDependencies": {
-    "@nestjs/common": "^11.1.19",
-    "@nestjs/websockets": "^11.1.19",
-    "@nestjs/platform-socket.io": "^11.1.19"
-  },
-  "peerDependenciesMeta": {
-    "@nestjs/common": { "optional": true },
-    "@nestjs/websockets": { "optional": true },
-    "@nestjs/platform-socket.io": { "optional": true }
   },
   "dependencies": {
     "@modern-admin/core": "workspace:*",
@@ -36,5 +48,21 @@
     "@nestjs/websockets": "^11.1.19",
     "@types/bun": "^1.3.13",
     "typescript": "^6.0.3"
+  },
+  "peerDependencies": {
+    "@nestjs/common": "^11.1.19",
+    "@nestjs/websockets": "^11.1.19",
+    "@nestjs/platform-socket.io": "^11.1.19"
+  },
+  "peerDependenciesMeta": {
+    "@nestjs/common": {
+      "optional": true
+    },
+    "@nestjs/websockets": {
+      "optional": true
+    },
+    "@nestjs/platform-socket.io": {
+      "optional": true
+    }
   }
 }

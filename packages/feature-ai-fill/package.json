@@ -1,8 +1,14 @@
 {
   "name": "@modern-admin/feature-ai-fill",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
+  "description": "AI-powered field auto-fill feature plugin for Modern Admin.",
   "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/modern-admin/modern-admin.git",
+    "directory": "packages/feature-ai-fill"
+  },
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
@@ -15,8 +21,28 @@
       "default": "./src/nest/index.ts"
     }
   },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "restricted",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./nest": {
+        "types": "./dist/nest/index.d.ts",
+        "default": "./dist/nest/index.js"
+      }
+    }
+  },
   "scripts": {
-    "build": "tsc -b",
+    "build": "bun ../../scripts/clean.ts dist .tsbuildinfo && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "bun test"
   },
@@ -32,6 +58,14 @@
     "rxjs": "^7.8.2",
     "zod": "^4.0.0"
   },
+  "devDependencies": {
+    "@modern-admin/nest": "workspace:*",
+    "@modern-admin/tsconfig": "workspace:*",
+    "@nestjs/swagger": "^11.4.2",
+    "@types/bun": "^1.3.13",
+    "@types/busboy": "^1.5.4",
+    "typescript": "^6.0.3"
+  },
   "peerDependencies": {
     "@modern-admin/nest": "workspace:*",
     "@nestjs/swagger": "^11.4.2"
@@ -43,13 +77,5 @@
     "@nestjs/swagger": {
       "optional": true
     }
-  },
-  "devDependencies": {
-    "@modern-admin/nest": "workspace:*",
-    "@modern-admin/tsconfig": "workspace:*",
-    "@nestjs/swagger": "^11.4.2",
-    "@types/bun": "^1.3.13",
-    "@types/busboy": "^1.5.4",
-    "typescript": "^6.0.3"
   }
 }

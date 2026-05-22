@@ -91,3 +91,13 @@ export {
   type RecordActionResponse,
   type BulkActionResponse,
 } from './admin'
+
+// Standalone static-UI middleware — serves the prebuilt @modern-admin/web SPA
+// under a configurable mount path (default `/admin`).
+export { ModernAdminStaticUiModule } from './static-ui.module.js'
+export {
+  ModernAdminStaticUiMiddleware,
+  MODERN_ADMIN_STATIC_UI_OPTIONS,
+  type ModernAdminStaticUiOptions,
+  type ModernAdminUiRuntimeConfig,
+} from './static-ui.middleware.js'

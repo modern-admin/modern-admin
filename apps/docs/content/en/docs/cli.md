@@ -1,30 +1,31 @@
 ---
 title: CLI
-description: create-modern-admin scaffold and modern-admin generate commands.
+description: bun create @modern-admin scaffold and modern-admin generate commands.
 ---
 
 # CLI
 
-The `create-modern-admin` package ships two executable commands:
+The `@modern-admin/create` package ships two executable commands:
 
 | Command | Entrypoint | Purpose |
 |---|---|---|
-| `create-modern-admin` | `bunx create-modern-admin <name>` | Scaffold a brand-new project |
+| `bun create @modern-admin` | `bun create @modern-admin <name>` | Scaffold a brand-new standalone admin service |
 | `modern-admin generate` | `bunx modern-admin generate` | Add system tables to an existing project |
 
-Both commands are implemented in the same binary (`packages/create-modern-admin/src/cli.ts`)
+Both commands are implemented in the same binary (`packages/create/src/cli.ts`)
 and are also available as a programmatic API.
 
 ---
 
-## create-modern-admin — scaffold a new project
+## bun create @modern-admin — scaffold a new project
 
-Creates a ready-to-run NestJS + Modern Admin project in a new directory.
+Creates a ready-to-run standalone NestJS + Modern Admin service in a new directory.
+See [Standalone admin service](./integration-standalone.md) for the full integration guide.
 
 ### Usage
 
 ```sh
-bunx create-modern-admin <name> [--target ./path]
+bun create @modern-admin <name> [--target ./path]
 ```
 
 ### Arguments
@@ -39,33 +40,41 @@ bunx create-modern-admin <name> [--target ./path]
 
 ```
 <name>/
-  package.json          — dependencies: @modern-admin/core, @modern-admin/nest, NestJS 11
+  package.json          — pinned deps for @modern-admin/*, NestJS 11, Prisma 7, Better Auth
   tsconfig.json
   .gitignore
-  .env.example          — PORT, HOST, WEB_ORIGIN, REDIS_URL, DATABASE_URL
+  .env.example          — DATABASE_URL, BETTER_AUTH_SECRET, MODERN_ADMIN_TOKEN, PORT, HOST, REDIS_URL
+  .npmrc                — wires GitHub Packages registry for @modern-admin/* scope
+  docker-compose.yml    — local Postgres + Redis
   README.md
+  prisma/
+    schema.prisma       — sample Post model + ma_* system tables
   src/
-    main.ts             — NestJS bootstrap with app.listen()
-    app.module.ts       — AppModule with ModernAdminModule.forRoot({ databases: [], resources: [] })
+    main.ts             — NestJS bootstrap, mounts Better Auth handler + admin SPA
+    app.module.ts       — root module composing AdminModule + ModernAdminStaticUiModule
+    admin.module.ts     — Modern Admin wired with Prisma + Better Auth + logging
+    auth.ts             — Better Auth instance with apiKey plugin
+    db.ts               — Prisma client + DMMF
+    resources/
+      post.resource.ts  — sample @AdminResource decorator
 ```
 
 ### Next steps after scaffolding
 
 ```sh
 cd <name>
+cp .env.example .env
+# Fill in MODERN_ADMIN_TOKEN (GitHub PAT with read:packages), generate
+# BETTER_AUTH_SECRET via `bun run auth:secret`, set DATABASE_URL.
+
+export MODERN_ADMIN_TOKEN=$(grep MODERN_ADMIN_TOKEN .env | cut -d= -f2)
 bun install
-
-# Pick an ORM adapter and add it:
-bun add @modern-admin/adapter-drizzle drizzle-orm postgres
-# — or —
-bun add @modern-admin/adapter-prisma @prisma/client
-
-# Pick an auth provider (optional):
-bun add @modern-admin/auth-better-auth better-auth
-
-# Run the dev server:
+bun run db:generate
+bun run db:migrate
 bun run dev
 ```
+
+The panel is now live at `http://localhost:3001/admin`.
 
 ### Safety guard
 
@@ -263,7 +272,7 @@ bunx drizzle-kit migrate
 Both commands are available as Node/Bun modules for use in scripts and test helpers:
 
 ```ts
-import { scaffold, generate } from 'create-modern-admin'
+import { scaffold, generate } from '@modern-admin/create'
 
 // Scaffold a project
 const files = await scaffold({

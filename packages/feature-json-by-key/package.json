@@ -1,8 +1,14 @@
 {
   "name": "@modern-admin/feature-json-by-key",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
+  "description": "Editable JSON-by-key property type for Modern Admin.",
   "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/modern-admin/modern-admin.git",
+    "directory": "packages/feature-json-by-key"
+  },
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
@@ -11,14 +17,36 @@
       "default": "./src/index.ts"
     }
   },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "restricted",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
   "scripts": {
-    "build": "tsc -b",
+    "build": "bun ../../scripts/clean.ts dist .tsbuildinfo && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "bun test"
   },
   "dependencies": {
     "@modern-admin/core": "workspace:*",
     "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@modern-admin/feature-upload": "workspace:*",
+    "@modern-admin/tsconfig": "workspace:*",
+    "@types/bun": "^1.3.13",
+    "typescript": "^6.0.3"
   },
   "peerDependencies": {
     "@modern-admin/feature-upload": "workspace:*"
@@ -27,11 +55,5 @@
     "@modern-admin/feature-upload": {
       "optional": true
     }
-  },
-  "devDependencies": {
-    "@modern-admin/feature-upload": "workspace:*",
-    "@modern-admin/tsconfig": "workspace:*",
-    "@types/bun": "^1.3.13",
-    "typescript": "^6.0.3"
   }
 }

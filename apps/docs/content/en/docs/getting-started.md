@@ -16,12 +16,19 @@ description: Scaffold a Modern Admin project and register your first resource.
 ## Scaffold a new project
 
 ```sh
-bunx create-modern-admin my-app
+bun create @modern-admin my-app
 cd my-app
-bun install
 cp .env.example .env
+# set MODERN_ADMIN_TOKEN (GitHub PAT with read:packages) in .env
+export MODERN_ADMIN_TOKEN=$(grep MODERN_ADMIN_TOKEN .env | cut -d= -f2)
+bun install
 bun run dev
 ```
+
+This scaffolds a **standalone admin service** — a NestJS app that
+serves the prebuilt SPA at `/admin` and connects to the same database
+as your main backend. See [Standalone admin service](./integration-standalone.md)
+for the full integration guide.
 
 The starter wires up a single `AppModule` that imports
 `ModernAdminModule.forRoot({ databases: [], resources: [] })`. The API

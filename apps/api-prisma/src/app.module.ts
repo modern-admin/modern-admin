@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common'
 import { QueueModule } from '@modern-admin/queue'
+import { ModernAdminStaticUiModule } from '@modern-admin/nest'
 import { AppController } from './app.controller.js'
 import { AdminModule } from './admin.module.js'
 
@@ -12,6 +13,20 @@ import { AdminModule } from './admin.module.js'
       },
     }),
     AdminModule,
+    // Serve the prebuilt @modern-admin/web SPA at `/admin`. The admin REST
+    // surface lives under `/admin/api/*` (see `ResourceController` etc.)
+    // and is excluded by the module's middleware configuration.
+    ModernAdminStaticUiModule.forRoot({
+      path: '/admin',
+      title: 'Modern Admin (Prisma demo)',
+      runtimeConfig: {
+        // Same-origin: the SPA and the API share the Nest app.
+        apiUrl: '',
+        credentials: 'include',
+        loginHint: 'admin@example.com / admin12345',
+        persistDemoSession: true,
+      },
+    }),
   ],
   controllers: [AppController],
 })

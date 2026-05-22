@@ -63,8 +63,20 @@
             </TabSessionState>
           </value>
         </entry>
+        <entry key="5">
+          <value>
+            <TabSessionState>
+              <option name="provider" value="claude" />
+              <option name="sessionId" value="470372f6-846a-42ea-ab08-ab2da8a0fcc3" />
+              <option name="cwd" value="$PROJECT_DIR$" />
+              <option name="model" value="claude-opus-4-7" />
+              <option name="permissionMode" value="bypassPermissions" />
+              <option name="reasoningEffort" value="high" />
+            </TabSessionState>
+          </value>
+        </entry>
       </map>
     </option>
-    <option name="tabCount" value="5" />
+    <option name="tabCount" value="6" />
   </component>
 </project>

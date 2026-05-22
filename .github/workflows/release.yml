@@ -1,0 +1,91 @@
+# GitHub Actions release workflow for the @modern-admin/* monorepo.
+#
+# On every push to main this workflow either:
+#
+#   (a) Opens / updates a "Version Packages" pull request — if there are
+#       unreleased `.changeset/*.md` files staged on main.
+#   (b) Publishes every publishable package — if there are NO pending
+#       changesets (i.e. the Version Packages PR has just been merged).
+#
+# Authentication: GITHUB_TOKEN is automatically scoped to this repo and
+# has packages:write because of the `permissions:` block below. No PAT
+# is needed for CI runs.
+#
+# Manual publish from a fork / local machine remains possible — see
+# `.changeset/README.md`.
+
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+# Concurrency: queue releases per-branch so two pushes don't race.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Version or publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      packages: write
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # changesets needs full history to compute since-last-release diffs.
+          fetch-depth: 0
+
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # GitHub Packages auth for bun: write the token to a project-local
+      # .npmrc so `bun publish` can hit npm.pkg.github.com. bun honours
+      # the same npm auth config.
+      - name: Configure registry auth
+        run: |
+          cat > .npmrc <<EOF
+          @modern-admin:registry=https://npm.pkg.github.com
+          //npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
+          always-auth=true
+          EOF
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Build all publishable packages
+        # The release script also builds each package via publish-package.ts,
+        # but doing it upfront catches build errors fast (before touching
+        # the registry).
+        run: bun run build
+
+      # Path A: stage changeset bumps in a PR if any pending changesets exist.
+      # Path B: publish if no pending changesets (PR was just merged).
+      - name: Create Release PR or publish
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          # When pending changesets exist, this opens the "Version Packages"
+          # PR via `bun run version-packages`.
+          version: bun run version-packages
+          # When no pending changesets exist, this triggers publication.
+          publish: bun run release
+          commit: "chore(release): version packages"
+          title: "chore(release): version packages"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # bun publish reads NPM_TOKEN / BUN_AUTH_TOKEN — surface both.
+          NPM_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BUN_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

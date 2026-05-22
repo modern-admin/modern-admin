@@ -1,0 +1,44 @@
+# Local development backing services for {{name}}.
+#
+# Start with:   docker compose up -d
+# Stop with:    docker compose down
+# Wipe data:    docker compose down -v
+#
+# In production point DATABASE_URL / REDIS_URL at your real infrastructure.
+# The admin service is intentionally stateless: it reads/writes the same
+# database your main backend already uses.
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: {{name}}
+      POSTGRES_PASSWORD: {{name}}
+      POSTGRES_DB: {{name}}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U {{name}}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-data:
+  redis-data:

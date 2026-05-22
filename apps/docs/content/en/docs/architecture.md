@@ -42,7 +42,7 @@ packages/
   system-prisma/  — Prisma-backed system subsystem ports
   system-drizzle/ — Drizzle-backed system subsystem ports
   tsconfig/       — shared TypeScript presets
-  create-modern-admin/ — project scaffolder CLI
+  create/         — project scaffolder CLI (@modern-admin/create)
 ```
 
 The cardinal rule: **`packages/core` knows nothing about specific ORMs, transports,

@@ -1,0 +1,253 @@
+// Idempotent schema generator for Modern Admin.
+//
+// Two ORM flavours, each with the simplest sound merge strategy:
+//
+//   • Prisma — parse `model X { … }` blocks out of the canonical
+//     `@modern-admin/system-prisma/schema` fragment and append the ones
+//     that are NOT already declared in the host schema. Existing models
+//     are never rewritten — operators who tuned a column keep their
+//     tweaks. Re-running the command is a no-op once everything is in
+//     place.
+//
+//   • Drizzle — TypeScript is too lively to safely re-parse, so the
+//     generator instead writes a single `modern-admin-schema.ts` file
+//     that re-exports `@modern-admin/system-drizzle/pg`. The host adds
+//     it to its drizzle config alongside the existing app schema:
+//
+//         import * as systemSchema from './db/modern-admin-schema.ts'
+//         export const schema = { ...appSchema, ...systemSchema }
+//
+//     Re-running overwrites that one file (it's tagged with a
+//     "generated" header), so SDK upgrades flow through cleanly.
+
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
+import { dirname, isAbsolute, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+export type Orm = 'prisma' | 'drizzle'
+
+export interface GenerateOptions {
+  /** ORM to target. Auto-detected when omitted (looks for
+   *  `prisma/schema.prisma` or `drizzle.config.{ts,js}` under `cwd`). */
+  orm?: Orm
+  /** Working directory; defaults to `process.cwd()`. */
+  cwd?: string
+  /** Override target file. For Prisma this is the `schema.prisma` to
+   *  patch; for Drizzle it's the re-export file to write. */
+  schemaPath?: string
+  /** Don't write anything — return the planned changes instead. Used
+   *  by tests and the `--dry-run` flag. */
+  dryRun?: boolean
+}
+
+export interface GenerateResult {
+  orm: Orm
+  schemaPath: string
+  /** Models / exports that were added (or would be, in dry-run). */
+  added: string[]
+  /** Models already present and left untouched. */
+  skipped: string[]
+  /** Resulting file content. Identical to input when `added` is empty. */
+  output: string
+}
+
+// ─── Auto-detection ───────────────────────────────────────────────────────
+
+const fileExists = async (path: string): Promise<boolean> => {
+  try {
+    await stat(path)
+    return true
+  } catch {
+    return false
+  }
+}
+
+const detectOrm = async (cwd: string): Promise<Orm> => {
+  if (await fileExists(join(cwd, 'prisma/schema.prisma'))) return 'prisma'
+  for (const candidate of ['drizzle.config.ts', 'drizzle.config.js', 'drizzle.config.mjs']) {
+    if (await fileExists(join(cwd, candidate))) return 'drizzle'
+  }
+  throw new Error(
+    'Could not auto-detect ORM. Pass `--orm prisma` or `--orm drizzle`, ' +
+      'or run from a directory containing prisma/schema.prisma or drizzle.config.{ts,js}.',
+  )
+}
+
+// ─── Prisma model parsing ────────────────────────────────────────────────
+
+interface PrismaBlock {
+  name: string
+  text: string
+}
+
+/**
+ * Parse a Prisma fragment into a list of `{ name, text }` blocks.
+ *
+ * Walks the file line by line, tracking brace depth. Each `model NAME {`
+ * starts a block; we capture the block plus any leading `///` doc
+ * comments and `// …` line comments that abut it (a blank line breaks
+ * the comment association). Anything outside a model — `generator`,
+ * `datasource`, top-of-file comments, blank lines — is ignored.
+ *
+ * Exported for the unit tests; the CLI consumes `appendPrismaModels`.
+ */
+export const parsePrismaModels = (source: string): PrismaBlock[] => {
+  const blocks: PrismaBlock[] = []
+  const lines = source.split('\n')
+  let i = 0
+  while (i < lines.length) {
+    const line = lines[i]!
+    const match = /^model\s+(\w+)\s*\{/.exec(line)
+    if (!match) {
+      i++
+      continue
+    }
+    // Walk back over leading doc/line comments (until a blank line).
+    let start = i
+    while (start > 0) {
+      const prev = lines[start - 1]!
+      if (/^\s*(\/\/\/|\/\/)/.test(prev)) {
+        start--
+        continue
+      }
+      break
+    }
+    // Walk forward, tracking brace depth, until we close the block.
+    let depth = 0
+    let end = i
+    for (; end < lines.length; end++) {
+      for (const ch of lines[end]!) {
+        if (ch === '{') depth++
+        else if (ch === '}') depth--
+      }
+      if (depth === 0 && end >= i) break
+    }
+    blocks.push({
+      name: match[1]!,
+      text: lines.slice(start, end + 1).join('\n'),
+    })
+    i = end + 1
+  }
+  return blocks
+}
+
+/** Names of models declared in the file (cheap pass — no block bodies). */
+export const listPrismaModels = (source: string): Set<string> => {
+  const out = new Set<string>()
+  for (const m of source.matchAll(/^model\s+(\w+)\s*\{/gm)) {
+    out.add(m[1]!)
+  }
+  return out
+}
+
+const PRISMA_HEADER = [
+  '',
+  '// ─── Modern Admin system tables ──────────────────────────────────────────',
+  '// Generated by `bunx modern-admin generate`. Re-run after upgrading',
+  '// `@modern-admin/system-prisma` to pick up new tables. Existing models',
+  '// are NEVER rewritten — your column tweaks survive.',
+  '',
+].join('\n')
+
+export const appendPrismaModels = (
+  hostSchema: string,
+  canonical: string,
+): { output: string; added: string[]; skipped: string[] } => {
+  const present = listPrismaModels(hostSchema)
+  const blocks = parsePrismaModels(canonical)
+  const added: string[] = []
+  const skipped: string[] = []
+  const additions: string[] = []
+  for (const block of blocks) {
+    if (present.has(block.name)) {
+      skipped.push(block.name)
+    } else {
+      added.push(block.name)
+      additions.push(block.text)
+    }
+  }
+  if (additions.length === 0) {
+    return { output: hostSchema, added, skipped }
+  }
+  const sep = hostSchema.endsWith('\n') ? '' : '\n'
+  const output = hostSchema + sep + PRISMA_HEADER + additions.join('\n\n') + '\n'
+  return { output, added, skipped }
+}
+
+// ─── Drizzle: idempotent re-export file ──────────────────────────────────
+
+const DRIZZLE_FILE_CONTENT = `// Modern Admin — system tables for Drizzle.
+// AUTO-GENERATED by \`bunx modern-admin generate\` — safe to re-run.
+//
+// Add to your drizzle schema bag alongside your app tables:
+//
+//   import * as appSchema from './app-schema'
+//   import * as systemSchema from './modern-admin-schema'
+//   export const schema = { ...appSchema, ...systemSchema }
+//   export const db = drizzle(client, { schema })
+
+export * from '@modern-admin/system-drizzle/pg'
+`
+
+// ─── Canonical fragment loaders ──────────────────────────────────────────
+
+const here = (): string => dirname(fileURLToPath(import.meta.url))
+
+const loadCanonicalPrisma = async (): Promise<string> => {
+  // Resolved relative to this CLI's installed location. In the monorepo
+  // both packages sit under packages/*; in a published install they live
+  // side-by-side under node_modules/@modern-admin/.
+  const candidates = [
+    // workspace dev install (packages/create/dist|src/.. → packages/system-prisma/prisma/…)
+    resolve(here(), '..', '..', 'system-prisma', 'prisma', 'modern-admin.prisma'),
+    // node_modules install (node_modules/@modern-admin/create/dist|src/.. → node_modules/@modern-admin/system-prisma/prisma/…)
+    //   here() = .../node_modules/@modern-admin/create/dist
+    //   ../..  = .../node_modules/@modern-admin
+    resolve(here(), '..', '..', 'system-prisma', 'prisma', 'modern-admin.prisma'),
+  ]
+  for (const path of candidates) {
+    if (await fileExists(path)) return readFile(path, 'utf8')
+  }
+  throw new Error(
+    'Could not locate the canonical Prisma fragment from ' +
+      '@modern-admin/system-prisma. Make sure that package is installed.',
+  )
+}
+
+// ─── Public entry point ──────────────────────────────────────────────────
+
+export const generate = async (options: GenerateOptions = {}): Promise<GenerateResult> => {
+  const cwd = options.cwd ?? process.cwd()
+  const orm = options.orm ?? (await detectOrm(cwd))
+  const resolvePath = (p: string): string => (isAbsolute(p) ? p : resolve(cwd, p))
+
+  if (orm === 'prisma') {
+    const schemaPath = options.schemaPath
+      ? resolvePath(options.schemaPath)
+      : resolve(cwd, 'prisma/schema.prisma')
+    if (!(await fileExists(schemaPath))) {
+      throw new Error(`Prisma schema not found at ${schemaPath}.`)
+    }
+    const hostSchema = await readFile(schemaPath, 'utf8')
+    const canonical = await loadCanonicalPrisma()
+    const { output, added, skipped } = appendPrismaModels(hostSchema, canonical)
+    if (!options.dryRun && added.length > 0) {
+      await writeFile(schemaPath, output, 'utf8')
+    }
+    return { orm, schemaPath, added, skipped, output }
+  }
+
+  // Drizzle
+  const schemaPath = options.schemaPath
+    ? resolvePath(options.schemaPath)
+    : resolve(cwd, 'src/db/modern-admin-schema.ts')
+  const previous = (await fileExists(schemaPath)) ? await readFile(schemaPath, 'utf8') : ''
+  const output = DRIZZLE_FILE_CONTENT
+  const added = previous === output ? [] : ['modern-admin-schema.ts']
+  const skipped = previous === output ? ['modern-admin-schema.ts'] : []
+  if (!options.dryRun && added.length > 0) {
+    await mkdir(dirname(schemaPath), { recursive: true })
+    await writeFile(schemaPath, output, 'utf8')
+  }
+  return { orm, schemaPath, added, skipped, output }
+}

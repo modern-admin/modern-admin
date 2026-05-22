@@ -29,6 +29,7 @@
     "@modern-admin/nest": "workspace:*",
     "@modern-admin/queue": "workspace:*",
     "@modern-admin/system-prisma": "workspace:*",
+    "@modern-admin/web": "workspace:*",
     "@nestjs/bullmq": "^11.0.4",
     "@nestjs/common": "^11.1.19",
     "@nestjs/core": "^11.1.19",
