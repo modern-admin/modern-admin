@@ -236,9 +236,9 @@
         "typescript": "^6.0.3",
       },
     },
-    "packages/create-modern-admin": {
-      "name": "create-modern-admin",
-      "version": "0.0.0",
+    "packages/create": {
+      "name": "@modern-admin/create",
+      "version": "0.1.0",
       "bin": {
         "create-modern-admin": "./src/cli.ts",
         "modern-admin": "./src/cli.ts",
@@ -921,6 +921,8 @@
 
     "@modern-admin/core": ["@modern-admin/core@workspace:packages/core"],
 
+    "@modern-admin/create": ["@modern-admin/create@workspace:packages/create"],
+
     "@modern-admin/feature-ai-fill": ["@modern-admin/feature-ai-fill@workspace:packages/feature-ai-fill"],
 
     "@modern-admin/feature-history": ["@modern-admin/feature-history@workspace:packages/feature-history"],
@@ -1564,8 +1566,6 @@
     "cookie-signature": ["cookie-signature@1.2.2", "", {}, "sha512-D76uU73ulSXrD1UXF4KE2TMxVVwhsnCgfAyTg9k8P6KGZjlXKrOLe4dJQKI3Bxi5wjesZoFXJWElNWBjPZMbhg=="],
 
     "cors": ["cors@2.8.6", "", { "dependencies": { "object-assign": "^4", "vary": "^1" } }, "sha512-tJtZBBHA6vjIAaF6EnIaq6laBBP9aq/Y3ouVJjEfoHbRBcHBAHYcMh/w8LDrk2PvIMMq8gmopa5D4V8RmbrxGw=="],
-
-    "create-modern-admin": ["create-modern-admin@workspace:packages/create-modern-admin"],
 
     "cron-parser": ["cron-parser@4.9.0", "", { "dependencies": { "luxon": "^3.2.1" } }, "sha512-p0SaNjrHOnQeR8/VnfGbmg9te2kfyYSQ7Sc/j/6DtPL3JQvKxmjO9TSjNFpujqV3vEYYBvNNvXSxzyksBWAx1Q=="],
 
