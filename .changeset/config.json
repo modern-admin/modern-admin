@@ -15,7 +15,6 @@
     "@modern-admin/app-api",
     "@modern-admin/app-api-prisma",
     "@modern-admin/app-web",
-    "@modern-admin/app-e2e",
-    "@modern-admin/docs"
+    "@modern-admin/app-e2e"
   ]
 }
