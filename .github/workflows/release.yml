@@ -65,8 +65,13 @@ jobs:
       # Generate the Prisma client for app-api-prisma so its typecheck can
       # resolve `./generated/prisma/client`. The schema is checked in but
       # the generated client is not (`src/generated/` is gitignored).
+      # prisma.config.ts eagerly resolves DATABASE_URL via Prisma's env()
+      # helper — pass a dummy URL so the config loads. `prisma generate`
+      # never connects to the database, so the value doesn't matter.
       - name: Generate Prisma client
         run: bun run --filter @modern-admin/app-api-prisma prisma:generate
+        env:
+          DATABASE_URL: postgresql://localhost/ci
 
       - name: Typecheck
         run: bun run typecheck
