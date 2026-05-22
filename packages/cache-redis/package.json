@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/cache-redis",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Redis cache + pub/sub invalidation provider for Modern Admin.",
   "type": "module",
   "license": "MIT",

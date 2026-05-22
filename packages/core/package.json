@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/core",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Core abstractions of the Modern Admin framework — adapters, resources, decorators, actions, ports.",
   "type": "module",
   "license": "MIT",
