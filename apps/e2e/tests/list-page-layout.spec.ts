@@ -140,10 +140,15 @@ test.describe('List page layout — mobile (375 × 700)', () => {
     })
     expect('error' in result ? result.error : null).toBeNull()
     if (!('scrolled' in result)) throw new Error('drag did not execute')
+    const { scrolled, scrollWidth, clientWidth } = result as {
+      scrolled: number
+      scrollWidth: number
+      clientWidth: number
+    }
     // Buttons row must overflow (otherwise there's nothing to test).
-    expect(result.scrollWidth).toBeGreaterThan(result.clientWidth)
+    expect(scrollWidth).toBeGreaterThan(clientWidth)
     // Dragging 140px left should translate to ~140px of scrollLeft.
-    expect(result.scrolled).toBeGreaterThanOrEqual(100)
+    expect(scrolled).toBeGreaterThanOrEqual(100)
   })
 })
 
