@@ -1,5 +1,13 @@
 # @modern-admin/create
 
+## 0.1.2
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @modern-admin/system-drizzle@0.1.2
+  - @modern-admin/system-prisma@0.1.2
+
 ## 0.1.1
 
 ### Patch Changes
