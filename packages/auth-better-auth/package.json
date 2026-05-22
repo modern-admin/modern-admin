@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/auth-better-auth",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Better Auth provider integration for Modern Admin (cookie sessions + API keys).",
   "type": "module",
   "license": "MIT",

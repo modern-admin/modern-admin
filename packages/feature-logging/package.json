@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/feature-logging",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Persistent action log feature plugin for Modern Admin.",
   "type": "module",
   "license": "MIT",
