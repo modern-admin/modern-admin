@@ -39,6 +39,7 @@ export function App({ config, components }: AppProps): ReactElement {
           credentials: config.credentials ?? 'include',
           headers: config.headers,
           persistDemoSession: config.persistDemoSession,
+          authBasePath: config.authBasePath,
         }}
       >
         <AdminApp loginHint={config.loginHint} />

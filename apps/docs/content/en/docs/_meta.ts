@@ -25,4 +25,5 @@ export default {
   i18n: 'Internationalisation',
   'ai-assistant': 'AI Assistant',
   'ai-assistant-architecture': 'AI assistant architecture',
+  'agent-prompt': 'AI agent integration prompt',
 }

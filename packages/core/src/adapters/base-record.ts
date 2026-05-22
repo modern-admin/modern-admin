@@ -112,7 +112,7 @@ export class BaseRecord {
     const populated: Record<string, RecordJSON | unknown> = {}
     for (const key of Object.keys(this.populated)) {
       const child = this.populated[key]
-      populated[key] = child instanceof BaseRecord ? child.toJSON() : child
+      populated[key] = child instanceof BaseRecord ? child.toJSON() : toJsonSafe(child)
     }
     // Wire shape ships nested params (arrays/objects rebuilt) so clients
     // don't have to reverse the flat dot-notation. The internal `this.params`
@@ -120,10 +120,36 @@ export class BaseRecord {
     return {
       id: this.id(),
       title: this.title(),
-      params: unflatten(this.params),
+      params: toJsonSafe(unflatten(this.params)) as ParamsType,
       populated,
       errors: this.errors,
       baseError: this.baseError,
     }
   }
+}
+
+/**
+ * Recursively normalize a value so it survives `JSON.stringify`. The only
+ * non-JSON-safe primitive that adapters routinely surface is `BigInt`
+ * (Prisma's `BigInt` columns, Drizzle's `bigint mode: 'bigint'`); we render
+ * those as decimal strings. Without this, both Express's response writer
+ * and any cache provider (`@modern-admin/cache-redis`) crash with
+ * `TypeError: JSON.stringify cannot serialize BigInt` the moment a record
+ * carrying a `BigInt` field lands on the wire.
+ *
+ * The conversion is lossy in JS-type terms but JSON has no native BigInt
+ * representation anyway — strings are the canonical interchange shape.
+ */
+const toJsonSafe = (value: unknown): unknown => {
+  if (typeof value === 'bigint') return value.toString()
+  if (value == null || typeof value !== 'object') return value
+  if (Array.isArray(value)) return value.map(toJsonSafe)
+  // Honour custom toJSON (Date, Decimal.js, Mongo ObjectId, Day.js, …) —
+  // these already produce JSON-safe values, so we delegate.
+  if (typeof (value as { toJSON?: unknown }).toJSON === 'function') return value
+  const out: Record<string, unknown> = {}
+  for (const k of Object.keys(value as Record<string, unknown>)) {
+    out[k] = toJsonSafe((value as Record<string, unknown>)[k])
+  }
+  return out
 }

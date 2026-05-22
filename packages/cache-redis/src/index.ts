@@ -29,6 +29,25 @@ export interface RedisCacheOptions {
 
 const TAG_PREFIX = 'tag:'
 
+// Sentinel used to round-trip BigInt values through JSON without losing
+// the JS type. `BaseRecord.toJSON()` already strings BigInts for the wire,
+// so in practice we rarely hit this — but callers (custom action handlers,
+// adapter authors) sometimes hand BigInt-bearing payloads straight to the
+// cache, and we don't want that to crash the request.
+const BIGINT_TAG = '__bigint'
+const stringifyReplacer = (_key: string, value: unknown): unknown =>
+  typeof value === 'bigint' ? { [BIGINT_TAG]: value.toString() } : value
+const parseReviver = (_key: string, value: unknown): unknown => {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const obj = value as Record<string, unknown>
+    const keys = Object.keys(obj)
+    if (keys.length === 1 && keys[0] === BIGINT_TAG && typeof obj[BIGINT_TAG] === 'string') {
+      return BigInt(obj[BIGINT_TAG] as string)
+    }
+  }
+  return value
+}
+
 export class RedisCacheProvider implements ICacheProvider {
   private readonly client: RedisLike
   private readonly subscriber: RedisLike | undefined
@@ -54,7 +73,7 @@ export class RedisCacheProvider implements ICacheProvider {
     const raw = await this.client.get(this.k(key))
     if (raw == null) return null
     try {
-      return JSON.parse(raw) as T
+      return JSON.parse(raw, parseReviver) as T
     } catch {
       return null
     }
@@ -63,7 +82,7 @@ export class RedisCacheProvider implements ICacheProvider {
   async set<T = unknown>(key: string, value: T, options: CacheSetOptions = {}): Promise<void> {
     const ttl = options.ttl ?? this.defaultTtl
     const fullKey = this.k(key)
-    const payload = JSON.stringify(value)
+    const payload = JSON.stringify(value, stringifyReplacer)
     if (ttl != null) await this.client.set(fullKey, payload, 'EX', ttl)
     else await this.client.set(fullKey, payload)
     if (options.tags && options.tags.length) {

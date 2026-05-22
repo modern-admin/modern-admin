@@ -28,7 +28,18 @@ export interface AdminClientOptions {
   headers?: Record<string, string>
   persistDemoSession?: boolean
   demoSessionStorageKey?: string
+  /**
+   * Path under which the host mounts Better Auth's Node handler
+   * (`toNodeHandler(auth)`) AND configures `betterAuth({ basePath })`.
+   * Drives the sign-in / sign-out endpoints — defaults to
+   * `/admin/api/auth`, matching the canonical CLI scaffold. Override only
+   * if the host mounts Better Auth elsewhere; pass *without* a trailing
+   * slash, e.g. `'/api/auth'` (Better Auth's own default).
+   */
+  authBasePath?: string
 }
+
+const DEFAULT_AUTH_BASE_PATH = '/admin/api/auth'
 
 const buildQuery = (query?: ListQuery): string => {
   if (!query) return ''
@@ -53,6 +64,9 @@ export class AdminClient {
   private readonly credentials: RequestCredentials
   private readonly headers: Record<string, string>
   private readonly demoSessionStorageKey: string | null
+  private readonly authBasePath: string
+  private readonly signInPath: string
+  private readonly signOutPath: string
 
   constructor(opts: AdminClientOptions = {}) {
     this.baseUrl = opts.baseUrl?.replace(/\/$/, '') ?? ''
@@ -61,6 +75,9 @@ export class AdminClient {
     this.demoSessionStorageKey = opts.persistDemoSession
       ? (opts.demoSessionStorageKey ?? DEFAULT_DEMO_SESSION_STORAGE_KEY)
       : null
+    this.authBasePath = (opts.authBasePath ?? DEFAULT_AUTH_BASE_PATH).replace(/\/$/, '')
+    this.signInPath = `${this.authBasePath}/sign-in/email`
+    this.signOutPath = `${this.authBasePath}/sign-out`
   }
 
   private async requestOnce<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -89,8 +106,8 @@ export class AdminClient {
         allowDemoRestore &&
         err instanceof AdminApiError &&
         err.status === 401 &&
-        path !== '/api/auth/sign-in/email' &&
-        path !== '/api/auth/sign-out'
+        path !== this.signInPath &&
+        path !== this.signOutPath
       if (!canRestore) throw err
       const restored = await this.restoreDemoSession()
       if (!restored) throw err
@@ -133,7 +150,7 @@ export class AdminClient {
     const session = this.readDemoSession()
     if (!session) return false
     try {
-      await this.request<unknown>('/api/auth/sign-in/email', {
+      await this.request<unknown>(this.signInPath, {
         method: 'POST',
         body: JSON.stringify(session),
       })
@@ -159,7 +176,7 @@ export class AdminClient {
    *  rely on (`credentials: 'include'`). After sign-in, a best-effort
    *  call to the admin audit endpoint records the login event. */
   async login(email: string, password: string): Promise<void> {
-    await this.request<unknown>('/api/auth/sign-in/email', {
+    await this.request<unknown>(this.signInPath, {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     })
@@ -177,7 +194,7 @@ export class AdminClient {
    *  an explicit JSON body (even if empty) when Content-Type is JSON. */
   async logout(): Promise<void> {
     try {
-      await this.request<unknown>('/api/auth/sign-out', {
+      await this.request<unknown>(this.signOutPath, {
         method: 'POST',
         body: '{}',
       })

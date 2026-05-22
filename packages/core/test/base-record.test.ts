@@ -55,4 +55,22 @@ describe('BaseRecord', () => {
     expect(json.errors).toEqual({})
     expect(json.baseError).toBeNull()
   })
+
+  test('toJSON normalises BigInt fields to decimal strings (JSON-safe)', () => {
+    // Prisma surfaces `BigInt` columns as native bigint. Without
+    // normalisation, both Express `res.json()` and the Redis cache
+    // (`@modern-admin/cache-redis`) crash with
+    // "TypeError: JSON.stringify cannot serialize BigInt" on the first
+    // record carrying one. We render those as decimal strings so the wire
+    // shape stays JSON-stringifiable end-to-end.
+    const rec = new BaseRecord(
+      { id: 'r1', rustoreCommentId: 9007199254740993n, nested: { other: 1n } },
+      makeResource(),
+    )
+    const json = rec.toJSON()
+    expect(json.params.rustoreCommentId).toBe('9007199254740993')
+    expect((json.params.nested as { other: unknown }).other).toBe('1')
+    // Final smoke check: the whole record must round-trip through JSON.
+    expect(() => JSON.stringify(json)).not.toThrow()
+  })
 })

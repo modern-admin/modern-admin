@@ -97,6 +97,21 @@ describe('RedisCacheProvider', () => {
     expect(client.store.size).toBe(0)
   })
 
+  test('round-trips BigInt without crashing JSON.stringify', async () => {
+    const client = new FakeRedis()
+    const cache = new RedisCacheProvider({ client })
+    // Prisma returns `BigInt` columns as native bigint — list responses
+    // carrying them used to crash cache.set with "TypeError: JSON.stringify
+    // cannot serialize BigInt". The sentinel-based replacer/reviver must
+    // preserve both the type and the value.
+    const payload = { id: 1n, nested: { huge: 9007199254740993n } }
+    await cache.set('rec', payload)
+    expect(client.store.get('ma:rec')).toBe(
+      '{"id":{"__bigint":"1"},"nested":{"huge":{"__bigint":"9007199254740993"}}}',
+    )
+    expect(await cache.get<typeof payload>('rec')).toEqual(payload)
+  })
+
   test('publish prefixes the channel and forwards the message', async () => {
     const client = new FakeRedis()
     const cache = new RedisCacheProvider({ client })

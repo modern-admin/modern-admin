@@ -41,6 +41,14 @@ export interface ModernAdminRuntimeConfig {
   brand?: ModernAdminBrand
   /** Persist the demo session credentials in localStorage. */
   persistDemoSession?: boolean
+  /**
+   * Path under which the host mounts Better Auth's Node handler. Drives
+   * the sign-in / sign-out endpoints — defaults to `/admin/api/auth`,
+   * matching the canonical CLI scaffold (and `ModernAdminStaticUiModule`
+   * mounted at `/admin`). Override only when the host mounts Better Auth
+   * elsewhere; pass *without* a trailing slash.
+   */
+  authBasePath?: string
 }
 
 declare global {
