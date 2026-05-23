@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/nest",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "NestJS module wrapping @modern-admin/core — REST controllers, guards, cache, OpenAPI.",
   "type": "module",
   "license": "MIT",

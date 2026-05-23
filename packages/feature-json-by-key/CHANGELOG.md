@@ -1,5 +1,12 @@
 # @modern-admin/feature-json-by-key
 
+## 0.1.3
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @modern-admin/feature-upload@0.1.3
+
 ## 0.1.2
 
 ### Patch Changes
