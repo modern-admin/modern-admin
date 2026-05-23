@@ -89,8 +89,6 @@ fix(core,cache-redis): handle BigInt fields in record/JSON pipeline
 
 * @modern-admin/core: BaseRecord.toJSON normalises BigInt → string
 * @modern-admin/cache-redis: defensive sentinel-based BigInt round-trip
-
-Co-Authored-By: Claude <noreply@anthropic.com>
 EOF
 )"
 git push origin main
@@ -123,17 +121,17 @@ this:
 3. `bun run typecheck`
 4. `bun --filter '*' build`
 5. **Branching point**:
-   - If any `.changeset/*.md` files exist → it opens or updates a PR
-     titled **"chore: version packages"** that:
-     - Deletes the changesets,
-     - Bumps every linked package's `package.json` `version`,
-     - Updates each affected package's `CHANGELOG.md`,
-     - Updates `bun.lock`.
-   - If no changesets are pending (Version Packages PR was just
-     merged) → it runs `bun run release`, which calls
-     `scripts/release.ts`, which iterates publishable packages and
-     `bun publish`es each one to `https://npm.pkg.github.com` with
-     `access: restricted`.
+  - If any `.changeset/*.md` files exist → it opens or updates a PR
+    titled **"chore: version packages"** that:
+    - Deletes the changesets,
+    - Bumps every linked package's `package.json` `version`,
+    - Updates each affected package's `CHANGELOG.md`,
+    - Updates `bun.lock`.
+  - If no changesets are pending (Version Packages PR was just
+    merged) → it runs `bun run release`, which calls
+    `scripts/release.ts`, which iterates publishable packages and
+    `bun publish`es each one to `https://npm.pkg.github.com` with
+    `access: restricted`.
 
 Open the workflow run on GitHub and watch it to completion. Typical
 duration: 4–8 minutes for the bump PR, 6–12 minutes for the publish.
@@ -145,10 +143,10 @@ duration: 4–8 minutes for the bump PR, 6–12 minutes for the publish.
 When the workflow opens the **"chore: version packages"** PR:
 
 1. **Review the diff.** Check that:
-   - Every affected package got the version bump you expected.
-   - Each `CHANGELOG.md` entry reads correctly under the new version
-     header.
-   - `bun.lock` updated for the version bumps and nothing else.
+  - Every affected package got the version bump you expected.
+  - Each `CHANGELOG.md` entry reads correctly under the new version
+    header.
+  - `bun.lock` updated for the version bumps and nothing else.
 2. **If the changeset summary needs cleanup**, push commits onto the
    PR branch (the workflow keeps `bun.lock` in sync on re-run).
 3. **Merge with "Squash and merge".** The squash commit message

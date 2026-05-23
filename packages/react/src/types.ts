@@ -97,11 +97,42 @@ export interface CurrentUser {
   [claim: string]: unknown
 }
 
+/**
+ * Mirror of `core` `AdminFeatures`. Each flag is `true` iff the
+ * corresponding backend subsystem is wired and ready. The SPA uses these
+ * to hide UI surfaces (audit-log link, settings sections, revisions
+ * button, AI assistant widget) for features the host hasn't enabled.
+ */
+export interface AdminFeatures {
+  auditLog: boolean
+  history: boolean
+  webhooks: boolean
+  apiKeys: boolean
+  aiAssistant: boolean
+}
+
+const ALL_FEATURES_OFF: AdminFeatures = {
+  auditLog: false,
+  history: false,
+  webhooks: false,
+  apiKeys: false,
+  aiAssistant: false,
+}
+
+/** Defensive resolver for older API servers that don't yet surface
+ *  `features` in their `/admin/api/config` payload — every flag falls back
+ *  to `false`, so optional surfaces stay hidden until the backend opts in. */
+export const resolveFeatures = (raw?: Partial<AdminFeatures>): AdminFeatures => ({
+  ...ALL_FEATURES_OFF,
+  ...(raw ?? {}),
+})
+
 export interface AdminConfig {
   rootPath: string
   branding?: { companyName?: string; logo?: string; theme?: string }
   auth: Record<string, unknown>
   resources: ResourceJSON[]
+  features?: Partial<AdminFeatures>
 }
 
 export interface RecordJSON {

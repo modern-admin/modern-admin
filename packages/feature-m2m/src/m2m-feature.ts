@@ -175,8 +175,17 @@ const applyDiff = async (
     }
   }
 
-  // Insert new + update extras for existing.
+  // Deduplicate incoming by foreign-id so two payload entries with the same
+  // `id` don't insert two junction rows. When a duplicate appears later in
+  // the list its extras override the earlier copy — last-write-wins.
+  const incomingByForeign = new Map<string, M2MItem>()
   for (const item of incoming) {
+    const prev = incomingByForeign.get(item.id)
+    incomingByForeign.set(item.id, prev ? { ...prev, ...item } : item)
+  }
+
+  // Insert new + update extras for existing.
+  for (const item of incomingByForeign.values()) {
     const row = existingByForeign.get(item.id)
     if (row) {
       if (extraFields.length > 0) {

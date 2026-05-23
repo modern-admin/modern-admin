@@ -15,6 +15,7 @@ import {
 import { useAdminClient } from './provider.js'
 import type {
   AdminConfig,
+  AdminFeatures,
   CustomActionResponse,
   CurrentUser,
   ListQuery,
@@ -22,6 +23,7 @@ import type {
   RecordResponse,
   ResourceJSON,
 } from './types.js'
+import { resolveFeatures } from './types.js'
 import {
   AdminApiError,
   type AuditLogQuery,
@@ -58,6 +60,18 @@ export const useResource = (resourceId: string | undefined): ResourceJSON | unde
     const resource = data?.resources.find((r) => r.id === resourceId)
     return resource ? localizeResource(resource) : undefined
   }, [data?.resources, localizeResource, resourceId])
+}
+
+/**
+ * Capability flags advertised by the backend via `/admin/api/config`.
+ * Use to gate optional UI surfaces (audit-log link, settings sections,
+ * revisions button, AI assistant widget) — every flag is `false` until
+ * the bootstrap config is loaded, so consumers can render unconditionally
+ * and the gating logic short-circuits during the initial paint.
+ */
+export const useFeatures = (): AdminFeatures => {
+  const { data } = useAdminConfig()
+  return React.useMemo(() => resolveFeatures(data?.features), [data?.features])
 }
 
 export const useResources = (): ResourceJSON[] => {
@@ -316,7 +330,10 @@ export const useGlobalSearch = (
   const client = useAdminClient()
   return useQuery({
     queryKey: ['modern-admin', 'global-search', query] as const,
-    queryFn: () => client.globalSearch(query),
+    // Forward the AbortSignal TanStack Query attaches to each invocation.
+    // The signal fires when the query key changes (next keystroke) or the
+    // component unmounts, letting the server short-circuit stale work.
+    queryFn: ({ signal }) => client.globalSearch(query, undefined, { signal }),
     enabled: enabled && query.trim().length > 0,
     staleTime: 30_000,
   })

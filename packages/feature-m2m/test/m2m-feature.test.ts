@@ -403,6 +403,168 @@ describe('m2mFeature — cascade delete', () => {
   })
 })
 
+describe('m2mFeature — payload parsing edge cases', () => {
+  it('accepts numeric ids in payload (coerces to string)', async () => {
+    const ctx = buildAdmin()
+    // seed tag with numeric-looking id so the reference resolves
+    ctx.tagsTable.rows.push({ id: '42', name: 'forty-two' })
+    await ctx.admin.invoke({
+      method: 'post',
+      params: { resourceId: 'posts', recordId: 'p1', action: 'edit' },
+      payload: { tags: [42] } as unknown as Record<string, unknown>,
+    })
+    const row = ctx.postTagsTable.rows.find((r) => r.postId === 'p1')!
+    expect(row.tagId).toBe('42')
+  })
+
+  it('honours `value` key as id alias (for select-style payloads)', async () => {
+    const ctx = buildAdmin()
+    await ctx.admin.invoke({
+      method: 'post',
+      params: { resourceId: 'posts', recordId: 'p1', action: 'edit' },
+      payload: { tags: [{ value: 't1', note: 'aliased' }] } as unknown as Record<string, unknown>,
+    })
+    const row = ctx.postTagsTable.rows.find((r) => r.postId === 'p1')!
+    expect(row.tagId).toBe('t1')
+    expect(row.note).toBe('aliased')
+  })
+
+  it('drops entries with empty/missing id', async () => {
+    const ctx = buildAdmin()
+    await ctx.admin.invoke({
+      method: 'post',
+      params: { resourceId: 'posts', recordId: 'p1', action: 'edit' },
+      payload: {
+        tags: [
+          { id: 't1' },
+          { id: '' },         // empty id — drop
+          { id: null },       // null id — drop
+          { note: 'orphan' }, // no id key — drop
+          null,               // null entry — drop
+        ],
+      } as unknown as Record<string, unknown>,
+    })
+    expect(ctx.postTagsTable.rows.filter((r) => r.postId === 'p1')).toHaveLength(1)
+  })
+
+  it('treats payload.tags = null as "clear all"', async () => {
+    const ctx = buildAdmin()
+    await ctx.junction.create({ postId: 'p1', tagId: 't1' })
+    await ctx.junction.create({ postId: 'p1', tagId: 't2' })
+    await ctx.admin.invoke({
+      method: 'post',
+      params: { resourceId: 'posts', recordId: 'p1', action: 'edit' },
+      payload: { tags: null } as unknown as Record<string, unknown>,
+    })
+    expect(ctx.postTagsTable.rows.filter((r) => r.postId === 'p1')).toHaveLength(0)
+  })
+
+  it('mixed payload of strings + objects coexists', async () => {
+    const ctx = buildAdmin()
+    await ctx.admin.invoke({
+      method: 'post',
+      params: { resourceId: 'posts', recordId: 'p1', action: 'edit' },
+      payload: {
+        tags: ['t1', { id: 't2', note: 'obj' }, 't3'],
+      } as unknown as Record<string, unknown>,
+    })
+    const rows = ctx.postTagsTable.rows.filter((r) => r.postId === 'p1')
+    expect(rows.map((r) => r.tagId).sort()).toEqual(['t1', 't2', 't3'])
+    expect(rows.find((r) => r.tagId === 't2')!.note).toBe('obj')
+  })
+
+  it('flattened payload skips malformed keys (e.g. tags.foo.id, tags.0)', async () => {
+    const ctx = buildAdmin()
+    await ctx.admin.invoke({
+      method: 'post',
+      params: { resourceId: 'posts', recordId: 'p1', action: 'edit' },
+      payload: {
+        'tags.0.id': 't1',
+        'tags.foo.id': 'bogus',  // non-numeric index → ignored
+        'tags.1': 'naked',       // no field → ignored
+      } as unknown as Record<string, unknown>,
+    })
+    expect(ctx.postTagsTable.rows.map((r) => r.tagId)).toEqual(['t1'])
+  })
+
+  it('flattened payload preserves index order', async () => {
+    const ctx = buildAdmin()
+    await ctx.admin.invoke({
+      method: 'post',
+      params: { resourceId: 'posts', recordId: 'p1', action: 'edit' },
+      payload: {
+        'tags.2.id': 't3',
+        'tags.0.id': 't1',
+        'tags.1.id': 't2',
+      } as unknown as Record<string, unknown>,
+    })
+    // The diff applier writes in iteration order; junction-row ids reflect the
+    // sorted order even though the payload keys arrived shuffled.
+    expect(ctx.postTagsTable.rows.map((r) => r.tagId)).toEqual(['t1', 't2', 't3'])
+  })
+
+  it('duplicate ids in payload collapse to a single junction row', async () => {
+    // Map keyed by foreign-id ensures duplicates don't double-insert.
+    const ctx = buildAdmin()
+    await ctx.admin.invoke({
+      method: 'post',
+      params: { resourceId: 'posts', recordId: 'p1', action: 'edit' },
+      payload: {
+        tags: [{ id: 't1', note: 'first' }, { id: 't1', note: 'second' }],
+      } as unknown as Record<string, unknown>,
+    })
+    const rows = ctx.postTagsTable.rows.filter((r) => r.tagId === 't1')
+    // Either we collapse to one row OR — if currently buggy — we surface that
+    // bug now. The intended contract is "one junction row per foreign-id".
+    expect(rows).toHaveLength(1)
+  })
+})
+
+describe('m2mFeature — read hook resilience', () => {
+  it('returns empty array when junction resource is missing', async () => {
+    const tagsTable = tbl('tags', ['id', 'name'], [{ id: 't1', name: 'x' }])
+    const postsTable = tbl('posts', ['id'], [{ id: 'p1' }])
+    // Note: postTags table NOT registered → admin.findResource throws.
+    const admin = new ModernAdmin({
+      adapters: [adapter],
+      resources: [
+        { resource: tagsTable },
+        {
+          resource: postsTable,
+          features: [
+            m2mFeature({
+              property: 'tags',
+              through: 'postTags',
+              localKey: 'postId',
+              foreignKey: 'tagId',
+              reference: 'tags',
+            }),
+          ],
+        },
+      ],
+    })
+    const response = await admin.invoke({
+      method: 'get',
+      params: { resourceId: 'posts', recordId: 'p1', action: 'show' },
+    }) as { record: { params: Record<string, unknown> } }
+    expect(response.record.params.tags).toEqual([])
+  })
+
+  it('survives a broken foreign-key (junction row points to deleted tag)', async () => {
+    const ctx = buildAdmin()
+    // junction row references a tagId that doesn't exist in tags table
+    await ctx.junction.create({ postId: 'p1', tagId: 't999', addedAt: '2024-01-01' })
+    const response = await ctx.admin.invoke({
+      method: 'get',
+      params: { resourceId: 'posts', recordId: 'p1', action: 'show' },
+    }) as { record: { params: Record<string, unknown>; populated: Record<string, unknown> } }
+    // Item is still listed (it lives in the junction) but populated is empty.
+    const items = response.record.params.tags as Array<Record<string, unknown>>
+    expect(items.map((i) => i.id)).toEqual(['t999'])
+    expect(response.record.populated['tags.t999']).toBeUndefined()
+  })
+})
+
 describe('m2mFeature — composes with other features', () => {
   it('two m2mFeature calls on the same resource expose two virtual properties', () => {
     const tagsT = tbl('tags', ['id', 'name'], [])

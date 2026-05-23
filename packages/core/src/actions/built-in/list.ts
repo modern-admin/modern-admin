@@ -11,9 +11,17 @@ const handler = async (
   const query = request.query ?? {}
   const page = Math.max(1, Number(query.page ?? 1))
   const perPage = Math.max(1, Math.min(200, Number(query.perPage ?? DEFAULT_PER_PAGE)))
-  const sortBy = query.sortBy as string | undefined
-  const direction = (query.direction as 'asc' | 'desc' | undefined) ?? undefined
+  const querySortBy = query.sortBy as string | undefined
+  const queryDirection = (query.direction as 'asc' | 'desc' | undefined) ?? undefined
   const filters = (query.filters as Record<string, unknown> | undefined) ?? {}
+
+  // When the request doesn't pin a sort, fall back to the resource-level
+  // default declared via `ResourceOptions.sort`. Treating it as an effective
+  // sort (rather than only forwarding query params) means UI navigation,
+  // direct API calls, and cache keys all see the same canonical order.
+  const defaultSort = resource.decorate().options.sort
+  const sortBy = querySortBy ?? defaultSort?.sortBy
+  const direction = querySortBy != null ? queryDirection : defaultSort?.direction
 
   const filter = new Filter(filters, resource)
   const cacheKey = `list:${resource.id()}:${JSON.stringify({ filters, page, perPage, sortBy, direction })}`

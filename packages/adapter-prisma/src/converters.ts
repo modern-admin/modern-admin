@@ -93,6 +93,28 @@ const buildOperatorClause = (
   property: PrismaProperty | null,
 ): unknown => {
   const isString = property != null && property.type() === 'string'
+  const isArray = property?.isArray() ?? false
+
+  // ── Scalar-list (e.g. `String[]`, `Int[]`) field semantics ──────────
+  // Most scalar operators translate to element-wise list operators or are
+  // not supported by Prisma. Surface what we can; drop the rest so the
+  // adapter never produces an invalid where clause.
+  if (isArray) {
+    switch (operator) {
+      case 'eq':
+        return { has: coerceScalar(value, property) }
+      case 'in': {
+        if (Array.isArray(value)) {
+          return { hasSome: value.map((v) => coerceScalar(v as FilterValue, property)) }
+        }
+        return { hasSome: [coerceScalar(value, property)] }
+      }
+      // `co`/`sw`/`ew`/`gt`/`lt`/`between`/`neq` have no list equivalent
+      // in Prisma. Dropping the clause is preferable to a 500.
+      default:
+        return undefined
+    }
+  }
 
   switch (operator) {
     case 'eq': {
@@ -112,30 +134,26 @@ const buildOperatorClause = (
       return { not: coerced }
     }
     case 'co': {
+      // `contains`/`startsWith`/`endsWith` are only valid on string columns.
+      // Drop the clause on non-string fields instead of emitting an invalid
+      // where that crashes Prisma.
+      if (!isString) return undefined
       const coerced = coerceScalar(value, property)
-      if (typeof coerced === 'string') {
-        return { contains: coerced, mode: 'insensitive' }
-      }
-      return { contains: coerced }
+      return { contains: String(coerced), mode: 'insensitive' }
     }
     case 'sw': {
+      if (!isString) return undefined
       const coerced = coerceScalar(value, property)
-      if (typeof coerced === 'string') {
-        return { startsWith: coerced, mode: 'insensitive' }
-      }
-      return { startsWith: coerced }
+      return { startsWith: String(coerced), mode: 'insensitive' }
     }
     case 'ew': {
+      if (!isString) return undefined
       const coerced = coerceScalar(value, property)
-      if (typeof coerced === 'string') {
-        return { endsWith: coerced, mode: 'insensitive' }
-      }
-      return { endsWith: coerced }
+      return { endsWith: String(coerced), mode: 'insensitive' }
     }
     case 'in': {
       if (Array.isArray(value)) {
         const list = value.map((v) => coerceScalar(v as FilterValue, property))
-        if (property?.isArray()) return { hasSome: list }
         return { in: list }
       }
       // Single string passed for `in` — coerce to single-element array
@@ -157,7 +175,22 @@ const buildOperatorClause = (
       const toStr = comma >= 0 ? str.slice(comma + 1) : ''
       const clause: Record<string, unknown> = {}
       if (fromStr) clause.gte = coerceScalar(fromStr, property)
-      if (toStr) clause.lte = coerceScalar(toStr, property)
+      if (toStr) {
+        const upper = coerceScalar(toStr, property)
+        // For date-only `yyyy-MM-dd` upper bounds on DateTime columns the
+        // raw `new Date('2025-12-31')` lands at midnight UTC — excluding
+        // everything timestamped later that day. Bump to end-of-day so the
+        // user-visible "to 2025-12-31" actually includes 2025-12-31.
+        if (
+          upper instanceof Date &&
+          /^\d{4}-\d{2}-\d{2}$/.test(toStr) &&
+          (property?.type() === 'date' || property?.type() === 'datetime')
+        ) {
+          clause.lte = new Date(upper.getTime() + 24 * 60 * 60 * 1000 - 1)
+        } else {
+          clause.lte = upper
+        }
+      }
       return Object.keys(clause).length ? clause : undefined
     }
     default:
@@ -183,9 +216,15 @@ export const filterToWhere = (filter: Filter): Record<string, unknown> => {
     const property = element.property as PrismaProperty | null
     const isString = property != null && property.type() === 'string'
 
+    const isArray = property?.isArray() ?? false
+
     // ── Operators that need top-level WHERE clauses ──────────────────
     if (operator === 'empty') {
-      if (isString) {
+      if (isArray) {
+        // Prisma's only valid empty-check for scalar lists; `null` is
+        // rejected because list columns are non-nullable in Postgres.
+        where[path] = { isEmpty: true }
+      } else if (isString) {
         topLevel.push({ OR: [{ [path]: null }, { [path]: '' }] })
       } else {
         topLevel.push({ [path]: null })
@@ -193,17 +232,20 @@ export const filterToWhere = (filter: Filter): Record<string, unknown> => {
       return null
     }
     if (operator === 'nempty') {
+      if (isArray) {
+        where[path] = { isEmpty: false }
+        return null
+      }
       topLevel.push({ NOT: { [path]: null } })
       if (isString) topLevel.push({ NOT: { [path]: '' } })
       return null
     }
     if (operator === 'nco') {
+      // `contains` is only defined on string columns; drop silently on
+      // anything else so the request never 500s.
+      if (!isString) return null
       const coerced = coerceScalar(value, property)
-      if (typeof coerced === 'string') {
-        topLevel.push({ NOT: { [path]: { contains: coerced, mode: 'insensitive' } } })
-      } else {
-        topLevel.push({ NOT: { [path]: { contains: coerced } } })
-      }
+      topLevel.push({ NOT: { [path]: { contains: String(coerced), mode: 'insensitive' } } })
       return null
     }
 
@@ -212,8 +254,29 @@ export const filterToWhere = (filter: Filter): Record<string, unknown> => {
     // `equals`. Translate a scalar value to {is: {relatedId: {equals: v}}}.
     if (property instanceof PrismaProperty && property.field.kind === 'object') {
       const relatedIdField = property.field.relationToFields?.[0] ?? 'id'
+      // Drop empty strings — typically arrive when the user clears a
+      // reference picker. `{equals: ''}` would otherwise crash on
+      // UUID/Int FK columns.
+      if (value == null || value === '') return null
+
+      if (typeof value === 'object' && !Array.isArray(value)) {
+        // Nested object value (e.g. `filters[author.name]=Alice` → Filter
+        // unflattens to `{author: {name: 'Alice'}}`). Recurse: emit
+        // `{is: {name: {contains: 'Alice', mode: 'insensitive'}}}`.
+        const inner: Record<string, unknown> = {}
+        for (const [innerKey, innerValue] of Object.entries(value as Record<string, unknown>)) {
+          if (innerValue == null || innerValue === '') continue
+          inner[innerKey] = typeof innerValue === 'string'
+            ? { contains: innerValue, mode: 'insensitive' }
+            : { equals: innerValue }
+        }
+        if (Object.keys(inner).length === 0) return null
+        where[path] = { is: inner }
+        return null
+      }
+
       const coerced = coerceScalar(value as FilterValue, null)
-      if (coerced != null) {
+      if (coerced != null && coerced !== '') {
         where[path] = { is: { [relatedIdField]: { equals: coerced } } }
       }
       return null

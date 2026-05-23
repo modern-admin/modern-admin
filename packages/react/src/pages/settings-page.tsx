@@ -52,7 +52,7 @@ import {
   X,
 } from 'lucide-react'
 import { useAdminClient } from '../provider.js'
-import { useResources } from '../hooks.js'
+import { useFeatures, useResources } from '../hooks.js'
 import { useI18n } from '../i18n.js'
 import { Link, useNavigate } from '../router.js'
 import { useNotify } from '../notify.js'
@@ -73,7 +73,7 @@ interface SectionDef {
   icon: React.ComponentType<{ className?: string }>
 }
 
-const SECTIONS: SectionDef[] = [
+const ALL_SECTIONS: SectionDef[] = [
   { key: 'api-keys', labelKey: 'settings:apiKeys.title', icon: KeyRound },
   { key: 'webhooks', labelKey: 'settings:webhooks.title', icon: SettingsIcon },
   { key: 'ai-assistant', labelKey: 'aiAssistant:title', icon: Bot },
@@ -82,10 +82,41 @@ const SECTIONS: SectionDef[] = [
 export function SettingsPage({ section }: { section?: string }): React.ReactElement {
   const { t } = useI18n()
   const navigate = useNavigate()
-  const active: SectionKey =
+  const features = useFeatures()
+  // Only surface settings sections whose backend subsystem is wired —
+  // hides API Keys when there's no `apiKeyService`, Webhooks when there's
+  // no `webhookStore`, AI Assistant when no `aiAssistant` options.
+  const SECTIONS = React.useMemo(
+    () => ALL_SECTIONS.filter((s) =>
+      s.key === 'api-keys' ? features.apiKeys
+        : s.key === 'webhooks' ? features.webhooks
+          : s.key === 'ai-assistant' ? features.aiAssistant
+            : true,
+    ),
+    [features.apiKeys, features.webhooks, features.aiAssistant],
+  )
+  // Resolve the requested section. If the host explicitly disabled it, or
+  // the URL is bogus, fall back to the first enabled section. If no
+  // sections are enabled at all, render the empty-state below.
+  const requested: SectionKey | null =
     section === 'ai-assistant' ? 'ai-assistant'
       : section === 'webhooks' ? 'webhooks'
-        : 'api-keys'
+        : section === 'api-keys' ? 'api-keys'
+          : null
+  const active: SectionKey | null =
+    requested && SECTIONS.some((s) => s.key === requested)
+      ? requested
+      : (SECTIONS[0]?.key ?? null)
+  if (active === null) {
+    // Defensive: the user menu hides Settings entirely when no section is
+    // available, so users normally won't land here. Direct navigation to
+    // /settings without any configured section ends up showing this.
+    return (
+      <div className="rounded-md border border-dashed bg-card p-8 text-center text-sm text-muted-foreground">
+        {t('settings:noSectionsConfigured')}
+      </div>
+    )
+  }
   return (
     // `minmax(0,1fr)` (not bare `1fr`) lets the content column shrink below
     // its intrinsic min-width — otherwise wide tables push the whole grid

@@ -11,6 +11,15 @@ const buttonVariants = cva(
         default: 'bg-primary text-primary-foreground hover:bg-primary/90',
         destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
         outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground',
+        // Colored outline variants — same chrome as `outline` (border +
+        // transparent background, height comes from the size token) but
+        // with a semantic tint applied to border, text and hover. Use
+        // when grouping a row of action buttons so they share a single
+        // visual silhouette while still encoding intent through color.
+        'outline-primary':
+          'border border-primary/40 bg-background text-primary hover:bg-primary/10 hover:border-primary/60',
+        'outline-destructive':
+          'border border-destructive/40 bg-background text-destructive hover:bg-destructive/10 hover:border-destructive/60',
         secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
         ghost: 'hover:bg-accent hover:text-accent-foreground',
         link: 'text-primary underline-offset-4 hover:underline',

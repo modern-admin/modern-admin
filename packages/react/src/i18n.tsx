@@ -22,6 +22,11 @@ export interface MetadataPropertyTranslations {
   keyValueFields?: Record<string, MetadataKeyValueFieldTranslations>
 }
 
+export interface MetadataActionTranslations {
+  /** Display label shown in action menus, buttons, and tooltips. */
+  label?: string
+}
+
 export interface MetadataResourceTranslations {
   label?: string
   name?: string
@@ -30,6 +35,8 @@ export interface MetadataResourceTranslations {
     group?: string
   }
   properties?: Record<string, MetadataPropertyTranslations>
+  /** Per-action overrides keyed by action name (e.g. `publish`, `archive`). */
+  actions?: Record<string, MetadataActionTranslations>
 }
 
 export interface MetadataLocaleTranslations {
@@ -179,6 +186,17 @@ export function I18nProvider({
             fallbackMeta?.properties?.[property.path],
           ),
         ),
+        actions: resource.actions.map((action) => {
+          const localizedLabel = firstDefined(
+            resourceLocale?.actions?.[action.name]?.label,
+            resourceFallback?.actions?.[action.name]?.label,
+          )
+          if (localizedLabel === undefined) return action
+          return {
+            ...action,
+            custom: { ...(action.custom ?? {}), label: localizedLabel },
+          }
+        }),
       }
     },
     [fallbackLocale, locale, metadataTranslations],

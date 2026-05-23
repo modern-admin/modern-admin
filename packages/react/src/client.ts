@@ -271,12 +271,22 @@ export class AdminClient {
   }
 
   /** Cross-resource search. Fans `query` out to every registered resource's
-   *  `search` action; resources the principal cannot access are omitted. */
-  globalSearch(query: string, perResourceLimit?: number): Promise<GlobalSearchResponse> {
+   *  `search` action; resources the principal cannot access are omitted.
+   *
+   *  Accepts an optional `AbortSignal` so the command-palette dialog can
+   *  cancel an in-flight request when the user keeps typing — without this
+   *  the server is hit once per keystroke and stale responses race with
+   *  newer ones. */
+  globalSearch(
+    query: string,
+    perResourceLimit?: number,
+    options: { signal?: AbortSignal } = {},
+  ): Promise<GlobalSearchResponse> {
     const params = new URLSearchParams({ q: query })
     if (perResourceLimit != null) params.set('perResourceLimit', String(perResourceLimit))
     return this.request<GlobalSearchResponse>(
       `/admin/api/global-search?${params.toString()}`,
+      options.signal ? { signal: options.signal } : {},
     )
   }
 
@@ -1015,6 +1025,12 @@ export interface GlobalSearchHit {
   resourceName: string
   recordId: string
   title: string
+  /** Property path whose value matched the query (omitted when matched on title or id). */
+  matchedField?: string
+  /** ~80-char excerpt with the matched substring near its center. */
+  snippet?: string
+  /** Relevance ranking — higher is better. Mirrors the server-side rubric. */
+  score?: number
 }
 
 export interface GlobalSearchGroup {

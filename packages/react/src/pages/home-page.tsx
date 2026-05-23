@@ -241,7 +241,9 @@ export function HomePage(): React.ReactElement {
                     className="block rounded-md border border-border bg-card p-4 hover:border-primary/40 hover:shadow-sm transition-shadow"
                   >
                     <div className="font-semibold">{r.name}</div>
-                    <div className="text-xs text-muted-foreground">{r.id}</div>
+                    {r.name !== r.id && (
+                      <div className="text-xs text-muted-foreground">{r.id}</div>
+                    )}
                   </Link>
                 </li>
               ))}

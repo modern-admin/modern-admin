@@ -1104,7 +1104,7 @@ export function ResourceListPage({
               </div>
             )}
             {/* Mobile: card-per-record stack. Hidden ≥ sm. */}
-            <div className="space-y-2 sm:hidden">
+            <div className="space-y-4 sm:hidden">
               {records.isFetching && Array.from({length: pagination.pageSize}, (_, i) => (
                 <div key={`skel-card-${i}`} className="rounded-lg border border-border bg-card p-3">
                   <div className="flex items-start gap-3">

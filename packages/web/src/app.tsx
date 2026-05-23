@@ -6,13 +6,14 @@
  * library `mount()` entry point — hosts compose it the same way.
  */
 
-import type { ReactElement } from 'react'
+import { type ReactElement, useMemo } from 'react'
 import {
   AdminApp,
   ComponentLoader,
   I18nProvider,
   ModernAdminProvider,
 } from '@modern-admin/react'
+import { builtinLocales } from '@modern-admin/i18n'
 import type { ModernAdminRuntimeConfig } from './runtime-config.js'
 
 export interface AppProps {
@@ -26,8 +27,18 @@ export interface AppProps {
 }
 
 export function App({ config, components }: AppProps): ReactElement {
+  // Filter the built-in 9-locale bundle by the host's whitelist. Empty /
+  // omitted → expose everything; the language switcher in the header
+  // collapses itself when only one locale survives the filter.
+  const enabledLocales = useMemo(() => {
+    if (!config.locales || config.locales.length === 0) return builtinLocales
+    const codes = new Set(config.locales)
+    const filtered = builtinLocales.filter((l) => codes.has(l.code))
+    return filtered.length > 0 ? filtered : builtinLocales
+  }, [config.locales])
   return (
     <I18nProvider
+      locales={enabledLocales}
       defaultLocale={config.defaultLocale}
       fallbackLocale={config.fallbackLocale}
       metadataTranslations={config.metadataTranslations}

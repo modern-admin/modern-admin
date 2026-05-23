@@ -53,26 +53,40 @@ async function readProduct(request: APIRequestContext, id: string) {
 }
 
 test.describe('Custom @Action — record-level (posts)', () => {
-  test('publish / unpublish toggle the `published` flag', async ({ request }) => {
-    const post = await firstPost(request)
+  test('publish toggles published=true on an unpublished post', async ({ request }) => {
+    // Pull a wider window so we can deterministically pick a post that's
+    // currently unpublished. The fixed perPage=1 + arbitrary sort order
+    // used previously made the assertion direction depend on test-run
+    // ordering and seed RNG (~20% unpublished).
+    const list = await request.get(admin('/resources/posts/actions/list?perPage=100'))
+    expect(list.ok()).toBeTruthy()
+    const target = ((await list.json()).records as Array<{ id: string; params: { published: boolean } }>)
+      .find((r) => r.params.published === false)
+    if (!target) {
+      test.skip(true, 'no unpublished post in current seed window')
+      return
+    }
+    const id = String(target.id)
+    const res = await request.post(admin(`/resources/posts/records/${id}/actions/publish`))
+    expect(res.ok(), await res.text().catch(() => '')).toBeTruthy()
+    const after = await readPost(request, id)
+    expect(after.published).toBe(true)
+  })
 
-    // Force a known starting state so the assertion direction is stable.
-    const start: 'publish' | 'unpublish' = post.published ? 'unpublish' : 'publish'
-    const startRes = await request.post(
-      admin(`/resources/posts/records/${post.id}/actions/${start}`),
-    )
-    expect(startRes.ok(), await startRes.text().catch(() => '')).toBeTruthy()
-    const before = await readPost(request, post.id)
-    expect(before.published).toBe(start === 'publish')
-
-    // Flip back through the inverse action.
-    const inverse = start === 'publish' ? 'unpublish' : 'publish'
-    const flipRes = await request.post(
-      admin(`/resources/posts/records/${post.id}/actions/${inverse}`),
-    )
-    expect(flipRes.ok()).toBeTruthy()
-    const after = await readPost(request, post.id)
-    expect(after.published).toBe(inverse === 'publish')
+  test('unpublish toggles published=false on a published post', async ({ request }) => {
+    const list = await request.get(admin('/resources/posts/actions/list?perPage=100'))
+    expect(list.ok()).toBeTruthy()
+    const target = ((await list.json()).records as Array<{ id: string; params: { published: boolean } }>)
+      .find((r) => r.params.published === true)
+    if (!target) {
+      test.skip(true, 'no published post in current seed window')
+      return
+    }
+    const id = String(target.id)
+    const res = await request.post(admin(`/resources/posts/records/${id}/actions/unpublish`))
+    expect(res.ok()).toBeTruthy()
+    const after = await readPost(request, id)
+    expect(after.published).toBe(false)
   })
 })
 
@@ -149,13 +163,22 @@ test.describe('Custom @Action — record-level (products)', () => {
   })
 
   test('duplicateSku generates a new SKU', async ({ request }) => {
-    const before = await firstProduct(request)
+    // Pick the *last* product in a wide window so prior tests in the file
+    // (archive/restock on the first matching record) don't race with us.
+    const list = await request.get(admin('/resources/products/actions/list?perPage=100'))
+    expect(list.ok()).toBeTruthy()
+    const records = (await list.json()).records as Array<{ id: string; params: { sku: string } }>
+    expect(records.length).toBeGreaterThan(0)
+    const target = records[records.length - 1]!
+    const beforeSku = String(target.params.sku)
+
     const res = await request.post(
-      admin(`/resources/products/records/${before.id}/actions/duplicateSku`),
+      admin(`/resources/products/records/${target.id}/actions/duplicateSku`),
     )
-    expect(res.ok()).toBeTruthy()
-    const after = await readProduct(request, before.id)
-    expect(after.sku).not.toBe(before.sku)
+    expect(res.ok(), await res.text().catch(() => '')).toBeTruthy()
+
+    const after = await readProduct(request, String(target.id))
+    expect(after.sku).not.toBe(beforeSku)
     expect(after.sku.length).toBeGreaterThan(0)
   })
 })

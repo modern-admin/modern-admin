@@ -1,4 +1,4 @@
-import { and, asc, count as countFn, eq, gte, ilike, inArray, isNotNull, like, lte, ne, sql } from 'drizzle-orm'
+import { and, asc, count as countFn, eq, gte, ilike, inArray, isNotNull, like, lte, ne, or, sql } from 'drizzle-orm'
 import {
   BaseRecord,
   BaseResource,
@@ -167,6 +167,37 @@ export class DrizzleResource extends BaseResource {
     if (limit !== undefined) qb = qb.limit(limit)
     if (offset !== undefined) qb = qb.offset(offset)
     const rows = (await qb) as ParamsType[]
+    return rows.map((row) => new BaseRecord(row, this))
+  }
+
+  override async search(
+    query: string,
+    fields: string[],
+    options?: { limit?: number },
+  ): Promise<BaseRecord[]> {
+    const limit = options?.limit ?? 50
+    if (!query || fields.length === 0) return []
+    // Build per-field substring conditions. Only string-typed columns are
+    // valid for `ilike`/`like`; skip the rest defensively so a stray
+    // property path can't crash the query.
+    const isPg = this.dialect === 'pg'
+    const conds: unknown[] = []
+    for (const field of fields) {
+      const col = this.table[field] as DrizzleColumn | undefined
+      if (!col) continue
+      const prop = this.property(field)
+      if (!prop || prop.type() !== 'string') continue
+      const op = isPg ? ilike : like
+      conds.push(op(col as never, `%${query}%` as never))
+    }
+    if (conds.length === 0) return []
+    const where =
+      conds.length === 1 ? conds[0] : or(...(conds as never[]))
+    const rows = (await this.client
+      .select()
+      .from(this.table)
+      .where(where as unknown)
+      .limit(limit)) as ParamsType[]
     return rows.map((row) => new BaseRecord(row, this))
   }
 

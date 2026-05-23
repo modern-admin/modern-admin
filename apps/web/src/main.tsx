@@ -3,9 +3,16 @@
 // property-type components that ship only with this reference app.
 
 import { mount, type ModernAdminRuntimeConfig } from '@modern-admin/web'
-import { en } from './locales/en.js'
-import { ru } from './locales/ru.js'
+import type { MetadataLocaleTranslations } from '@modern-admin/react'
+import enJson from './locales/en.json'
+import ruJson from './locales/ru.json'
 import { adminComponents } from './admin-components.js'
+
+// JSON imports come in as their literal type. Casting through `unknown` keeps
+// the structural compatibility check while letting us swap translation files
+// (e.g. add a new resource) without touching the bundle entry point.
+const en = enJson as unknown as MetadataLocaleTranslations
+const ru = ruJson as unknown as MetadataLocaleTranslations
 
 const container = document.getElementById('root')
 if (!container) throw new Error('Root container missing')
@@ -21,6 +28,10 @@ const config: ModernAdminRuntimeConfig = {
   persistDemoSession: true,
   loginHint: 'admin@example.com / admin12345',
   metadataTranslations: { en, ru },
+  // Restrict the header switcher to the languages we actually ship JSON
+  // metadata for. Drop this array to expose all 9 built-in locales (the
+  // chrome will still translate; only resource labels fall back to en/ru).
+  locales: ['en', 'ru'],
 }
 
 mount(container, { config, components: adminComponents })

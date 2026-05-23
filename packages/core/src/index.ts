@@ -140,6 +140,7 @@ export {
 export {
   ModernAdmin,
   ACTIONS,
+  type AdminFeatures,
   type ModernAdminJSON,
   type ModernAdminOptions,
   type RegisterResourcesArgs,

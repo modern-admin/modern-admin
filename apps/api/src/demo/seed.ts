@@ -173,6 +173,10 @@ const customers: InMemoryRow[] = Array.from({ length: CUSTOMERS_COUNT }, (_, i) 
 const categories: InMemoryRow[] = CATEGORY_NAMES.map((name, i) => ({
   id: String(i + 1),
   name,
+  // `displayName` is deliberately distinct from `name` so tests can
+  // distinguish title resolution via `titleProperty: 'displayName'`
+  // from the auto-detection fallback that would otherwise pick `name`.
+  displayName: `${name} (section)`,
   slug: slugify(name),
   description: paragraph(2),
   position: i + 1,
@@ -458,6 +462,7 @@ export const seed = (): InMemoryDb => ({
       properties: [
         new BaseProperty({ path: 'id', isId: true }),
         new BaseProperty({ path: 'name', type: 'string', isRequired: true }),
+        new BaseProperty({ path: 'displayName', type: 'string' }),
         new BaseProperty({ path: 'slug', type: 'string' }),
         new BaseProperty({ path: 'description', type: 'textarea' }),
         new BaseProperty({ path: 'position', type: 'number' }),

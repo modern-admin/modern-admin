@@ -1,6 +1,6 @@
 import { NotImplementedError } from '../errors'
 import type { ResourceDecorator } from '../decorators/resource-decorator.js'
-import type { Filter } from '../filter/filter.js'
+import { Filter } from '../filter/filter.js'
 import { BaseRecord } from './base-record.js'
 import type { BaseProperty } from './base-property.js'
 import type {
@@ -59,6 +59,45 @@ export abstract class BaseResource {
   abstract update(id: string, params: ParamsType): Promise<ParamsType>
 
   abstract delete(id: string): Promise<void>
+
+  /**
+   * Search across many string fields with a single substring query.
+   *
+   * Returns up to `options.limit` records whose value in **any** of the
+   * listed `fields` contains `query` (case-insensitive). Used by the
+   * built-in `search` action that powers the global-search palette and
+   * reference/autocomplete pickers.
+   *
+   * The default implementation issues one `find()` per field with a
+   * `contains` filter (operator `null` → adapter's default contains
+   * semantics) and dedupes results by id while preserving discovery
+   * order. Adapters with native OR support (Prisma, Drizzle, SQL) should
+   * override with a single query for an order-of-magnitude speedup and
+   * to push limiting/sorting into the database engine.
+   */
+  async search(
+    query: string,
+    fields: string[],
+    options?: { limit?: number },
+  ): Promise<BaseRecord[]> {
+    const limit = options?.limit ?? 50
+    if (!query || fields.length === 0) return []
+    const seen = new Set<string>()
+    const results: BaseRecord[] = []
+    for (const field of fields) {
+      if (results.length >= limit) break
+      const filter = new Filter({ [field]: query }, this)
+      const batch = await this.find(filter, { limit, offset: 0 })
+      for (const record of batch) {
+        const key = String(record.id())
+        if (seen.has(key)) continue
+        seen.add(key)
+        results.push(record)
+        if (results.length >= limit) break
+      }
+    }
+    return results
+  }
 
   /**
    * Return distinct (unique) non-null string values for a given field,

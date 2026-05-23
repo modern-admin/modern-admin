@@ -35,6 +35,15 @@ export interface ModernAdminRuntimeConfig {
   defaultLocale?: string
   /** Locale used when a translation is missing. Defaults to 'en'. */
   fallbackLocale?: string
+  /**
+   * Whitelist of locale codes to expose in the header switcher (filters
+   * the built-in 9-locale bundle: `en`, `ru`, `de`, `es`, `fr`, `it`, `ja`,
+   * `pl`, `pt-BR`). Behaviour:
+   *   - omitted / empty array → all built-in locales available
+   *   - single code           → switcher hides, that locale is forced
+   *   - multiple codes        → switcher lists only those locales
+   */
+  locales?: string[]
   /** Optional per-resource / per-property metadata translations. */
   metadataTranslations?: MetadataTranslations
   /** Branding overrides (title, logo). */

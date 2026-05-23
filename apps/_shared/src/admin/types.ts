@@ -101,6 +101,11 @@ export interface PostRow {
 export interface CategoryRow {
   id: string
   name: string
+  /** Human-readable label distinct from `name` so chart legends can prove
+   *  the resolver honours `titleProperty: 'displayName'` (a path that
+   *  intentionally falls outside the auto-detection list
+   *  `['title', 'name', 'subject', 'email']`). */
+  displayName?: string
   slug?: string
   description?: string
   position?: number

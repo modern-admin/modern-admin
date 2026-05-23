@@ -54,7 +54,7 @@ import {
   User,
   Users,
 } from 'lucide-react'
-import { useCurrentUser, useLogout, useResources } from './hooks.js'
+import { useCurrentUser, useFeatures, useLogout, useResources } from './hooks.js'
 import { LoginPage } from './pages/login-page.js'
 import type { CurrentUser } from './types.js'
 import { Link, useRoute, useNavigate } from './router.js'
@@ -159,12 +159,19 @@ function isResourceActive(route: ReturnType<typeof useRoute>, resourceId: string
 function ResourceMenuItem({ resource }: { resource: ResourceJSON }): React.ReactElement {
   const route = useRoute()
   const active = isResourceActive(route, resource.id)
+  const hasAlias = resource.name !== resource.id
+  const tooltip = hasAlias ? `${resource.name} (${resource.id})` : resource.name
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton asChild isActive={active} tooltip={resource.name}>
+      <SidebarMenuButton asChild isActive={active} tooltip={tooltip}>
         <Link to={{ name: 'list', resourceId: resource.id }}>
           <NavIcon name={resource.navigation?.icon} />
-          <span>{resource.name}</span>
+          <span className="min-w-0 flex-1 truncate">
+            {resource.name}
+            {hasAlias && (
+              <span className="ml-0.5 text-xs opacity-60"> ({resource.id})</span>
+            )}
+          </span>
         </Link>
       </SidebarMenuButton>
     </SidebarMenuItem>
@@ -197,6 +204,7 @@ function SidebarCollapseToggle(): React.ReactElement {
 
 function AppSidebar(): React.ReactElement {
   const resources = useResources()
+  const features = useFeatures()
   const { t } = useI18n()
   const route = useRoute()
   const { groups, ungrouped } = React.useMemo(() => buildNavGroups(resources), [resources])
@@ -242,14 +250,16 @@ function AppSidebar(): React.ReactElement {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={auditActive} tooltip={t('audit:title')}>
-                <Link to={{ name: 'audit-log' }}>
-                  <History />
-                  <span>{t('audit:title')}</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+            {features.auditLog && (
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={auditActive} tooltip={t('audit:title')}>
+                  <Link to={{ name: 'audit-log' }}>
+                    <History />
+                    <span>{t('audit:title')}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
             {ungrouped.map((r) => (
               <ResourceMenuItem key={r.id} resource={r} />
             ))}
@@ -308,8 +318,17 @@ function UserMenu({ user }: { user: CurrentUser }): React.ReactElement {
   const { t } = useI18n()
   const logout = useLogout()
   const navigate = useNavigate()
+  const features = useFeatures()
   const initials = userInitials(user)
   const display = user.name || user.email || user.id
+  // First section advertised by the backend — the entry in the user menu
+  // jumps straight there. When every section is disabled (no api-keys,
+  // no webhooks, no ai-assistant) the Settings entry is hidden entirely.
+  const firstSettingsSection: 'api-keys' | 'webhooks' | 'ai-assistant' | null =
+    features.apiKeys ? 'api-keys'
+      : features.webhooks ? 'webhooks'
+        : features.aiAssistant ? 'ai-assistant'
+          : null
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -343,17 +362,21 @@ function UserMenu({ user }: { user: CurrentUser }): React.ReactElement {
             )}
           </div>
         </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          className="gap-3 px-3 py-2"
-          onSelect={(e) => {
-            e.preventDefault()
-            navigate({ name: 'settings', section: 'api-keys' })
-          }}
-        >
-          <Settings className="size-4 text-muted-foreground" />
-          <span>{t('settings:menuItem')}</span>
-        </DropdownMenuItem>
+        {firstSettingsSection && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="gap-3 px-3 py-2"
+              onSelect={(e) => {
+                e.preventDefault()
+                navigate({ name: 'settings', section: firstSettingsSection })
+              }}
+            >
+              <Settings className="size-4 text-muted-foreground" />
+              <span>{t('settings:menuItem')}</span>
+            </DropdownMenuItem>
+          </>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem
           className="gap-3 px-3 py-2"

@@ -93,6 +93,7 @@ const apiKeyService = buildApiKeyService(authProvider)
       aiTaskStore: system.aiTaskStore,
       historyStore: system.historyStore,
       logStore: system.logStore,
+      webhookStore: system.webhookStore,
       plugins: [
         historyPlugin({ store: system.historyStore }),
         actionLoggingPlugin({ store: system.logStore }),

@@ -136,20 +136,37 @@ export class PrismaResource extends BaseResource {
       if (field.isReadOnly && !field.isId && !this.writableForeignKeys.has(field.name)) continue
       if (!(field.name in params)) continue
       const raw = params[field.name]
+      // Empty string on DateTime / enum columns is meaningless: the form
+      // emits `""` when the user clears a control (Select placeholder,
+      // legacy DatePicker), and Prisma 7 rejects it with a 500. Coerce to
+      // `null` so optional columns are cleared, then let the required+null
+      // gate below drop the key on required columns (so the DB @default
+      // fires instead of erroring).
+      const isEnumLike = field.kind === 'enum'
+      const normalised =
+        raw === '' && (field.type === 'DateTime' || isEnumLike) ? null : raw
       // Required (non-nullable) fields must not receive null — Prisma 7 treats
       // that as a validation error.  Omitting the key lets the DB @default fire
       // (e.g. enum defaults) or surfaces a clear "missing required field" error
       // instead of the unhelpful "must not be null" one.
-      if (field.isRequired && raw === null) continue
+      if (field.isRequired && normalised === null) continue
       // datetime-local inputs produce "YYYY-MM-DDTHH:mm" (no seconds / no tz).
       // Prisma 7 requires a complete ISO-8601 DateTime string, so we round-trip
       // through Date to normalise any partial string.  Invalid strings are
       // passed through unchanged so Prisma can surface the validation error.
-      if (field.type === 'DateTime' && typeof raw === 'string' && raw !== '') {
-        const d = new Date(raw)
-        out[field.name] = Number.isNaN(d.getTime()) ? raw : d.toISOString()
+      if (field.type === 'DateTime' && typeof normalised === 'string' && normalised !== '') {
+        const d = new Date(normalised)
+        out[field.name] = Number.isNaN(d.getTime()) ? normalised : d.toISOString()
+      } else if (typeof normalised === 'string') {
+        // Form-encoded payloads (`application/x-www-form-urlencoded`,
+        // `multipart/form-data`, HTML `<form>` POSTs) stringify every
+        // scalar. Prisma 7 strictly type-checks `Boolean`/`Int`/`Float`/
+        // `Decimal`/`BigInt` columns and rejects strings with a generic
+        // PrismaClientValidationError → 500. Coerce the common shapes so
+        // the same payload that works for JSON also works for form posts.
+        out[field.name] = coerceFormScalar(normalised, field.type)
       } else {
-        out[field.name] = raw
+        out[field.name] = normalised
       }
     }
     return out
@@ -190,15 +207,58 @@ export class PrismaResource extends BaseResource {
   }
 
   override async count(filter: Filter): Promise<number> {
-    return this.delegate().count({where: filterToWhere(filter)})
+    try {
+      return await this.delegate().count({where: filterToWhere(filter)})
+    } catch (err) {
+      throw this.toValidationError(err)
+    }
   }
 
   override async find(filter: Filter, options: FindOptions): Promise<BaseRecord[]> {
-    const rows = (await this.delegate().findMany({
-      where: filterToWhere(filter),
-      ...findOptionsToPrisma(options),
-    })) as ParamsType[]
-    return rows.map((row) => new BaseRecord(row, this))
+    try {
+      const rows = (await this.delegate().findMany({
+        where: filterToWhere(filter),
+        ...findOptionsToPrisma(options),
+      })) as ParamsType[]
+      return rows.map((row) => new BaseRecord(row, this))
+    } catch (err) {
+      throw this.toValidationError(err)
+    }
+  }
+
+  override async search(
+    query: string,
+    fields: string[],
+    options?: { limit?: number },
+  ): Promise<BaseRecord[]> {
+    const limit = options?.limit ?? 50
+    if (!query || fields.length === 0) return []
+    // Restrict to String columns — Prisma rejects `contains` on Int/Bool/
+    // DateTime with a validation error. Enum + relation fields are also
+    // skipped; substring search on them is rarely what callers want.
+    const stringFieldNames = new Set(
+      this.model.fields
+        .filter((f) => f.type === 'String' && f.kind === 'scalar')
+        .map((f) => f.name),
+    )
+    const stringFields = fields.filter((f) => stringFieldNames.has(f))
+    if (stringFields.length === 0) return []
+    const contains = (field: string): Record<string, unknown> => ({
+      [field]: { contains: query, mode: 'insensitive' },
+    })
+    const where =
+      stringFields.length === 1
+        ? contains(stringFields[0]!)
+        : { OR: stringFields.map(contains) }
+    try {
+      const rows = (await this.delegate().findMany({
+        where,
+        take: limit,
+      })) as ParamsType[]
+      return rows.map((row) => new BaseRecord(row, this))
+    } catch (err) {
+      throw this.toValidationError(err)
+    }
   }
 
   override async findOne(id: string): Promise<BaseRecord | null> {
@@ -408,7 +468,13 @@ export class PrismaResource extends BaseResource {
    */
   private toValidationError(err: unknown): unknown {
     if (!err || typeof err !== 'object') return err
-    const e = err as { code?: string; meta?: { target?: string[]; field_name?: string }; message?: string }
+    const e = err as {
+      code?: string
+      name?: string
+      constructor?: { name?: string }
+      meta?: { target?: string[]; field_name?: string; modelName?: string }
+      message?: string
+    }
     if (e.code === 'P2002' && Array.isArray(e.meta?.target)) {
       const fields = e.meta.target
       return new ValidationError(
@@ -422,7 +488,63 @@ export class PrismaResource extends BaseResource {
         [e.meta.field_name]: {type: 'foreignKey', message: 'related record not found'},
       })
     }
+    // `PrismaClientValidationError` covers missing required arguments and
+    // type mismatches. Surface as a field-level ValidationError so the
+    // controller layer returns 400 instead of leaking a 500 stack trace.
+    const name = e.name ?? e.constructor?.name
+    if (name === 'PrismaClientValidationError' && typeof e.message === 'string') {
+      const message = e.message
+      // Match `Argument \`field\` is missing.` (Prisma 7 message format).
+      const missing = message.match(/Argument `([^`]+)` is missing\./)
+      if (missing?.[1]) {
+        return new ValidationError({
+          [missing[1]]: {type: 'required', message: `${missing[1]} is required`},
+        })
+      }
+      // `Argument \`field\`: Invalid value provided.` covers type mismatches.
+      const invalid = message.match(/Argument `([^`]+)`:\s*([^\n]+)/)
+      if (invalid?.[1]) {
+        return new ValidationError({
+          [invalid[1]]: {type: 'invalid', message: invalid[2]?.trim() ?? 'invalid value'},
+        })
+      }
+      // Generic fallback so the user still gets a 400 with a hint.
+      return new ValidationError({}, {type: 'validation', message: message.split('\n').slice(-2).join(' ').trim()})
+    }
     return err
+  }
+}
+
+/**
+ * Coerce a stringified scalar back to its declared Prisma type. Required
+ * because form-encoded payloads (`multipart/form-data`, urlencoded HTML
+ * forms) round-trip every value as a string; Prisma 7's strict type
+ * checker then rejects the create with a `PrismaClientValidationError`
+ * (e.g. `inStock: "true"` instead of `inStock: true`). Invalid strings
+ * pass through unchanged so Prisma can still surface a precise error.
+ */
+const coerceFormScalar = (value: string, prismaType: string): unknown => {
+  switch (prismaType) {
+    case 'Boolean': {
+      if (value === 'true' || value === '1' || value === 'on') return true
+      if (value === 'false' || value === '0' || value === 'off') return false
+      return value
+    }
+    case 'Int':
+    case 'BigInt': {
+      if (value === '') return value
+      const n = Number(value)
+      if (!Number.isFinite(n) || !Number.isInteger(n)) return value
+      return prismaType === 'BigInt' ? BigInt(value) : n
+    }
+    case 'Float':
+    case 'Decimal': {
+      if (value === '') return value
+      const n = Number(value)
+      return Number.isFinite(n) ? n : value
+    }
+    default:
+      return value
   }
 }
 

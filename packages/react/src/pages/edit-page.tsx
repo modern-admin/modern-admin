@@ -27,7 +27,7 @@ import {
   getModKeyLabel,
 } from '@modern-admin/ui'
 import { AlertCircle, Eye, Plus, Save, Sparkles, Trash2, X } from 'lucide-react'
-import { useCreateRecord, useDeleteRecord, useRecord, useResource, useUpdateRecord } from '../hooks.js'
+import { useCreateRecord, useDeleteRecord, useFeatures, useRecord, useResource, useUpdateRecord } from '../hooks.js'
 import { parseApiError } from '../client.js'
 import { PropertyEditor } from '../property-renderer.js'
 import { Link, useNavigate } from '../router.js'
@@ -60,6 +60,7 @@ export function ResourceEditPage({
   const create = useCreateRecord(resourceId)
   const update = useUpdateRecord(resourceId)
   const remove = useDeleteRecord(resourceId)
+  const features = useFeatures()
   const navigate = useNavigate()
   const { t, locale } = useI18n()
   const notify = useNotify()
@@ -459,7 +460,9 @@ export function ResourceEditPage({
             )}
             {!isNew && (
               <>
-                <RevisionsButton resourceId={resourceId} recordId={recordId!} />
+                {features.history && (
+                  <RevisionsButton resourceId={resourceId} recordId={recordId!} />
+                )}
                 <Link to={{ name: 'show', resourceId, recordId: recordId! }}>
                   <Button variant="outline" size="sm">
                     <Eye className="size-4" />

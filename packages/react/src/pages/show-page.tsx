@@ -12,7 +12,7 @@ import {
   getModKeyLabel,
 } from '@modern-admin/ui'
 import { AlertCircle, Pencil, Trash2, Zap } from 'lucide-react'
-import { useDeleteRecord, useInvokeRecordAction, useRecord, useResource } from '../hooks.js'
+import { useDeleteRecord, useFeatures, useInvokeRecordAction, useRecord, useResource } from '../hooks.js'
 import { parseApiError } from '../client.js'
 import { PropertyDisplay } from '../property-renderer.js'
 import { Link, useNavigate } from '../router.js'
@@ -64,6 +64,7 @@ export function ResourceShowPage({
   const record = useRecord(resourceId, recordId)
   const remove = useDeleteRecord(resourceId)
   const invokeRecord = useInvokeRecordAction(resourceId)
+  const features = useFeatures()
   const { t } = useI18n()
   const navigate = useNavigate()
   const dialogs = useDialogs()
@@ -116,15 +117,21 @@ export function ResourceShowPage({
         </CardTitle>
         {record.data && (
           <div className="flex shrink-0 flex-wrap gap-2">
-            <RevisionsButton resourceId={resourceId} recordId={recordId} />
+            {features.history && (
+              <RevisionsButton resourceId={resourceId} recordId={recordId} />
+            )}
             <Tooltip>
               <TooltipTrigger asChild>
-                <Link to={{ name: 'edit', resourceId, recordId }}>
-                  <Button size="sm">
+                {/* `asChild` + Link-as-Button keeps the rendered DOM a
+                 *  single `<a>` so it picks up the Button's `h-8` from
+                 *  `size="sm"` instead of stacking a Link wrapper that
+                 *  collapses to its anchor default height. */}
+                <Button variant="outline-primary" size="sm" asChild>
+                  <Link to={{ name: 'edit', resourceId, recordId }}>
                     <Pencil className="size-4" />
                     {t('common:edit')}
-                  </Button>
-                </Link>
+                  </Link>
+                </Button>
               </TooltipTrigger>
               <TooltipContent className="flex items-center gap-1.5">
                 <span>{t('common:edit')}</span>
@@ -136,7 +143,7 @@ export function ResourceShowPage({
               </TooltipContent>
             </Tooltip>
             <Button
-              variant="destructive"
+              variant="outline-destructive"
               size="sm"
               disabled={remove.isPending}
               onClick={() => void handleDelete()}
@@ -176,6 +183,7 @@ export function ResourceShowPage({
         )}
       </CardHeader>
       <CardContent>
+        <div className="space-y-4">
         {record.isLoading && <p className="text-muted-foreground">{t('common:loading')}</p>}
         {record.isError && <PageError error={record.error} t={t} />}
         {record.data && (
@@ -197,6 +205,7 @@ export function ResourceShowPage({
               ))}
           </dl>
         )}
+        </div>
       </CardContent>
     </Card>
     {record.data && <RelatedRecordsTabs resource={resource} recordId={recordId} />}

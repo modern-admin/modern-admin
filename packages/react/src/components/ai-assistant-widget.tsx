@@ -24,6 +24,7 @@ import {
 import { Bot, History, Loader2, MessageSquare, Plus, Send, Settings, X } from 'lucide-react'
 import { uuidv7 } from '@modern-admin/core'
 import { useAdminClient } from '../provider.js'
+import { useFeatures } from '../hooks.js'
 import { useNotify } from '../notify.js'
 import { useNavigate } from '../router.js'
 import { useI18n } from '../i18n.js'
@@ -86,9 +87,18 @@ export function AiAssistantWidget(): React.ReactElement | null {
   const [activeTaskId, setActiveTaskId] = React.useState<string | null>(null)
   const [queue, setQueue] = React.useState<QueuedItem[]>([])
 
+  // Capability gate: when the host hasn't wired `aiAssistant` in
+  // `ModernAdminModule.forRoot`, the `/admin/api/ai-assistant/*`
+  // controllers aren't even registered — issuing the settings query would
+  // 404 every page load. Skip the query, the widget, and the chat sheet
+  // entirely in that case.
+  const features = useFeatures()
+  const aiAvailable = features.aiAssistant
+
   const settings = useQuery({
     queryKey: ['modern-admin', 'ai-assistant', 'settings'],
     queryFn: () => client.getAiAssistantSettings(),
+    enabled: aiAvailable,
   })
 
   const chat = useMutation({
@@ -118,7 +128,7 @@ export function AiAssistantWidget(): React.ReactElement | null {
   const history = useQuery<AiAssistantChatHistoryItem[]>({
     queryKey: ['modern-admin', 'ai-assistant', 'chats'],
     queryFn: () => client.listAiAssistantChats(),
-    enabled: open && settings.data?.configured === true,
+    enabled: aiAvailable && open && settings.data?.configured === true,
   })
 
   const task = useQuery<AiAssistantTask>({
@@ -223,6 +233,7 @@ export function AiAssistantWidget(): React.ReactElement | null {
     sendChat(next.content)
   }, [activeTaskId, chat.isPending, queue, sendChat])
 
+  if (!aiAvailable) return null
   if (settings.isLoading) return null
   if (settings.error) return null
   if (!settings.data?.enabled) return null

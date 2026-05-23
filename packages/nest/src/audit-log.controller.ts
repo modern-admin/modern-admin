@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   ForbiddenException,
   Get,
@@ -55,7 +56,9 @@ export class AuditLogController {
     this.assertAllowed(req.currentAdmin)
     const store = this.options?.logStore
     if (!store?.list) throw new NotImplementedException('Queryable log store is not configured')
-    const query = queryZ.parse(rawQuery)
+    const parsed = queryZ.safeParse(rawQuery)
+    if (!parsed.success) throw new BadRequestException(parsed.error.message)
+    const query = parsed.data
     const events = await store.list({
       ...(query.resourceId ? { resourceId: query.resourceId } : {}),
       ...(query.recordId ? { recordId: query.recordId } : {}),

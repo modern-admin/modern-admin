@@ -26,6 +26,7 @@ export {
 } from './provider.js'
 export {
   useAdminConfig,
+  useFeatures,
   useResource,
   useResources,
   useRecords,
@@ -59,6 +60,7 @@ export {
   type I18nProviderProps,
   type MetadataKeyValueFieldTranslations,
   type MetadataPropertyTranslations,
+  type MetadataActionTranslations,
   type MetadataResourceTranslations,
   type MetadataLocaleTranslations,
   type MetadataTranslations,
@@ -141,6 +143,7 @@ export {
 } from './export.js'
 export type {
   AdminConfig,
+  AdminFeatures,
   ActionDescriptor,
   CurrentUser,
   ListQuery,

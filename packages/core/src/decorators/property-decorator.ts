@@ -95,6 +95,18 @@ export class PropertyDecorator {
     return this.options.isDisabled ?? !this.property.isEditable()
   }
 
+  /**
+   * Tri-state opt-in/out for the resource's `search` action (drives the
+   * global-search palette):
+   * - `true`     → always searched, even for non-string types.
+   * - `false`    → always skipped (mute noisy/long-text or PII columns).
+   * - `undefined`→ auto: included for visible, non-id string properties;
+   *                the resolved title property is always searched.
+   */
+  isSearchable(): boolean | undefined {
+    return this.options.isSearchable
+  }
+
   isId(): boolean {
     return this.property.isId()
   }

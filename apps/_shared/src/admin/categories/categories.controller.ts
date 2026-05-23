@@ -20,6 +20,17 @@ import type { CategoryRow } from '../types.js'
   source: () => adminSource('categories'),
   navigation: { icon: 'FolderTree', group: 'Content' },
   relatedResources: [{ resourceId: 'posts', foreignKey: 'categoryId' }],
+  // Explicit title property — chart `groupBy` on FK columns referencing
+  // this resource will surface this field's value in the legend instead
+  // of the raw id (see `AnalyticsController` → `resolvedLabels`).
+  //
+  // `displayName` is deliberately OUTSIDE the auto-detection list
+  // (`TITLE_COLUMN_NAMES = ['title', 'name', 'subject', 'email']` in
+  // `packages/core/src/adapters/base-property.ts`). Without this explicit
+  // override, `BaseResource.titlePropertyPath()` would auto-pick `name`.
+  // The override proves the user-declared `titleProperty` wins over the
+  // heuristic — same shape as the user's "Apps" resource case.
+  titleProperty: 'displayName',
 })
 export class CategoriesAdminController extends AdminController<CategoryRow> {
   override async show(ctx: ShowContext<CategoryRow>): Promise<RecordActionResponse> {

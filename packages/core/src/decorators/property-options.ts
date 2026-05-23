@@ -141,6 +141,20 @@ export const propertyOptionsZ = z.object({
   isRequired: z.boolean().optional(),
   isDisabled: z.boolean().optional(),
   /**
+   * Whether this property participates in the resource's `search` action
+   * (and therefore in the global-search palette).
+   *
+   * - `true`  — always included, even for non-string types. Useful for
+   *   numeric identifiers (`orderNumber`, `invoiceNo`) or enum-backed
+   *   short codes operators expect to type literally.
+   * - `false` — always excluded. Use to mute noisy/long-text columns or
+   *   PII fields you don't want surfaced through fan-out search.
+   * - `undefined` (default) — auto: include if the property is a visible,
+   *   non-id string. The resolved title property (see
+   *   `ResourceOptions.titleProperty`) is always searched regardless.
+   */
+  isSearchable: z.boolean().optional(),
+  /**
    * Treat the property as an array of values (e.g. multi-file upload, array
    * of references). Overrides the underlying schema's array flag — useful when
    * a feature plugin needs to widen a single-value column into a list at the

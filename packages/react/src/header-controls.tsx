@@ -89,9 +89,13 @@ export function ThemeToggle(): React.ReactElement {
   )
 }
 
-export function LanguageSwitcher(): React.ReactElement {
+export function LanguageSwitcher(): React.ReactElement | null {
   const { locale, setLocale, availableLocales, t } = useI18n()
   const locales = availableLocales()
+  // With a single registered locale there is nothing to switch between —
+  // hide the control entirely (consumers control the set via I18nProvider's
+  // `locales` prop, which the standalone shell wires from runtime config).
+  if (locales.length <= 1) return null
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>

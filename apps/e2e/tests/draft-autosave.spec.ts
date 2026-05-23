@@ -88,16 +88,18 @@ test.describe('Draft auto-save — new record form', () => {
     // Field hydrates with the stored draft.
     await expect(fieldInput(page, /^Name/)).toHaveValue(name, { timeout: 5_000 })
 
-    // The toast (rendered into sonner's portal) carries the restored copy
-    // plus an Undo action. We match by accessible text since sonner places
-    // toasts inside a region/list role.
-    const undoButton = page.getByRole('button', { name: /undo|восстан|annuler|annulla|deshacer|desfazer|rückgängig|cofnij|元に戻す/i }).first()
-    await expect(undoButton).toBeVisible({ timeout: 5_000 })
-
     // The toaster container has `data-sonner-toaster` and a `position`
     // attribute matching the `position` option passed to the toast.
     const toaster = page.locator('[data-sonner-toaster][data-y-position="bottom"][data-x-position="center"]')
     await expect(toaster).toHaveCount(1)
+
+    // The toast (rendered into sonner's portal) carries the restored copy
+    // plus an Undo action. Scope to the toaster so we don't match the
+    // RichTextEditor toolbar's `aria-label="Undo"` button.
+    const undoButton = toaster
+      .getByRole('button', { name: /undo|восстан|annuler|annulla|deshacer|desfazer|rückgängig|cofnij|元に戻す/i })
+      .first()
+    await expect(undoButton).toBeVisible({ timeout: 5_000 })
   })
 
   test('Undo action reverts to defaults and clears the draft', async ({ page }) => {
@@ -112,8 +114,15 @@ test.describe('Draft auto-save — new record form', () => {
 
     await expect(fieldInput(page, /^Name/)).toHaveValue(name, { timeout: 5_000 })
 
-    // Click the Undo toast action.
-    const undoButton = page.getByRole('button', { name: /undo|восстан|annuler|annulla|deshacer|desfazer|rückgängig|cofnij|元に戻す/i }).first()
+    // Click the Undo toast action. Scope to the Sonner toaster portal so we
+    // don't accidentally hit the RichTextEditor's `aria-label="Undo"` button
+    // that ships with the form chrome.
+    const toaster = page.locator('[data-sonner-toaster]')
+    const undoButton = toaster
+      .getByRole('button', { name: /undo|восстан|annuler|annulla|deshacer|desfazer|rückgängig|cofnij|元に戻す/i })
+      .first()
+    await expect(undoButton).toBeVisible({ timeout: 5_000 })
+    await expect(undoButton).toBeEnabled()
     await undoButton.click()
 
     // Form reverts to empty default; storage is purged.

@@ -51,6 +51,18 @@ export interface ModernAdminOptions {
    * any `isAccessible` overrides on individual actions.
    */
   rolesResourceId?: string
+  /**
+   * Capability flags surfaced to the SPA via `toJSON()`. Transports populate
+   * this from the runtime configuration of optional subsystems (history
+   * store, log store, webhook store, api-key service, AI assistant…). The
+   * frontend uses the flags to hide navigation entries, settings sections,
+   * and per-record controls for features that aren't wired up, so it never
+   * issues requests that would 501/404 nor renders dead UI surfaces.
+   *
+   * When unset, every flag defaults to `false` — the SPA renders the bare
+   * minimum (resources only) and skips every optional feature.
+   */
+  features?: Partial<AdminFeatures>
 }
 
 /**
@@ -61,11 +73,43 @@ export interface ModernAdminOptions {
  */
 export type RolePermissions = Record<string, string[]>
 
+/**
+ * Runtime capability flags advertised to the SPA. Each flag is `true` iff
+ * the corresponding backend subsystem is wired and ready to serve
+ * requests. The SPA reads these to gate optional UI surfaces.
+ */
+export interface AdminFeatures {
+  /** Audit log page + sidebar entry. Backed by `logStore`. */
+  auditLog: boolean
+  /** Per-record revisions sheet. Backed by `historyStore`. */
+  history: boolean
+  /** Settings → Webhooks section. Backed by `webhookStore`. */
+  webhooks: boolean
+  /** Settings → API Keys section. Backed by `apiKeyService`. */
+  apiKeys: boolean
+  /** AI assistant floating widget + Settings section. Backed by `aiAssistant` options. */
+  aiAssistant: boolean
+}
+
+const ALL_FEATURES_OFF: AdminFeatures = {
+  auditLog: false,
+  history: false,
+  webhooks: false,
+  apiKeys: false,
+  aiAssistant: false,
+}
+
+const resolveFeatures = (options?: Partial<AdminFeatures>): AdminFeatures => ({
+  ...ALL_FEATURES_OFF,
+  ...(options ?? {}),
+})
+
 export interface ModernAdminJSON {
   rootPath: string
   branding: ModernAdminOptions['branding']
   auth: Record<string, unknown>
   resources: ResourceJSON[]
+  features: AdminFeatures
 }
 
 /**
@@ -347,6 +391,7 @@ export class ModernAdmin {
         branding: this.options.branding,
         auth: this.auth.getUiProps(),
         resources,
+        features: resolveFeatures(this.options.features),
       }))
     }
     return {
@@ -354,6 +399,7 @@ export class ModernAdmin {
       branding: this.options.branding,
       auth: this.auth.getUiProps(),
       resources: this.resources.map((r) => r.decorate().toJSON()),
+      features: resolveFeatures(this.options.features),
     }
   }
 

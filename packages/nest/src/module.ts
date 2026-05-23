@@ -146,6 +146,27 @@ export interface ModernAdminModuleOptions extends ModernAdminOptions {
 export class ModernAdminFeatureModule {}
 
 /**
+ * Derive the SPA capability flags from the optional subsystems the host
+ * has wired into `ModernAdminModuleOptions`. The frontend reads these via
+ * `/admin/api/config` and uses them to hide UI surfaces (audit-log link,
+ * settings sections, per-record revisions button, AI assistant widget)
+ * that would otherwise trigger 501/403 requests.
+ *
+ * Any explicit `features` entry on `options` overrides the derived value,
+ * so deployments can hide a section that is technically configured.
+ */
+const deriveFeatures = (
+  options: ModernAdminModuleOptions,
+): ModernAdminModuleOptions['features'] => ({
+  auditLog: typeof options.logStore?.list === 'function',
+  history: options.historyStore !== undefined,
+  webhooks: options.webhookStore !== undefined,
+  apiKeys: options.apiKeyService !== undefined,
+  aiAssistant: options.aiAssistant !== undefined,
+  ...(options.features ?? {}),
+})
+
+/**
  * NestJS dynamic module wrapping a single ModernAdmin instance.
  *
  * Resources are declared as classes that extend `AdminController` and are
@@ -179,11 +200,11 @@ export class ModernAdminFeatureModule {}
 @Module({})
 export class ModernAdminModule {
   static forRoot(options: ModernAdminModuleOptions): DynamicModule {
-    const admin = new ModernAdmin(options)
+    const aiEnabled = options.aiAssistant !== undefined
+    const admin = new ModernAdmin({ ...options, features: deriveFeatures(options) })
     const apiKeyProviders: Provider[] = options.apiKeyService
       ? [{ provide: MODERN_ADMIN_API_KEY_SERVICE, useValue: options.apiKeyService }]
       : []
-    const aiEnabled = options.aiAssistant !== undefined
     return {
       module: ModernAdminModule,
       global: options.global ?? false,
@@ -304,7 +325,8 @@ export class ModernAdminModule {
         },
         {
           provide: MODERN_ADMIN,
-          useFactory: (resolved: ModernAdminModuleOptions) => new ModernAdmin(resolved),
+          useFactory: (resolved: ModernAdminModuleOptions) =>
+            new ModernAdmin({ ...resolved, features: deriveFeatures(resolved) }),
           inject: [MODERN_ADMIN_OPTIONS],
         },
         AiAssistantService,
