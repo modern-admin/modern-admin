@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/graphql",
-  "version": "0.1.3",
+  "version": "1.0.0",
   "description": "Apollo + code-first GraphQL transport for @modern-admin/nest.",
   "type": "module",
   "license": "MIT",
