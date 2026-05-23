@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/system-prisma",
-  "version": "0.1.2",
+  "version": "1.0.0",
   "description": "Prisma-backed implementation of Modern Admin system stores (logs, history, webhooks, AI tasks).",
   "type": "module",
   "license": "MIT",

@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/feature-webhooks",
-  "version": "0.1.2",
+  "version": "1.0.0",
   "description": "Outbound webhooks feature plugin for Modern Admin.",
   "type": "module",
   "license": "MIT",

@@ -1,5 +1,14 @@
 # @modern-admin/feature-upload
 
+## 1.0.0
+
+### Patch Changes
+
+- Updated dependencies [[`19b0574`](https://github.com/modern-admin/modern-admin/commit/19b0574fbf7e97afa3d48d5b9a151eda1ed9afd8)]:
+  - @modern-admin/core@1.0.0
+  - @modern-admin/nest@1.0.0
+  - @modern-admin/graphql@1.0.0
+
 ## 0.1.3
 
 ### Patch Changes
