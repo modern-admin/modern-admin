@@ -49,6 +49,14 @@ export interface ModernAdminRuntimeConfig {
    * elsewhere; pass *without* a trailing slash.
    */
   authBasePath?: string
+  /**
+   * URL prefix where the SPA is mounted (e.g. `/admin`). Injected
+   * automatically by `ModernAdminStaticUiMiddleware` from its `path` option
+   * so you normally do not need to set this. The router uses it as its
+   * basepath so all internal navigation and deep-link refreshes stay under
+   * the correct prefix. Pass without a trailing slash.
+   */
+  basePath?: string
 }
 
 declare global {

@@ -52,12 +52,18 @@ export default defineConfig({
   ],
 
   projects: [
-    // API/GraphQL tests only need an APIRequestContext — no browser, no auth.
-    // Splitting them into their own project keeps the browser projects free of
-    // the login dependency and lets you run them with --project=api in CI.
+    // API/GraphQL tests use APIRequestContext only (no browser) but the
+    // backend now sits behind the Better Auth guard, so the project loads the
+    // same authenticated `storageState` produced by the `setup` project.
+    // Playwright's request fixture replays the stored cookies on every call,
+    // which is enough to satisfy the cookie-session guard on /admin/api/*.
     {
       name: 'api',
-      testMatch: /(api|graphql)\.spec\.ts$/,
+      testMatch: /(api|graphql|graphql-mutations|openapi|global-search-api|history-api|audit-log-api|custom-actions-api)\.spec\.ts$/,
+      dependencies: ['setup'],
+      use: {
+        storageState: 'playwright/.auth/admin.json',
+      },
     },
     // One-shot login that captures storage state. Browser projects depend on
     // it so they start already authenticated.
@@ -73,7 +79,7 @@ export default defineConfig({
     },
     {
       name: 'chromium',
-      testIgnore: /(api|graphql)\.spec\.ts$/,
+      testIgnore: /(api|graphql|graphql-mutations|openapi|global-search-api|history-api|audit-log-api|custom-actions-api)\.spec\.ts$/,
       dependencies: ['setup'],
       use: {
         ...devices['Desktop Chrome'],

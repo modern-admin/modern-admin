@@ -92,6 +92,11 @@ export {
   type BulkActionResponse,
 } from './admin'
 
+// Better Auth middleware — use instead of bare toNodeHandler() so that
+// @modern-admin/nest's AuthController endpoints (/me, /login, /ui-props)
+// are not shadowed by Better Auth's greedy handler.
+export { createBetterAuthMiddleware } from './better-auth-middleware.js'
+
 // Standalone static-UI middleware — serves the prebuilt @modern-admin/web SPA
 // under a configurable mount path (default `/admin`).
 export { ModernAdminStaticUiModule } from './static-ui.module.js'

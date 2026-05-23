@@ -11,9 +11,10 @@ interface GqlResponse<T> {
 const graphql = async (
   request: import('@playwright/test').APIRequestContext,
   query: string,
+  variables?: Record<string, unknown>,
 ): Promise<GqlResponse<Record<string, unknown>>> => {
   const res = await request.post(GRAPHQL, {
-    data: { query },
+    data: variables ? { query, variables } : { query },
     headers: { 'content-type': 'application/json' },
   })
   return (await res.json()) as GqlResponse<Record<string, unknown>>
@@ -31,9 +32,9 @@ test.describe('GraphQL', () => {
     )
     expect(fields).toEqual(
       expect.arrayContaining([
-        'usersList',
-        'usersOne',
-        'usersCount',
+        'customersList',
+        'customersOne',
+        'customersCount',
         'postsList',
         'postsOne',
         'postsCount',
@@ -41,23 +42,25 @@ test.describe('GraphQL', () => {
     )
   })
 
-  test('usersList returns seeded rows', async ({ request }) => {
+  test('customersList returns seeded rows', async ({ request }) => {
     const body = await graphql(
       request,
-      '{ usersList { id email name role } usersCount }',
+      '{ customersList { id email name } customersCount }',
     )
     expect(body.errors).toBeUndefined()
-    const users = body.data?.usersList as Array<{ email: string }>
-    expect(users.length).toBeGreaterThanOrEqual(3)
-    expect(users.some((u) => u.email === 'ada@example.com')).toBe(true)
-    expect(typeof body.data?.usersCount).toBe('number')
+    const customers = body.data?.customersList as Array<{ email: string }>
+    expect(customers.length).toBeGreaterThanOrEqual(3)
+    // The seed builds emails as `${first}.${last}${i+1}@example.com`. Customer
+    // #1 starts with "Ada", so the e-mail begins with "ada.".
+    expect(customers.some((u) => /^ada\./i.test(u.email))).toBe(true)
+    expect(typeof body.data?.customersCount).toBe('number')
   })
 
-  test('usersOne resolves a record by id', async ({ request }) => {
-    const body = await graphql(request, '{ usersOne(id: "1") { id email } }')
+  test('customersOne resolves a record by id', async ({ request }) => {
+    const body = await graphql(request, '{ customersOne(id: "1") { id email name } }')
     expect(body.errors).toBeUndefined()
-    const user = body.data?.usersOne as { id: string; email: string } | null
-    expect(user?.id).toBe('1')
-    expect(user?.email).toBe('ada@example.com')
+    const customer = body.data?.customersOne as { id: string; email: string } | null
+    expect(customer?.id).toBe('1')
+    expect(customer?.email).toMatch(/@example\.com$/)
   })
 })

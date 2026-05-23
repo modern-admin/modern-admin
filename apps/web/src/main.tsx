@@ -12,6 +12,11 @@ if (!container) throw new Error('Root container missing')
 
 const config: ModernAdminRuntimeConfig = {
   apiUrl: import.meta.env.VITE_API_URL ?? 'http://localhost:3001',
+  // Demo APIs (`apps/api` and `apps/api-prisma`) mount the Better Auth
+  // handler at `/api/auth` (see `apps/_shared/src/nest/bootstrap.ts`),
+  // while the SPA defaults to `/admin/api/auth`. Point the client at the
+  // actual mount so sign-in / sign-out reach the right handler.
+  authBasePath: '/api/auth',
   credentials: 'include',
   persistDemoSession: true,
   loginHint: 'admin@example.com / admin12345',

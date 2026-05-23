@@ -25,6 +25,8 @@ import { AdminModule } from './admin.module.js'
         credentials: 'include',
         loginHint: 'admin@example.com / admin12345',
         persistDemoSession: true,
+        // This demo mounts Better Auth at `/api/auth` (not `/admin/api/auth`).
+        authBasePath: '/api/auth',
       },
     }),
   ],

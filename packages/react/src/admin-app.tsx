@@ -463,6 +463,13 @@ export interface AdminAppProps {
   /** Optional helper line shown under the title on the login screen — e.g.
    *  demo credentials. */
   loginHint?: React.ReactNode
+  /**
+   * URL prefix where the SPA is mounted (e.g. `/admin`). Injected
+   * automatically from `window.__MODERN_ADMIN__.basePath` by the standalone
+   * bundle. Drives the router basepath so all navigation and deep-link
+   * refreshes stay under the correct prefix. Defaults to `''` (root mount).
+   */
+  basePath?: string
 }
 
 function FullscreenSpinner(): React.ReactElement {
@@ -534,9 +541,9 @@ function ShellLayout({ children }: { children: React.ReactNode }): React.ReactEl
   )
 }
 
-export function AdminApp({ loginHint }: AdminAppProps = {}): React.ReactElement {
+export function AdminApp({ loginHint, basePath }: AdminAppProps = {}): React.ReactElement {
   const { user, isLoading, isAuthenticated } = useCurrentUser()
   if (isLoading) return <FullscreenSpinner />
   if (!isAuthenticated || !user) return <LoginPage hint={loginHint} />
-  return <AdminRouterProvider ShellLayout={ShellLayout} />
+  return <AdminRouterProvider ShellLayout={ShellLayout} basepath={basePath ?? ''} />
 }

@@ -19,6 +19,17 @@
 import * as React from 'react'
 import { useRouter, useRouterState } from '@tanstack/react-router'
 
+/**
+ * Provides the SPA mount basepath (e.g. `/admin`) to all navigation
+ * primitives (`Link`, `useNavigate`, `useRoute`). Set by
+ * `AdminRouterProvider` from `window.__MODERN_ADMIN__.basePath`. Defaults
+ * to `''` (root mount).
+ */
+export const BasepathContext = React.createContext<string>('')
+
+/** Returns the normalised basepath (never has a trailing slash; `''` at root). */
+const useBasepath = (): string => React.useContext(BasepathContext)
+
 /** URL-persisted state for the resource list page. */
 export interface ListQueryState {
   page?: number
@@ -127,7 +138,10 @@ export const buildHref = (route: Route): string => {
   }
 }
 
-/** Current canonical route, derived from the live TSR state. */
+/** Current canonical route, derived from the live TSR state.
+ *  When the router has a basepath, TSR strips it from `location.pathname`
+ *  before exposing it in state — so `parseLocation` sees only the
+ *  basepath-relative portion. */
 export const useRoute = (): Route =>
   useRouterState({
     select: (s) => parseLocation(s.location.pathname, s.location.searchStr ?? ''),
@@ -138,11 +152,12 @@ export const useRoute = (): Route =>
  *  through TSR's lifecycle. */
 export const useNavigate = (): ((route: Route) => void) => {
   const router = useRouter()
+  const basepath = useBasepath()
   return React.useCallback(
     (next: Route) => {
-      router.history.push(buildHref(next))
+      router.history.push(basepath + buildHref(next))
     },
-    [router],
+    [router, basepath],
   )
 }
 
@@ -155,7 +170,8 @@ export interface LinkProps extends React.AnchorHTMLAttributes<HTMLAnchorElement>
  *  default browser behaviour so "open in new tab" keeps working. */
 export const Link = ({ to, onClick, ...rest }: LinkProps): React.ReactElement => {
   const router = useRouter()
-  const href = buildHref(to)
+  const basepath = useBasepath()
+  const href = basepath + buildHref(to)
   const handleClick = React.useCallback(
     (event: React.MouseEvent<HTMLAnchorElement>) => {
       onClick?.(event)

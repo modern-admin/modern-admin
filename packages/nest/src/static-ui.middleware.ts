@@ -183,9 +183,15 @@ export class ModernAdminStaticUiMiddleware implements NestMiddleware {
 
   private async resolveConfig(req: Request): Promise<ModernAdminUiRuntimeConfig> {
     const raw = this.options.runtimeConfig
-    if (!raw) return {}
-    if (typeof raw === 'function') return raw(req)
-    return raw
+    const userConfig: ModernAdminUiRuntimeConfig = raw
+      ? typeof raw === 'function'
+        ? await raw(req)
+        : raw
+      : {}
+    // Always inject `basePath` from the mount path so the SPA router knows
+    // where it is mounted without any manual configuration by the host app.
+    // User-supplied `basePath` in runtimeConfig takes precedence if provided.
+    return { basePath: this.mountPath || '/', ...userConfig }
   }
 }
 

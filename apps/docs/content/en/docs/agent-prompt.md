@@ -60,8 +60,8 @@ This produces a NestJS 11 app with:
 
 - `prisma/schema.prisma` — `ma_*` system tables only (admins, sessions,
   roles, logs, history, config, dashboards, cache).
-- `src/main.ts` — `toNodeHandler(auth)` mounted at `/admin/api/auth`
-  **before** any body parser.
+- `src/main.ts` — `createBetterAuthMiddleware(toNodeHandler(auth))` mounted at
+  `/admin/api/auth` **before** any body parser (see §11d).
 - `src/admin.module.ts` — `ModernAdminModule.forRoot({...})` wired with
   Prisma + Better Auth.
 - `src/app.module.ts` — imports both `AdminModule` and
@@ -1008,13 +1008,46 @@ The module installs an Express middleware that:
 The middleware *excludes* `${path}/api/*` so the regular admin REST
 controllers keep handling API traffic.
 
-### 11d. `authBasePath` — only override when Better Auth lives elsewhere
+### 11d. Mounting Better Auth — use `createBetterAuthMiddleware`, not bare `toNodeHandler`
+
+`toNodeHandler(auth)` is greedy: it intercepts **every** path under its
+mount prefix and returns its own `404` for paths it doesn't own. When
+mounted at `/admin/api/auth` this shadows three NestJS endpoints that
+`@modern-admin/nest`'s `AuthController` owns:
+
+| path | owner |
+|------|-------|
+| `POST /admin/api/auth/login` | `AuthController` — records login event, returns session |
+| `GET  /admin/api/auth/me` | `AuthController` — session bootstrap for the SPA |
+| `GET  /admin/api/auth/ui-props` | `AuthController` — public auth config for the SPA |
+
+A bare `app.use('/admin/api/auth', toNodeHandler(auth))` causes
+`POST /admin/api/auth/login 404` — Better Auth handles it first and
+returns its own 404 before NestJS sees the request.
+
+**Always use `createBetterAuthMiddleware` instead:**
+
+```ts
+import { toNodeHandler } from 'better-auth/node'
+import { createBetterAuthMiddleware } from '@modern-admin/nest'
+
+// main.ts — BEFORE any body parser:
+app.use('/admin/api/auth', createBetterAuthMiddleware(toNodeHandler(auth)))
+```
+
+`createBetterAuthMiddleware` wraps the given handler and calls `next()`
+for `/me`, `/login`, and `/ui-props`, letting NestJS handle those three
+paths while routing everything else (sign-in, sign-out, session, etc.)
+to Better Auth.
+
+#### `authBasePath` — only override when Better Auth lives elsewhere
 
 The SPA's sign-in form posts to `${authBasePath}/sign-in/email`. The
 default `authBasePath` is `/admin/api/auth`, matching the canonical
-scaffold where `main.ts` does `app.use('/admin/api/auth', toNodeHandler(auth))`
-and `auth.ts` sets `betterAuth({ basePath: '/admin/api/auth' })`. As
-long as those three values agree, you do not have to set anything.
+scaffold where `main.ts` does
+`app.use('/admin/api/auth', createBetterAuthMiddleware(auth))`
+and `auth.ts` sets `betterAuth({ basePath: '/admin/api/auth' })`.
+As long as those three values agree, you do not have to set anything.
 
 Override `authBasePath` when — and only when — you intentionally mount
 Better Auth at a non-default path (e.g. you're embedding the admin
@@ -1029,8 +1062,8 @@ ModernAdminStaticUiModule.forRoot({
 })
 ```
 
-If you change the API basePath, change all three coordinated values:
-- `app.use(<basePath>, toNodeHandler(auth))` in `main.ts`,
+If you change the auth basePath, change all three coordinated values:
+- `app.use(<basePath>, createBetterAuthMiddleware(toNodeHandler(auth)))` in `main.ts`,
 - `betterAuth({ basePath: <basePath> })` in `auth.ts`,
 - `runtimeConfig.authBasePath: <basePath>` in the SPA mount.
 
@@ -1192,9 +1225,16 @@ when paginating large lists.
   `404 Not Found`. Always import
   `ModernAdminStaticUiModule.forRoot({ path: '/admin', … })` next to
   `AdminModule`. See §11c.
+- **Do not use bare `toNodeHandler(auth)` at the `/admin/api/auth`
+  prefix.** `toNodeHandler` is greedy — it returns its own 404 for any
+  path it doesn't own, shadowing `AuthController`'s `/login`, `/me`,
+  and `/ui-props` before NestJS can handle them. Always wrap it with
+  `createBetterAuthMiddleware(toNodeHandler(auth))` from
+  `@modern-admin/nest`. See §11d.
 - **Do not hardcode `/api/auth/...` in the SPA mount.** The default
   `authBasePath` in `runtimeConfig` is `/admin/api/auth` and matches the
-  canonical scaffold's `app.use('/admin/api/auth', toNodeHandler(auth))`.
+  canonical scaffold's
+  `app.use('/admin/api/auth', createBetterAuthMiddleware(toNodeHandler(auth)))`.
   If `main.ts` mounts Better Auth at one path and the SPA's
   `authBasePath` resolves to a different one, login posts to a
   non-existent endpoint and the browser shows

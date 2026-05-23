@@ -574,7 +574,16 @@ export function ResourceListPage({
     return all
   }, [resource, lockedFilters])
 
-  const builtInActionNames = new Set(['list', 'show', 'new', 'edit', 'delete', 'bulkDelete', 'search'])
+  const builtInActionNames = new Set([
+    'list',
+    'show',
+    'new',
+    'edit',
+    'delete',
+    'bulkDelete',
+    'search',
+    'values',
+  ])
   const customResourceActions = (resource?.actions ?? []).filter(
     (a) => a.actionType === 'resource' && !builtInActionNames.has(a.name),
   )

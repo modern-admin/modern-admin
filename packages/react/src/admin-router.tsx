@@ -8,6 +8,12 @@
 // Requires an SPA fallback rule on the server (e.g. `try_files ... index.html`
 // in nginx, historyApiFallback in Vite). See `router.tsx` and `docs/frontend.md`.
 //
+// Basepath: `AdminRouterProvider` accepts a `basepath` prop (e.g. `/admin`)
+// injected automatically from `window.__MODERN_ADMIN__.basePath`. The router
+// is created with that basepath so TSR strips it from URLs before route
+// matching. `BasepathContext` exposes it to `Link` and `useNavigate` so they
+// can prepend it when pushing to browser history.
+//
 // Search params: TSR's default JSON-style parser would mangle our existing
 // `filters[<path>]=<value>` URL format. We make `parseSearch`/`stringifySearch`
 // no-ops (TSR keeps `searchStr` raw); `useRoute()` re-parses `searchStr` into
@@ -22,6 +28,7 @@ import {
   Outlet,
   RouterProvider,
 } from '@tanstack/react-router'
+import { BasepathContext } from './router.js'
 import { ResourceListPage } from './pages/list-page.js'
 import { ResourceShowPage } from './pages/show-page.js'
 import { ResourceEditPage } from './pages/edit-page.js'
@@ -183,21 +190,25 @@ const noopRouterContext: RouterContext = {
   ShellLayout: () => null,
 }
 
-const router = createRouter({
-  routeTree,
-  history: createBrowserHistory(),
-  parseSearch: flatParseSearch,
-  stringifySearch: flatStringifySearch,
-  context: noopRouterContext,
-  defaultPreload: false,
-  scrollRestoration: false,
-})
+function makeRouter(basepath: string) {
+  return createRouter({
+    routeTree,
+    history: createBrowserHistory(),
+    basepath: basepath || '/',
+    parseSearch: flatParseSearch,
+    stringifySearch: flatStringifySearch,
+    context: noopRouterContext,
+    defaultPreload: false,
+    scrollRestoration: false,
+  })
+}
 
 // Type registration — gives typed `useParams()`/`useSearch()` and link
-// validation across the package.
+// validation across the package. The concrete router type uses the root
+// router shape (basepath doesn't affect the generic types).
 declare module '@tanstack/react-router' {
   interface Register {
-    router: typeof router
+    router: ReturnType<typeof makeRouter>
   }
 }
 
@@ -208,13 +219,30 @@ export interface AdminRouterProviderProps {
    *  must include an `<Outlet/>` slot (or a child element wrapping it) so
    *  routed page components can mount inside it. */
   ShellLayout: React.ComponentType<{ children: React.ReactNode }>
+  /** URL prefix where the SPA is mounted (e.g. `/admin`). Defaults to `''`
+   *  (root mount). Passed to TSR as the router `basepath` AND exposed to
+   *  `Link`/`useNavigate` via `BasepathContext` so they push full paths. */
+  basepath?: string
 }
 
 /** Mounts the admin's route tree. Must be rendered only after the user is
  *  authenticated — login flow happens upstream in `AdminApp`. */
 export function AdminRouterProvider({
   ShellLayout,
+  basepath = '',
 }: AdminRouterProviderProps): React.ReactElement {
+  // Normalise: strip trailing slash, treat '/' as 'no basepath' (root mount).
+  const normalised = React.useMemo(() => {
+    if (!basepath || basepath === '/') return ''
+    return basepath.endsWith('/') ? basepath.slice(0, -1) : basepath
+  }, [basepath])
+  // Create router lazily per basepath. Runtime config is stable across the
+  // app's lifetime, so in practice this runs exactly once per mount.
+  const router = React.useMemo(() => makeRouter(normalised), [normalised])
   const context = React.useMemo<RouterContext>(() => ({ ShellLayout }), [ShellLayout])
-  return <RouterProvider router={router} context={context} />
+  return (
+    <BasepathContext.Provider value={normalised}>
+      <RouterProvider router={router} context={context} />
+    </BasepathContext.Provider>
+  )
 }
