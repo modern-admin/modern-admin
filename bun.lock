@@ -501,7 +501,7 @@
     },
     "packages/react": {
       "name": "@modern-admin/react",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "dependencies": {
         "@hookform/resolvers": "^5.2.2",
         "@modern-admin/core": "workspace:*",
@@ -645,7 +645,7 @@
     },
     "packages/web": {
       "name": "@modern-admin/web",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "dependencies": {
         "@modern-admin/core": "workspace:*",
         "@modern-admin/i18n": "workspace:*",
