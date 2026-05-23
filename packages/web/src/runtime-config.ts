@@ -66,6 +66,14 @@ export interface ModernAdminRuntimeConfig {
    * the correct prefix. Pass without a trailing slash.
    */
   basePath?: string
+  /**
+   * When true, the sidebar resource list shows the raw resource id next
+   * to the localized label (e.g. "Posts (posts)") whenever the label
+   * differs from the id. Defaults to `false` — keeping the sidebar tidy.
+   * The home page tile and selector dropdowns (chart builder, etc.)
+   * always show both regardless of this flag.
+   */
+  showSidebarResourceIds?: boolean
 }
 
 declare global {

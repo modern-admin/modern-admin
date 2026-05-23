@@ -170,13 +170,15 @@ test.describe('i18n — resource metadata translations', () => {
     await page.goto('/')
     const aside = sidebar(page)
 
-    // EN — `resources.posts.label` = "Posts" (then " (posts)" id suffix).
-    await expect(aside.getByRole('link', { name: /^Posts(\s|\()/ }).first()).toBeVisible()
+    // EN — `resources.posts.label` = "Posts". By default the sidebar
+    // hides the raw id suffix (opt-in via runtime config
+    // `showSidebarResourceIds`), so the accessible link name is exact.
+    await expect(aside.getByRole('link', { name: 'Posts', exact: true }).first()).toBeVisible()
 
     await switchLocale(page, 'ru')
 
     // RU — `resources.posts.label` = "Посты".
-    await expect(aside.getByRole('link', { name: /^Посты(\s|\()/ }).first()).toBeVisible()
+    await expect(aside.getByRole('link', { name: 'Посты', exact: true }).first()).toBeVisible()
   })
 
   test('navigation group label switches between en and ru', async ({ page }) => {
@@ -193,22 +195,21 @@ test.describe('i18n — resource metadata translations', () => {
     await expect(aside.getByRole('button', { name: /^Контент$/ })).toBeVisible()
   })
 
-  test('sidebar appends the original resource id in parentheses when the localized label differs', async ({
-    page,
-  }) => {
+  test('sidebar hides the raw resource id suffix by default', async ({ page }) => {
     await page.goto('/')
     const aside = sidebar(page)
 
-    // The localized label "Posts" differs from the id "posts" (case),
-    // so the sidebar must surface "(posts)" alongside the link.
-    await expect(aside.locator('a:has-text("(posts)")').first()).toBeVisible()
+    // The demo runtime config (`apps/web/src/main.tsx`) does NOT opt into
+    // `showSidebarResourceIds`, so even though the localized label
+    // "Posts" / "Посты" differs from the id "posts", the sidebar link
+    // surfaces only the label — no "(posts)" suffix.
+    await expect(aside.locator('a:has-text("(posts)")')).toHaveCount(0)
+    await expect(aside.getByRole('link', { name: 'Posts', exact: true }).first()).toBeVisible()
 
     await switchLocale(page, 'ru')
 
-    // After switching to RU, "Посты" still differs from id "posts" → suffix
-    // remains. We also assert the localized label sits in the same link.
-    const ruLink = aside.locator('a:has-text("Посты"):has-text("(posts)")').first()
-    await expect(ruLink).toBeVisible()
+    await expect(aside.locator('a:has-text("(posts)")')).toHaveCount(0)
+    await expect(aside.getByRole('link', { name: 'Посты', exact: true }).first()).toBeVisible()
   })
 
   test('home-page resource tile reflects the localized label and id', async ({

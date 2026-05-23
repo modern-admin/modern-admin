@@ -53,7 +53,11 @@ export function App({ config, components }: AppProps): ReactElement {
           authBasePath: config.authBasePath,
         }}
       >
-        <AdminApp loginHint={config.loginHint} basePath={config.basePath} />
+        <AdminApp
+          loginHint={config.loginHint}
+          basePath={config.basePath}
+          showSidebarResourceIds={config.showSidebarResourceIds}
+        />
       </ModernAdminProvider>
     </I18nProvider>
   )

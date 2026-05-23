@@ -156,11 +156,18 @@ function isResourceActive(route: ReturnType<typeof useRoute>, resourceId: string
   )
 }
 
-function ResourceMenuItem({ resource }: { resource: ResourceJSON }): React.ReactElement {
+function ResourceMenuItem({
+  resource,
+  showId,
+}: {
+  resource: ResourceJSON
+  showId: boolean
+}): React.ReactElement {
   const route = useRoute()
   const active = isResourceActive(route, resource.id)
   const hasAlias = resource.name !== resource.id
-  const tooltip = hasAlias ? `${resource.name} (${resource.id})` : resource.name
+  const withId = showId && hasAlias
+  const tooltip = withId ? `${resource.name} (${resource.id})` : resource.name
   return (
     <SidebarMenuItem>
       <SidebarMenuButton asChild isActive={active} tooltip={tooltip}>
@@ -168,7 +175,7 @@ function ResourceMenuItem({ resource }: { resource: ResourceJSON }): React.React
           <NavIcon name={resource.navigation?.icon} />
           <span className="min-w-0 flex-1 truncate">
             {resource.name}
-            {hasAlias && (
+            {withId && (
               <span className="ml-0.5 text-xs opacity-60"> ({resource.id})</span>
             )}
           </span>
@@ -202,7 +209,7 @@ function SidebarCollapseToggle(): React.ReactElement {
 
 // ─── Sidebar ─────────────────────────────────────────────────────────────────
 
-function AppSidebar(): React.ReactElement {
+function AppSidebar({ showResourceIds }: { showResourceIds: boolean }): React.ReactElement {
   const resources = useResources()
   const features = useFeatures()
   const { t } = useI18n()
@@ -261,7 +268,7 @@ function AppSidebar(): React.ReactElement {
               </SidebarMenuItem>
             )}
             {ungrouped.map((r) => (
-              <ResourceMenuItem key={r.id} resource={r} />
+              <ResourceMenuItem key={r.id} resource={r} showId={showResourceIds} />
             ))}
           </SidebarMenu>
         </SidebarGroup>
@@ -290,7 +297,7 @@ function AppSidebar(): React.ReactElement {
               {isOpen && (
                 <SidebarMenu>
                   {group.resources.map((r) => (
-                    <ResourceMenuItem key={r.id} resource={r} />
+                    <ResourceMenuItem key={r.id} resource={r} showId={showResourceIds} />
                   ))}
                 </SidebarMenu>
               )}
@@ -493,6 +500,14 @@ export interface AdminAppProps {
    * refreshes stay under the correct prefix. Defaults to `''` (root mount).
    */
   basePath?: string
+  /**
+   * When true, the sidebar resource list appends the raw resource id in
+   * parentheses next to the localized label (e.g. "Posts (posts)") when
+   * the label differs from the id. Defaults to `false` to keep the
+   * sidebar tidy. The home-page resource tiles and selector dropdowns
+   * (chart builder, etc.) always render both — they are not affected.
+   */
+  showSidebarResourceIds?: boolean
 }
 
 function FullscreenSpinner(): React.ReactElement {
@@ -524,13 +539,19 @@ function FullscreenSpinner(): React.ReactElement {
 // `useCurrentUser()` here is safe — provider/query state is set up upstream
 // in `AdminApp`, and by the time this layout renders the user is guaranteed
 // to be authenticated (otherwise `AdminApp` short-circuits to `<LoginPage/>`).
-function ShellLayout({ children }: { children: React.ReactNode }): React.ReactElement {
+function ShellLayout({
+  children,
+  showSidebarResourceIds,
+}: {
+  children: React.ReactNode
+  showSidebarResourceIds: boolean
+}): React.ReactElement {
   const { user } = useCurrentUser()
   return (
     <HotkeyRegistryProvider>
       <DialogsProvider>
         <SidebarProvider>
-          <AppSidebar />
+          <AppSidebar showResourceIds={showSidebarResourceIds} />
           {/* `h-svh` on SidebarInset is the key to the scroll layout: it
               constrains the inset to exactly the viewport height, which lets
               the inner `<main overflow-auto>` (flex-1) actually scroll
@@ -564,9 +585,23 @@ function ShellLayout({ children }: { children: React.ReactNode }): React.ReactEl
   )
 }
 
-export function AdminApp({ loginHint, basePath }: AdminAppProps = {}): React.ReactElement {
+export function AdminApp({
+  loginHint,
+  basePath,
+  showSidebarResourceIds,
+}: AdminAppProps = {}): React.ReactElement {
   const { user, isLoading, isAuthenticated } = useCurrentUser()
+  const showIds = showSidebarResourceIds ?? false
+  // Capture the option in a stable layout component so the router doesn't
+  // remount the whole shell whenever the prop reference changes.
+  const Layout = React.useMemo(
+    () =>
+      function ConfiguredShellLayout({ children }: { children: React.ReactNode }): React.ReactElement {
+        return <ShellLayout showSidebarResourceIds={showIds}>{children}</ShellLayout>
+      },
+    [showIds],
+  )
   if (isLoading) return <FullscreenSpinner />
   if (!isAuthenticated || !user) return <LoginPage hint={loginHint} />
-  return <AdminRouterProvider ShellLayout={ShellLayout} basepath={basePath ?? ''} />
+  return <AdminRouterProvider ShellLayout={Layout} basepath={basePath ?? ''} />
 }
