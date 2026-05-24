@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/feature-history",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Record revision history feature plugin for Modern Admin.",
   "type": "module",
   "license": "MIT",
