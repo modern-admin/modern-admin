@@ -32,7 +32,14 @@
  * The stubs are NOT committed (`pro-mirror` is in `.gitignore`).
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import { dirname, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -63,6 +70,26 @@ function parseLock(text: string): Lockfile {
 
 function proAlreadyPopulated(): boolean {
   return existsSync(resolve(REPO_ROOT, 'pro-mirror/packages/feature-ai-fill/package.json'))
+}
+
+/**
+ * Clear any residue at `pro-mirror` before generating stubs. Earlier
+ * git history committed `pro-mirror` as a symlink (mode 120000) and a
+ * stale CI checkout therefore lands a broken symlink — `existsSync()`
+ * returns false on it (the target is gone) but `mkdirSync()` then
+ * fails with EEXIST/ENOENT because the path entry itself is present.
+ * Use `lstatSync` (which does NOT follow symlinks) to detect ANY
+ * filesystem entry at the path and remove it.
+ */
+function clearProMirrorResidue(): void {
+  const path = resolve(REPO_ROOT, 'pro-mirror')
+  try {
+    lstatSync(path)
+  } catch {
+    return // nothing there — good
+  }
+  console.log('  removing stale entry at pro-mirror (likely a broken symlink from a stale checkout)')
+  rmSync(path, { recursive: true, force: true })
 }
 
 /**
@@ -110,6 +137,7 @@ function main(): void {
     return
   }
   console.log('[ensure-pro-stubs] pro-mirror missing — generating stubs from bun.lock')
+  clearProMirrorResidue()
   const lock = parseLock(readFileSync(LOCK_PATH, 'utf8'))
   const proPaths = Object.keys(lock.workspaces).filter((k) => k.startsWith('pro-mirror/'))
   if (proPaths.length === 0) {
