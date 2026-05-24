@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/queue",
-  "version": "2.0.0",
+  "version": "1.1.0",
   "description": "BullMQ-based queue + cron module for Modern Admin (NestJS).",
   "type": "module",
   "license": "MIT",

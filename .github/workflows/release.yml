@@ -59,17 +59,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Open-core's package.json lists four `pro-mirror/*` workspaces
-      # (Pro feature plugins + Pro e2e harness) resolved locally via
-      # the gitignored `pro-mirror` symlink. CI has no symlink, so we
-      # materialise stub package.json files for those workspaces using
-      # data from bun.lock. The stubs are untracked (pro-mirror is in
-      # .gitignore) and survive the `git reset --hard` that
-      # changesets/action@v1 performs internally. See
-      # scripts/ensure-pro-stubs.ts.
-      - name: Ensure pro-mirror stubs
-        run: bun scripts/ensure-pro-stubs.ts
-
       - name: Install dependencies
         run: bun install --frozen-lockfile
 

@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/license",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Ed25519/JWS license-key verification helpers for Modern Admin commercial packages.",
   "type": "module",
   "license": "MIT",

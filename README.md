@@ -32,19 +32,19 @@ weaknesses:
 
 ## Stack
 
-| Layer            | Choice                                              |
-| ---------------- | --------------------------------------------------- |
-| Runtime / pm     | [Bun](https://bun.com) 1.3+                         |
-| Frontend         | Vite 8 + React 19 + TanStack Router 1.x (hash)      |
-| UI               | shadcn/ui, Tailwind CSS 4 (CSS-first), Recharts 3   |
-| Backend          | NestJS 11 (REST + GraphQL + WebSocket + OpenAPI)    |
-| ORMs             | Prisma 7, Drizzle 0.45                              |
-| Auth             | Better Auth 1.6+ (cookies + API keys)               |
-| Cache            | Redis (backend) + TanStack Query 5 (frontend)       |
-| Queue            | BullMQ + `@nestjs/bullmq` (jobs, cron, webhooks)    |
-| Validation       | Zod 4 end-to-end                                    |
-| Docs site        | Nextra 4 / Next.js                                  |
-| Language         | TypeScript 6 (strict)                               |
+| Layer        | Choice                                            |
+|--------------|---------------------------------------------------|
+| Runtime / pm | [Bun](https://bun.com) 1.3+                       |
+| Frontend     | Vite 8 + React 19 + TanStack Router 1.x (hash)    |
+| UI           | shadcn/ui, Tailwind CSS 4 (CSS-first), Recharts 3 |
+| Backend      | NestJS 11 (REST + GraphQL + WebSocket + OpenAPI)  |
+| ORMs         | Prisma 7, Drizzle 0.45                            |
+| Auth         | Better Auth 1.6+ (cookies + API keys)             |
+| Cache        | Redis (backend) + TanStack Query 5 (frontend)     |
+| Queue        | BullMQ + `@nestjs/bullmq` (jobs, cron, webhooks)  |
+| Validation   | Zod 4 end-to-end                                  |
+| Docs site    | Nextra 4 / Next.js                                |
+| Language     | TypeScript 6 (strict)                             |
 
 > Dependency policy: this project always pins to the latest stable release of
 > each library. Code is adapted for breaking changes, not held back.
@@ -192,81 +192,6 @@ Scaffold a new project:
 ```bash
 bun create @modern-admin my-admin
 ```
-
-## Roadmap
-
-- [x] **Phase 0 — Bootstrap.** Bun workspaces, package skeletons, hello-world
-      apps, docker-compose for Postgres + Redis.
-- [x] **Phase 1 — Core abstractions.** `BaseDatabase` / `BaseResource` /
-      `BaseProperty` / `BaseRecord`, decorators with Zod schemas,
-      `ResourcesFactory`, built-in actions, ports, `ModernAdmin`
-      orchestrator. **79 tests**.
-- [x] **Phase 2 — Prisma adapter.** DMMF-driven property inference, filter
-      mapping, references. **30 tests**.
-- [x] **Phase 3 — NestJS module + Better Auth.** REST controllers with
-      AdminJS-shaped routes (`/admin/api/resources/:id/actions/*`), auth
-      guard, cache interceptor, `forFeature` registry, OpenAPI from Zod.
-      **34 + 8 tests**.
-- [x] **Phase 4 — GraphQL transport.** Dynamic schema with lazy compilation
-      via `SchemaHolder` (`/admin/graphql`), **queries + mutations +
-      DataLoader + multipart uploads + sandbox**. **9 tests**.
-- [x] **Phase 5 — Frontend core.** Vite + React 19 + shadcn, TanStack
-      Router (hash history), list/show/edit/new/login pages, property
-      renderers, AdminClient, optimistic updates, hotkeys. **51 tests**.
-- [x] **Phase 6 — Drizzle adapter.** Schema introspection via FK symbol
-      keys. **40 tests**.
-- [x] **Phase 7 — Realtime.** WebSocket gateway + Redis pub/sub.
-      **12 tests**.
-- [x] **Phase 8 — Polish.** `@modern-admin/create` CLI (**26 tests**),
-      Nextra docs site (`apps/docs`), theming, i18n × 9 locales
-      (**9 tests**), Playwright e2e, mobile-first UI, BigInt support,
-      configurable `authBasePath`.
-- [x] **Phase 9 — Feature plugins, dashboards, persistence, AI**
-  - [x] `feature-upload` (Local + S3) — **47 tests**
-  - [x] `feature-logging` — **17 tests**
-  - [x] `feature-history` (revision diff) — **7 tests**
-  - [x] `feature-webhooks` (BullMQ, HMAC) — **5 tests**
-  - [x] `feature-ai-fill` (AI fill from photo/file) — **13 tests**
-  - [x] `feature-m2m` (many-to-many) — **16 tests**
-  - [x] `feature-password` (argon2/bcrypt) — **12 tests**
-  - [x] `feature-json-by-key` (virtual JSON sub-fields) — **29 tests**
-  - [x] `queue` (BullMQ + cron + distributed locks) — **24 tests**
-  - [x] `system-prisma` (persistent stores) — **13 tests**
-  - [x] `system-drizzle` (persistent stores) — **6 tests**
-  - [x] Dashboard / chart-builder (KPI / line / area / bar, time-series,
-        chart groups, per-user localStorage store)
-  - [x] Global search, wizard create forms, AI assistant widget,
-        audit-log page, revisions UI, admins & API keys, settings page
-  - [x] `@modern-admin/web` pre-built SPA bundle
-  - [x] Changesets + CI release pipeline → GitHub Packages (`1.0.x`)
-  - [x] **Per-resource cache config** (`ResourceOptions.cache.http` /
-        `.action`) — TTL and on/off per resource; `resolveResourceCacheConfig()`
-        in core; split `listTag` / `recordTag` invalidation; in-flight dedup
-  - [x] **`MemoryCacheProvider`** — in-process TTL + tag-index cache in
-        `@modern-admin/core`; `NoopCacheProvider` for zero-config dev/tests
-  - [x] **`action.guard`** — optional confirmation prompt on custom actions;
-        `confirmGuard(action, dialogs)` helper in `@modern-admin/react` wired
-        across all invoke call-sites (toolbar, bulk bar, row dropdown, show-page)
-  - [x] **`relatedResources[].label` i18n** — `metadataTranslations.relatedResources`
-        map + `localizeRelatedResources()` in `@modern-admin/react`
-  - [x] **Show resource IDs in sidebar** — configurable option in admin config
-  - [x] E2e suites: caching API (`caching-api.spec.ts`) + filter sidebar
-        (`filter-sidebar-ui.spec.ts`)
-  - [x] **`ServerDashboardStore`** — server-backed `IDashboardStore` via
-        `GET/PUT /admin/api/dashboard`; requires `configStore` in
-        `ModernAdminModule.forRoot()`. `LocalStorageDashboardStore` remains
-        the default when no store is configured.
-  - [x] **GraphQL subscriptions** (`graphql-ws` over `ws`) — `<resource>Events`
-        subscription per resource backed by `IRealtimeBus`; enable via
-        `ModernAdminGraphqlModule.forRoot({ subscriptions: { bus } })`. Reuse
-        the same bus passed to `ModernAdminModule.forRoot({ realtime })` (e.g.
-        `RedisRealtimeBus`) for cross-instance fan-out. The legacy WS gateway
-        (`@modern-admin/realtime`) remains available for non-GraphQL clients.
-  - [x] **LICENSE file in repo root** — `LICENSE` (MIT) placed at the
-        repo root; `package.json` of every published package declares
-        `"license": "MIT"`; root `package.json` carries `"license": "MIT"`.
-
-Detailed plan: `/home/sergey/.claude/plans/fizzy-jumping-reef.md` (local).
 
 ## Documentation
 
