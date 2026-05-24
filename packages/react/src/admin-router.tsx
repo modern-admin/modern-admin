@@ -29,6 +29,7 @@ import {
   RouterProvider,
 } from '@tanstack/react-router'
 import { BasepathContext } from './router.js'
+import { getRouteExtension } from './extension-registry.js'
 import { ResourceListPage } from './pages/list-page.js'
 import { ResourceShowPage } from './pages/show-page.js'
 import { ResourceEditPage } from './pages/edit-page.js'
@@ -142,9 +143,33 @@ const settingsSectionRoute = createRoute({
   },
 })
 
+// Route for Pro extension pages registered via `registerExtensionRoute`.
+// The component reads `key` from params and looks up the registered
+// extension at render time — so it works even if extensions are registered
+// after module init but before the user navigates to the route.
+const extensionRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/ext/$extKey',
+  component: function ExtensionRouteComponent() {
+    const { extKey } = extensionRoute.useParams()
+    const ext = getRouteExtension(extKey)
+    if (!ext) {
+      // Extension was registered for this key in the sidebar but no component
+      // was provided. Render a minimal placeholder rather than a blank screen.
+      return (
+        <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
+          <p className="text-sm">Extension &quot;{extKey}&quot; not found.</p>
+        </div>
+      )
+    }
+    return <ext.component />
+  },
+})
+
 const routeTree = rootRoute.addChildren([
   homeRoute,
   auditLogRoute,
+  extensionRoute,
   resourceNewRoute,
   resourceEditRoute,
   resourceShowRoute,

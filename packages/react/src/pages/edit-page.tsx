@@ -49,6 +49,88 @@ export interface ResourceEditPageProps {
   recordId?: string
 }
 
+/**
+ * Defensive coercion applied to values returned by `aiFillFromImage` before
+ * they reach `form.setValue`. The backend already normalises numbers/dates/
+ * enums/references; this is a last-line check so an unexpected stringy
+ * number does not poison a numeric field's state and so out-of-domain enum
+ * values are dropped rather than silently committed. Returns `undefined` to
+ * mean "drop this value, keep the existing form state".
+ */
+function coerceAiFillValue(property: PropertyJSON, value: unknown): unknown {
+  if (value === null || value === undefined) return undefined
+  // Enum-style: snap by exact / case-insensitive value or label.
+  if (property.availableValues?.length) {
+    if (typeof value !== 'string') return undefined
+    const trimmed = value.trim()
+    if (trimmed === '') return undefined
+    const lower = trimmed.toLowerCase()
+    const match = property.availableValues.find((v) => v.value === trimmed)
+      ?? property.availableValues.find((v) => v.value.toLowerCase() === lower)
+      ?? property.availableValues.find((v) => v.label.toLowerCase() === lower)
+    return match?.value
+  }
+  // References: keep id-shaped scalars only (string or number).
+  if (property.reference) {
+    if (typeof value === 'string' || typeof value === 'number') return value
+    return undefined
+  }
+  switch (property.type) {
+    case 'bigint':
+    case 'biginteger': {
+      // BigInt values are transported as digit strings end-to-end (matches
+      // BaseRecord.toJSON + the Prisma adapter's accept-string write path).
+      // Never round-trip via Number() — values >2^53 would lose precision.
+      if (typeof value === 'bigint') return value.toString()
+      if (typeof value === 'number') {
+        if (!Number.isFinite(value) || !Number.isInteger(value)) return undefined
+        return String(value)
+      }
+      if (typeof value !== 'string') return undefined
+      const trimmed = value.trim().replace(/[\s_]/g, '')
+      return /^-?\d+$/.test(trimmed) ? trimmed : undefined
+    }
+    case 'number':
+    case 'float':
+    case 'currency':
+    case 'money':
+    case 'decimal':
+    case 'integer': {
+      if (typeof value === 'number') return Number.isFinite(value) ? value : undefined
+      if (typeof value !== 'string') return undefined
+      const trimmed = value.trim().replace(/[^\d.,\-+eE]/g, '')
+      if (trimmed === '' || trimmed === '-' || trimmed === '+') return undefined
+      const lastDot = trimmed.lastIndexOf('.')
+      const lastComma = trimmed.lastIndexOf(',')
+      const normalised = lastDot >= lastComma
+        ? trimmed.replace(/,/g, '')
+        : trimmed.replace(/\./g, '').replace(',', '.')
+      const n = Number(normalised)
+      if (!Number.isFinite(n)) return undefined
+      return property.type === 'integer' ? Math.trunc(n) : n
+    }
+    case 'boolean':
+      if (typeof value === 'boolean') return value
+      if (typeof value === 'number') return value !== 0
+      if (typeof value === 'string') {
+        const t = value.trim().toLowerCase()
+        if (['true', 'yes', 'y', '1', 'on'].includes(t)) return true
+        if (['false', 'no', 'n', '0', 'off'].includes(t)) return false
+      }
+      return undefined
+    case 'date':
+    case 'datetime':
+    case 'datetime-local':
+      // Keep ISO-ish strings; date pickers cope with both YYYY-MM-DD and full
+      // ISO. Reject anything that doesn't at least look year-prefixed so we
+      // don't push "12 March 2026" into a <DatePicker>.
+      if (typeof value !== 'string') return undefined
+      return /^\d{4}-\d{2}-\d{2}/.test(value.trim()) ? value.trim() : undefined
+    default:
+      return value
+  }
+}
+
 type FormValues = Record<string, unknown>
 
 export function ResourceEditPage({
@@ -277,29 +359,43 @@ export function ResourceEditPage({
   const applyAiFillValues = React.useCallback(
     (values: Record<string, unknown>): void => {
       // Snapshot the current values of the fields that will be overwritten so
-      // the user can undo with a single toast action.
-      const known = new Set(editable.map((p) => p.path))
+      // the user can undo with a single toast action. Only fields we actually
+      // applied are snapshotted — fields skipped due to unknown path or
+      // failed coercion must not be "undone" to undefined.
+      const known = new Map(editable.map((p) => [p.path, p]))
       const snapshot: Record<string, unknown> = {}
       const current = form.getValues()
-      for (const path of Object.keys(values)) {
-        if (!known.has(path)) continue
+      const applied: Array<[string, unknown]> = []
+      for (const [path, value] of Object.entries(values)) {
+        const property = known.get(path)
+        if (!property) continue
+        const coerced = coerceAiFillValue(property, value)
+        if (coerced === undefined) continue
+        applied.push([path, coerced])
         snapshot[path] = current[path]
       }
 
-      for (const [path, value] of Object.entries(values)) {
-        if (!known.has(path)) continue
-        form.setValue(path, value as never, { shouldDirty: true, shouldValidate: false })
+      for (const [path, value] of applied) {
+        // shouldValidate: true so any value the model returned that does not
+        // pass the form schema is highlighted to the user immediately rather
+        // than discovered on submit.
+        form.setValue(path, value as never, { shouldDirty: true, shouldValidate: true })
+      }
+
+      if (applied.length === 0) {
+        notify.error({ key: 'aiFill:noValues' })
+        return
       }
 
       // Offer a quick undo via a bottom-center toast — same pattern as draft restore.
-      notify.raw(t('aiFill:applied'), {
+      notify.raw(t('aiFill:applied', { count: applied.length }), {
         position: 'bottom-center',
         duration: 8000,
         action: {
           label: t('common:undoDraftRestore'),
           onClick: () => {
             for (const [path, prev] of Object.entries(snapshot)) {
-              form.setValue(path, prev as never, { shouldDirty: true, shouldValidate: false })
+              form.setValue(path, prev as never, { shouldDirty: true, shouldValidate: true })
             }
           },
         },
@@ -464,9 +560,9 @@ export function ResourceEditPage({
                   <RevisionsButton resourceId={resourceId} recordId={recordId!} />
                 )}
                 <Link to={{ name: 'show', resourceId, recordId: recordId! }}>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" aria-label={t('common:show')}>
                     <Eye className="size-4" />
-                    {t('common:show')}
+                    <span className="hidden sm:inline">{t('common:show')}</span>
                   </Button>
                 </Link>
                 <Button
@@ -474,9 +570,10 @@ export function ResourceEditPage({
                   size="sm"
                   disabled={remove.isPending || form.formState.isSubmitting || isHydrating}
                   onClick={() => void handleDelete()}
+                  aria-label={t('common:delete')}
                 >
                   <Trash2 className="size-4" />
-                  {t('common:delete')}
+                  <span className="hidden sm:inline">{t('common:delete')}</span>
                 </Button>
               </>
             )}
@@ -541,7 +638,7 @@ export function ResourceEditPage({
           onFilled={applyAiFillValues}
         />
       )}
-      <div className="sticky bottom-0 z-20 -mx-4 border-t border-border bg-card px-4 py-3 pr-16 sm:-mx-6 sm:px-6 sm:pr-16">
+      <div className="sticky bottom-0 z-20 -mx-2 border-t border-border bg-card px-2 py-3 pr-14 sm:-mx-6 sm:px-6 sm:pr-16">
         <div className="flex items-center justify-between">
           <div>
             {submitError && (
@@ -559,9 +656,10 @@ export function ResourceEditPage({
                     : { name: 'show', resourceId, recordId: recordId! },
                 )
               }
+              aria-label={t('common:cancel')}
             >
               <X className="size-4" />
-              {t('common:cancel')}
+              <span className="hidden sm:inline">{t('common:cancel')}</span>
             </Button>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -569,9 +667,12 @@ export function ResourceEditPage({
                   type="submit"
                   form="edit-record-form"
                   disabled={form.formState.isSubmitting || isHydrating}
+                  aria-label={isNew ? t('common:create') : t('common:save')}
                 >
                   {isNew ? <Plus className="size-4" /> : <Save className="size-4" />}
-                  {isNew ? t('common:create') : t('common:save')}
+                  <span className="hidden sm:inline">
+                    {isNew ? t('common:create') : t('common:save')}
+                  </span>
                 </Button>
               </TooltipTrigger>
               <TooltipContent className="flex items-center gap-1.5">

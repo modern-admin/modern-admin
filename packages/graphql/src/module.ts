@@ -4,11 +4,26 @@
 
 import { type DynamicModule, Inject, Module, type OnApplicationBootstrap } from '@nestjs/common'
 import { MODERN_ADMIN } from '@modern-admin/nest'
-import type { ModernAdmin } from '@modern-admin/core'
+import type { IRealtimeBus, ModernAdmin } from '@modern-admin/core'
 import { GraphqlController } from './controller.js'
-import { GRAPHQL_OPTIONS, GRAPHQL_SCHEMA } from './tokens.js'
+import { GRAPHQL_OPTIONS, GRAPHQL_REALTIME_BUS, GRAPHQL_SCHEMA } from './tokens.js'
 import { ModernAdminGraphqlSchemaHolder } from './schema-holder.js'
+import { GraphqlSubscriptionServer } from './subscription-server.js'
 import type { GraphqlExtensionFactory } from './extensions.js'
+
+export interface GraphqlSubscriptionOptions {
+  /**
+   * Realtime bus that backs `<resource>Events` subscriptions. Reuse the same
+   * bus you pass to `ModernAdminModule.forRoot({ realtime })` so the events
+   * flowing through `invoke()` reach subscribed GraphQL clients.
+   */
+  bus: IRealtimeBus
+  /**
+   * URL path the graphql-ws WebSocket server is mounted on.
+   * Defaults to `/admin/graphql`.
+   */
+  path?: string
+}
 
 export interface ModernAdminGraphqlOptions {
   global?: boolean
@@ -23,6 +38,13 @@ export interface ModernAdminGraphqlOptions {
    * `uploadGraphqlExtension()` from `@modern-admin/feature-upload`.
    */
   extensions?: ReadonlyArray<GraphqlExtensionFactory>
+  /**
+   * Enable GraphQL subscriptions over `graphql-ws`. When set, a WebSocket
+   * server is attached to the underlying HTTP server on `path` (default
+   * `/admin/graphql`) and `<resource>Events` subscription fields resolve
+   * against the provided bus.
+   */
+  subscriptions?: GraphqlSubscriptionOptions
 }
 
 @Module({})
@@ -45,17 +67,27 @@ export class ModernAdminGraphqlModule implements OnApplicationBootstrap {
     const resolved: ResolvedGraphqlOptions = {
       sandbox: options.sandbox ?? true,
       extensions: options.extensions ?? [],
+      subscriptionsPath: options.subscriptions?.path ?? '/admin/graphql',
+      subscriptionsEnabled: Boolean(options.subscriptions),
+    }
+    const providers: DynamicModule['providers'] = [
+      ModernAdminGraphqlSchemaHolder,
+      { provide: GRAPHQL_SCHEMA, useExisting: ModernAdminGraphqlSchemaHolder },
+      { provide: GRAPHQL_OPTIONS, useValue: resolved },
+      {
+        provide: GRAPHQL_REALTIME_BUS,
+        useValue: options.subscriptions?.bus ?? null,
+      },
+    ]
+    if (options.subscriptions) {
+      providers.push(GraphqlSubscriptionServer)
     }
     return {
       module: ModernAdminGraphqlModule,
       global: options.global ?? false,
       controllers: [GraphqlController],
-      providers: [
-        ModernAdminGraphqlSchemaHolder,
-        { provide: GRAPHQL_SCHEMA, useExisting: ModernAdminGraphqlSchemaHolder },
-        { provide: GRAPHQL_OPTIONS, useValue: resolved },
-      ],
-      exports: [GRAPHQL_SCHEMA, GRAPHQL_OPTIONS, ModernAdminGraphqlSchemaHolder],
+      providers,
+      exports: [GRAPHQL_SCHEMA, GRAPHQL_OPTIONS, GRAPHQL_REALTIME_BUS, ModernAdminGraphqlSchemaHolder],
     }
   }
 }
@@ -64,4 +96,6 @@ export class ModernAdminGraphqlModule implements OnApplicationBootstrap {
 export interface ResolvedGraphqlOptions {
   sandbox: boolean
   extensions: ReadonlyArray<GraphqlExtensionFactory>
+  subscriptionsPath: string
+  subscriptionsEnabled: boolean
 }

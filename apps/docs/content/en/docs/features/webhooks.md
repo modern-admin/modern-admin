@@ -1,9 +1,14 @@
 ---
-title: Webhooks
+title: Webhooks (Pro)
 description: webhookPlugin — outbound HTTP events on record mutations with pluggable dispatch and HMAC signing.
 ---
 
-# Webhooks — `@modern-admin/feature-webhooks`
+# Webhooks — `@modern-admin-pro/feature-webhooks`
+
+> **Pro tier.** This plugin ships as part of **Modern Admin Pro** ($20/dev/month, $50/dev/month Enterprise).
+> The open-core release includes the `IWebhookStore` port and storage adapters; the
+> mutation hooks, dispatcher, HMAC signing, and admin UI ship in the Pro registry.
+> Learn more & subscribe at [modernadminpro.com](https://modernadminpro.com).
 
 Dispatches outbound HTTP POST requests when records are created, updated, or deleted.
 Webhook subscriptions are managed from the admin UI; delivery is pluggable (in-memory,
@@ -24,7 +29,7 @@ BullMQ, custom).
 ## Installation
 
 ```sh
-bun add @modern-admin/feature-webhooks
+bun add @modern-admin-pro/feature-webhooks
 # Store implementation:
 bun add @modern-admin/system-prisma   # Prisma store
 bun add @modern-admin/system-drizzle  # Drizzle store
@@ -37,9 +42,9 @@ bun add @modern-admin/queue bullmq @nestjs/bullmq
 ## Configuration
 
 ```ts
-import { webhookPlugin } from '@modern-admin/feature-webhooks'
+import { webhookPlugin } from '@modern-admin-pro/feature-webhooks'
 import { PrismaWebhookStore } from '@modern-admin/system-prisma'
-import { BullMQWebhookDispatcher } from '@modern-admin/feature-webhooks/dispatchers'
+import { BullMQWebhookDispatcher } from '@modern-admin-pro/feature-webhooks/dispatchers'
 
 ModernAdminModule.forRoot({
   plugins: [
@@ -187,7 +192,7 @@ Enqueues a BullMQ job for each matching subscription. Provides automatic retry,
 exponential backoff, and delivery history.
 
 ```ts
-import { BullMQWebhookDispatcher } from '@modern-admin/feature-webhooks/dispatchers'
+import { BullMQWebhookDispatcher } from '@modern-admin-pro/feature-webhooks/dispatchers'
 
 new BullMQWebhookDispatcher(webhooksQueue)
 ```

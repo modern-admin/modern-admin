@@ -197,7 +197,7 @@ export function AuditLogPage(): React.ReactElement {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2 sm:space-y-4">
       <Card>
         <CardHeader>
           <CardTitle>{t('audit:title')}</CardTitle>
@@ -216,7 +216,12 @@ export function AuditLogPage(): React.ReactElement {
                 <SelectItem key={id} value={id}>{t(key)}</SelectItem>
               ))}
               {resources.map((resource) => (
-                <SelectItem key={resource.id} value={resource.id}>{resource.name}</SelectItem>
+                <SelectItem key={resource.id} value={resource.id}>
+                  {resource.name}
+                  {resource.name !== resource.id && (
+                    <span className="ml-1.5 text-xs text-muted-foreground">({resource.id})</span>
+                  )}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>

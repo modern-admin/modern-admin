@@ -91,6 +91,23 @@ always just a `ma_user` row plus a session — the **role** and
 **permissions** machinery described below is identical regardless of
 how the user authenticated.
 
+> **The `admin()` plugin is mandatory for everything on this page.**
+> `ma_user.role` exists as a column only because the `admin` plugin
+> declares it, and — more importantly — the plugin is also what
+> attaches `role` to the **session**, which is where
+> `BetterAuthProvider.getCurrentUser()` reads it from. If you omit
+> `admin()` from `plugins: [...]`, the role column may still be
+> populated by direct DB writes (the `admins` resource in the panel
+> writes it through Prisma), but **the session never carries it** —
+> so `currentAdmin.role` is always `undefined`, the role gate fails
+> open or denies depending on the action, and every
+> `isAccessible: ({currentAdmin}) => currentAdmin?.role === 'admin'`
+> predicate evaluates to `false`. The symptom is "the admin user
+> from the `Admins` page gets 403 on everything role-gated even
+> though their `role` column reads `admin`". Fix: add `admin({...})`
+> to `plugins` in `src/auth.ts` and re-issue sessions (sign out / in).
+> See [Authentication → Common mistakes](./auth.md#common-mistakes).
+
 There is no `password` column on `ma_user`; password hashes (when
 present) live in `ma_account`. That's why the `admins` resource in this
 panel does not expose a "set password" field — password resets, if

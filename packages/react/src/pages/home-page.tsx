@@ -122,10 +122,10 @@ export function HomePage(): React.ReactElement {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 sm:space-y-6">
       {/* ── Dashboard charts ──────────────────────────────────────── */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 gap-2">
+        <CardHeader className="flex flex-row items-center justify-between p-3 pb-2 space-y-0 gap-2 sm:p-6 sm:pb-2">
           <CardTitle>{t('chart:dashboard')}</CardTitle>
           <div className="flex items-center gap-2">
             <Button
@@ -142,7 +142,7 @@ export function HomePage(): React.ReactElement {
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
           {groups.length > 0 && activeGroupId && (
             <Tabs
               value={activeGroupId}
@@ -194,7 +194,7 @@ export function HomePage(): React.ReactElement {
               </EmptyHeader>
             </Empty>
           ) : (
-            <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+            <div className="grid gap-3 grid-cols-1 sm:gap-4 md:grid-cols-2">
               {visibleCharts.map((c) => (
                 <div
                   key={c.id}

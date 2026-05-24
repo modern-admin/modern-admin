@@ -115,15 +115,23 @@ and adds `include` / `exclude`. Example: `historyPlugin` delegates to `historyFe
 
 ## Bundled feature packages
 
+**Open-core (MIT):**
+
 | Package | Export shape | Role |
 |---------|--------------|------|
 | [`@modern-admin/feature-upload`](./upload) | `uploadFeature()` | File columns + storage wiring |
 | [`@modern-admin/feature-m2m`](./m2m) | `m2mFeature()` | Junction-backed multi-select |
 | [`@modern-admin/feature-history`](./history) | `historyFeature()` / `historyPlugin()` | Revision snapshots |
 | [`@modern-admin/feature-password`](./password) | `passwordsFeature()` | Virtual password fields + hashing hooks |
-| [`@modern-admin/feature-logging`](./logging) | `actionLoggingFeature()` / `actionLoggingPlugin()` | Persist action audit rows |
 | [`@modern-admin/feature-json-by-key`](./json-by-key) | `jsonByKeyFeature()` | Friendly key/value editor for JSON |
-| [`@modern-admin/feature-webhooks`](./webhooks) | `webhookPlugin()` | After-hook based outbound events |
+
+**Pro tier** — [`modernadminpro.com`](https://modernadminpro.com) ($20/dev/month, Enterprise $50/dev/month):
+
+| Package | Export shape | Role |
+|---------|--------------|------|
+| [`@modern-admin-pro/feature-logging`](./logging) | `actionLoggingFeature()` / `actionLoggingPlugin()` | Persist action audit rows |
+| [`@modern-admin-pro/feature-webhooks`](./webhooks) | `webhookPlugin()` | After-hook based outbound events with HMAC, retries, admin UI |
+| `@modern-admin-pro/feature-ai-fill` | `aiFillFeature()` | "Fill form from photo / URL / text" button via vision LLM |
 
 These are **not** separate runtime subsystems — they only produce or wrap **`ResourceOptions`**
 so the same REST / GraphQL / React stack keeps working.

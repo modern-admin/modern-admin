@@ -1,9 +1,15 @@
 ---
-title: Action logging
+title: Action logging (Pro)
 description: actionLoggingFeature / actionLoggingPlugin — persist every action invocation to an audit log.
 ---
 
-# Action logging — `@modern-admin/feature-logging`
+# Action logging — `@modern-admin-pro/feature-logging`
+
+> **Pro tier.** This plugin ships as part of **Modern Admin Pro** ($20/dev/month, $50/dev/month Enterprise).
+> The open-core release includes the `ILogStore` port and storage adapters
+> (`@modern-admin/system-prisma` / `system-drizzle`) — the plugin that wires them into
+> every action lives in the Pro registry. Learn more & subscribe at
+> [modernadminpro.com](https://modernadminpro.com).
 
 Persists every action invocation (who did what, when, with what payload/result) to an
 `ILogStore`. Useful for compliance, debugging, and security auditing.
@@ -22,7 +28,7 @@ Persists every action invocation (who did what, when, with what payload/result) 
 ## Installation
 
 ```sh
-bun add @modern-admin/feature-logging
+bun add @modern-admin-pro/feature-logging
 # Pick a store implementation:
 bun add @modern-admin/system-prisma   # Prisma store
 bun add @modern-admin/system-drizzle  # Drizzle store
@@ -33,7 +39,7 @@ bun add @modern-admin/system-drizzle  # Drizzle store
 ## Global plugin (recommended)
 
 ```ts
-import { actionLoggingPlugin } from '@modern-admin/feature-logging'
+import { actionLoggingPlugin } from '@modern-admin-pro/feature-logging'
 import { PrismaLogStore } from '@modern-admin/system-prisma'
 
 ModernAdminModule.forRoot({
@@ -81,7 +87,7 @@ actionLoggingPlugin({
 ## Per-resource variant
 
 ```ts
-import { actionLoggingFeature } from '@modern-admin/feature-logging'
+import { actionLoggingFeature } from '@modern-admin-pro/feature-logging'
 
 {
   resource: UsersResource,

@@ -3,6 +3,7 @@ import type { PropertyType } from '../adapters/types.js'
 import {
   BUILT_IN_ACTIONS,
   type Action,
+  type ActionContext,
   type ActionResponse,
 } from '../actions'
 import { ActionDecorator } from './action-decorator.js'
@@ -164,14 +165,29 @@ export class ResourceDecorator {
   toJSON(context: PropertyContextBase): Promise<ResourceJSON>
   toJSON(context?: PropertyContextBase): ResourceJSON | Promise<ResourceJSON> {
     if (context) {
-      return Promise.all(this.properties.map((p) => p.toJSON(context))).then((properties) => ({
-        id: this.id,
-        name: this.name,
-        navigation: this.navigation,
-        relatedResources: this.relatedResources,
-        properties: properties.filter((p): p is PropertyJSON => p !== null),
-        actions: Array.from(this.actions.values()).map((a) => a.toDescriptor()),
-      }))
+      return (async () => {
+        const properties = (await Promise.all(this.properties.map((p) => p.toJSON(context))))
+          .filter((p): p is PropertyJSON => p !== null)
+        // Filter out actions the current admin cannot access, so the SPA can
+        // gate UI on capability — e.g. <ReferenceLink> renders a plain badge
+        // instead of a clickable show link when `show` is missing from the
+        // referenced resource. Resource-level checks here use a context
+        // without a `record`; per-record gating still re-runs at invoke time.
+        const entries = Array.from(this.actions.values())
+        const descriptors = await Promise.all(entries.map(async (a) => {
+          const descriptor = a.toDescriptor()
+          const actionContext = { ...context, action: descriptor } as ActionContext
+          return (await a.isAccessible(actionContext)) ? descriptor : null
+        }))
+        return {
+          id: this.id,
+          name: this.name,
+          navigation: this.navigation,
+          relatedResources: this.relatedResources,
+          properties,
+          actions: descriptors.filter((d): d is ReturnType<ActionDecorator['toDescriptor']> => d !== null),
+        }
+      })()
     }
     return {
       id: this.id,

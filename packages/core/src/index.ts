@@ -117,6 +117,7 @@ export {
   AnonymousAuthProvider,
   ComponentLoader,
   InMemoryRealtimeBus,
+  MemoryCacheProvider,
   NoopCacheProvider,
   NoopRealtimeBus,
   type CacheSetOptions,
@@ -208,6 +209,15 @@ export {
 
 // UUID v7 generator — see `CLAUDE.md` → "Identifier policy".
 export { uuidv7 } from './utils/uuid.js'
+
+// Commercial feature-flag registry. Populated by `new ModernAdmin({
+// featureFlags })`, consulted by `@modern-admin-pro/*` packages to gate
+// their `apply()` bodies.
+export {
+  setActiveFeatureFlags,
+  isFeatureActive,
+  getActiveFeatureFlags,
+} from './feature-flags.js'
 
 // `unflatten` converts BaseRecord's internal flat dot-notation params back
 // to a nested object. Exposed so features (e.g. feature-history) can

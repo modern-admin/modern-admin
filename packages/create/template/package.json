@@ -19,7 +19,6 @@
     "@modern-admin/auth-better-auth": "^0.1.0",
     "@modern-admin/cache-redis": "^0.1.0",
     "@modern-admin/core": "^0.1.0",
-    "@modern-admin/feature-logging": "^0.1.0",
     "@modern-admin/nest": "^0.1.0",
     "@modern-admin/system-prisma": "^0.1.0",
     "@modern-admin/web": "^0.1.0",

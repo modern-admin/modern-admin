@@ -37,3 +37,64 @@ export class NoopCacheProvider implements ICacheProvider {
     // no-op
   }
 }
+
+interface MemoryEntry {
+  value: unknown
+  tags: string[]
+  /** Epoch ms when the entry expires. `Infinity` = never. */
+  expiresAt: number
+}
+
+/**
+ * In-process cache provider with TTL and tag invalidation. Backed by a
+ * plain Map — every entry lives only in the current process. Intended for
+ * single-instance demos, e2e tests, and local development; multi-instance
+ * deployments should use `RedisCacheProvider` (from `@modern-admin/cache-redis`)
+ * to share invalidation across nodes.
+ *
+ * Expired entries are reaped lazily on read; there is no background timer
+ * because all e2e/test consumers are short-lived processes.
+ */
+export class MemoryCacheProvider implements ICacheProvider {
+  private readonly entries = new Map<string, MemoryEntry>()
+  private readonly tagIndex = new Map<string, Set<string>>()
+
+  async get<T = unknown>(key: string): Promise<T | null> {
+    const entry = this.entries.get(key)
+    if (!entry) return null
+    if (entry.expiresAt <= Date.now()) {
+      this.entries.delete(key)
+      return null
+    }
+    return entry.value as T
+  }
+
+  async set<T = unknown>(key: string, value: T, options: CacheSetOptions = {}): Promise<void> {
+    const ttlMs = options.ttl != null ? options.ttl * 1000 : Number.POSITIVE_INFINITY
+    const tags = options.tags ?? []
+    this.entries.set(key, { value, tags, expiresAt: Date.now() + ttlMs })
+    for (const tag of tags) {
+      let bucket = this.tagIndex.get(tag)
+      if (!bucket) {
+        bucket = new Set()
+        this.tagIndex.set(tag, bucket)
+      }
+      bucket.add(key)
+    }
+  }
+
+  async del(key: string | string[]): Promise<void> {
+    const list = Array.isArray(key) ? key : [key]
+    for (const k of list) this.entries.delete(k)
+  }
+
+  async invalidateTag(tag: string | string[]): Promise<void> {
+    const tags = Array.isArray(tag) ? tag : [tag]
+    for (const t of tags) {
+      const bucket = this.tagIndex.get(t)
+      if (!bucket) continue
+      for (const key of bucket) this.entries.delete(key)
+      this.tagIndex.delete(t)
+    }
+  }
+}

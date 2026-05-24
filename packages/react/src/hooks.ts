@@ -26,6 +26,7 @@ import type {
 import { resolveFeatures } from './types.js'
 import {
   AdminApiError,
+  type AuthUiProps,
   type AuditLogQuery,
   type AuditLogResponse,
   type GlobalSearchResponse,
@@ -195,6 +196,7 @@ const keySearch = (resourceId: string, query: string) =>
 // ─── Auth ─────────────────────────────────────────────────────────────────
 
 const KEY_ME = ['modern-admin', 'auth', 'me'] as const
+const KEY_AUTH_UI = ['modern-admin', 'auth', 'ui-props'] as const
 
 export interface CurrentUserResult {
   user: CurrentUser | null
@@ -230,6 +232,26 @@ export const useCurrentUser = (): CurrentUserResult => {
     isAuthenticated: !!query.data?.user,
     error: query.error,
   }
+}
+
+/** Fetch public auth UI metadata (enabled social providers, email/password flag).
+ *  Cached indefinitely — the provider list is static for a given deployment. */
+export const useAuthUiProps = (): UseQueryResult<AuthUiProps> => {
+  const client = useAdminClient()
+  return useQuery({
+    queryKey: KEY_AUTH_UI,
+    queryFn: () => client.getAuthUiProps(),
+    staleTime: Infinity,
+  })
+}
+
+/** Initiate OAuth social login. Navigates the browser away to the provider;
+ *  `isPending` is true while the redirect URL is being fetched. */
+export const useSocialLogin = (): UseMutationResult<void, Error, string> => {
+  const client = useAdminClient()
+  return useMutation({
+    mutationFn: (provider: string) => client.loginSocial(provider),
+  })
 }
 
 export const useLogin = (): UseMutationResult<

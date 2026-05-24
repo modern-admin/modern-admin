@@ -13,6 +13,7 @@ import {
 } from '@modern-admin/ui'
 import { AlertCircle, Pencil, Trash2, Zap } from 'lucide-react'
 import { useDeleteRecord, useFeatures, useInvokeRecordAction, useRecord, useResource } from '../hooks.js'
+import { confirmGuard } from '../action-guard.js'
 import { parseApiError } from '../client.js'
 import { PropertyDisplay } from '../property-renderer.js'
 import { Link, useNavigate } from '../router.js'
@@ -102,7 +103,7 @@ export function ResourceShowPage({
   const recordLabel = record.data?.record?.title || recordId
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2 sm:space-y-4">
       <PageBreadcrumbs
         items={[
           homeCrumb(t('common:home')),
@@ -127,9 +128,9 @@ export function ResourceShowPage({
                  *  `size="sm"` instead of stacking a Link wrapper that
                  *  collapses to its anchor default height. */}
                 <Button variant="outline-primary" size="sm" asChild>
-                  <Link to={{ name: 'edit', resourceId, recordId }}>
+                  <Link to={{ name: 'edit', resourceId, recordId }} aria-label={t('common:edit')}>
                     <Pencil className="size-4" />
-                    {t('common:edit')}
+                    <span className="hidden sm:inline">{t('common:edit')}</span>
                   </Link>
                 </Button>
               </TooltipTrigger>
@@ -147,14 +148,16 @@ export function ResourceShowPage({
               size="sm"
               disabled={remove.isPending}
               onClick={() => void handleDelete()}
+              aria-label={t('common:delete')}
             >
               <Trash2 className="size-4" />
-              {t('common:delete')}
+              <span className="hidden sm:inline">{t('common:delete')}</span>
             </Button>
             {customRecordActions.length > 0 && (
               <ActionMenu
                 actions={customRecordActions}
-                onAction={(action) => {
+                onAction={async (action) => {
+                  if (!await confirmGuard(action, dialogs)) return
                   void invokeRecord
                     .mutateAsync({ recordId, actionName: action.name })
                     .then((res) => {
@@ -172,9 +175,14 @@ export function ResourceShowPage({
                 }}
                 t={t}
                 trigger={(
-                  <Button variant="outline" size="sm" disabled={invokeRecord.isPending}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={invokeRecord.isPending}
+                    aria-label={t('common:actions')}
+                  >
                     <Zap className="size-4" />
-                    {t('common:actions')}
+                    <span className="hidden sm:inline">{t('common:actions')}</span>
                   </Button>
                 )}
               />
@@ -199,6 +207,7 @@ export function ResourceShowPage({
                       property={p}
                       value={record.data!.record.params[p.path]}
                       view="show"
+                      populated={record.data!.record.populated as Record<string, unknown> | undefined}
                     />
                   </dd>
                 </div>

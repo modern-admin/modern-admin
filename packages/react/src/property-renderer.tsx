@@ -32,7 +32,13 @@ import {
 import { Check, Copy } from 'lucide-react'
 import { uuidv7 } from '@modern-admin/core'
 import { useQueries } from '@tanstack/react-query'
-import type { KeyValueFieldSpec, PropertyJSON } from './types.js'
+import type {
+  KeyValueFieldSpec,
+  PropertyDisplayProps,
+  PropertyEditorProps,
+  PropertyJSON,
+} from './types.js'
+import { getPropertyExtension } from './extension-registry.js'
 import { useAdminContext, useAdminClient } from './provider.js'
 import { useI18n } from './i18n.js'
 import { useNotify } from './notify.js'
@@ -134,11 +140,9 @@ function CopiableDisplay({
   )
 }
 
-export interface PropertyDisplayProps {
-  property: PropertyJSON
-  value: unknown
-  view?: 'list' | 'show'
-}
+// PropertyDisplayProps is defined in types.ts (shared with extension-registry).
+// Re-exported here for backwards compat.
+export type { PropertyDisplayProps } from './types.js'
 
 function ListCellText({ children }: { children: React.ReactNode }): React.ReactElement {
   return (
@@ -156,7 +160,7 @@ function ListCellText({ children }: { children: React.ReactNode }): React.ReactE
   )
 }
 
-export function PropertyDisplay({ property, value, view = 'list' }: PropertyDisplayProps): React.ReactElement | null {
+export function PropertyDisplay({ property, value, view = 'list', populated }: PropertyDisplayProps): React.ReactElement | null {
   const { components } = useAdminContext()
   const { t, locale } = useI18n()
   const copiable = view === 'show' && (property.isId === true || property.custom?.copiable === true)
@@ -209,13 +213,24 @@ export function PropertyDisplay({ property, value, view = 'list' }: PropertyDisp
           const ids = Array.isArray(value)
             ? (value as Array<string | number>)
             : []
-          return <ReferenceLinkList resourceId={property.reference} recordIds={ids} />
+          return (
+            <ReferenceLinkList
+              resourceId={property.reference}
+              recordIds={ids}
+              populated={populated}
+              populatedKeyPrefix={property.path}
+            />
+          )
         }
+        const populatedRecord = populated?.[property.path] as
+          | { id?: string; title?: string }
+          | undefined
         return (
           <ReferenceLink
             resourceId={property.reference}
             recordId={value as string | number}
             showIcon={view === 'show'}
+            populated={populatedRecord}
           />
         )
       }
@@ -231,23 +246,39 @@ export function PropertyDisplay({ property, value, view = 'list' }: PropertyDisp
       if (items.length === 0) return <span className="text-muted-foreground">—</span>
       const extras = m2m?.extraFields ?? []
       if (view === 'list' || extras.length === 0) {
-        return <ReferenceLinkList resourceId={reference} recordIds={ids} />
+        return (
+          <ReferenceLinkList
+            resourceId={reference}
+            recordIds={ids}
+            populated={populated}
+            populatedKeyPrefix={property.path}
+          />
+        )
       }
       return (
         <div className="space-y-1">
-          {items.map((it) => (
-            <div key={String(it.id)} className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <ReferenceLink resourceId={reference} recordId={String(it.id)} />
-              {extras.map((f) =>
-                it[f] != null && it[f] !== '' ? (
-                  <span key={f} className="text-xs text-muted-foreground">
-                    {f}:{' '}
-                    <span className="text-foreground">{String(it[f])}</span>
-                  </span>
-                ) : null,
-              )}
-            </div>
-          ))}
+          {items.map((it) => {
+            const populatedRef = populated?.[`${property.path}.${it.id}`] as
+              | { id?: string; title?: string }
+              | undefined
+            return (
+              <div key={String(it.id)} className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <ReferenceLink
+                  resourceId={reference}
+                  recordId={String(it.id)}
+                  populated={populatedRef}
+                />
+                {extras.map((f) =>
+                  it[f] != null && it[f] !== '' ? (
+                    <span key={f} className="text-xs text-muted-foreground">
+                      {f}:{' '}
+                      <span className="text-foreground">{String(it[f])}</span>
+                    </span>
+                  ) : null,
+                )}
+              </div>
+            )
+          })}
         </div>
       )
     }
@@ -351,19 +382,18 @@ export function PropertyDisplay({ property, value, view = 'list' }: PropertyDisp
       }
       return renderOne(String(value))
     }
-    default:
+    default: {
+      // Check the extension registry for a custom type before falling back to plain text.
+      const ext = getPropertyExtension(property.type)
+      if (ext) return <ext.display property={property} value={value} view={view} populated={populated} />
       return withCopy(view === 'list' ? <ListCellText>{String(value)}</ListCellText> : <span>{String(value)}</span>)
+    }
   }
 }
 
-export interface PropertyEditorProps {
-  property: PropertyJSON
-  value: unknown
-  onChange(next: unknown): void
-  disabled?: boolean
-  /** Required for `type: 'file'` properties to route uploads to the right endpoint. */
-  resourceId?: string
-}
+// PropertyEditorProps is defined in types.ts (shared with extension-registry).
+// Re-exported here for backwards compat.
+export type { PropertyEditorProps } from './types.js'
 
 // ─── File upload editor ───────────────────────────────────────────────────────
 
@@ -1097,7 +1127,10 @@ export function PropertyEditor({
           />
         </div>
       )
-    default:
+    default: {
+      // Check the extension registry for a custom type before falling back to a plain text input.
+      const ext = getPropertyExtension(property.type)
+      if (ext) return <ext.editor property={property} value={value} onChange={onChange} disabled={disabled} resourceId={resourceId} />
       return (
         <Input
           value={stringValue}
@@ -1105,5 +1138,6 @@ export function PropertyEditor({
           disabled={disabled}
         />
       )
+    }
   }
 }

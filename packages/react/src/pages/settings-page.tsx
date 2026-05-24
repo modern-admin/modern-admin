@@ -59,21 +59,24 @@ import { useNotify } from '../notify.js'
 import { useDialogs } from '../dialogs.js'
 import type { ApiKeyRecord, WebhookInput, WebhookRecord } from '../client.js'
 import type { ResourceJSON } from '../types.js'
+import { getSettingsSectionExtensions } from '../extension-registry.js'
 import { AiAssistantSettingsSection } from './ai-assistant-settings-section.js'
 import { SettingsCard, SettingsListState, SettingsTableScroll } from './settings-shared.js'
 
 const KEY_LIST = ['modern-admin', 'api-keys'] as const
 const KEY_WEBHOOKS = ['modern-admin', 'webhooks'] as const
 
-type SectionKey = 'api-keys' | 'ai-assistant' | 'webhooks'
+type BuiltInSectionKey = 'api-keys' | 'ai-assistant' | 'webhooks'
 
 interface SectionDef {
-  key: SectionKey
+  key: string
   labelKey: string
   icon: React.ComponentType<{ className?: string }>
+  /** When `true`, the section is supplied by an extension (no built-in renderer). */
+  isExtension?: boolean
 }
 
-const ALL_SECTIONS: SectionDef[] = [
+const BUILT_IN_SECTIONS: SectionDef[] = [
   { key: 'api-keys', labelKey: 'settings:apiKeys.title', icon: KeyRound },
   { key: 'webhooks', labelKey: 'settings:webhooks.title', icon: SettingsIcon },
   { key: 'ai-assistant', labelKey: 'aiAssistant:title', icon: Bot },
@@ -83,27 +86,33 @@ export function SettingsPage({ section }: { section?: string }): React.ReactElem
   const { t } = useI18n()
   const navigate = useNavigate()
   const features = useFeatures()
-  // Only surface settings sections whose backend subsystem is wired —
-  // hides API Keys when there's no `apiKeyService`, Webhooks when there's
-  // no `webhookStore`, AI Assistant when no `aiAssistant` options.
-  const SECTIONS = React.useMemo(
-    () => ALL_SECTIONS.filter((s) =>
-      s.key === 'api-keys' ? features.apiKeys
-        : s.key === 'webhooks' ? features.webhooks
-          : s.key === 'ai-assistant' ? features.aiAssistant
-            : true,
-    ),
+  // Only surface built-in sections whose backend subsystem is wired.
+  // Extension sections are always shown when registered.
+  const SECTIONS = React.useMemo<SectionDef[]>(
+    () => [
+      ...BUILT_IN_SECTIONS.filter((s) =>
+        s.key === 'api-keys' ? features.apiKeys
+          : s.key === 'webhooks' ? features.webhooks
+            : s.key === 'ai-assistant' ? features.aiAssistant
+              : true,
+      ),
+      ...getSettingsSectionExtensions().map((ext) => ({
+        key: ext.key,
+        labelKey: ext.labelKey,
+        icon: ext.icon,
+        isExtension: true as const,
+      })),
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [features.apiKeys, features.webhooks, features.aiAssistant],
   )
-  // Resolve the requested section. If the host explicitly disabled it, or
-  // the URL is bogus, fall back to the first enabled section. If no
-  // sections are enabled at all, render the empty-state below.
-  const requested: SectionKey | null =
-    section === 'ai-assistant' ? 'ai-assistant'
-      : section === 'webhooks' ? 'webhooks'
-        : section === 'api-keys' ? 'api-keys'
-          : null
-  const active: SectionKey | null =
+  // Resolve the requested section. If the URL is bogus or the section is
+  // disabled, fall back to the first enabled section.
+  const builtInKeys: BuiltInSectionKey[] = ['api-keys', 'webhooks', 'ai-assistant']
+  const isBuiltIn = (k: string): k is BuiltInSectionKey =>
+    (builtInKeys as string[]).includes(k)
+  const requested: string | null = section ?? null
+  const active: string | null =
     requested && SECTIONS.some((s) => s.key === requested)
       ? requested
       : (SECTIONS[0]?.key ?? null)
@@ -120,11 +129,11 @@ export function SettingsPage({ section }: { section?: string }): React.ReactElem
   return (
     // `minmax(0,1fr)` (not bare `1fr`) lets the content column shrink below
     // its intrinsic min-width — otherwise wide tables push the whole grid
-    // past the viewport at ~`md` widths (~768–900px).
-    <div className="flex flex-col gap-4 md:grid md:grid-cols-[14rem_minmax(0,1fr)]">
+    // past the viewport at ~`lg` widths (~1000–1100px).
+    <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[14rem_minmax(0,1fr)]">
       {/* Mobile: dropdown selector (handles many sections gracefully) */}
-      <div className="md:hidden">
-        <Select value={active} onValueChange={(v) => navigate({ name: 'settings', section: v as SectionKey })}>
+      <div className="lg:hidden">
+        <Select value={active ?? ''} onValueChange={(v) => navigate({ name: 'settings', section: v })}>
           <SelectTrigger className="w-full">
             <SelectValue />
           </SelectTrigger>
@@ -141,7 +150,7 @@ export function SettingsPage({ section }: { section?: string }): React.ReactElem
         </Select>
       </div>
       {/* Desktop: sidebar nav */}
-      <aside className="hidden md:block">
+      <aside className="hidden lg:block">
         <nav className="flex flex-col gap-1">
           {SECTIONS.map(({ key, labelKey, icon: Icon }) => (
             <Link
@@ -159,9 +168,13 @@ export function SettingsPage({ section }: { section?: string }): React.ReactElem
         </nav>
       </aside>
       <section className="min-w-0">
-        {active === 'api-keys' && <ApiKeysSection />}
-        {active === 'webhooks' && <WebhooksSection />}
-        {active === 'ai-assistant' && <AiAssistantSettingsSection />}
+        {active && isBuiltIn(active) && active === 'api-keys' && <ApiKeysSection />}
+        {active && isBuiltIn(active) && active === 'webhooks' && <WebhooksSection />}
+        {active && isBuiltIn(active) && active === 'ai-assistant' && <AiAssistantSettingsSection />}
+        {active && !isBuiltIn(active) && (() => {
+          const extSection = getSettingsSectionExtensions().find((e) => e.key === active)
+          return extSection ? <extSection.component /> : null
+        })()}
       </section>
     </div>
   )
@@ -922,7 +935,12 @@ function WebhookEditorDialog({
                 <SelectContent>
                   <SelectItem value="__all__">{t('settings:webhooks.editor.allResources')}</SelectItem>
                   {resources.map((resource) => (
-                    <SelectItem key={resource.id} value={resource.id}>{resource.name}</SelectItem>
+                    <SelectItem key={resource.id} value={resource.id}>
+                      {resource.name}
+                      {resource.name !== resource.id && (
+                        <span className="ml-1.5 text-xs text-muted-foreground">({resource.id})</span>
+                      )}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>

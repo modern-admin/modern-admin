@@ -125,6 +125,8 @@ export const ru: LocaleBundle = {
     'auth:title': 'Вход',
     'auth:subtitle': 'Введите email и пароль для входа',
     'auth:tagline': 'Современная админ-панель для любого стека.',
+    'auth:orContinueWith': 'Или войти через',
+    'auth:continueWith': 'Войти через {provider}',
     'common:chooseFile': 'Выбрать файл',
     'common:chooseFiles': 'Выбрать файлы',
     'common:dragAndDrop': 'Перетащите или',

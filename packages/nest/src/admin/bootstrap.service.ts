@@ -10,6 +10,7 @@
 
 import { Inject, Injectable, type OnApplicationBootstrap } from '@nestjs/common'
 import type { BaseResource, ModernAdmin } from '@modern-admin/core'
+import { collectTelemetryInfo, reportTelemetry } from '@modern-admin/telemetry'
 import { MODERN_ADMIN, MODERN_ADMIN_OPTIONS } from '../tokens.js'
 import type { ModernAdminModuleOptions } from '../module.js'
 import { AdminControllerScanner } from './scanner.js'
@@ -52,5 +53,10 @@ export class ModernAdminBootstrapService implements OnApplicationBootstrap {
       controller.admin = this.admin
       controller.resource = added[i] as BaseResource
     })
+
+    // Opt-in telemetry ping — fires only when MODERN_ADMIN_TELEMETRY=1.
+    // Fire-and-forget: never awaited in the hot path, silently swallows
+    // any network error.
+    void reportTelemetry(collectTelemetryInfo(this.admin))
   }
 }

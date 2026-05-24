@@ -66,11 +66,21 @@ class TestResource extends BaseResource {
     const idx = this.table.rows.findIndex((r) => r.id === id)
     if (idx >= 0) this.table.rows.splice(idx, 1)
   }
-  /** Exact-match filter: avoids in-memory substring quirk for FK lookups. */
+  /** Exact-match filter with `in`-operator support: avoids the in-memory
+   *  substring quirk for FK lookups while still letting the m2m feature's
+   *  batched read-hook issue `WHERE localKey IN (…)` queries. */
   private match(filter: Filter): Row[] {
     return this.table.rows.filter((row) => {
       for (const [path, el] of Object.entries(filter.filters)) {
-        if (String(row[path] ?? '') !== String(el.value)) return false
+        const cell = String(row[path] ?? '')
+        if (el.operator === 'in') {
+          const list = Array.isArray(el.value)
+            ? el.value.map(String)
+            : String(el.value).split(',')
+          if (!list.includes(cell)) return false
+          continue
+        }
+        if (cell !== String(el.value)) return false
       }
       return true
     })

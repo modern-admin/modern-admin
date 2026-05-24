@@ -10,7 +10,7 @@ const makeJob = (name: string, data: unknown = {}, id = 'test-job-id'): Job =>
   ({ name, data, id } as unknown as Job)
 
 type MockRedis = {
-  set: ReturnType<typeof mock>
+  runCommand: ReturnType<typeof mock>
   del: ReturnType<typeof mock>
 }
 
@@ -20,7 +20,7 @@ const buildProcessor = (overrides?: {
   redis?: Partial<MockRedis>
 }) => {
   const redis: MockRedis = {
-    set: overrides?.redis?.set ?? mock(() => Promise.resolve('OK')),
+    runCommand: overrides?.redis?.runCommand ?? mock(() => Promise.resolve('OK')),
     del: overrides?.redis?.del ?? mock(() => Promise.resolve(1)),
   }
 
@@ -85,12 +85,15 @@ describe('CronProcessor › skipIfRunning lock', () => {
 
   test('acquires lock and executes handler when no lock exists', async () => {
     const result = await processor.process(makeJob('locked-task'))
-    expect(redis.set.mock.calls[0]).toEqual([
-      `${CRON_LOCK_PREFIX}locked-task`,
-      'test-job-id',
-      'EX',
-      DEFAULT_CRON_LOCK_TTL,
-      'NX',
+    expect(redis.runCommand.mock.calls[0]).toEqual([
+      'set',
+      [
+        `${CRON_LOCK_PREFIX}locked-task`,
+        'test-job-id',
+        'EX',
+        DEFAULT_CRON_LOCK_TTL,
+        'NX',
+      ],
     ])
     expect(result).toBe('locked-result')
   })
@@ -107,7 +110,7 @@ describe('CronProcessor › skipIfRunning lock', () => {
   })
 
   test('skips execution when lock is already held', async () => {
-    redis.set.mockImplementation(() => Promise.resolve(null))
+    redis.runCommand.mockImplementation(() => Promise.resolve(null))
     const result = await processor.process(makeJob('locked-task'))
     expect(result).toBeUndefined()
     expect(handler.mock.calls).toHaveLength(0)
@@ -122,7 +125,7 @@ describe('CronProcessor › skipIfRunning lock', () => {
     ;(cronService as unknown as { shouldSkipIfRunning: () => boolean }).shouldSkipIfRunning =
       () => false
     const result = await p.process(makeJob('normal-task'))
-    expect(r.set.mock.calls).toHaveLength(0)
+    expect(r.runCommand.mock.calls).toHaveLength(0)
     expect(result).toBe('no-lock')
   })
 })

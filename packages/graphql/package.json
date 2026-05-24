@@ -42,18 +42,23 @@
     "@modern-admin/core": "workspace:*",
     "@modern-admin/nest": "workspace:*",
     "busboy": "^1.6.0",
-    "dataloader": "^2.2.3"
+    "dataloader": "^2.2.3",
+    "graphql-ws": "^6.0.8",
+    "ws": "^8.21.0"
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
     "@nestjs/common": "^11.1.19",
+    "@nestjs/core": "^11.1.19",
     "@types/bun": "^1.3.13",
     "@types/busboy": "^1.5.4",
+    "@types/ws": "^8.18.1",
     "graphql": "^16.11.0",
     "typescript": "^6.0.3"
   },
   "peerDependencies": {
     "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
     "graphql": "^16.0.0"
   }
 }

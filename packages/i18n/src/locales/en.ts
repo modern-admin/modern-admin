@@ -125,6 +125,8 @@ export const en: LocaleBundle = {
     'auth:title': 'Sign in',
     'auth:subtitle': 'Enter your email and password to sign in',
     'auth:tagline': 'The modern admin panel for any stack.',
+    'auth:orContinueWith': 'Or continue with',
+    'auth:continueWith': 'Continue with {provider}',
     'common:chooseFile': 'Choose file',
     'common:chooseFiles': 'Choose files',
     'common:dragAndDrop': 'Drag and drop or',

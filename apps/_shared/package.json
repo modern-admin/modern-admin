@@ -20,7 +20,6 @@
     "@better-auth/api-key": "1.6.9",
     "@modern-admin/auth-better-auth": "workspace:*",
     "@modern-admin/core": "workspace:*",
-    "@modern-admin/feature-ai-fill": "workspace:*",
     "@modern-admin/feature-json-by-key": "workspace:*",
     "@modern-admin/feature-m2m": "workspace:*",
     "@modern-admin/feature-password": "workspace:*",

@@ -488,8 +488,8 @@ properties, changes action visibility, etc. Examples:
 | `m2mFeature` | `@modern-admin/feature-m2m` |
 | `historyFeature` | `@modern-admin/feature-history` |
 | `passwordFeature` | `@modern-admin/feature-password` |
-| `actionLoggingFeature` | `@modern-admin/feature-logging` |
-| `webhooksFeature` | `@modern-admin/feature-webhooks` |
+| `actionLoggingFeature` | `@modern-admin-pro/feature-logging` (Pro) |
+| `webhooksFeature` | `@modern-admin-pro/feature-webhooks` (Pro) |
 
 ### 2. Global plugin (process-wide)
 
@@ -577,7 +577,9 @@ Builds a code-first schema at boot time by introspecting `admin.resources`:
 
 - One `Query` field per resource+action (`users_list`, `users_show`, …)
 - One `Mutation` field per write action (`users_new`, `users_edit`, `users_delete`, …)
-- One `Subscription` per resource (`users_events`) backed by `IRealtimeBus`
+- One `Subscription` per resource (`usersEvents`) backed by `IRealtimeBus`
+  (enable with `ModernAdminGraphqlModule.forRoot({ subscriptions: { bus } })`;
+  graphql-ws WebSocket transport mounted on `/admin/graphql`)
 - Aggregation queries (`users_aggregate`, `users_timeSeries`) when the adapter supports it
 - Custom scalars: `JSON`, `DateTime`, `Upload`
 

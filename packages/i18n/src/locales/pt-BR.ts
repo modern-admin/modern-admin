@@ -125,6 +125,8 @@ export const ptBR: LocaleBundle = {
     'auth:title': 'Entrar',
     'auth:subtitle': 'Insira seu e-mail e senha para entrar',
     'auth:tagline': 'O painel de administração moderno para qualquer stack.',
+    'auth:orContinueWith': 'Ou continuar com',
+    'auth:continueWith': 'Continuar com {provider}',
     'common:chooseFile': 'Escolher arquivo',
     'common:chooseFiles': 'Escolher arquivos',
     'common:dragAndDrop': 'Arraste e solte ou',

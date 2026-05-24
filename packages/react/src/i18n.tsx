@@ -4,7 +4,7 @@
 
 import * as React from 'react'
 import { I18n, builtinLocales, type LocaleBundle } from '@modern-admin/i18n'
-import type { KeyValueFieldSpec, PropertyJSON, ResourceJSON } from './types.js'
+import type { KeyValueFieldSpec, PropertyJSON, RelatedResource, ResourceJSON } from './types.js'
 
 const STORAGE_KEY = 'modern-admin:locale'
 
@@ -37,6 +37,11 @@ export interface MetadataResourceTranslations {
   properties?: Record<string, MetadataPropertyTranslations>
   /** Per-action overrides keyed by action name (e.g. `publish`, `archive`). */
   actions?: Record<string, MetadataActionTranslations>
+  /**
+   * Tab label overrides for related-resource tabs on the show page.
+   * Key is the related resource's `resourceId`.
+   */
+  relatedResources?: Record<string, string>
 }
 
 export interface MetadataLocaleTranslations {
@@ -88,6 +93,22 @@ const localizeKeyValueField = (
     }
   }),
 })
+
+/**
+ * Applies translated tab labels to `relatedResources`. Each translation map
+ * is keyed by `resourceId`; the first map that has a matching entry wins.
+ * Exported for unit testing.
+ */
+export const localizeRelatedResources = (
+  relatedResources: RelatedResource[] | undefined,
+  ...translations: Array<Record<string, string> | undefined>
+): RelatedResource[] | undefined => {
+  if (!relatedResources) return relatedResources
+  return relatedResources.map((r) => {
+    const translatedLabel = firstDefined(...translations.map((map) => map?.[r.resourceId]))
+    return translatedLabel !== undefined ? { ...r, label: translatedLabel } : r
+  })
+}
 
 const localizeProperty = (
   property: PropertyJSON,
@@ -197,6 +218,11 @@ export function I18nProvider({
             custom: { ...(action.custom ?? {}), label: localizedLabel },
           }
         }),
+        relatedResources: localizeRelatedResources(
+          resource.relatedResources,
+          resourceLocale?.relatedResources,
+          resourceFallback?.relatedResources,
+        ),
       }
     },
     [fallbackLocale, locale, metadataTranslations],

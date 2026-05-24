@@ -251,7 +251,7 @@ export function ChartWidget({
 
   return (
     <Card className="flex flex-col">
-      <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+      <CardHeader className="flex flex-row items-center justify-between gap-2 p-3 pb-2 space-y-0 sm:p-6 sm:pb-2">
         <CardTitle className="text-sm font-medium truncate pr-2">
           {config.title || t('chart:untitled')}
         </CardTitle>
@@ -329,7 +329,7 @@ export function ChartWidget({
         </div>
       </CardHeader>
 
-      <CardContent className="flex-1 pt-0 space-y-3">
+      <CardContent className="flex-1 p-3 pt-0 space-y-3 sm:p-6 sm:pt-0">
         {/* Quick filters — compact inline row, label as placeholder, Apply on the right. */}
         {!unsupported && quickFilterPaths.length > 0 && resourceConfig && (
           <div className="flex flex-wrap items-center gap-2">

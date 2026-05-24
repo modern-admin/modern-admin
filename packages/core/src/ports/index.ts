@@ -5,6 +5,7 @@ export {
   type LoginCredentials,
 } from './auth-provider.js'
 export {
+  MemoryCacheProvider,
   NoopCacheProvider,
   type ICacheProvider,
   type CacheSetOptions,

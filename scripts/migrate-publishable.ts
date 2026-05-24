@@ -87,22 +87,16 @@ const PACKAGES: PkgEntry[] = [
     description: 'Prisma-backed implementation of Modern Admin system stores (logs, history, webhooks, AI tasks).' },
   { dir: 'packages/system-drizzle',
     description: 'Drizzle-backed implementation of Modern Admin system stores.' },
-  { dir: 'packages/feature-ai-fill',
-    description: 'AI-powered field auto-fill feature plugin for Modern Admin.' },
   { dir: 'packages/feature-history',
     description: 'Record revision history feature plugin for Modern Admin.' },
   { dir: 'packages/feature-json-by-key',
     description: 'Editable JSON-by-key property type for Modern Admin.' },
-  { dir: 'packages/feature-logging',
-    description: 'Persistent action log feature plugin for Modern Admin.' },
   { dir: 'packages/feature-m2m',
     description: 'Many-to-many relation property type for Modern Admin.' },
   { dir: 'packages/feature-password',
     description: 'Hashed password property type for Modern Admin.' },
   { dir: 'packages/feature-upload',
     description: 'File upload feature plugin for Modern Admin (local + S3 providers).' },
-  { dir: 'packages/feature-webhooks',
-    description: 'Outbound webhooks feature plugin for Modern Admin.' },
 ]
 
 async function exists(path: string): Promise<boolean> {

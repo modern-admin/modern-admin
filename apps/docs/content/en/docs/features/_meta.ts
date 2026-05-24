@@ -4,7 +4,7 @@ export default {
   m2m: 'Many-to-many',
   history: 'History',
   password: 'Password hashing',
-  logging: 'Action logging',
-  webhooks: 'Webhooks',
+  logging: 'Action logging (Pro)',
+  webhooks: 'Webhooks (Pro)',
   'json-by-key': 'JSON by key',
 }

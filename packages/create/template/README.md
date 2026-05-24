@@ -11,7 +11,6 @@ separate frontend deployment is required.
   `@prisma/adapter-pg` driver adapter.
 - **Better Auth** (email/password + API keys) via `@modern-admin/auth-better-auth`.
 - **Static SPA** at `/admin` via `@modern-admin/web`.
-- **Action log** persisted to `ma_log` via `@modern-admin/feature-logging`.
 - **Optional Redis cache** for cross-instance invalidation.
 - Empty resource list — add your own (see *Adding resources* below).
 

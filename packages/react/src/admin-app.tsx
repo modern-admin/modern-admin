@@ -54,6 +54,7 @@ import {
   User,
   Users,
 } from 'lucide-react'
+import { getSidebarExtensions } from './extension-registry.js'
 import { useCurrentUser, useFeatures, useLogout, useResources } from './hooks.js'
 import { LoginPage } from './pages/login-page.js'
 import type { CurrentUser } from './types.js'
@@ -240,7 +241,7 @@ function AppSidebar({ showResourceIds }: { showResourceIds: boolean }): React.Re
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="h-14 flex-row items-center gap-2 border-b border-border px-3 py-0 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+      <SidebarHeader className="h-12 flex-row items-center gap-2 border-b border-border px-3 py-0 sm:h-14 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
         <Database className="size-4 shrink-0 text-primary" />
         <span className="truncate text-sm font-semibold group-data-[collapsible=icon]:hidden">
           {t('common:appName')}
@@ -267,6 +268,26 @@ function AppSidebar({ showResourceIds }: { showResourceIds: boolean }): React.Re
                 </SidebarMenuButton>
               </SidebarMenuItem>
             )}
+            {getSidebarExtensions()
+              .filter((ext) => !ext.featureGate || !!(features as unknown as Record<string, unknown>)[ext.featureGate])
+              .map((ext) => {
+                const extActive =
+                  route.name === 'extension' && route.key === ext.extensionKey
+                return (
+                  <SidebarMenuItem key={ext.key}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={extActive}
+                      tooltip={ext.label}
+                    >
+                      <Link to={{ name: 'extension', key: ext.extensionKey }}>
+                        <ext.icon />
+                        <span>{ext.label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
             {ungrouped.map((r) => (
               <ResourceMenuItem key={r.id} resource={r} showId={showResourceIds} />
             ))}
@@ -459,7 +480,7 @@ function Header({ user }: { user: CurrentUser | null }): React.ReactElement {
     group: t('common:search'),
   })
   return (
-    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-card px-4 sm:px-6">
+    <header className="sticky top-0 z-30 flex h-12 shrink-0 items-center gap-1 border-b border-border bg-card px-2 sm:h-14 sm:gap-3 sm:px-6">
       <Button
         variant="ghost"
         size="icon"
@@ -573,7 +594,7 @@ function ShellLayout({
                 padding. With `pb-0`, the sticky element can extend all the way
                 down. Children that don't have a sticky footer add their own
                 bottom spacing via the `pb-4 sm:pb-6` class. */}
-            <main className="min-h-0 min-w-0 flex-1 overflow-auto px-4 pt-4 sm:px-6 sm:pt-6">
+            <main className="min-h-0 min-w-0 flex-1 overflow-auto px-2 pt-2 sm:px-6 sm:pt-6">
               {children}
             </main>
             <AiAssistantWidget />

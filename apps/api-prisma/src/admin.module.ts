@@ -8,9 +8,8 @@
 //     Better Auth — one connection pool, one migration history.
 //   - `setupPrismaSystem(prisma)` builds the system stores (action log,
 //     webhooks, config, history, AI tasks, cache fallback) on top of the
-//     `Ma*` tables included in `prisma/schema.prisma`.
-//   - `actionLoggingPlugin({ store: system.logStore })` redirects the
-//     plugin from `ConsoleLogStore` to a persistent SQL row in `ma_log`.
+//     `Ma*` tables included in `prisma/schema.prisma`. These stores back
+//     the corresponding Pro feature plugins when the host app wires them in.
 //
 // Resources are shared with `apps/api` via `@modern-admin/app-shared`:
 // the same `CustomersAdminModule`, `PostsAdminModule`, … wire one set of
@@ -23,17 +22,8 @@ import { Module } from '@nestjs/common'
 import { type BaseDatabase, type BaseResource, type IAuthProvider } from '@modern-admin/core'
 import { ModernAdminModule } from '@modern-admin/nest'
 import { PrismaDatabase, PrismaResource } from '@modern-admin/adapter-prisma'
-import { ModernAdminAiFillModule } from '@modern-admin/feature-ai-fill/nest'
 import { ModernAdminUploadModule } from '@modern-admin/feature-upload/nest'
 import { historyPlugin } from '@modern-admin/feature-history'
-import { actionLoggingPlugin } from '@modern-admin/feature-logging'
-import {
-  BullMqWebhookDispatcher,
-  WEBHOOK_QUEUE,
-  webhookPlugin,
-  WebhookQueueModule,
-} from '@modern-admin/feature-webhooks'
-import { QueueModule } from '@modern-admin/queue'
 import { setupPrismaSystem } from '@modern-admin/system-prisma'
 import {
   AdminsAdminModule,
@@ -47,9 +37,9 @@ import {
   ProductsAdminModule,
   RegionalAdminModule,
   RolesAdminModule,
+  setAuditLogStore,
   TagsAdminModule,
 } from '@modern-admin/app-shared'
-import { Queue } from 'bullmq'
 import { dmmf, prisma } from './db.js'
 // Side-effect import: registers Prisma resources with the shared admin
 // source registry before any `@AdminResource` decorator is evaluated.
@@ -58,26 +48,18 @@ import './admin-sources.js'
 /** System stores shared across the app — backed by Postgres via Prisma. */
 export const system = setupPrismaSystem(prisma as never)
 
+// Wire the audit-log sink used by Better Auth's `session.create.after`
+// hook. Must run AFTER `setupPrismaSystem()` (which builds the store) and
+// BEFORE any login attempt — admin-module construction is the natural
+// place since it happens during Nest bootstrap, before the HTTP layer
+// starts accepting requests.
+setAuditLogStore(system.logStore)
+
 const authProvider = buildBetterAuthProvider()
 const apiKeyService = buildApiKeyService(authProvider)
 
-const webhookRedisUrl = process.env.REDIS_URL
-const webhookQueue = webhookRedisUrl
-  ? new Queue(WEBHOOK_QUEUE, { connection: webhookRedisUrl as never })
-  : null
-const webhookDispatcher = webhookQueue
-  ? new BullMqWebhookDispatcher(webhookQueue)
-  : undefined
-
 @Module({
   imports: [
-    ...(webhookRedisUrl
-      ? [
-        QueueModule.forRoot({ connection: webhookRedisUrl }),
-        WebhookQueueModule.register({ store: system.webhookStore }),
-      ]
-      : []),
-    ModernAdminAiFillModule.forRoot(),
     ModernAdminUploadModule.forRoot(),
     ModernAdminModule.forRoot({
       global: true,
@@ -94,16 +76,12 @@ const webhookDispatcher = webhookQueue
       rolesResourceId: 'roles',
       plugins: [
         historyPlugin({ store: system.historyStore }),
-        webhookPlugin({ store: system.webhookStore, dispatcher: webhookDispatcher }),
-        // Action logs land in `ma_log` instead of stdout.
-        actionLoggingPlugin({ store: system.logStore }),
       ],
       configStore: system.configStore,
       aiTaskStore: system.aiTaskStore,
       historyStore: system.historyStore,
       logStore: system.logStore,
       webhookStore: system.webhookStore,
-      ...(webhookDispatcher ? { webhookDispatcher } : {}),
       // Execute AI assistant SQL queries inside a PostgreSQL READ ONLY
       // transaction that is always rolled back — two layers of defence:
       //   1. SET TRANSACTION READ ONLY — PostgreSQL physically blocks any

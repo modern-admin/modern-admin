@@ -235,6 +235,88 @@ const hydrateRecordParams = async (
   }
 }
 
+/**
+ * Batched list-mode hydration. Replaces N×2 SQL (one junction SELECT + one
+ * reference findMany per record) with exactly 2 SQL per relation:
+ *
+ *   1. `SELECT … FROM junction WHERE localKey IN (parentId1, …)`
+ *   2. `referenceResource.findMany(allForeignIds)` → `WHERE id IN (…)`
+ *
+ * Then groups results in JS and assigns `params` + `populated` per record.
+ *
+ * Falls back to per-record `hydrateRecordParams` if the resources cannot be
+ * resolved, so the call site keeps a single error path.
+ */
+const hydrateListRecords = async (
+  records: Array<{
+    id: string
+    params: Record<string, unknown>
+    populated: Record<string, unknown>
+  }>,
+  admin: ModernAdmin,
+  relation: M2MRelation,
+): Promise<void> => {
+  if (records.length === 0) return
+  const { property, through, localKey, foreignKey, reference, extraFields = [] } = relation
+  let junction: BaseResource
+  let referenceResource: BaseResource
+  try {
+    junction = admin.findResource(through)
+    referenceResource = admin.findResource(reference)
+  } catch {
+    for (const rec of records) rec.params[property] = []
+    return
+  }
+
+  const parentIds = records.map((r) => String(r.id))
+  // Filter encodes `in:` operator via the value prefix (see
+  // `packages/core/src/filter/filter.ts` → `parseOperatorValue`). Works
+  // across all three current adapters (Prisma, Drizzle, in-memory).
+  const filter = new Filter({ [localKey]: `in:${parentIds.join(',')}` }, junction)
+  const allRows = await junction.find(filter, { limit: 100_000 })
+
+  // Post-filter in JS: adapters with looser `in` semantics (none today, but
+  // defensive) might over-match; this also drops any rows whose localKey
+  // doesn't strictly equal one of the requested parentIds.
+  const parentIdSet = new Set(parentIds)
+  const rowsByParent = new Map<string, BaseRecord[]>()
+  for (const row of allRows) {
+    const pid = String(row.params[localKey] ?? '')
+    if (!parentIdSet.has(pid)) continue
+    const bucket = rowsByParent.get(pid)
+    if (bucket) bucket.push(row)
+    else rowsByParent.set(pid, [row])
+  }
+
+  // Build items per record and collect the union of foreign ids.
+  const itemsByParent = new Map<string, M2MItem[]>()
+  const allForeignIds = new Set<string>()
+  for (const pid of parentIds) {
+    const rows = rowsByParent.get(pid) ?? []
+    const items = rows.map((r) => buildItem(r, foreignKey, extraFields))
+    itemsByParent.set(pid, items)
+    for (const it of items) allForeignIds.add(it.id)
+  }
+
+  // Single batch fetch of all referenced records across the page.
+  const refRecords = allForeignIds.size
+    ? await referenceResource.findMany(Array.from(allForeignIds))
+    : []
+  const refJsonById = new Map<string, ReturnType<BaseRecord['toJSON']>>()
+  for (const ref of refRecords) {
+    refJsonById.set(String(ref.id()), ref.toJSON())
+  }
+
+  for (const rec of records) {
+    const items = itemsByParent.get(String(rec.id)) ?? []
+    rec.params[property] = items
+    for (const it of items) {
+      const json = refJsonById.get(it.id)
+      if (json) rec.populated[`${property}.${it.id}`] = json
+    }
+  }
+}
+
 // ─── Hooks ───────────────────────────────────────────────────────────────────
 
 const buildReadHook = (relation: M2MRelation): HookFn =>
@@ -243,9 +325,8 @@ const buildReadHook = (relation: M2MRelation): HookFn =>
     const list = response as ListActionResponse
     const single = response as RecordActionResponse
     if (Array.isArray(list.records)) {
-      await Promise.all(
-        list.records.map((rec) => hydrateRecordParams(rec, admin, relation)),
-      )
+      // Batched: 2 SQL per relation regardless of page size.
+      await hydrateListRecords(list.records, admin, relation)
     } else if (single.record) {
       await hydrateRecordParams(single.record, admin, relation)
     }

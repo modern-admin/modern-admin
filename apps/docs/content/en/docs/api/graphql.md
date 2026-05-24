@@ -159,6 +159,80 @@ mutation {
 
 ---
 
+## Subscriptions
+
+For each resource the schema builder generates a `<resource>Events` subscription
+that streams `RealtimeEvent` values (`created` / `updated` / `deleted`) from the
+configured `IRealtimeBus`. Subscriptions are served over `graphql-ws` on the
+same `/admin/graphql` URL — clients upgrade an HTTP connection to a WebSocket
+and use the `graphql-transport-ws` subprotocol.
+
+Enable them by passing a bus to the module. Reuse the same bus you wire into
+`ModernAdminModule.forRoot({ realtime })` so events published by `invoke()`
+reach subscribed clients:
+
+```ts
+import { InMemoryRealtimeBus } from '@modern-admin/core'
+import { ModernAdminGraphqlModule } from '@modern-admin/graphql'
+import { ModernAdminModule } from '@modern-admin/nest'
+
+const realtime = new InMemoryRealtimeBus()
+
+@Module({
+  imports: [
+    ModernAdminModule.forRoot({ realtime, ... }),
+    ModernAdminGraphqlModule.forRoot({
+      subscriptions: { bus: realtime },
+      // path defaults to '/admin/graphql'
+    }),
+  ],
+})
+export class AppModule {}
+```
+
+For cross-instance fan-out, swap `InMemoryRealtimeBus` for
+`RedisRealtimeBus` from `@modern-admin/realtime` (same Redis pub/sub channel
+used by the legacy WebSocket gateway). The legacy gateway and GraphQL
+subscriptions can coexist on the same process.
+
+Schema shape:
+
+```graphql
+type RealtimeEvent {
+  kind: String!         # "created" | "updated" | "deleted"
+  resourceId: String!
+  recordId: String
+  record: JSON          # snapshot of params after the mutation (if available)
+  actorId: String
+  at: Float!            # ms since epoch
+}
+
+type Subscription {
+  usersEvents(kind: String): RealtimeEvent!
+  ordersEvents(kind: String): RealtimeEvent!
+  # ...one field per resource
+}
+```
+
+Example subscription:
+
+```graphql
+subscription {
+  usersEvents(kind: "updated") {
+    kind
+    recordId
+    record
+    at
+  }
+}
+```
+
+Calling `subscribe` against a `<resource>Events` field when no bus is
+configured fails immediately with an actionable error pointing at
+`ModernAdminGraphqlModule.forRoot({ subscriptions })`.
+
+---
+
 ## Custom scalars
 
 | Scalar | Used for | Serialisation |

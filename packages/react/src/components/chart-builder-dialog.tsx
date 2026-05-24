@@ -291,7 +291,12 @@ export function ChartBuilderDialog({
               </SelectTrigger>
               <SelectContent>
                 {resources.map((r) => (
-                  <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.name}
+                    {r.name !== r.id && (
+                      <span className="ml-1.5 text-xs text-muted-foreground">({r.id})</span>
+                    )}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>

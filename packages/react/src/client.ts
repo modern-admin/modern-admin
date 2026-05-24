@@ -12,6 +12,12 @@ import type {
   RecordResponse,
 } from './types.js'
 
+export interface AuthUiProps {
+  /** Enabled OAuth provider ids, e.g. ['google', 'github']. */
+  providers: string[]
+  emailAndPassword: boolean
+}
+
 interface StoredDemoSession {
   email: string
   password: string
@@ -173,20 +179,39 @@ export class AdminClient {
 
   /** Email/password login via the host-mounted Better Auth handler. The
    *  endpoint sets an http-only session cookie that subsequent requests
-   *  rely on (`credentials: 'include'`). After sign-in, a best-effort
-   *  call to the admin audit endpoint records the login event. */
+   *  rely on (`credentials: 'include'`). The audit-log entry is written
+   *  server-side by Better Auth's `session.create.after` hook, which
+   *  covers email/password, OAuth, passkey and api-key flows uniformly. */
   async login(email: string, password: string): Promise<void> {
     await this.request<unknown>(this.signInPath, {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     })
     this.writeDemoSession({ email, password })
-    // Best-effort: record the login event in the audit log. Session cookie
-    // is now set, so the guard on this endpoint resolves the principal.
-    try {
-      await this.requestOnce<unknown>('/admin/api/auth/login', { method: 'POST' })
-    } catch {
-      // Logging is non-critical — don't block the login flow.
+  }
+
+  /** Fetch public auth UI metadata: which social providers are enabled,
+   *  whether email/password login is active. The endpoint is unauthenticated. */
+  getAuthUiProps(): Promise<AuthUiProps> {
+    return this.requestOnce<AuthUiProps>('/admin/api/auth/ui-props')
+  }
+
+  /** Initiate an OAuth social-login flow. Calls Better Auth's sign-in/social
+   *  endpoint which returns a redirect URL, then navigates the browser there.
+   *  `callbackUrl` defaults to the current page so the app re-checks auth
+   *  after the provider redirects back. */
+  async loginSocial(provider: string, callbackUrl?: string): Promise<void> {
+    const resolved =
+      callbackUrl ?? (typeof window !== 'undefined' ? window.location.href : '/')
+    const data = await this.requestOnce<{ url?: string }>(
+      `${this.authBasePath}/sign-in/social`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ provider, callbackURL: resolved }),
+      },
+    )
+    if (data.url && typeof window !== 'undefined') {
+      window.location.href = data.url
     }
   }
 

@@ -125,6 +125,8 @@ export const ja: LocaleBundle = {
     'auth:title': 'サインイン',
     'auth:subtitle': 'メールアドレスとパスワードを入力してください',
     'auth:tagline': 'あらゆるスタックに対応したモダンな管理パネル。',
+    'auth:orContinueWith': 'または連携してログイン',
+    'auth:continueWith': '{provider}でログイン',
     'common:chooseFile': 'ファイルを選択',
     'common:chooseFiles': 'ファイルを選択',
     'common:dragAndDrop': 'ドラッグ＆ドロップまたは',

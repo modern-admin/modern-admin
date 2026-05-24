@@ -4,11 +4,10 @@ Universal, modern, performant admin panel framework — a spiritual successor to
 [AdminJS](https://adminjs.co/) built on a contemporary stack with a focus on
 DX, customization, persistent system stores, and production-grade caching.
 
-> Status: **feature-complete**, on the road to 1.0. Phases 0–8 done; Phase 9
-> (feature plugins, dashboards, system persistence, AI) is largely complete.
-> **533 unit tests** across 23 packages, all green; typecheck clean across
+> Status: **feature-complete**, on the road to 1.0. Phases 0–9 done.
+> **547 unit tests** across 23 packages, all green; typecheck clean across
 > all 29 workspace projects. Packages are released to GitHub Packages
-> (`@modern-admin/*`, currently `0.1.x`).
+> (`@modern-admin/*`, currently `1.0.x`).
 
 ## Why
 
@@ -19,8 +18,10 @@ weaknesses:
 - Outdated UI library and styling story → **shadcn/ui + Tailwind 4**
 - Weak component customization, slow runtime bundling → **Vite + dynamic
   imports, no runtime bundler**
-- No built-in caching → **Redis on the backend, TanStack Query on the
-  frontend, tag-based invalidation**
+- No built-in caching → **Redis on the backend (`@modern-admin/cache-redis`),
+  in-process `MemoryCacheProvider` in core, TanStack Query on the frontend;
+  per-resource TTL config, split `list`/`record` tag invalidation, in-flight
+  request deduplication**
 - No GraphQL → **REST + GraphQL (queries, mutations, DataLoader, uploads)
   in parallel over the same decorated resources**
 - Limited auth → **Better Auth (OAuth, passkeys, 2FA, magic links, API keys)**
@@ -127,9 +128,10 @@ Core defines abstractions (`BaseDatabase`, `BaseResource`, `BaseProperty`,
 `BaseRecord`), Zod-validated decorator options, an action system with
 `before`/`after` hooks, and **ports** for auth/cache/realtime/components,
 plus **subsystem stores** (action logs, history, webhooks, AI tasks,
-config, SQL cache) shared by feature plugins. Adapters, system packages,
-and transports plug in without leaking ORM- or framework-specific types
-into core.
+config, SQL cache) shared by feature plugins. Core also ships a
+`MemoryCacheProvider` (in-process, TTL + tag-index) and `NoopCacheProvider`
+for zero-config dev/test use. Adapters, system packages, and transports
+plug in without leaking ORM- or framework-specific types into core.
 
 ## Feature plugins
 
@@ -148,6 +150,16 @@ use `uuidv7()`, and any port the plugin needs (`ILogStore`,
 `IHistoryStore`, `IWebhookStore`, `IAiTaskStore`, …) has an in-memory
 default plus a real Prisma / Drizzle implementation in the `system-*`
 packages.
+
+Custom actions support an optional **`guard`** field — a confirmation
+prompt shown before the action fires. The `confirmGuard(action, dialogs)`
+helper in `@modern-admin/react` wires this across every invoke call-site
+(toolbar, bulk bar, row dropdown, show-page). Translations for
+`relatedResources` tab labels are now part of `metadataTranslations`
+(key = resource id), resolved via `localizeRelatedResources()`.
+
+The sidebar supports a configurable option to **show resource IDs**
+alongside resource names, useful during development.
 
 ## Getting started
 
@@ -168,7 +180,7 @@ bun run dev:web          # Vite SPA
 
 # Workspace-wide checks
 bun run typecheck        # 29 projects (excludes apps/docs)
-bun test                 # 533 unit tests, all green
+bun test                 # 547 unit tests, all green
 bun run e2e              # Playwright (PLAYWRIGHT_CHANNEL=chrome on Ubuntu 26.04)
 ```
 
@@ -226,12 +238,33 @@ bun create @modern-admin my-admin
   - [x] Global search, wizard create forms, AI assistant widget,
         audit-log page, revisions UI, admins & API keys, settings page
   - [x] `@modern-admin/web` pre-built SPA bundle
-  - [x] Changesets + CI release pipeline → GitHub Packages
-  - [ ] **GraphQL subscriptions** (`graphql-ws` + Redis pub/sub) — backlog
-  - [ ] **LICENSE file in repo root** — packages declare MIT, root needs it
-  - [ ] **1.0 stabilization** — currently published as `0.1.x`
-  - [ ] **Additional adapters** (MongoDB, TypeORM) — backlog
-  - [ ] **Server-side `IDashboardStore`** (currently localStorage only)
+  - [x] Changesets + CI release pipeline → GitHub Packages (`1.0.x`)
+  - [x] **Per-resource cache config** (`ResourceOptions.cache.http` /
+        `.action`) — TTL and on/off per resource; `resolveResourceCacheConfig()`
+        in core; split `listTag` / `recordTag` invalidation; in-flight dedup
+  - [x] **`MemoryCacheProvider`** — in-process TTL + tag-index cache in
+        `@modern-admin/core`; `NoopCacheProvider` for zero-config dev/tests
+  - [x] **`action.guard`** — optional confirmation prompt on custom actions;
+        `confirmGuard(action, dialogs)` helper in `@modern-admin/react` wired
+        across all invoke call-sites (toolbar, bulk bar, row dropdown, show-page)
+  - [x] **`relatedResources[].label` i18n** — `metadataTranslations.relatedResources`
+        map + `localizeRelatedResources()` in `@modern-admin/react`
+  - [x] **Show resource IDs in sidebar** — configurable option in admin config
+  - [x] E2e suites: caching API (`caching-api.spec.ts`) + filter sidebar
+        (`filter-sidebar-ui.spec.ts`)
+  - [x] **`ServerDashboardStore`** — server-backed `IDashboardStore` via
+        `GET/PUT /admin/api/dashboard`; requires `configStore` in
+        `ModernAdminModule.forRoot()`. `LocalStorageDashboardStore` remains
+        the default when no store is configured.
+  - [x] **GraphQL subscriptions** (`graphql-ws` over `ws`) — `<resource>Events`
+        subscription per resource backed by `IRealtimeBus`; enable via
+        `ModernAdminGraphqlModule.forRoot({ subscriptions: { bus } })`. Reuse
+        the same bus passed to `ModernAdminModule.forRoot({ realtime })` (e.g.
+        `RedisRealtimeBus`) for cross-instance fan-out. The legacy WS gateway
+        (`@modern-admin/realtime`) remains available for non-GraphQL clients.
+  - [x] **LICENSE file in repo root** — `LICENSE` (MIT) placed at the
+        repo root; `package.json` of every published package declares
+        `"license": "MIT"`; root `package.json` carries `"license": "MIT"`.
 
 Detailed plan: `/home/sergey/.claude/plans/fizzy-jumping-reef.md` (local).
 
@@ -279,6 +312,16 @@ bun run docs:dev
   translation boundary.
 - Action buttons get a leading `lucide-react` icon when semantics map
   cleanly (e.g. `Plus`=create, `Trash2`=delete, `Pencil`=edit, `Eye`=view).
+- Custom actions support `guard?: string` — a description shown in a confirm
+  dialog before the action fires. Use `confirmGuard(action, dialogs)` from
+  `@modern-admin/react` at every invoke call-site.
+- `relatedResources[].label` is translatable: set `relatedResources` map in
+  `metadataTranslations`; `localizeRelatedResources()` resolves the labels.
+- Cache behavior is configurable per resource via `ResourceOptions.cache`:
+  `{ action?: { enabled, ttl }, http?: { enabled, ttl } }`. Core ships
+  `MemoryCacheProvider` (TTL + tags) and `NoopCacheProvider`; Redis is in
+  `@modern-admin/cache-redis`. HTTP responses and action cache share the same
+  `listTag` / `recordTag` split for targeted invalidation.
 - Commit messages follow Angular Conventional Commits:
   `<type>(<scope>): <subject>` with a per-package body.
 - Releases run through **Changesets + `.github/workflows/release.yml`** —
@@ -286,5 +329,6 @@ bun run docs:dev
 
 ## License
 
-MIT (per `package.json` of each published package). A repo-root `LICENSE`
-file is on the backlog before 1.0.
+[MIT](./LICENSE). Every published `@modern-admin/*` package declares
+`"license": "MIT"` in its `package.json`; the canonical text lives in
+`LICENSE` at the repo root.

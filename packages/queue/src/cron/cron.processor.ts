@@ -40,7 +40,20 @@ export class CronProcessor extends WorkerHost {
     const lockKey = `${CRON_LOCK_PREFIX}${job.name}`
     const client = await this.cronQueue.client
 
-    const acquired = await client.set(lockKey, job.id!, 'EX', DEFAULT_CRON_LOCK_TTL, 'NX')
+    // Atomic SET NX EX via the generic `runCommand` escape hatch on
+    // bullmq's `IRedisClient`. We can't use `client.set(..., { EX, NX })`
+    // because bullmq 5.77+ abstracted the client surface and dropped the
+    // `NX` option from `set`'s typed overloads (it now only accepts
+    // `{ PX?, EX? }`). `runCommand` is the documented portable way to
+    // reach any Redis command across ioredis / node-redis / bun-redis
+    // adapters. Returns the raw bulk-string reply ("OK") or nil.
+    const acquired = (await client.runCommand('set', [
+      lockKey,
+      job.id!,
+      'EX',
+      DEFAULT_CRON_LOCK_TTL,
+      'NX',
+    ])) as string | null
     if (!acquired) {
       this.logger.warn(
         `Skipping "${job.name}" (jobId=${job.id}) — previous instance still running`,

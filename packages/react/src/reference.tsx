@@ -24,34 +24,60 @@ import {
 import { Check, ChevronsUpDown, ExternalLink, X } from 'lucide-react'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { useAdminClient } from './provider.js'
-import { useSearchRecords } from './hooks.js'
+import { useResource, useSearchRecords } from './hooks.js'
 import { useI18n } from './i18n.js'
 import { Link } from './router.js'
 
-/** Read-only badge that links to the referenced record's show page. */
+/** Read-only badge that links to the referenced record's show page.
+ *
+ * When `populated` is provided (e.g. supplied by the list/show endpoint via
+ * `record.populated[propertyPath]`) the title is rendered directly from it
+ * and no `show` request is fired — this is what prevents the N+1 fetch
+ * storm on list pages with reference columns. */
 export function ReferenceLink({
   resourceId,
   recordId,
   fallback,
   showIcon = false,
   className,
+  populated,
 }: {
   resourceId: string
   recordId: string | number | null | undefined
   fallback?: React.ReactNode
   showIcon?: boolean
   className?: string
+  populated?: { id?: string; title?: string } | null
 }): React.ReactElement | null {
   const client = useAdminClient()
   const id = recordId == null ? '' : String(recordId)
+  const hasPopulated = !!(id && populated && populated.title)
+  const referencedResource = useResource(resourceId)
+  // When the SPA config has been loaded, its `actions` list is already
+  // filtered against the current admin's access. Missing `show` = no
+  // permission to view the referenced record → render plain text instead
+  // of a clickable link. While the config is still loading (`undefined`)
+  // we default to "linkable" so the first paint matches the steady state
+  // for the common case.
+  const canShow =
+    referencedResource === undefined
+      ? true
+      : referencedResource.actions.some((a) => a.name === 'show')
   const { data } = useQuery({
     queryKey: ['modern-admin', resourceId, 'show', id],
     queryFn: () => client.show(resourceId, id),
-    enabled: !!id,
+    enabled: !!id && !hasPopulated && canShow,
     staleTime: 30_000,
   })
   if (!id) return (fallback as React.ReactElement | null) ?? null
-  const title = data?.record?.title || `#${id}`
+  const title = (hasPopulated ? populated!.title : data?.record?.title) || `#${id}`
+  if (!canShow) {
+    return (
+      <span className={cn('inline-flex items-center', className)}>
+        <Badge variant="secondary">{title}</Badge>
+      </span>
+    )
+  }
   return (
     <Link
       to={{ name: 'show', resourceId, recordId: id }}
@@ -178,24 +204,47 @@ export function ReferenceCombobox({
   )
 }
 
-/** Renders a list of comma-separated badge links, one per foreign key. */
+/** Renders a list of comma-separated badge links, one per foreign key.
+ *
+ * When `populated` + `populatedKeyPrefix` are provided, each item is looked up
+ * via `populated[`${prefix}.${id}`]` and threaded into its `<ReferenceLink>`
+ * to suppress per-row `show` requests. The key shape matches what the m2m
+ * feature's read-hook writes (see `packages/feature-m2m`) and what the list
+ * action's `populateReferences` helper writes for array references. */
 export function ReferenceLinkList({
   resourceId,
   recordIds,
   className,
+  populated,
+  populatedKeyPrefix,
 }: {
   resourceId: string
   recordIds: ReadonlyArray<string | number>
   className?: string
+  populated?: Record<string, unknown>
+  populatedKeyPrefix?: string
 }): React.ReactElement {
   if (!recordIds || recordIds.length === 0) {
     return <span className="text-muted-foreground">—</span>
   }
   return (
     <div className={cn('flex flex-wrap gap-1', className)}>
-      {recordIds.map((id) => (
-        <ReferenceLink key={String(id)} resourceId={resourceId} recordId={id} />
-      ))}
+      {recordIds.map((id) => {
+        const entry =
+          populated && populatedKeyPrefix
+            ? (populated[`${populatedKeyPrefix}.${id}`] as
+                | { id?: string; title?: string }
+                | undefined)
+            : undefined
+        return (
+          <ReferenceLink
+            key={String(id)}
+            resourceId={resourceId}
+            recordId={id}
+            populated={entry}
+          />
+        )
+      })}
     </div>
   )
 }

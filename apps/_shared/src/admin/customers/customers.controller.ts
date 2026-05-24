@@ -14,7 +14,6 @@
 // since plan/subscription is the relevant axis for app users, not
 // panel-access roles.
 
-import { aiFillFeature } from '@modern-admin/feature-ai-fill'
 import { passwordsFeature } from '@modern-admin/feature-password'
 import {
   Action,
@@ -42,27 +41,6 @@ import type { CustomerRow } from '../types.js'
       },
       // Bun ships argon2id natively — no extra dependency required.
       hash: (plain) => Bun.password.hash(plain, 'argon2id'),
-    }),
-    // AI fill from a business card or contact profile screenshot.
-    // Upload a photo → the model extracts name, email, phone, website and bio.
-    aiFillFeature({
-      prompt:
-        'This is a business card or contact profile screenshot. ' +
-        'Extract the person\'s contact details as printed on the card.',
-      fields: {
-        name:       { hint: 'Full name as printed on the card' },
-        email:      { hint: 'Email address' },
-        phone:      { hint: 'Phone number, include country code if visible' },
-        websiteUrl: { hint: 'Website or LinkedIn/social URL if present' },
-        bio:        { hint: 'Job title, company name, or short description if present' },
-        // Not readable from a photo — skip these fields entirely.
-        tier:        { exclude: true },
-        score:       { exclude: true },
-        avatarUrl:   { exclude: true },
-        birthday:    { exclude: true },
-        lastLoginAt: { exclude: true },
-        createdAt:   { exclude: true },
-      },
     }),
   ],
 })

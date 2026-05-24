@@ -4,7 +4,7 @@ import {
   Type,
   type Provider,
 } from '@nestjs/common'
-import { DiscoveryModule } from '@nestjs/core'
+import { APP_INTERCEPTOR, DiscoveryModule } from '@nestjs/core'
 import { QueueModule } from '@modern-admin/queue'
 import {
   ModernAdmin,
@@ -234,6 +234,9 @@ export class ModernAdminModule {
         ModernAdminBootstrapService,
         ModernAdminAuthGuard,
         ModernAdminCacheInterceptor,
+        // Apply the cache interceptor to every route. It's GET-only and
+        // resource-scoped — non-admin paths and unknown resources bypass.
+        { provide: APP_INTERCEPTOR, useExisting: ModernAdminCacheInterceptor },
       ],
       exports: [
         MODERN_ADMIN,
@@ -335,6 +338,7 @@ export class ModernAdminModule {
         ModernAdminBootstrapService,
         ModernAdminAuthGuard,
         ModernAdminCacheInterceptor,
+        { provide: APP_INTERCEPTOR, useExisting: ModernAdminCacheInterceptor },
       ],
       exports: [
         MODERN_ADMIN,

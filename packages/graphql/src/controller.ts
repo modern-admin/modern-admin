@@ -23,10 +23,10 @@ import {
   type ExecutionResult,
 } from 'graphql'
 import { MODERN_ADMIN } from '@modern-admin/nest'
-import type { ModernAdmin } from '@modern-admin/core'
+import type { IRealtimeBus, ModernAdmin } from '@modern-admin/core'
 import { ModernAdminGraphqlSchemaHolder } from './schema-holder.js'
 import { createContext } from './schema-builder.js'
-import { GRAPHQL_OPTIONS } from './tokens.js'
+import { GRAPHQL_OPTIONS, GRAPHQL_REALTIME_BUS } from './tokens.js'
 import { SANDBOX_HTML } from './sandbox-html.js'
 import type { ResolvedGraphqlOptions } from './module.js'
 import { parseMultipartGraphqlRequest } from './multipart.js'
@@ -48,6 +48,7 @@ export class GraphqlController {
     @Inject(MODERN_ADMIN) private readonly admin: ModernAdmin,
     private readonly schemaHolder: ModernAdminGraphqlSchemaHolder,
     @Inject(GRAPHQL_OPTIONS) private readonly options: ResolvedGraphqlOptions,
+    @Inject(GRAPHQL_REALTIME_BUS) private readonly bus: IRealtimeBus | null,
   ) {}
 
   @Get()
@@ -113,7 +114,7 @@ export class GraphqlController {
     return execute({
       schema,
       document,
-      contextValue: createContext(this.admin, req.currentAdmin),
+      contextValue: createContext(this.admin, req.currentAdmin, this.bus ?? undefined),
       variableValues: variables,
       operationName,
     })

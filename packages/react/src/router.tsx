@@ -49,6 +49,11 @@ export type Route =
   | { name: 'new'; resourceId: string }
   /** Settings hub. Sub-section selected via `section` (e.g. 'api-keys'). */
   | { name: 'settings'; section?: string }
+  /**
+   * Extension page registered by a Pro plugin via `registerExtensionRoute`.
+   * Renders at `/ext/<key>` inside the authenticated admin shell.
+   */
+  | { name: 'extension'; key: string }
 
 const parseListQuery = (search: string): ListQueryState | undefined => {
   if (!search) return undefined
@@ -104,6 +109,9 @@ export const parseLocation = (pathname: string, searchStr: string): Route => {
     const section = parts[1] ? decodeURIComponent(parts[1]) : undefined
     return section ? { name: 'settings', section } : { name: 'settings' }
   }
+  if (parts[0] === 'ext' && parts[1]) {
+    return { name: 'extension', key: decodeURIComponent(parts[1]) }
+  }
   if (parts[0] === 'resources' && parts[1]) {
     const resourceId = decodeURIComponent(parts[1])
     if (parts[2] === 'new') return { name: 'new', resourceId }
@@ -135,6 +143,8 @@ export const buildHref = (route: Route): string => {
       return `/resources/${encodeURIComponent(route.resourceId)}/new`
     case 'settings':
       return route.section ? `/settings/${encodeURIComponent(route.section)}` : '/settings'
+    case 'extension':
+      return `/ext/${encodeURIComponent(route.key)}`
   }
 }
 

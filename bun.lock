@@ -23,7 +23,6 @@
         "@better-auth/api-key": "1.6.9",
         "@modern-admin/auth-better-auth": "workspace:*",
         "@modern-admin/core": "workspace:*",
-        "@modern-admin/feature-ai-fill": "workspace:*",
         "@modern-admin/feature-json-by-key": "workspace:*",
         "@modern-admin/feature-m2m": "workspace:*",
         "@modern-admin/feature-password": "workspace:*",
@@ -51,10 +50,8 @@
         "@modern-admin/auth-better-auth": "workspace:*",
         "@modern-admin/cache-redis": "workspace:*",
         "@modern-admin/core": "workspace:*",
-        "@modern-admin/feature-ai-fill": "workspace:*",
         "@modern-admin/feature-history": "workspace:*",
         "@modern-admin/feature-json-by-key": "workspace:*",
-        "@modern-admin/feature-logging": "workspace:*",
         "@modern-admin/feature-m2m": "workspace:*",
         "@modern-admin/feature-password": "workspace:*",
         "@modern-admin/feature-upload": "workspace:*",
@@ -93,11 +90,8 @@
         "@modern-admin/auth-better-auth": "workspace:*",
         "@modern-admin/cache-redis": "workspace:*",
         "@modern-admin/core": "workspace:*",
-        "@modern-admin/feature-ai-fill": "workspace:*",
         "@modern-admin/feature-history": "workspace:*",
-        "@modern-admin/feature-logging": "workspace:*",
         "@modern-admin/feature-upload": "workspace:*",
-        "@modern-admin/feature-webhooks": "workspace:*",
         "@modern-admin/nest": "workspace:*",
         "@modern-admin/queue": "workspace:*",
         "@modern-admin/system-prisma": "workspace:*",
@@ -112,6 +106,49 @@
         "@prisma/internals": "^7.8.0",
         "better-auth": "1.6.9",
         "bullmq": "^5.76.6",
+        "dotenv": "^17.4.2",
+        "dotenv-expand": "^13.0.0",
+        "ioredis": "^5.10.1",
+        "reflect-metadata": "^0.2.2",
+        "rxjs": "^7.8.2",
+      },
+      "devDependencies": {
+        "@modern-admin/tsconfig": "workspace:*",
+        "@types/bun": "^1.3.13",
+        "prisma": "^7.8.0",
+        "typescript": "^6.0.3",
+      },
+    },
+    "apps/api-prisma-pro": {
+      "name": "@modern-admin-pro/app-api-prisma",
+      "version": "0.0.0",
+      "dependencies": {
+        "@better-auth/api-key": "1.6.9",
+        "@modern-admin-pro/feature-ai-fill": "workspace:*",
+        "@modern-admin-pro/feature-logging": "workspace:*",
+        "@modern-admin-pro/feature-webhooks": "workspace:*",
+        "@modern-admin/adapter-prisma": "workspace:*",
+        "@modern-admin/app-shared": "workspace:*",
+        "@modern-admin/auth-better-auth": "workspace:*",
+        "@modern-admin/cache-redis": "workspace:*",
+        "@modern-admin/core": "workspace:*",
+        "@modern-admin/feature-history": "workspace:*",
+        "@modern-admin/feature-password": "workspace:*",
+        "@modern-admin/feature-upload": "workspace:*",
+        "@modern-admin/nest": "workspace:*",
+        "@modern-admin/queue": "workspace:*",
+        "@modern-admin/system-prisma": "workspace:*",
+        "@modern-admin/web": "workspace:*",
+        "@nestjs/bullmq": "^11.0.4",
+        "@nestjs/common": "^11.1.19",
+        "@nestjs/core": "^11.1.19",
+        "@nestjs/platform-express": "^11.1.19",
+        "@prisma/adapter-pg": "^7.8.0",
+        "@prisma/client": "^7.8.0",
+        "@prisma/client-runtime-utils": "^7.8.0",
+        "@prisma/internals": "^7.8.0",
+        "better-auth": "1.6.9",
+        "bullmq": "^5.77.2",
         "dotenv": "^17.4.2",
         "dotenv-expand": "^13.0.0",
         "ioredis": "^5.10.1",
@@ -253,38 +290,6 @@
         "typescript": "^6.0.3",
       },
     },
-    "packages/feature-ai-fill": {
-      "name": "@modern-admin/feature-ai-fill",
-      "version": "1.0.0",
-      "dependencies": {
-        "@modern-admin/core": "workspace:*",
-        "@nestjs/common": "^11.1.19",
-        "@nestjs/core": "^11.1.19",
-        "@nestjs/throttler": "^6.5.0",
-        "@openrouter/ai-sdk-provider": "^2.9.0",
-        "ai": "^6.0.177",
-        "busboy": "^1.6.0",
-        "reflect-metadata": "^0.2.2",
-        "rxjs": "^7.8.2",
-        "zod": "^4.0.0",
-      },
-      "devDependencies": {
-        "@modern-admin/nest": "workspace:*",
-        "@modern-admin/tsconfig": "workspace:*",
-        "@nestjs/swagger": "^11.4.2",
-        "@types/bun": "^1.3.13",
-        "@types/busboy": "^1.5.4",
-        "typescript": "^6.0.3",
-      },
-      "peerDependencies": {
-        "@modern-admin/nest": "workspace:*",
-        "@nestjs/swagger": "^11.4.2",
-      },
-      "optionalPeers": [
-        "@modern-admin/nest",
-        "@nestjs/swagger",
-      ],
-    },
     "packages/feature-history": {
       "name": "@modern-admin/feature-history",
       "version": "1.0.0",
@@ -316,18 +321,6 @@
       "optionalPeers": [
         "@modern-admin/feature-upload",
       ],
-    },
-    "packages/feature-logging": {
-      "name": "@modern-admin/feature-logging",
-      "version": "1.0.0",
-      "dependencies": {
-        "@modern-admin/core": "workspace:*",
-      },
-      "devDependencies": {
-        "@modern-admin/tsconfig": "workspace:*",
-        "@types/bun": "^1.3.13",
-        "typescript": "^6.0.3",
-      },
     },
     "packages/feature-m2m": {
       "name": "@modern-admin/feature-m2m",
@@ -390,27 +383,6 @@
         "graphql",
       ],
     },
-    "packages/feature-webhooks": {
-      "name": "@modern-admin/feature-webhooks",
-      "version": "1.0.0",
-      "dependencies": {
-        "@modern-admin/core": "workspace:*",
-        "@modern-admin/queue": "workspace:*",
-      },
-      "devDependencies": {
-        "@modern-admin/tsconfig": "workspace:*",
-        "@nestjs/bullmq": "^11.0.4",
-        "@nestjs/common": "^11.1.19",
-        "@types/bun": "^1.3.13",
-        "bullmq": "^5.76.6",
-        "typescript": "^6.0.3",
-      },
-      "peerDependencies": {
-        "@nestjs/bullmq": "^11.0.4",
-        "@nestjs/common": "^11.0.0",
-        "bullmq": "^5.0.0",
-      },
-    },
     "packages/graphql": {
       "name": "@modern-admin/graphql",
       "version": "1.0.0",
@@ -419,23 +391,40 @@
         "@modern-admin/nest": "workspace:*",
         "busboy": "^1.6.0",
         "dataloader": "^2.2.3",
+        "graphql-ws": "^6.0.8",
+        "ws": "^8.21.0",
       },
       "devDependencies": {
         "@modern-admin/tsconfig": "workspace:*",
         "@nestjs/common": "^11.1.19",
+        "@nestjs/core": "^11.1.19",
         "@types/bun": "^1.3.13",
         "@types/busboy": "^1.5.4",
+        "@types/ws": "^8.18.1",
         "graphql": "^16.11.0",
         "typescript": "^6.0.3",
       },
       "peerDependencies": {
         "@nestjs/common": "^11.0.0",
+        "@nestjs/core": "^11.0.0",
         "graphql": "^16.0.0",
       },
     },
     "packages/i18n": {
       "name": "@modern-admin/i18n",
       "version": "1.0.0",
+      "devDependencies": {
+        "@modern-admin/tsconfig": "workspace:*",
+        "@types/bun": "^1.3.13",
+        "typescript": "^6.0.3",
+      },
+    },
+    "packages/license": {
+      "name": "@modern-admin/license",
+      "version": "1.0.0",
+      "dependencies": {
+        "jose": "^6.1.0",
+      },
       "devDependencies": {
         "@modern-admin/tsconfig": "workspace:*",
         "@types/bun": "^1.3.13",
@@ -449,6 +438,7 @@
         "@modern-admin/core": "workspace:*",
         "@modern-admin/i18n": "workspace:*",
         "@modern-admin/queue": "workspace:*",
+        "@modern-admin/telemetry": "workspace:*",
         "@nestjs/bullmq": "^11.0.4",
         "@nestjs/common": "^11.1.19",
         "@nestjs/core": "^11.1.19",
@@ -487,7 +477,7 @@
         "@nestjs/core": "^11.1.19",
         "@nestjs/testing": "^11.1.19",
         "@types/bun": "^1.3.13",
-        "bullmq": "^5.76.6",
+        "bullmq": "^5.77.2",
         "reflect-metadata": "^0.2.2",
         "rxjs": "^7.8.2",
         "typescript": "^6.0.3",
@@ -588,6 +578,19 @@
         "@prisma/client",
       ],
     },
+    "packages/telemetry": {
+      "name": "@modern-admin/telemetry",
+      "version": "1.0.0",
+      "devDependencies": {
+        "@modern-admin/core": "workspace:*",
+        "@modern-admin/tsconfig": "workspace:*",
+        "@types/bun": "^1.3.13",
+        "typescript": "^6.0.3",
+      },
+      "peerDependencies": {
+        "@modern-admin/core": "workspace:*",
+      },
+    },
     "packages/tsconfig": {
       "name": "@modern-admin/tsconfig",
       "version": "0.1.0",
@@ -669,6 +672,85 @@
       "peerDependencies": {
         "react": "^19.2.6",
         "react-dom": "^19.2.6",
+      },
+    },
+    "pro-mirror/apps/e2e": {
+      "name": "@modern-admin-pro/app-e2e",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@modern-admin/tsconfig": "workspace:*",
+        "@playwright/test": "^1.50.0",
+        "@types/bun": "^1.3.13",
+        "@types/node": "^22.10.0",
+        "typescript": "^6.0.3",
+      },
+    },
+    "pro-mirror/packages/feature-ai-fill": {
+      "name": "@modern-admin-pro/feature-ai-fill",
+      "version": "1.0.0",
+      "dependencies": {
+        "@modern-admin/core": "^1.0.0",
+        "@modern-admin/license": "^1.0.0",
+        "@nestjs/common": "^11.1.19",
+        "@nestjs/core": "^11.1.19",
+        "@nestjs/throttler": "^6.5.0",
+        "@openrouter/ai-sdk-provider": "^2.9.0",
+        "ai": "^6.0.177",
+        "busboy": "^1.6.0",
+        "reflect-metadata": "^0.2.2",
+        "rxjs": "^7.8.2",
+        "zod": "^4.0.0",
+      },
+      "devDependencies": {
+        "@modern-admin/nest": "^1.0.0",
+        "@modern-admin/tsconfig": "^0.1.0",
+        "@nestjs/swagger": "^11.4.2",
+        "@types/bun": "^1.3.13",
+        "@types/busboy": "^1.5.4",
+        "typescript": "^6.0.3",
+      },
+      "peerDependencies": {
+        "@modern-admin/nest": "^1.0.0",
+        "@nestjs/swagger": "^11.4.2",
+      },
+      "optionalPeers": [
+        "@modern-admin/nest",
+        "@nestjs/swagger",
+      ],
+    },
+    "pro-mirror/packages/feature-logging": {
+      "name": "@modern-admin-pro/feature-logging",
+      "version": "1.0.0",
+      "dependencies": {
+        "@modern-admin/core": "^1.0.0",
+        "@modern-admin/license": "^1.0.0",
+      },
+      "devDependencies": {
+        "@modern-admin/tsconfig": "^0.1.0",
+        "@types/bun": "^1.3.13",
+        "typescript": "^6.0.3",
+      },
+    },
+    "pro-mirror/packages/feature-webhooks": {
+      "name": "@modern-admin-pro/feature-webhooks",
+      "version": "1.0.0",
+      "dependencies": {
+        "@modern-admin/core": "^1.0.0",
+        "@modern-admin/license": "^1.0.0",
+        "@modern-admin/queue": "^0.1.0",
+      },
+      "devDependencies": {
+        "@modern-admin/tsconfig": "^0.1.0",
+        "@nestjs/bullmq": "^11.0.4",
+        "@nestjs/common": "^11.1.19",
+        "@types/bun": "^1.3.13",
+        "bullmq": "^5.76.6",
+        "typescript": "^6.0.3",
+      },
+      "peerDependencies": {
+        "@nestjs/bullmq": "^11.0.4",
+        "@nestjs/common": "^11.0.0",
+        "bullmq": "^5.0.0",
       },
     },
   },
@@ -901,6 +983,16 @@
 
     "@microsoft/tsdoc": ["@microsoft/tsdoc@0.16.0", "", {}, "sha512-xgAyonlVVS+q7Vc7qLW0UrJU7rSFcETRWsqdXZtjzRU8dF+6CkozTK4V4y1LwOX7j8r/vHphjDeMeGI4tNGeGA=="],
 
+    "@modern-admin-pro/app-api-prisma": ["@modern-admin-pro/app-api-prisma@workspace:apps/api-prisma-pro"],
+
+    "@modern-admin-pro/app-e2e": ["@modern-admin-pro/app-e2e@workspace:pro-mirror/apps/e2e"],
+
+    "@modern-admin-pro/feature-ai-fill": ["@modern-admin-pro/feature-ai-fill@workspace:pro-mirror/packages/feature-ai-fill"],
+
+    "@modern-admin-pro/feature-logging": ["@modern-admin-pro/feature-logging@workspace:pro-mirror/packages/feature-logging"],
+
+    "@modern-admin-pro/feature-webhooks": ["@modern-admin-pro/feature-webhooks@workspace:pro-mirror/packages/feature-webhooks"],
+
     "@modern-admin/adapter-drizzle": ["@modern-admin/adapter-drizzle@workspace:packages/adapter-drizzle"],
 
     "@modern-admin/adapter-prisma": ["@modern-admin/adapter-prisma@workspace:packages/adapter-prisma"],
@@ -923,13 +1015,9 @@
 
     "@modern-admin/create": ["@modern-admin/create@workspace:packages/create"],
 
-    "@modern-admin/feature-ai-fill": ["@modern-admin/feature-ai-fill@workspace:packages/feature-ai-fill"],
-
     "@modern-admin/feature-history": ["@modern-admin/feature-history@workspace:packages/feature-history"],
 
     "@modern-admin/feature-json-by-key": ["@modern-admin/feature-json-by-key@workspace:packages/feature-json-by-key"],
-
-    "@modern-admin/feature-logging": ["@modern-admin/feature-logging@workspace:packages/feature-logging"],
 
     "@modern-admin/feature-m2m": ["@modern-admin/feature-m2m@workspace:packages/feature-m2m"],
 
@@ -937,11 +1025,11 @@
 
     "@modern-admin/feature-upload": ["@modern-admin/feature-upload@workspace:packages/feature-upload"],
 
-    "@modern-admin/feature-webhooks": ["@modern-admin/feature-webhooks@workspace:packages/feature-webhooks"],
-
     "@modern-admin/graphql": ["@modern-admin/graphql@workspace:packages/graphql"],
 
     "@modern-admin/i18n": ["@modern-admin/i18n@workspace:packages/i18n"],
+
+    "@modern-admin/license": ["@modern-admin/license@workspace:packages/license"],
 
     "@modern-admin/nest": ["@modern-admin/nest@workspace:packages/nest"],
 
@@ -954,6 +1042,8 @@
     "@modern-admin/system-drizzle": ["@modern-admin/system-drizzle@workspace:packages/system-drizzle"],
 
     "@modern-admin/system-prisma": ["@modern-admin/system-prisma@workspace:packages/system-prisma"],
+
+    "@modern-admin/telemetry": ["@modern-admin/telemetry@workspace:packages/telemetry"],
 
     "@modern-admin/tsconfig": ["@modern-admin/tsconfig@workspace:packages/tsconfig"],
 
@@ -1501,7 +1591,7 @@
 
     "buffer-from": ["buffer-from@1.1.2", "", {}, "sha512-E+XQCRwSbaaiChtv6k6Dwgc+bx+Bs6vuKJHHl5kox/BaKbhiXzqQOwK4cO22yElGp2OCmjwVhT3HmxgyPGnJfQ=="],
 
-    "bullmq": ["bullmq@5.76.6", "", { "dependencies": { "cron-parser": "4.9.0", "ioredis": "5.10.1", "msgpackr": "2.0.1", "node-abort-controller": "3.1.1", "semver": "7.7.4", "tslib": "2.8.1" } }, "sha512-vlmL3B3NVMRy6se3c7jPHn1Nhqxrg7+wlv1t3XAQFBYZNJDMLP0OO5x2AX5ca7DAuS1SU/C+VfYi+NHVoFK1QQ=="],
+    "bullmq": ["bullmq@5.77.2", "", { "dependencies": { "cron-parser": "4.9.0", "ioredis": "5.10.1", "msgpackr": "2.0.1", "node-abort-controller": "3.1.1", "semver": "7.8.0", "tslib": "2.8.1" }, "peerDependencies": { "redis": ">=5.0.0" }, "optionalPeers": ["redis"] }, "sha512-3I3LdL8vR8/hetgPZghwFvsxVFhRJdUfhjeA4kXTQtHehRwQRTndIVzxOBwo/Bv+bP2uBzHJo894Or7qAhbwDw=="],
 
     "bun-types": ["bun-types@1.3.13", "", { "dependencies": { "@types/node": "*" } }, "sha512-QXKeHLlOLqQX9LgYaHJfzdBaV21T63HhFJnvuRCcjZiaUDpbs5ED1MgxbMra71CsryN/1dAoXuJJJwIv/2drVA=="],
 
@@ -1796,6 +1886,8 @@
     "graphmatch": ["graphmatch@1.1.1", "", {}, "sha512-5ykVn/EXM1hF0XCaWh05VbYvEiOL2lY1kBxZtaYsyvjp7cmWOU1XsAdfQBwClraEofXDT197lFbXOEVMHpvQOg=="],
 
     "graphql": ["graphql@16.14.0", "", {}, "sha512-BBvQ/406p+4CZbTpCbVPSxfzrZrbnuWSP1ELYgyS6B+hNeKzgrdB4JczCa5VZUBQrDa9hUngm0KnexY6pJRN5Q=="],
+
+    "graphql-ws": ["graphql-ws@6.0.8", "", { "peerDependencies": { "@fastify/websocket": "^10 || ^11", "crossws": "~0.3", "graphql": "^15.10.1 || ^16", "ws": "^8" }, "optionalPeers": ["@fastify/websocket", "crossws", "ws"] }, "sha512-m3EOaNsUBXwAnkBWbzPfe0Nq8pXUfxsWnolC54sru3FzHvhTZL0Ouf/BoQsaGAXqM+YPerXOJ47BUnmgmoupCw=="],
 
     "has-flag": ["has-flag@4.0.0", "", {}, "sha512-EykJT/Q1KjTWctppgIAgfSO0tKVuZUjhgMr17kqTumMl6Afv3EISleU7qZUzoXDFTAHTDC4NOoG/ZxU3EvlMPQ=="],
 
@@ -2419,7 +2511,7 @@
 
     "wrappy": ["wrappy@1.0.2", "", {}, "sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ=="],
 
-    "ws": ["ws@8.18.3", "", { "peerDependencies": { "bufferutil": "^4.0.1", "utf-8-validate": ">=5.0.2" }, "optionalPeers": ["bufferutil", "utf-8-validate"] }, "sha512-PEIGCY5tSlUt50cqyMXfCzX+oOPqN0vuGqWzbcJ2xvnkzkq46oOpz7dQaTDBdfICb4N14+GARUDw2XV2N4tvzg=="],
+    "ws": ["ws@8.21.0", "", { "peerDependencies": { "bufferutil": "^4.0.1", "utf-8-validate": ">=5.0.2" }, "optionalPeers": ["bufferutil", "utf-8-validate"] }, "sha512-Vsp28b7DRcimFQvrqu2Wek3z1iYxDCWqHYB8Qsnk/S4RfaCQzPGPyBNuVjJV3cd6UiKtUtp6sNM77gWvzcCH+g=="],
 
     "xtend": ["xtend@4.0.2", "", {}, "sha512-LKYU1iAXJXUgAXn9URjiu+MWhyUXHsvfp7mcuYm9dSUKK0/CjtrUwFAxD82/mCWbtLsGjFIad0wIsod4zrTAEQ=="],
 
@@ -2456,6 +2548,10 @@
     "@manypkg/get-packages/@changesets/types": ["@changesets/types@4.1.0", "", {}, "sha512-LDQvVDv5Kb50ny2s25Fhm3d9QSZimsoUGBsUioj6MC3qbMUCuC8GPIvk/M6IvXx3lYhAs0lwWUQLb+VIEUCECw=="],
 
     "@manypkg/get-packages/fs-extra": ["fs-extra@8.1.0", "", { "dependencies": { "graceful-fs": "^4.2.0", "jsonfile": "^4.0.0", "universalify": "^0.1.0" } }, "sha512-yhlQgA6mnOJUKOsRUFsgJdQCvkKhcz8tlZG5HBQfReYZy46OwLcY+Zia0mtdHsOo9y/hP+CxMN0TU9QxoOtG4g=="],
+
+    "@modern-admin/app-api/bullmq": ["bullmq@5.76.6", "", { "dependencies": { "cron-parser": "4.9.0", "ioredis": "5.10.1", "msgpackr": "2.0.1", "node-abort-controller": "3.1.1", "semver": "7.7.4", "tslib": "2.8.1" } }, "sha512-vlmL3B3NVMRy6se3c7jPHn1Nhqxrg7+wlv1t3XAQFBYZNJDMLP0OO5x2AX5ca7DAuS1SU/C+VfYi+NHVoFK1QQ=="],
+
+    "@modern-admin/app-api-prisma/bullmq": ["bullmq@5.76.6", "", { "dependencies": { "cron-parser": "4.9.0", "ioredis": "5.10.1", "msgpackr": "2.0.1", "node-abort-controller": "3.1.1", "semver": "7.7.4", "tslib": "2.8.1" } }, "sha512-vlmL3B3NVMRy6se3c7jPHn1Nhqxrg7+wlv1t3XAQFBYZNJDMLP0OO5x2AX5ca7DAuS1SU/C+VfYi+NHVoFK1QQ=="],
 
     "@prisma/dev/@prisma/get-platform": ["@prisma/get-platform@7.2.0", "", { "dependencies": { "@prisma/debug": "7.2.0" } }, "sha512-k1V0l0Td1732EHpAfi2eySTezyllok9dXb6UQanajkJQzPUGi3vO2z7jdkz67SypFTdmbnyGYxvEvYZdZsMAVA=="],
 
@@ -2531,6 +2627,8 @@
 
     "@typescript-eslint/visitor-keys/eslint-visitor-keys": ["eslint-visitor-keys@5.0.1", "", {}, "sha512-tD40eHxA35h0PEIZNeIjkHoDR4YjjJp34biM0mDvplBe//mB+IHCqHDGV7pxF+7MklTvighcCPPZC7ynWyjdTA=="],
 
+    "bullmq/semver": ["semver@7.8.0", "", { "bin": { "semver": "bin/semver.js" } }, "sha512-AcM7dV/5ul4EekoQ29Agm5vri8JNqRyj39o0qpX6vDF2GZrtutZl5RwgD1XnZjiTAfncsJhMI48QQH3sN87YNA=="],
+
     "bun-types/@types/node": ["@types/node@25.6.0", "", { "dependencies": { "undici-types": "~7.19.0" } }, "sha512-+qIYRKdNYJwY3vRCZMdJbPLJAtGjQBudzZzdzwQYkEPQd+PJGixUL5QfvCLDaULoLv+RhT3LDkwEfKaAkgSmNQ=="],
 
     "c12/jiti": ["jiti@2.7.0", "", { "bin": { "jiti": "lib/jiti-cli.mjs" } }, "sha512-AC/7JofJvZGrrneWNaEnJeOLUx+JlGt7tNa0wZiRPT4MY1wmfKjt2+6O2p2uz2+skll8OZZmJMNqeke7kKbNgQ=="],
@@ -2538,6 +2636,8 @@
     "engine.io/@types/node": ["@types/node@25.6.0", "", { "dependencies": { "undici-types": "~7.19.0" } }, "sha512-+qIYRKdNYJwY3vRCZMdJbPLJAtGjQBudzZzdzwQYkEPQd+PJGixUL5QfvCLDaULoLv+RhT3LDkwEfKaAkgSmNQ=="],
 
     "engine.io/accepts": ["accepts@1.3.8", "", { "dependencies": { "mime-types": "~2.1.34", "negotiator": "0.6.3" } }, "sha512-PYAthTa2m2VKxuvSD3DPC/Gy+U+sOA1LAuT8mkmRuvw+NACSaeXEQ+NHcVF7rONl6qcaxV3Uuemwawk+7+SJLw=="],
+
+    "engine.io/ws": ["ws@8.18.3", "", { "peerDependencies": { "bufferutil": "^4.0.1", "utf-8-validate": ">=5.0.2" }, "optionalPeers": ["bufferutil", "utf-8-validate"] }, "sha512-PEIGCY5tSlUt50cqyMXfCzX+oOPqN0vuGqWzbcJ2xvnkzkq46oOpz7dQaTDBdfICb4N14+GARUDw2XV2N4tvzg=="],
 
     "fast-glob/glob-parent": ["glob-parent@5.1.2", "", { "dependencies": { "is-glob": "^4.0.1" } }, "sha512-AOIgSQCepiJYwP3ARnGx+5VnTu2HBYdzbGP45eLw1vr3zB3vZLeyed1sC9hnbcOc9/SrMyM5RPQrkGz4aS9Zow=="],
 
@@ -2566,6 +2666,8 @@
     "rolldown/@rolldown/pluginutils": ["@rolldown/pluginutils@1.0.0-rc.17", "", {}, "sha512-n8iosDOt6Ig1UhJ2AYqoIhHWh/isz0xpicHTzpKBeotdVsTEcxsSA/i3EVM7gQAj0rU27OLAxCjzlj15IWY7bg=="],
 
     "socket.io/accepts": ["accepts@1.3.8", "", { "dependencies": { "mime-types": "~2.1.34", "negotiator": "0.6.3" } }, "sha512-PYAthTa2m2VKxuvSD3DPC/Gy+U+sOA1LAuT8mkmRuvw+NACSaeXEQ+NHcVF7rONl6qcaxV3Uuemwawk+7+SJLw=="],
+
+    "socket.io-adapter/ws": ["ws@8.18.3", "", { "peerDependencies": { "bufferutil": "^4.0.1", "utf-8-validate": ">=5.0.2" }, "optionalPeers": ["bufferutil", "utf-8-validate"] }, "sha512-PEIGCY5tSlUt50cqyMXfCzX+oOPqN0vuGqWzbcJ2xvnkzkq46oOpz7dQaTDBdfICb4N14+GARUDw2XV2N4tvzg=="],
 
     "@manypkg/find-root/find-up/locate-path": ["locate-path@5.0.0", "", { "dependencies": { "p-locate": "^4.1.0" } }, "sha512-t7hw9pI+WvuwNJXwk5zVHpyhIqzg2qTlklJOf0mVxGSbe3Fp2VieZcduNYjaLDoy6p9uGpQEGWG87WpMKlNq8g=="],
 

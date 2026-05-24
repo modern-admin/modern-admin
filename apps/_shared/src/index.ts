@@ -16,6 +16,7 @@
 
 export {
   buildBetterAuth,
+  setAuditLogStore,
   type BuildBetterAuthOptions,
   type BuiltBetterAuth,
 } from './auth/build-better-auth.js'

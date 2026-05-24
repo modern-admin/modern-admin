@@ -233,19 +233,57 @@ test.describe('i18n — resource metadata translations', () => {
 })
 
 test.describe('i18n — list page property labels', () => {
-  test('column header for posts.title switches between en and ru', async ({ page }) => {
+  test('posts: column headers switch between en and ru', async ({ page }) => {
     await page.goto('/resources/posts')
-    // EN — `resources.posts.properties.title.label`.
-    await expect(
-      page.getByRole('columnheader', { name: /Post title/ }).first(),
-    ).toBeVisible({ timeout: 15_000 })
+    await expect(page.locator('tbody tr').first()).toBeVisible({ timeout: 15_000 })
+
+    // EN column headers from `resources.posts.properties.*.label`.
+    await expect(page.getByRole('columnheader', { name: 'Post title' })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: 'Excerpt' })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: 'Author' })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: 'Category' })).toBeVisible()
 
     await switchLocale(page, 'ru')
 
-    // RU — `resources.posts.properties.title.label` = "Заголовок поста".
-    await expect(
-      page.getByRole('columnheader', { name: /Заголовок поста/ }).first(),
-    ).toBeVisible()
+    // RU — same keys resolved in Russian.
+    await expect(page.getByRole('columnheader', { name: 'Заголовок поста' })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: 'Краткое описание' })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: 'Автор' })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: 'Категория' })).toBeVisible()
+  })
+
+  test('customers: column headers switch between en and ru', async ({ page }) => {
+    await page.goto('/resources/customers')
+    await expect(page.locator('tbody tr').first()).toBeVisible({ timeout: 15_000 })
+
+    // EN — `resources.customers.properties.*.label`.
+    await expect(page.getByRole('columnheader', { name: 'Email' })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: 'Full name' })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: 'Phone' })).toBeVisible()
+
+    await switchLocale(page, 'ru')
+
+    // RU.
+    await expect(page.getByRole('columnheader', { name: 'Email' })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: 'Полное имя' })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: 'Телефон' })).toBeVisible()
+  })
+
+  test('products: column headers switch between en and ru', async ({ page }) => {
+    await page.goto('/resources/products')
+    await expect(page.locator('tbody tr').first()).toBeVisible({ timeout: 15_000 })
+
+    // EN — `resources.products.properties.*.label`.
+    await expect(page.getByRole('columnheader', { name: 'Product name' })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: 'Price' })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: 'In stock' })).toBeVisible()
+
+    await switchLocale(page, 'ru')
+
+    // RU.
+    await expect(page.getByRole('columnheader', { name: 'Название товара' })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: 'Цена' })).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: 'В наличии' })).toBeVisible()
   })
 
   test('switching locale on the customers list flips toolbar chrome', async ({

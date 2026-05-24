@@ -242,7 +242,18 @@ export class InMemoryResource extends BaseResource {
         continue
       }
       if (typeof needle === 'string') {
-        if (!String(value ?? '').toLowerCase().includes(needle.toLowerCase())) return false
+        // Substring (`includes`) is only meaningful on free-text string
+        // columns like `title` or `email`. Reference / id / enum / number
+        // columns must use strict equality — otherwise `authorId=1` also
+        // matches authorId "10", "11", "12", … "21", which is what
+        // leaks unrelated rows into the related-records tabs and into
+        // header filters on FK columns.
+        const propType = entry.property?.type?.()
+        if (propType === 'string') {
+          if (!String(value ?? '').toLowerCase().includes(needle.toLowerCase())) return false
+        } else if (String(value ?? '') !== needle) {
+          return false
+        }
       } else if (needle !== value) {
         return false
       }

@@ -138,6 +138,7 @@ export const auth = betterAuth({
 import { betterAuth } from 'better-auth'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
 import { apiKey } from '@better-auth/api-key'
+import { admin } from 'better-auth/plugins'
 import { prisma } from './db.js'   // your PrismaClient singleton
 
 export const auth = betterAuth({
@@ -162,6 +163,14 @@ export const auth = betterAuth({
       rateLimit: { enabled: false },
       schema: { apikey: { modelName: 'ma_apikey' } },
     }) as never,
+
+    // Admin plugin — adds the `role` field to ma_user AND, crucially,
+    // attaches it to the session so `currentAdmin.role` is populated.
+    // Without this plugin role-based gating silently breaks:
+    // `ma_user.role` exists in the DB but the session never carries
+    // it, so every role-gated action returns 403. See "Common
+    // mistakes" below.
+    admin({ defaultRole: process.env.DEMO_ADMIN_ROLE ?? 'user' }) as never,
   ],
 })
 
@@ -382,6 +391,14 @@ ModernAdminModule.forRoot({
 })
 ```
 
+> **Prerequisite — Better Auth `admin()` plugin.** `currentAdmin.role`
+> is set by `BetterAuthProvider.getCurrentUser()` from
+> `session.user.role`, which is populated **only** by Better Auth's
+> `admin()` plugin (`better-auth/plugins`). Mount it alongside `apiKey`
+> in `src/auth.ts` or every role-gated action will return 403 with
+> the principal's role appearing as `undefined`. See "Common
+> mistakes" at the bottom of this page.
+
 The roles resource must expose at least:
 - `id` — primary key (the role name, e.g. `'admin'`, `'viewer'`)
 - `permissions` — a JSON column holding a `Record<resourceId, action[]>` matrix
@@ -506,3 +523,50 @@ The `@modern-admin/nest` module mounts two auth endpoints:
 
 The frontend calls `/admin/api/auth/me` on boot. A `401` response triggers the login
 screen; a `200` response with `{ user }` transitions directly into the admin shell.
+
+---
+
+## Common mistakes
+
+### Forgetting the `admin()` plugin → 403 on every role-gated action
+
+**Symptom.** A user whose `ma_user.role` reads `'admin'` in the
+database (visible in the panel under **Admins**) still gets
+`403 Forbidden` on every action that requires a role.
+
+**Root cause.** `BetterAuthProvider.getCurrentUser()` reads
+`currentAdmin.role` from `session.user.role`. That field is populated
+**only** when Better Auth's `admin()` plugin is mounted. Without
+it the session payload has no `role`, the gate sees
+`currentAdmin.role === undefined`, and every `isAccessible:
+({currentAdmin}) => currentAdmin?.role === 'admin'` predicate
+evaluates to `false`.
+
+The trap is that `ma_user.role` *does* contain `'admin'` in the
+database. Direct DB writes (e.g.
+`prisma.maUser.update({ data: { role: 'admin' }})`) and the
+`admins` resource UI bypass the plugin and store/read the column
+directly, so the value is visible — but the session, which is built
+through Better Auth's API, never sees it.
+
+**Fix.** Mount the admin plugin alongside `apiKey`:
+
+```ts
+import { admin } from 'better-auth/plugins'
+
+export const auth = betterAuth({
+  // …
+  plugins: [
+    apiKey({ /* … */ }),
+    admin({ defaultRole: process.env.DEMO_ADMIN_ROLE ?? 'user' }),
+  ],
+})
+```
+
+After adding the plugin, sign out and back in so the session is
+re-issued with the `role` claim.
+
+**How to verify.** `GET /admin/api/auth/me` should return
+`{"user":{"role":"admin", …}, "permissions": { … }}`. If `user.role`
+is missing or `permissions` is `null` despite `rolesResourceId` being
+configured, the `admin()` plugin is still not mounted.

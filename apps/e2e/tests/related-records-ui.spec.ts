@@ -104,6 +104,68 @@ test.describe('RelatedRecordsTabs — customers show page', () => {
     await expect(panel.locator('tbody tr')).not.toHaveCount(0, { timeout: 15_000 })
   })
 
+  test('foreign-key filter is strict equality, not substring', async ({
+    request,
+  }) => {
+    // Regression: the in-memory matcher used to fall back to a case-
+    // insensitive `String.includes()` for any string-typed needle,
+    // regardless of property type. With numeric-string FK ids that
+    // makes `filters[authorId]=1` also match authorId="10", "11", "12",
+    // …, "21" — so a customer's "Related Posts" tab leaked every post
+    // whose authorId merely *contained* the customer id.
+    //
+    // The fix should treat reference / id columns as strict equality
+    // (substring match is only meaningful for free-text string fields
+    // like `title`). This test pins that contract from the API surface.
+    const res = await request.get(
+      adminApi('/resources/posts/actions/list?perPage=200&filters[authorId]=1'),
+    )
+    expect(res.ok()).toBeTruthy()
+    const body = await res.json()
+    const records = body.records as Array<{ params: { authorId: string } }>
+    const distinct = Array.from(new Set(records.map((r) => r.params.authorId)))
+    expect(distinct, `expected only authorId "1", got ${distinct.join(', ')}`).toEqual(['1'])
+    expect(body.meta.total).toBe(records.length)
+  })
+
+  test('related posts tab only shows posts authored by this customer', async ({
+    page,
+    request,
+  }) => {
+    // End-to-end version of the regression above: navigate to a
+    // customer's show page and assert every row in the embedded Posts
+    // table actually belongs to that customer.
+    const customerId = await customerWithRelations(request)
+    await openCustomerShow(page, customerId)
+
+    const panel = activeRelatedPanel(page)
+    await expect(panel.locator('tbody tr')).not.toHaveCount(0, { timeout: 15_000 })
+
+    // Cross-check the embedded list count with the API count for the
+    // same filter — they must agree, otherwise the table is leaking
+    // (or hiding) records.
+    const apiRes = await request.get(
+      adminApi(`/resources/posts/actions/list?perPage=200&filters[authorId]=${customerId}`),
+    )
+    const apiBody = await apiRes.json()
+    const apiAuthors = Array.from(
+      new Set((apiBody.records as Array<{ params: { authorId: string } }>).map(
+        (r) => r.params.authorId,
+      )),
+    )
+    expect(
+      apiAuthors,
+      `API returned posts whose authorId ≠ ${customerId}: ${apiAuthors.join(', ')}`,
+    ).toEqual([customerId])
+
+    // The visible Posts table shouldn't claim a higher total than the
+    // strictly-filtered API count (which it would if the contains-match
+    // bug crept back in — the table would happily show 81 records for
+    // customer "1" while the strict API count is 3).
+    const pageSize = Math.min(10, apiBody.records.length)
+    await expect(panel.locator('tbody tr')).toHaveCount(pageSize, { timeout: 15_000 })
+  })
+
   test('Posts tab paginates next page inside the embedded list', async ({
     page,
     request,

@@ -9,7 +9,7 @@
 //
 //    import { PrismaClient } from '@prisma/client'
 //    import { setupPrismaSystem } from '@modern-admin/system-prisma'
-//    import { actionLoggingPlugin } from '@modern-admin/feature-logging'
+//    import { actionLoggingPlugin } from '@modern-admin-pro/feature-logging'
 //
 //    const prisma = new PrismaClient()
 //    const system = setupPrismaSystem(prisma)

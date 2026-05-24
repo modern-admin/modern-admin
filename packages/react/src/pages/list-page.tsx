@@ -57,7 +57,6 @@ import {
   SheetHeader,
   SheetTitle,
   Skeleton,
-  Table,
   TableBody,
   TableCell,
   TableHead,
@@ -110,7 +109,8 @@ import { homeCrumb, PageBreadcrumbs } from '../breadcrumbs.js'
 import { ExportDialog } from './export-dialog.js'
 import { ActionMenu, ActionMenuItems } from '../action-menu.js'
 import { visibleRecordProperties } from '../relations.js'
-import type { ListQuery, PropertyJSON, RecordJSON } from '../types.js'
+import type { ActionDescriptor, ListQuery, PropertyJSON, RecordJSON } from '../types.js'
+import { confirmGuard } from '../action-guard.js'
 
 const PAGE_SIZES = [10, 20, 50, 100] as const
 
@@ -668,6 +668,7 @@ export function ResourceListPage({
           recordId={row.original.id}
           property={property}
           value={row.original.params[property.path]}
+          populated={row.original.populated}
         />
       ),
     })))
@@ -706,9 +707,10 @@ export function ResourceListPage({
                 ),
             })
           }}
-          onInvokeAction={(actionName) => {
+          onInvokeAction={async (action) => {
+            if (!await confirmGuard(action, dialogs)) return
             invokeRecord.mutate(
-              {recordId: row.original.id, actionName},
+              {recordId: row.original.id, actionName: action.name},
               {
                 onSuccess: (res) => {
                   if (res.notice) {
@@ -935,7 +937,8 @@ export function ResourceListPage({
               {showCustomResourceActions && (
                 <ActionMenu
                   actions={customResourceActions}
-                  onAction={(action) => {
+                  onAction={async (action) => {
+                    if (!await confirmGuard(action, dialogs)) return
                     invokeResource.mutate(
                       {actionName: action.name},
                       {
@@ -1017,7 +1020,7 @@ export function ResourceListPage({
           )}
         </HeaderEl>
       )}
-      <ContentEl className="flex flex-1 flex-col gap-3">
+      <ContentEl className="flex flex-1 flex-col gap-2 sm:gap-3">
         {showStandaloneEmptyState ? (
           <Empty>
             <EmptyHeader>
@@ -1064,7 +1067,8 @@ export function ResourceListPage({
                   {customBulkActions.length > 0 && (
                     <ActionMenu
                       actions={customBulkActions}
-                      onAction={(action) => {
+                      onAction={async (action) => {
+                        if (!await confirmGuard(action, dialogs)) return
                         invokeBulk.mutate(
                           {actionName: action.name, ids: selectedIds},
                           {
@@ -1104,7 +1108,7 @@ export function ResourceListPage({
               </div>
             )}
             {/* Mobile: card-per-record stack. Hidden ≥ sm. */}
-            <div className="space-y-4 sm:hidden">
+            <div className="space-y-2 sm:hidden">
               {records.isFetching && Array.from({length: pagination.pageSize}, (_, i) => (
                 <div key={`skel-card-${i}`} className="rounded-lg border border-border bg-card p-3">
                   <div className="flex items-start gap-3">
@@ -1165,9 +1169,10 @@ export function ResourceListPage({
                     })
                   }}
                   customActions={customRecordActions}
-                  onInvokeAction={(actionName) => {
+                  onInvokeAction={async (action) => {
+                    if (!await confirmGuard(action, dialogs)) return
                     invokeRecord.mutate(
-                      {recordId: row.original.id, actionName},
+                      {recordId: row.original.id, actionName: action.name},
                       {
                         onSuccess: (res) => {
                           if (res.notice) {
@@ -1249,7 +1254,15 @@ export function ResourceListPage({
 
                 return (
                   <div className="relative" style={{ width: renderedTotal }}>
-                    <Table style={{ tableLayout: 'fixed', width: renderedTotal }}>
+                    {/* Use a raw <table> instead of the shadcn <Table> wrapper:
+                        <Table> renders an internal <div className="overflow-auto">
+                        which becomes the containing block for sticky cells, pinning
+                        them to the off-screen right edge of the full table width
+                        rather than the visible scroll area. */}
+                    <table
+                      className="w-full caption-bottom text-sm"
+                      style={{ tableLayout: 'fixed', width: renderedTotal }}
+                    >
                       <TableHeader>
                         {table.getHeaderGroups().map((hg) => (
                           <TableRow key={hg.id}>
@@ -1259,7 +1272,8 @@ export function ResourceListPage({
                                 style={{width: sizeOf(header.column.id, header.getSize())}}
                                 className={cn(
                                   'relative select-none',
-                                  header.column.id === '_actions' && 'px-1',
+                                  header.column.id === '_actions' &&
+                                    'sticky right-0 z-20 bg-muted px-1 shadow-[-4px_0_8px_-6px_rgba(0,0,0,0.15)]',
                                 )}
                               >
                                 {header.isPlaceholder
@@ -1292,7 +1306,10 @@ export function ResourceListPage({
                                 <TableCell
                                   key={col.id}
                                   style={{width: sizeOf(col.id, col.getSize())}}
-                                  className={col.id === '_actions' ? 'px-1' : ''}
+                                  className={cn(
+                                    col.id === '_actions' &&
+                                      'sticky right-0 z-10 bg-card px-1 shadow-[-4px_0_8px_-6px_rgba(0,0,0,0.15)]',
+                                  )}
                                 >
                                   {col.id === '_select' ? (
                                     <Skeleton className="h-4 w-4 rounded"/>
@@ -1318,7 +1335,7 @@ export function ResourceListPage({
                             <TableRow
                               key={row.id}
                               data-state={row.getIsSelected() && 'selected'}
-                              className="cursor-pointer"
+                              className="group cursor-pointer"
                               onClick={(e) => {
                                 const target = e.target as HTMLElement
                                 if (target.closest('a, button, [role="menuitem"], [role="checkbox"]')) return
@@ -1350,7 +1367,8 @@ export function ResourceListPage({
                                   style={{width: sizeOf(cell.column.id, cell.column.getSize())}}
                                   className={cn(
                                     'overflow-hidden',
-                                    cell.column.id === '_actions' && 'px-1',
+                                    cell.column.id === '_actions' &&
+                                      'sticky right-0 z-10 bg-card px-1 shadow-[-4px_0_8px_-6px_rgba(0,0,0,0.15)] group-hover:bg-muted group-data-[state=selected]:bg-muted',
                                   )}
                                 >
                                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -1360,7 +1378,7 @@ export function ResourceListPage({
                           ))
                         )}
                       </TableBody>
-                    </Table>
+                    </table>
                     {/* Vertical guide line follows the cursor while a column is being
                         resized. Position is computed from rendered (boosted) widths. */}
                     {resizingHeader && (
@@ -1381,9 +1399,10 @@ export function ResourceListPage({
   )
 
   return (
-    <div className={cn('flex flex-col', f.card ? 'min-h-full gap-4' : 'h-full')}>
+    <div className={cn('flex flex-col', f.card ? 'min-h-full' : 'h-full')}>
       {f.breadcrumbs && (
         <PageBreadcrumbs
+          className="mb-2 sm:mb-4"
           items={[homeCrumb(t('common:home')), {label: resource.name}]}
         />
       )}
@@ -1402,9 +1421,14 @@ export function ResourceListPage({
       {!showStandaloneEmptyState && (
         // Standalone page mode: sticky at the page-wrapper level so the
         // paginator pins to the viewport bottom while the user scrolls
-        // through the list. Right padding (`pr-16`) reserves space for the
-        // floating AI assistant widget (`fixed bottom-4 right-4`, ~40px
-        // wide) so pagination buttons never slide under it.
+        // through the list. The bar extends edge-to-edge via negative
+        // margins that exactly cancel the main scroll-container padding
+        // (`px-4 sm:px-6`) so it sits flush against the screen edges with
+        // no visible gutter. Right padding (`pr-14 sm:pr-16`) reserves
+        // space for the floating AI assistant widget (`fixed bottom-4
+        // right-4`, ~40px wide) so pagination buttons never slide under
+        // it. A top shadow lifts the bar visually off the table when the
+        // user is mid-scroll.
         //
         // Embedded mode (`card: false`, e.g. picker dialog): plain flex
         // child below the scrollable table area. No sticky, no scrollbar
@@ -1415,7 +1439,7 @@ export function ResourceListPage({
           className={cn(
             'border-t border-border bg-card py-3',
             f.card
-              ? 'sticky bottom-0 z-20 -mx-4 px-4 pr-16 sm:-mx-6 sm:px-6 sm:pr-16'
+              ? 'sticky bottom-0 z-20 -mx-2 mt-0 px-2 pr-14 shadow-[0_-4px_8px_-6px_rgba(0,0,0,0.08)] sm:-mx-6 sm:px-6 sm:pr-16'
               : 'shrink-0 px-6',
           )}
         >
@@ -1456,11 +1480,13 @@ function CellContent({
                        recordId,
                        property,
                        value,
+                       populated,
                      }: {
   resourceId: string
   recordId: string
   property: PropertyJSON
   value: unknown
+  populated?: Record<string, unknown>
 }): React.ReactElement {
   if (property.isId) {
     return (
@@ -1479,16 +1505,30 @@ function CellContent({
   if (property.reference && property.type !== 'm2m' && value != null && value !== '') {
     if (property.isArray) {
       const ids = Array.isArray(value) ? (value as Array<string | number>) : []
-      return <ReferenceLinkList resourceId={property.reference} recordIds={ids}/>
+      return (
+        <ReferenceLinkList
+          resourceId={property.reference}
+          recordIds={ids}
+          populated={populated}
+          populatedKeyPrefix={property.path}
+        />
+      )
     }
+    // The list endpoint pre-populates scalar references in batch
+    // (`record.populated[property.path]`), so we hand the inline record to
+    // <ReferenceLink> and avoid the per-row `show` request.
+    const populatedRecord = populated?.[property.path] as
+      | { id?: string; title?: string }
+      | undefined
     return (
       <ReferenceLink
         resourceId={property.reference}
         recordId={value as string | number}
+        populated={populatedRecord}
       />
     )
   }
-  return <PropertyDisplay property={property} value={value} view="list"/>
+  return <PropertyDisplay property={property} value={value} view="list" populated={populated}/>
 }
 
 function RowActions({
@@ -1502,8 +1542,8 @@ function RowActions({
   onView(): void
   onEdit(): void
   onDelete(): void
-  onInvokeAction?(actionName: string): void
-  customActions?: import('../types.js').ActionDescriptor[]
+  onInvokeAction?(action: ActionDescriptor): void
+  customActions?: ActionDescriptor[]
   t: (key: string, params?: Record<string, string | number>) => string
 }): React.ReactElement {
   return (
@@ -1528,7 +1568,7 @@ function RowActions({
               <DropdownMenuSeparator/>
               <ActionMenuItems
                 actions={customActions}
-                onAction={(action) => onInvokeAction?.(action.name)}
+                onAction={(action) => onInvokeAction?.(action)}
               />
             </>
           )}
@@ -2481,8 +2521,8 @@ function RecordCard({
   onView(): void
   onEdit(): void
   onDelete(): void
-  customActions?: import('../types.js').ActionDescriptor[]
-  onInvokeAction?(actionName: string): void
+  customActions?: ActionDescriptor[]
+  onInvokeAction?(action: ActionDescriptor): void
   t: (key: string, params?: Record<string, string | number>) => string
 }): React.ReactElement {
   const idProperty = properties.find((p) => p.isId)
@@ -2492,10 +2532,12 @@ function RecordCard({
     (titleProperty ? String(record.params[titleProperty.path] ?? '') : '') ||
     `#${record.id}`
 
-  // Body shows non-id, non-title properties (max 4 for compactness).
+  // Body shows non-id, non-title properties. On mobile we want maximum
+  // information density, so render up to 8 — enough to surface most fields
+  // without scrolling each card.
   const bodyProps = properties
     .filter((p) => !p.isId && p.path !== titleProperty?.path)
-    .slice(0, 4)
+    .slice(0, 8)
 
   // Card uses a clickable div (not <button>) because it nests interactive
   // children (the RowActions DropdownMenuTrigger and reference links). HTML
@@ -2535,12 +2577,12 @@ function RecordCard({
       onMouseDown={handleMouseDown}
       onKeyDown={handleKeyDown}
       data-state={selected ? 'selected' : undefined}
-      className="block w-full cursor-pointer rounded-lg border border-border bg-card p-3 text-left transition-colors hover:bg-accent/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=selected]:border-primary/50 data-[state=selected]:bg-primary/5"
+      className="block w-full cursor-pointer rounded-lg border border-border bg-card p-2.5 text-left transition-colors hover:bg-accent/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=selected]:border-primary/50 data-[state=selected]:bg-primary/5"
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-2">
         {showSelect && (
           <div
-            className="flex flex-none items-center pt-1"
+            className="flex flex-none items-center pt-0.5"
             onClick={(e) => e.stopPropagation()}
           >
             <Checkbox
@@ -2553,9 +2595,9 @@ function RecordCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-semibold">{titleText}</div>
+              <div className="truncate text-sm font-semibold leading-tight">{titleText}</div>
               {idProperty && (
-                <div className="truncate text-xs text-muted-foreground">
+                <div className="truncate text-[11px] leading-tight text-muted-foreground">
                   #{String(record.params[idProperty.path] ?? record.id)}
                 </div>
               )}
@@ -2570,18 +2612,19 @@ function RecordCard({
             />
           </div>
           {bodyProps.length > 0 && (
-            <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2">
+            <div className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1.5">
               {bodyProps.map((p) => (
                 <div key={p.path} className="min-w-0">
-                  <div className="truncate text-[11px] uppercase tracking-wide text-muted-foreground">
+                  <div className="truncate text-[10px] uppercase tracking-wide leading-tight text-muted-foreground">
                     {p.label}
                   </div>
-                  <div className="mt-0.5 truncate text-sm">
+                  <div className="truncate text-sm leading-tight">
                     <CellContent
                       resourceId={resourceId}
                       recordId={record.id}
                       property={p}
                       value={record.params[p.path]}
+                      populated={record.populated}
                     />
                   </div>
                 </div>

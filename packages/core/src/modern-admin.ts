@@ -14,6 +14,7 @@ export interface RegisterResourcesArgs {
   plugins?: GlobalPlugin[]
 }
 import { AnonymousAuthProvider, ComponentLoader, NoopCacheProvider, NoopRealtimeBus, type CurrentAdmin, type IAuthProvider, type ICacheProvider, type IComponentLoader, type IRealtimeBus, type RealtimeEvent } from './ports'
+import { setActiveFeatureFlags } from './feature-flags.js'
  
 export interface ModernAdminOptions {
   databases?: unknown[]
@@ -63,6 +64,23 @@ export interface ModernAdminOptions {
    * minimum (resources only) and skips every optional feature.
    */
   features?: Partial<AdminFeatures>
+  /**
+   * Explicit opt-in list of commercial feature flags to activate
+   * (e.g. `['ai-fill', 'webhooks']`). Pro-tier packages
+   * (`@modern-admin-pro/*`) only wire themselves up when their feature is
+   * present here — independent of whether a valid license is detected.
+   *
+   * Activation is a two-layer check:
+   *   1. the Pro package's own license-gate confirms a valid license that
+   *      covers the feature (logs a warn + becomes a no-op otherwise);
+   *   2. the orchestrator registers `featureFlags` here, and Pro plugins
+   *      consult the global registry via `isFeatureActive(name)`.
+   *
+   * Listing a flag without a valid license still results in a no-op (the
+   * license check inside the Pro package wins). Listing nothing keeps
+   * every commercial plugin dormant even when its package is imported.
+   */
+  featureFlags?: string[]
 }
 
 /**
@@ -135,6 +153,11 @@ export class ModernAdmin {
   private readonly rolePermsCache = new Map<string, RolePermissions | null>()
 
   constructor(public readonly options: ModernAdminOptions = {}) {
+    // Publish the opted-in commercial feature flags into the process-global
+    // registry before resources are built. Pro plugins read the registry
+    // during their feature-factory / plugin-apply invocations triggered by
+    // `ResourcesFactory.buildResources` below.
+    setActiveFeatureFlags(options.featureFlags ?? [])
     this.rootPath = options.rootPath ?? '/admin'
     this.auth = options.auth ?? new AnonymousAuthProvider()
     this.cache = options.cache ?? new NoopCacheProvider()

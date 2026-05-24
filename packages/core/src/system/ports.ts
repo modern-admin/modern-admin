@@ -5,8 +5,8 @@
 // them against the host's ORM client. Default no-op / in-memory variants
 // live alongside the ports for tests and zero-config dev.
 //
-// `ILogStore` is the canonical home for the action-log sink (the legacy
-// definition in `@modern-admin/feature-logging` re-exports from here).
+// `ILogStore` is the canonical home for the action-log sink (the Pro
+// `@modern-admin-pro/feature-logging` plugin re-exports from here).
 
 import type {
   ActionLogEntry,

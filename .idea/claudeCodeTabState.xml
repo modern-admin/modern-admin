@@ -19,9 +19,9 @@
           <value>
             <TabSessionState>
               <option name="provider" value="claude" />
-              <option name="sessionId" value="470372f6-846a-42ea-ab08-ab2da8a0fcc3" />
+              <option name="sessionId" value="96258929-e753-420e-b052-dec315ba044a" />
               <option name="cwd" value="$PROJECT_DIR$" />
-              <option name="model" value="claude-opus-4-7" />
+              <option name="model" value="claude-sonnet-4-6" />
               <option name="permissionMode" value="bypassPermissions" />
               <option name="reasoningEffort" value="high" />
             </TabSessionState>
@@ -31,7 +31,7 @@
           <value>
             <TabSessionState>
               <option name="provider" value="claude" />
-              <option name="sessionId" value="ed9043a4-9525-42b7-bb9f-647ae06cb2b1" />
+              <option name="sessionId" value="172ece9f-5e90-4264-8153-574d730492a7" />
               <option name="cwd" value="$PROJECT_DIR$" />
               <option name="model" value="claude-opus-4-7" />
               <option name="permissionMode" value="bypassPermissions" />
@@ -43,9 +43,9 @@
           <value>
             <TabSessionState>
               <option name="provider" value="claude" />
-              <option name="sessionId" value="29f9752f-3405-4dc3-adcd-a0fc6d9686d8" />
+              <option name="sessionId" value="9976d37d-c8df-4540-8f26-2e31c93ce246" />
               <option name="cwd" value="$PROJECT_DIR$" />
-              <option name="model" value="claude-sonnet-4-6" />
+              <option name="model" value="claude-opus-4-7" />
               <option name="permissionMode" value="bypassPermissions" />
               <option name="reasoningEffort" value="high" />
             </TabSessionState>

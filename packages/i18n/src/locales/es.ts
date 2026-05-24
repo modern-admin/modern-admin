@@ -125,6 +125,8 @@ export const es: LocaleBundle = {
     'auth:title': 'Iniciar sesión',
     'auth:subtitle': 'Ingrese su correo y contraseña para iniciar sesión',
     'auth:tagline': 'El panel de administración moderno para cualquier stack.',
+    'auth:orContinueWith': 'O continuar con',
+    'auth:continueWith': 'Continuar con {provider}',
     'common:chooseFile': 'Elegir archivo',
     'common:chooseFiles': 'Elegir archivos',
     'common:dragAndDrop': 'Arrastra y suelta o',

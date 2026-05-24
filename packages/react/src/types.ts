@@ -169,3 +169,30 @@ export interface ListQuery {
   direction?: 'asc' | 'desc'
   filters?: Record<string, string>
 }
+
+/**
+ * Props contract for a property **display** component. Shared between the
+ * built-in `PropertyDisplay` and any custom property extension registered
+ * via `registerPropertyExtension`.
+ */
+export interface PropertyDisplayProps {
+  property: PropertyJSON
+  value: unknown
+  view?: 'list' | 'show'
+  /** The record's `populated` map (pre-fetched reference titles). */
+  populated?: Record<string, unknown>
+}
+
+/**
+ * Props contract for a property **editor** component. Shared between the
+ * built-in `PropertyEditor` and any custom property extension registered
+ * via `registerPropertyExtension`.
+ */
+export interface PropertyEditorProps {
+  property: PropertyJSON
+  value: unknown
+  onChange(next: unknown): void
+  disabled?: boolean
+  /** Required for `type: 'file'` properties to route uploads correctly. */
+  resourceId?: string
+}

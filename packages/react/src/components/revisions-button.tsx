@@ -122,9 +122,9 @@ export function RevisionsButton({
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" aria-label={t('history:revisions')}>
           <History className="size-4" />
-          {t('history:revisions')}
+          <span className="hidden sm:inline">{t('history:revisions')}</span>
         </Button>
       </SheetTrigger>
       <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-5xl">

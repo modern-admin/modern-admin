@@ -26,17 +26,21 @@ import {
   type BaseProperty,
   type BaseResource,
   type CurrentAdmin,
+  type IRealtimeBus,
   type ModernAdmin,
   type PropertyType,
   type RawFilters,
 } from '@modern-admin/core'
 import { GraphQLUpload } from './scalars.js'
 import type { ExtensionContext, GraphqlExtensionFactory, GraphqlSchemaExtension } from './extensions.js'
+import { createRealtimeAsyncIterator } from './subscription-iterator.js'
 
 export interface GraphqlContext {
   admin: ModernAdmin
   currentAdmin?: CurrentAdmin
   loaders: Map<string, DataLoader<string, unknown>>
+  /** Optional realtime bus — required for `*Events` subscriptions to resolve. */
+  bus?: IRealtimeBus
 }
 
 const GraphQLJSON = new GraphQLScalarType({
@@ -311,6 +315,43 @@ export const buildGraphqlSchema = (
 
   const queryFields: Record<string, GraphQLFieldConfig<unknown, GraphqlContext>> = {}
   const mutationFields: Record<string, GraphQLFieldConfig<unknown, GraphqlContext>> = {}
+  const subscriptionFields: Record<string, GraphQLFieldConfig<unknown, GraphqlContext>> = {}
+
+  // Shared RealtimeEvent object type — mirrors `IRealtimeBus`' RealtimeEvent
+  // shape. Snapshot is exposed as JSON so we don't have to thread per-resource
+  // unions through the schema.
+  const RealtimeEventType = new GraphQLObjectType<unknown, GraphqlContext>({
+    name: 'RealtimeEvent',
+    description: 'Resource lifecycle event broadcast by the realtime bus.',
+    fields: () => ({
+      kind: {
+        type: new GraphQLNonNull(GraphQLString),
+        description: 'One of "created" | "updated" | "deleted".',
+        resolve: (src) => (src as { kind?: string }).kind ?? null,
+      },
+      resourceId: {
+        type: new GraphQLNonNull(GraphQLString),
+        resolve: (src) => (src as { resourceId?: string }).resourceId ?? null,
+      },
+      recordId: {
+        type: GraphQLString,
+        resolve: (src) => (src as { recordId?: string }).recordId ?? null,
+      },
+      record: {
+        type: GraphQLJSON,
+        resolve: (src) => (src as { record?: unknown }).record ?? null,
+      },
+      actorId: {
+        type: GraphQLString,
+        resolve: (src) => (src as { actorId?: string }).actorId ?? null,
+      },
+      at: {
+        type: new GraphQLNonNull(GraphQLFloat),
+        description: 'Server timestamp in ms since epoch.',
+        resolve: (src) => (src as { at?: number }).at ?? 0,
+      },
+    }),
+  })
 
   for (const resource of admin.resources) {
     const id = resource.decorate().id
@@ -418,6 +459,28 @@ export const buildGraphqlSchema = (
         return true
       },
     }
+
+    // <resource>Events — pushes RealtimeEvent values whenever the bus
+    // publishes a matching create/update/delete. The optional `kind` arg
+    // narrows the stream client-side.
+    subscriptionFields[`${lower}Events`] = {
+      type: new GraphQLNonNull(RealtimeEventType),
+      args: { kind: { type: GraphQLString } },
+      subscribe(_src, args, ctx) {
+        if (!ctx.bus) {
+          throw new Error(
+            'GraphQL subscriptions require a realtime bus — pass `bus` to ModernAdminGraphqlModule.forRoot({ subscriptions: { bus } }).',
+          )
+        }
+        const kindArg = args.kind as string | undefined
+        const kind =
+          kindArg === 'created' || kindArg === 'updated' || kindArg === 'deleted'
+            ? kindArg
+            : null
+        return createRealtimeAsyncIterator(ctx.bus, { resourceId: id, kind })
+      },
+      resolve: (payload) => payload,
+    }
   }
 
   // Always include a status field so the schema is non-empty even when no
@@ -470,6 +533,10 @@ export const buildGraphqlSchema = (
       Object.keys(mutationFields).length > 0
         ? new GraphQLObjectType({ name: 'Mutation', fields: () => mutationFields })
         : undefined,
+    subscription:
+      Object.keys(subscriptionFields).length > 0
+        ? new GraphQLObjectType({ name: 'Subscription', fields: () => subscriptionFields })
+        : undefined,
     types: extraTypes.length > 0 ? extraTypes : undefined,
   })
 }
@@ -477,8 +544,10 @@ export const buildGraphqlSchema = (
 export const createContext = (
   admin: ModernAdmin,
   currentAdmin?: CurrentAdmin,
+  bus?: IRealtimeBus,
 ): GraphqlContext => ({
   admin,
   ...(currentAdmin ? { currentAdmin } : {}),
   loaders: new Map(),
+  ...(bus ? { bus } : {}),
 })

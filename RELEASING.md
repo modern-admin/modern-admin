@@ -219,6 +219,70 @@ git push origin main
 
 ---
 
+## 8. Open-core ↔ commercial versioning policy
+
+### Compatibility contract
+
+| Open-core `@modern-admin/*` version | Compatible Pro `@modern-admin-pro/*` version |
+|--------------------------------------|----------------------------------------------|
+| `1.x.y`                              | `1.x.y`                                      |
+| `2.x.y`                              | `2.x.y`                                      |
+
+**Rule**: commercial packages carry the same major version as the open-core
+they depend on. A major bump in `@modern-admin/core` (breaking public API)
+mandates a major bump in every `@modern-admin-pro/*` package that imports it,
+even if the Pro package itself has no breaking change.
+
+This lets consumers of both families pin `^1` on both sides and get
+compatible updates without version-negotiation guesswork.
+
+### Peer dependency range
+
+Every `@modern-admin-pro/*` package declares:
+
+```json
+"peerDependencies": {
+  "@modern-admin/core": "^1"
+}
+```
+
+When open-core publishes `2.0.0`, the Pro side bumps to `2.0.0` and
+changes the range to `"^2"`.
+
+### Feature flag contract
+
+Commercial packages do not activate unless:
+
+1. A valid license key covering the feature is present (`MODERN_ADMIN_LICENSE_KEY`).
+2. The orchestrator explicitly opts in: `new ModernAdmin({ featureFlags: ['<name>'] })`.
+
+Both conditions are required — missing either silently disables the feature
+(no crash, just a `console.warn`).
+
+Feature flag names are **stable identifiers** — changing them is a breaking
+change that requires a major bump in the Pro package. Current names:
+
+| Package                                  | Flag         |
+|------------------------------------------|--------------|
+| `@modern-admin-pro/feature-ai-fill`      | `ai-fill`    |
+| `@modern-admin-pro/feature-webhooks`     | `webhooks`   |
+| `@modern-admin-pro/feature-logging`      | `logging`    |
+
+### Pre-release verification flow
+
+Before releasing Pro packages, run the following sequence:
+
+1. **Open-core green** — `bun test && bun run typecheck` in `modern-admin/`.
+2. **Pro green with bunfig overrides** — `bun test && bun run typecheck` in
+   `modern-admin-pro/` with workspace overrides pointing to the local
+   open-core clone.
+3. **Publish open-core** — wait for it to appear on GitHub Packages.
+4. **Bump open-core peer deps in Pro** — update to the published version,
+   remove bunfig overrides, re-run the full test suite without overrides.
+5. **Publish Pro** — run the changeset/release flow in `modern-admin-pro/`.
+
+---
+
 ## What NOT to do
 
 - **Do not run `bun publish` locally.** It bypasses the version-bump

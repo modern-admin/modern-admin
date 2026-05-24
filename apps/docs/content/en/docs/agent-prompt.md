@@ -796,14 +796,15 @@ Built-in catalog:
 | `@modern-admin/feature-m2m`      | local          | Tags-style join table between two resources. |
 | `@modern-admin/feature-password` | local          | Login-credential resource where the DB stores a hash. |
 | `@modern-admin/feature-history`  | local + global | Need per-row revisions and a "history" tab on show. Use **global** if every resource should be tracked. |
-| `@modern-admin/feature-logging`  | local + global | Audit log of every action (who-did-what-when). Almost always wire globally with `actionLoggingPlugin`. |
-| `@modern-admin/feature-webhooks` | global         | Outbound webhooks on create/edit/delete events. |
-| `@modern-admin/feature-ai-fill`  | per-resource   | Add an AI "fill from photo / URL / text" button to the new/edit form. Configure model in env. |
+| `@modern-admin-pro/feature-logging` (Pro) | local + global | Audit log of every action (who-did-what-when). Almost always wire globally with `actionLoggingPlugin`. |
+| `@modern-admin-pro/feature-webhooks` (Pro) | global         | Outbound webhooks on create/edit/delete events. |
+| `@modern-admin-pro/feature-ai-fill` (Pro)  | per-resource   | Add an AI "fill from photo / URL / text" button to the new/edit form. Configure model in env. |
 | `@modern-admin/feature-json-by-key` | local       | Single JSON column whose schema branches on a sibling field's value (e.g. `type === 'image' ⇒ {url,alt}`). |
 
-Auto-installed by the scaffold: `feature-upload`, `feature-logging`,
-`feature-history`, `feature-webhooks`, `feature-ai-fill`. The agent
-just needs to wire them per resource.
+Auto-installed by the scaffold: `feature-upload`, `feature-history`.
+The Pro tier (`@modern-admin-pro/feature-logging|webhooks|ai-fill`)
+ships separately under a commercial license — see
+[modernadminpro.com](https://modernadminpro.com).
 
 Decision tree for "should I write a feature?": **don't**, unless the
 transform applies to ≥3 resources. For one-off needs, hooks +
@@ -880,8 +881,9 @@ Better Auth is already mounted by the scaffold. The agent's job:
 
 - Enable the login strategies the host project needs (email/password,
   OAuth, passkey, magic link) in `src/auth.ts`.
-- Add `plugins: [adminPlugin(), apiKey({...})]` to Better Auth — these
-  power role gating and machine-to-machine access.
+- Add `plugins: [admin({...}), apiKey({...})]` to Better Auth — these
+  power role gating and machine-to-machine access. **The `admin()`
+  plugin is mandatory if you use `rolesResourceId`** — see §11e.
 - Never re-implement login pages, sessions, or password hashing.
 - Never invent custom JWT logic — Better Auth + cookie session is
   the path.
@@ -1070,7 +1072,56 @@ If you change the auth basePath, change all three coordinated values:
 A mismatch surfaces as `POST /api/auth/sign-in/email 404 Not Found` on
 login — the SPA points at the default while the server moved.
 
-### 11e. `BigInt` columns survive serialisation by default
+### 11e. The `admin()` plugin is mandatory for role gating
+
+`BetterAuthProvider.getCurrentUser()` reads `currentAdmin.role` from
+`session.user.role`. That field is **only** populated when Better
+Auth's `admin()` plugin is mounted. Without it the session payload
+has no `role`, and any of the following silently breaks:
+
+- `rolesResourceId` permission gate — the role lookup gets `undefined`
+  and the gate falls through to the fail-open branch (or denies,
+  depending on action defaults).
+- Per-action `isAccessible: ({currentAdmin}) => currentAdmin?.role === 'admin'`
+  predicates — always evaluate to `false`, returning **403 Forbidden**
+  on every protected action, even for users whose `ma_user.role`
+  column is set to `'admin'` in the database.
+- `/admin/api/auth/me` — `user.role` is missing from the response, so
+  the SPA's permission hint layer hides nothing (UI shows actions the
+  server will then 403 on).
+
+The trap is that the database column *is* populated — `ma_user.role`
+will read `'admin'` via Prisma, and the `admins` resource in the
+panel renders it correctly. So the bug looks like "permissions are
+wrong" when it is in fact "the session never carries the role at
+all". A direct DB write (e.g. `prisma.maUser.update({ data: { role:
+'admin' }})`) bypasses the plugin and gives you exactly this state.
+
+**Always mount `admin()` when you use `rolesResourceId` or any role
+predicate:**
+
+```ts
+import { betterAuth } from 'better-auth'
+import { apiKey } from '@better-auth/api-key'
+import { admin } from 'better-auth/plugins'
+
+export const auth = betterAuth({
+  // … database, baseURL, modelNames …
+  plugins: [
+    apiKey({ /* … */ }),
+    admin({
+      // 'admin' is convenient for demos so the seeded user can do
+      // everything; use 'user' (or your equivalent) in production.
+      defaultRole: process.env.DEMO_ADMIN_ROLE ?? 'user',
+    }),
+  ],
+})
+```
+
+Reference: `apps/api-prisma/src/auth.ts` mounts the plugin via
+`extraPlugins:` on `buildBetterAuth()`.
+
+### 11f. `BigInt` columns survive serialisation by default
 
 Prisma surfaces `BigInt` columns as native `bigint`. The framework
 normalises those to decimal strings at the `BaseRecord.toJSON()`
@@ -1244,7 +1295,14 @@ when paginating large lists.
   `TypeError: JSON.stringify cannot serialize BigInt`. The framework
   normalises `BigInt` columns to decimal strings inside
   `BaseRecord.toJSON()` — every list/show response is already
-  JSON-safe. See §11e.
+  JSON-safe. See §11f.
+- **Do not omit `admin()` plugin** from Better Auth when you use
+  `rolesResourceId` or any `currentAdmin?.role` predicate. The plugin
+  is what attaches `role` to the session; without it
+  `currentAdmin.role` is always `undefined` (even when `ma_user.role`
+  is `'admin'` in the database) and every role-gated action returns
+  **403 Forbidden**. Add `admin({ defaultRole: '…' })` from
+  `better-auth/plugins` alongside `apiKey({...})`. See §11e.
 - **Do not cherry-pick the `Ma*` schema fragment.** `setupPrismaSystem`
   resolves all 14 delegates eagerly on boot and throws
   `[modern-admin/system-prisma] missing delegate "prisma.maWebhook"`

@@ -13,9 +13,10 @@ import { z } from 'zod'
 // ─── Log entries (action log) ─────────────────────────────────────────────
 
 /**
- * One recorded action. Replaces the local definition that used to live in
- * `@modern-admin/feature-logging` so persistent stores can validate the row
- * shape before writing.
+ * One recorded action. Canonical row shape consumed by persistent stores
+ * (`@modern-admin/system-prisma`, `system-drizzle`) and by the Pro
+ * `@modern-admin-pro/feature-logging` plugin so writers and stores agree
+ * on the schema.
  */
 export const actionLogEntryZ = z.object({
   /**

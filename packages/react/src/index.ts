@@ -5,6 +5,7 @@ export {
   AdminClient,
   AdminApiError,
   type AdminClientOptions,
+  type AuthUiProps,
   type AiAssistantChatEnqueueResponse,
   type AiAssistantChatMessage,
   type AiAssistantChatResponse,
@@ -18,6 +19,21 @@ export {
   type UploadFilesOptions,
 } from './client.js'
 export { ComponentLoader, type ComponentEntry } from './component-loader.js'
+export {
+  registerSidebarItem,
+  registerSettingsSection,
+  registerPropertyExtension,
+  registerExtensionRoute,
+  getSidebarExtensions,
+  getSettingsSectionExtensions,
+  getPropertyExtension,
+  getRouteExtension,
+  _resetExtensionRegistry,
+  type SidebarExtension,
+  type SettingsExtension,
+  type PropertyExtension,
+  type RouteExtension,
+} from './extension-registry.js'
 export {
   ModernAdminProvider,
   useAdminClient,
@@ -40,6 +56,8 @@ export {
   useCurrentUser,
   useLogin,
   useLogout,
+  useAuthUiProps,
+  useSocialLogin,
   type CurrentUserResult,
 } from './hooks.js'
 export {

@@ -10,10 +10,16 @@ export { GraphqlController } from './controller.js'
 export {
   ModernAdminGraphqlModule,
   type ModernAdminGraphqlOptions,
+  type GraphqlSubscriptionOptions,
   type ResolvedGraphqlOptions,
 } from './module.js'
 export { ModernAdminGraphqlSchemaHolder } from './schema-holder.js'
-export { GRAPHQL_SCHEMA, GRAPHQL_OPTIONS } from './tokens.js'
+export { GraphqlSubscriptionServer } from './subscription-server.js'
+export {
+  createRealtimeAsyncIterator,
+  type SubscriptionFilter,
+} from './subscription-iterator.js'
+export { GRAPHQL_SCHEMA, GRAPHQL_OPTIONS, GRAPHQL_REALTIME_BUS } from './tokens.js'
 export { GraphQLUpload, type UploadValue } from './scalars.js'
 export {
   type ExtensionContext,

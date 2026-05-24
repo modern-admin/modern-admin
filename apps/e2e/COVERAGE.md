@@ -7,38 +7,41 @@ a prioritised work plan. Update this file when a row moves from gap → done.
 
 ### API project (`projects: ['api']`)
 - `api.spec.ts` — REST CRUD on customers, config, list pagination, FK exposure
-- `audit-log-api.spec.ts` — audit log endpoints, filters, limits
+- `caching-api.spec.ts` — `x-cache` MISS→HIT cycle, mutation invalidation, split-tag (edit A leaves B's `show` cache intact), concurrent dedup
 - `custom-actions-api.spec.ts` — `@Action` (record / bulk / resource) on posts + products
 - `date-filter-api.spec.ts` — date-range operators (`~~from/~~to`, `between`, `gt/lt`)
 - `forms-api.spec.ts` — form-data writes: scalar, enum, date, reference FK, json, richtext, composite FK, `@Before` hooks
 - `global-search-api.spec.ts` — global search grouping, limits, validation
 - `graphql.spec.ts` + `graphql-mutations.spec.ts` — schema, queries, mutations, DataLoader
 - `history-api.spec.ts` — record revisions list / fetch / revert (API only)
-- `numeric-filter.spec.ts` — numeric operators
 - `openapi.spec.ts` — OpenAPI doc + Swagger UI + CORS
+- `timeseries-api.spec.ts` — chart time-series with FK `groupByLabelResource` label resolution; verifies `titleProperty` override is honoured over heuristic column detection
 
 ### Browser project (`projects: ['chromium']`)
-- `ai-fill-ui.spec.ts` — `feature-ai-fill`: button visibility, mocked recognize → field hydration, cancel
 - `bulk-actions-ui.spec.ts` — multi-row select + Actions dropdown → `publishMany`, Clear selection
-- `feature-json-by-key-ui.spec.ts` — `feature-json-by-key`: virtual fields, `showWhen` swap, JSON merge round-trip
-- `feature-logging-ui.spec.ts` — audit-log page: filters (resource / action / record id), entry cards
-- `feature-password-ui.spec.ts` — `feature-password`: virtual `newPassword` input, hash rotation, no plaintext echo
-- `feature-webhooks-ui.spec.ts` — `/settings/webhooks`: create, test dispatch, edit, delete confirm dialog
 - `draft-autosave.spec.ts` — localStorage draft persistence + Undo toast
 - `edit-page.spec.ts` — hydration, PATCH on save, required-field validation
 - `export-ui.spec.ts` — list-page Export dialog: CSV + JSON downloads, Close
+- `feature-json-by-key-ui.spec.ts` — `feature-json-by-key`: virtual fields, `showWhen` swap, JSON merge round-trip
+- `feature-password-ui.spec.ts` — `feature-password`: virtual `newPassword` input, hash rotation, no plaintext echo
+- `filter-sidebar-ui.spec.ts` — FilterPanel side-sheet: reference filter (strict FK equality), enum filter (`availableValues` → Select), filter-count badge, clear-all restores unfiltered list + removes URL params
 - `forms-ui.spec.ts` — custom color-picker, color-swatch show, boolean Switch, m2m combobox + chip-remove
 - `forms-upload-ui.spec.ts` — single + multi-value file upload (products.thumbnail / .gallery), remove, show-page preview
+- `global-search-ui.spec.ts` — command-palette dialog: trigger button + `mod+k` hotkey, search results grouped by resource, recent-searches persistence in localStorage, clear recent, keyboard navigation
 - `history-ui.spec.ts` — Revisions Sheet, timeline, Revert confirm + cancel
+- `i18n-ui.spec.ts` — language switcher (configured subset only), en↔ru round-trip, chrome/resource/action/property label translations, locale persisted in localStorage across reload
 - `list-crud.spec.ts` — pagination, filter URL, cell-click → edit, row actions, delete
 - `list-page-advanced.spec.ts` — sort cycle, per-page selector, column visibility
 - `list-page-layout.spec.ts` — mobile + desktop layout regression
 - `m2m-picker-dialog.spec.ts` — m2m table-dialog picker (posts/tags)
 - `not-found.spec.ts` — 404 cases for show/edit/router
+- `numeric-filter.spec.ts` — numeric filter operators (`between`, `gt`, `eq`) on `Float?` column; verifies operator prefix is stripped before adapter receives typed scalar
 - `references-and-state.spec.ts` — reference rendering + URL deep-link state
 - `related-records-ui.spec.ts` — RelatedRecordsTabs on customers show, tab switch, embedded pagination
 - `settings.spec.ts` — settings page navigation (API keys / webhooks sections)
 - `show-page.spec.ts` — show field rendering, header buttons, delete
+- `social-login-ui.spec.ts` — ui-props endpoint shape, login page without/with social providers (route-mocked), separator visibility, emailAndPassword:false hides form, unknown provider fallback, POST body on click, disabled state during redirect
+- `visual-regression.spec.ts` — screenshot baselines (home, customers list, customers/new, settings) at fixed 1280×800; `toHaveScreenshot()` with `maxDiffPixelRatio: 0.02`
 - `web.spec.ts` — SPA smoke (home + resource list)
 - `wizard-create.spec.ts` — three-step wizard create flow
 
@@ -48,11 +51,12 @@ a prioritised work plan. Update this file when a row moves from gap → done.
 |---|---|---|
 | ~~`feature-upload`~~ | ✅ covered by `forms-upload-ui.spec.ts` | — |
 | ~~`feature-history` (UI)~~ | ✅ covered by `history-ui.spec.ts` | — |
-| ~~`feature-ai-fill`~~ | ✅ covered by `ai-fill-ui.spec.ts` | — |
 | ~~`feature-password`~~ | ✅ covered by `feature-password-ui.spec.ts` | — |
-| ~~`feature-webhooks`~~ | ✅ covered by `feature-webhooks-ui.spec.ts` | — |
-| ~~`feature-logging`~~ | ✅ covered by `feature-logging-ui.spec.ts` | — |
 | ~~`feature-json-by-key`~~ | ✅ covered by `feature-json-by-key-ui.spec.ts` | — |
+
+Pro feature plugins (`@modern-admin-pro/feature-ai-fill`, `feature-logging`,
+`feature-webhooks`) are covered by Playwright specs in the separate Pro
+monorepo (`modern-admin-pro/apps/e2e/`) — not exercised here.
 
 ## 🟠 Important — core UI flows without coverage
 
@@ -78,7 +82,7 @@ a prioritised work plan. Update this file when a row moves from gap → done.
 | Run UI tests against `api-drizzle` | Same logic — drizzle backend lives, no UI ever drives it |
 | WebSocket realtime | open two tabs, mutate in one → second tab updates live (`packages/realtime`) |
 | Cache invalidation via Redis pub/sub | 2 API processes, mutation in one → cache invalidates in the other |
-| i18n runtime language switch | toggle locale → strings actually change (smoke across 9 locales) |
+| ~~i18n runtime language switch~~ | ✅ covered by `i18n-ui.spec.ts` (en↔ru, localStorage persistence) |
 | Theme toggle | dark / light switch |
 | Mobile sidebar drawer | interactive open / close on narrow viewport |
 

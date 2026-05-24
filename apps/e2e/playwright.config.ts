@@ -34,6 +34,9 @@ export default defineConfig({
       env: {
         API_PORT: String(API_PORT),
         WEB_ORIGIN: `http://localhost:${WEB_PORT}`,
+        // Force the in-process MemoryCacheProvider so the caching e2e spec
+        // can observe HIT/MISS/BYPASS without a Redis dependency.
+        CACHE_BACKEND: 'memory',
       },
     },
     {
@@ -59,7 +62,7 @@ export default defineConfig({
     // which is enough to satisfy the cookie-session guard on /admin/api/*.
     {
       name: 'api',
-      testMatch: /(api|graphql|graphql-mutations|openapi|global-search-api|history-api|audit-log-api|custom-actions-api|date-filter-api|forms-api|timeseries-api)\.spec\.ts$/,
+      testMatch: /(api|graphql|graphql-mutations|openapi|global-search-api|history-api|custom-actions-api|date-filter-api|forms-api|timeseries-api|caching-api|login-audit-api)\.spec\.ts$/,
       dependencies: ['setup'],
       use: {
         storageState: 'playwright/.auth/admin.json',
@@ -79,7 +82,7 @@ export default defineConfig({
     },
     {
       name: 'chromium',
-      testIgnore: /(api|graphql|graphql-mutations|openapi|global-search-api|history-api|audit-log-api|custom-actions-api|date-filter-api|forms-api|timeseries-api)\.spec\.ts$/,
+      testIgnore: /(api|graphql|graphql-mutations|openapi|global-search-api|history-api|custom-actions-api|date-filter-api|forms-api|timeseries-api|caching-api|login-audit-api)\.spec\.ts$/,
       dependencies: ['setup'],
       use: {
         ...devices['Desktop Chrome'],

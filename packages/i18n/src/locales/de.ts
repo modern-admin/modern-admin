@@ -125,6 +125,8 @@ export const de: LocaleBundle = {
     'auth:title': 'Anmelden',
     'auth:subtitle': 'Geben Sie Ihre E-Mail und Ihr Passwort ein',
     'auth:tagline': 'Das moderne Admin-Panel für jeden Stack.',
+    'auth:orContinueWith': 'Oder weiter mit',
+    'auth:continueWith': 'Weiter mit {provider}',
     'common:chooseFile': 'Datei auswählen',
     'common:chooseFiles': 'Dateien auswählen',
     'common:dragAndDrop': 'Ziehen und ablegen oder',

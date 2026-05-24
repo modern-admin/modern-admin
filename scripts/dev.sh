@@ -11,7 +11,7 @@
 #   scripts/dev.sh logs    <service>       # print path to current log
 #   scripts/dev.sh tail    <service>       # follow log (Ctrl-C to stop)
 #
-# Known services: api, api-prisma, web.
+# Known services: api, api-prisma, api-prisma-pro, web.
 # Logs:  .dev-logs/<service>.log   (truncated each start; previous run
 #                                    rotated to <service>.prev.log)
 # PIDs:  .dev-logs/<service>.pid
@@ -29,9 +29,10 @@ mkdir -p "$LOG_DIR"
 # service → working directory (relative to repo root)
 service_cwd() {
   case "$1" in
-    api)         echo "apps/api" ;;
-    api-prisma)  echo "apps/api-prisma" ;;
-    web)         echo "apps/web" ;;
+    api)             echo "apps/api" ;;
+    api-prisma)      echo "apps/api-prisma" ;;
+    api-prisma-pro)  echo "apps/api-prisma-pro" ;;
+    web)             echo "apps/web" ;;
     *) return 1 ;;
   esac
 }
@@ -47,8 +48,21 @@ service_env() {
     api)
       printf 'API_PORT=%s\n' "$API_PORT"
       printf 'WEB_ORIGIN=http://localhost:%s\n' "$WEB_PORT"
+      # Demo runs the in-process cache so HIT/MISS/BYPASS is observable
+      # via `x-cache` headers (and matches what the e2e config expects).
+      printf 'CACHE_BACKEND=memory\n'
       ;;
     api-prisma)
+      printf 'API_PORT=%s\n' "$API_PORT"
+      printf 'WEB_ORIGIN=http://localhost:%s\n' "$WEB_PORT"
+      printf 'CACHE_BACKEND=memory\n'
+      ;;
+    api-prisma-pro)
+      # Pro reference demo wiring all 3 Pro feature plugins on top of the
+      # open-core Prisma stack. Uses its own Postgres database
+      # (`modern_admin_pro`) per `apps/api-prisma-pro/.env`. CACHE_BACKEND
+      # left at the package default (Redis) so the Pro logging/webhooks
+      # plugins exercise their real Redis-backed paths during dev.
       printf 'API_PORT=%s\n' "$API_PORT"
       printf 'WEB_ORIGIN=http://localhost:%s\n' "$WEB_PORT"
       ;;
@@ -59,7 +73,7 @@ service_env() {
   esac
 }
 
-ALL_SERVICES=(api api-prisma web)
+ALL_SERVICES=(api api-prisma api-prisma-pro web)
 DEFAULT_SERVICES=(api-prisma web)
 
 log_file() { echo "$LOG_DIR/$1.log"; }

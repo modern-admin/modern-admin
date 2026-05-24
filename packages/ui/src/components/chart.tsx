@@ -85,7 +85,13 @@ export function ChartPanel({
 
   if (type === 'pie') {
     return (
-      <div className={cn('w-full', className)} style={{ height }}>
+      <div
+        className={cn(
+          'w-full [&_*:focus]:outline-none [&_*:focus-visible]:outline-none',
+          className,
+        )}
+        style={{ height }}
+      >
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
@@ -114,7 +120,13 @@ export function ChartPanel({
     type === 'area' ? AreaChart : type === 'bar' ? BarChart : LineChart
 
   return (
-    <div className={cn('w-full', className)} style={{ height }}>
+    <div
+      className={cn(
+        'w-full [&_*:focus]:outline-none [&_*:focus-visible]:outline-none',
+        className,
+      )}
+      style={{ height }}
+    >
       <ResponsiveContainer width="100%" height="100%">
         <ChartCmp data={mapped} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
@@ -406,9 +418,14 @@ export function TimeSeriesChart({
   }
 
   return (
-    <div className={cn('w-full', className)}>
+    <div
+      className={cn(
+        'w-full [&_*:focus]:outline-none [&_*:focus-visible]:outline-none',
+        className,
+      )}
+    >
       <ResponsiveContainer width="100%" height={height}>
-        <ChartCmp data={rows} margin={{ top: 16, right: 20, left: -20, bottom: 8 }}>
+        <ChartCmp data={rows} margin={{ top: 16, right: 12, left: -28, bottom: 8 }}>
           <CartesianGrid strokeDasharray="6 6" stroke={GRID_STROKE} />
           <XAxis
             dataKey="date"
