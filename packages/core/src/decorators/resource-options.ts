@@ -2,6 +2,57 @@ import { z } from 'zod'
 import { propertyOptionsZ, type PropertyOptions } from './property-options.js'
 import { actionOptionsZ } from './action-options.js'
 
+/**
+ * Per-read-action cache override. `enabled: false` skips the cache for that
+ * action regardless of strategy/TTL; `ttl` overrides the resolved value.
+ */
+export const cacheActionOptionsZ = z.object({
+  enabled: z.boolean().optional(),
+  /** TTL in seconds. Wins over the resource-level `ttl`. */
+  ttl: z.number().int().nonnegative().optional(),
+})
+
+export type CacheActionOptions = z.infer<typeof cacheActionOptionsZ>
+
+/**
+ * Strategy for read-action response caching at the resource level.
+ *
+ *  - `'ttl'` (default): use the configured TTL (resource-level or
+ *    per-action). Standard cache-then-invalidate behaviour.
+ *  - `'tag-only'`: TTL is effectively long-lived (30 days). Cache is
+ *    kept until a mutation invalidates the tag. Use for reference
+ *    data that changes rarely or only via the admin layer.
+ *  - `'off'`: bypass the cache entirely (both reads and writes). The
+ *    mutation hooks still invalidate tags so flipping back to `'ttl'`
+ *    or `'tag-only'` later doesn't surface stale entries.
+ */
+export const cacheStrategyZ = z.enum(['ttl', 'tag-only', 'off'])
+
+export type CacheStrategy = z.infer<typeof cacheStrategyZ>
+
+/**
+ * Per-resource cache configuration. Accepts a literal `false` as a
+ * shorthand for `{ strategy: 'off' }`.
+ *
+ * Per-action overrides (`list`, `show`, `search`, `http`) win over the
+ * resource-level `ttl` / `strategy`. The `http` slot governs the
+ * NestJS-level response interceptor; the rest govern the action-level
+ * cache that lives inside the read handlers.
+ */
+export const cacheOptionsObjectZ = z.object({
+  strategy: cacheStrategyZ.optional(),
+  /** Resource-level default TTL applied to every read action. Seconds. */
+  ttl: z.number().int().nonnegative().optional(),
+  list: cacheActionOptionsZ.optional(),
+  show: cacheActionOptionsZ.optional(),
+  search: cacheActionOptionsZ.optional(),
+  http: cacheActionOptionsZ.optional(),
+})
+
+export const cacheOptionsZ = z.union([z.literal(false), cacheOptionsObjectZ])
+
+export type CacheOptions = z.infer<typeof cacheOptionsZ>
+
 export const navigationZ = z
   .object({
     name: z.string().optional(),
@@ -53,6 +104,13 @@ export const resourceOptionsZ = z.object({
     .optional(),
   /** Reverse 1:N relations to render as tabs on the show page. */
   relatedResources: z.array(relatedResourceZ).optional(),
+  /**
+   * Server-side response cache configuration for this resource. See
+   * `cacheOptionsZ` / `resolveResourceCacheConfig` for the resolution
+   * rules. When omitted, defaults apply (TTL strategy, 5-minute TTL for
+   * list/show/http, 60s for search).
+   */
+  cache: cacheOptionsZ.optional(),
 })
 
 export type ResourceOptions = Omit<

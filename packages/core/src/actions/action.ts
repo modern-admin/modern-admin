@@ -2,6 +2,7 @@ import type { BaseRecord, BaseResource } from '../adapters'
 import type { ICacheProvider } from '../ports/cache-provider.js'
 import type { CurrentAdmin } from '../ports/current-admin.js'
 import type { ModernAdmin } from '../modern-admin.js'
+import type { CacheRuntime } from './cache-runtime.js'
 
 export type ActionType = 'resource' | 'record' | 'bulk'
 
@@ -52,6 +53,14 @@ export interface ActionContext {
   action: ActionDescriptor
   currentAdmin?: CurrentAdmin
   cache: ICacheProvider
+  /**
+   * Shared read-through cache + in-flight dedup coordinator. Built-in
+   * read actions (`list`, `show`, `search`) and the NestJS HTTP
+   * interceptor route through this rather than touching `cache`
+   * directly so they all observe the same coalescing semantics and
+   * resource-level cache config.
+   */
+  cacheRuntime: CacheRuntime
   /** Free-form bag for hooks to share state. */
   [key: string]: unknown
 }

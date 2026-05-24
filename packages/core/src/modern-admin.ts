@@ -1,5 +1,5 @@
 import { BaseResource, type ParamsType, type RecordJSON } from './adapters'
-import { BUILT_IN_ACTIONS, type Action, type ActionContext, type ActionRequest, type ActionResponse, type After, type Before } from './actions'
+import { BUILT_IN_ACTIONS, CacheRuntime, type Action, type ActionContext, type ActionRequest, type ActionResponse, type After, type Before } from './actions'
 import type { ResourceJSON } from './decorators/resource-decorator.js'
 import { ResourcesFactory, type Adapter, type GlobalPlugin, type ResourceWithOptions } from './factories/resources-factory.js'
 import { ResourceNotFoundError, ActionNotFoundError, ForbiddenError } from './errors'
@@ -121,6 +121,7 @@ export class ModernAdmin {
   public readonly resources: BaseResource[]
   public readonly auth: IAuthProvider
   public readonly cache: ICacheProvider
+  public readonly cacheRuntime: CacheRuntime
   public readonly componentLoader: IComponentLoader
   public readonly realtime: IRealtimeBus
   public readonly rootPath: string
@@ -137,6 +138,7 @@ export class ModernAdmin {
     this.rootPath = options.rootPath ?? '/admin'
     this.auth = options.auth ?? new AnonymousAuthProvider()
     this.cache = options.cache ?? new NoopCacheProvider()
+    this.cacheRuntime = new CacheRuntime(this.cache)
     this.componentLoader = options.componentLoader ?? new ComponentLoader()
     this.realtime = options.realtime ?? new NoopRealtimeBus()
     this.resources = ResourcesFactory.buildResources({
@@ -248,6 +250,7 @@ export class ModernAdmin {
       resource,
       action: actionDecorator.toDescriptor(),
       cache: this.cache,
+      cacheRuntime: this.cacheRuntime,
       ...(currentAdmin !== undefined ? { currentAdmin } : {}),
     }
 

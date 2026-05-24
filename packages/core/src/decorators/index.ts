@@ -20,6 +20,20 @@ export { actionOptionsZ, type ActionOptions } from './action-options.js'
 export {
   resourceOptionsZ,
   relatedResourceZ,
+  cacheActionOptionsZ,
+  cacheOptionsZ,
+  cacheOptionsObjectZ,
+  cacheStrategyZ,
   type ResourceOptions,
   type RelatedResource,
+  type CacheActionOptions,
+  type CacheOptions,
+  type CacheStrategy,
 } from './resource-options.js'
+export {
+  resolveResourceCacheConfig,
+  TAG_ONLY_TTL_SECONDS,
+  DEFAULT_TTL_SECONDS,
+  type CacheReadAction,
+  type ResolvedCacheConfig,
+} from './cache-config.js'

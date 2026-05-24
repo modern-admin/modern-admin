@@ -1,3 +1,4 @@
+import { listTag, recordTag } from '../cache-runtime.js'
 import type {
   Action,
   ActionContext,
@@ -21,8 +22,8 @@ const handler = async (
     }
   })
   await cache.invalidateTag([
-    `resource:${resource.id()}`,
-    ...ids.map((id) => `record:${resource.id()}:${id}`),
+    listTag(resource.id()),
+    ...ids.map((id) => recordTag(resource.id(), id)),
   ])
   return {
     records: records.map((r) => r.toJSON()),

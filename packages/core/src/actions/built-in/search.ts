@@ -1,6 +1,8 @@
 import { Filter } from '../../filter/filter.js'
 import type { BaseRecord } from '../../adapters'
 import type { PropertyDecorator } from '../../decorators/property-decorator.js'
+import { listTag } from '../cache-runtime.js'
+import { resolveResourceCacheConfig } from '../../decorators/cache-config.js'
 import type {
   Action,
   ActionContext,
@@ -115,7 +117,7 @@ const handler = async (
   request: ActionRequest,
   context: ActionContext,
 ): Promise<ListActionResponse> => {
-  const { resource, cache } = context
+  const { resource, cacheRuntime } = context
   const query = (request.params.query ?? '').trim()
 
   // No query → return first 50 records unfiltered.
@@ -128,74 +130,75 @@ const handler = async (
   }
 
   const cacheKey = `search:${resource.id()}:${query}`
-  const cached = await cache.get<ListActionResponse>(cacheKey)
-  if (cached) return cached
+  const cfg = resolveResourceCacheConfig(resource.decorate().options, 'search')
 
-  const { titlePath, fields } = collectSearchableFields(context)
-  const seen = new Set<string>()
-  const collected: BaseRecord[] = []
-  const add = (record: BaseRecord): void => {
-    const key = String(record.id())
-    if (seen.has(key)) return
-    seen.add(key)
-    collected.push(record)
-  }
-
-  // 1. Exact id match (and dependent-typed ids handled via try/catch).
-  try {
-    const byId = await resource.findOne(query)
-    if (byId) add(byId)
-  } catch { /* non-numeric id on integer PK — ignore */ }
-
-  // 2. Field-wide substring search via the adapter-overridable hook.
-  //    Adapters with native OR build one query; the default impl fans out.
-  if (fields.length > 0) {
-    const fanned = await resource.search(query, fields, {
-      limit: RESULT_LIMIT * FETCH_MULTIPLIER,
-    })
-    for (const record of fanned) add(record)
-  }
-
-  // 3. ID substring fallback. When we still don't have enough results,
-  //    scan a bounded batch (≤200) and keep any whose id stringifies to
-  //    something that contains the query. Practical for UUID/cuid pickers
-  //    where operators paste the trailing segment of a record id.
-  if (collected.length < RESULT_LIMIT) {
-    const batch = await resource.find(new Filter({}, resource), {
-      limit: 200,
-      offset: 0,
-    })
-    for (const record of batch) {
-      if (String(record.id()).toLowerCase().includes(query.toLowerCase())) {
-        add(record)
-        if (collected.length >= RESULT_LIMIT) break
+  return cacheRuntime.read<ListActionResponse>(
+    cacheKey,
+    {
+      enabled: cfg.enabled,
+      ttl: cfg.ttl,
+      tags: [listTag(resource.id())],
+    },
+    async () => {
+      const { titlePath, fields } = collectSearchableFields(context)
+      const seen = new Set<string>()
+      const collected: BaseRecord[] = []
+      const add = (record: BaseRecord): void => {
+        const key = String(record.id())
+        if (seen.has(key)) return
+        seen.add(key)
+        collected.push(record)
       }
-    }
-  }
 
-  // 4. Rank, then trim.
-  const ranked = collected
-    .map((record, index) => ({
-      record,
-      score: scoreRecord(record, query, titlePath, fields),
-      index,
-    }))
-    .sort((a, b) => (b.score - a.score) || (a.index - b.index))
-    .slice(0, RESULT_LIMIT)
-    .map((entry) => entry.record)
+      // 1. Exact id match (and dependent-typed ids handled via try/catch).
+      try {
+        const byId = await resource.findOne(query)
+        if (byId) add(byId)
+      } catch { /* non-numeric id on integer PK — ignore */ }
 
-  const response: ListActionResponse = {
-    records: ranked.map((r) => r.toJSON()),
-    meta: { total: ranked.length, page: 1, perPage: RESULT_LIMIT },
-  }
+      // 2. Field-wide substring search via the adapter-overridable hook.
+      //    Adapters with native OR build one query; the default impl fans out.
+      if (fields.length > 0) {
+        const fanned = await resource.search(query, fields, {
+          limit: RESULT_LIMIT * FETCH_MULTIPLIER,
+        })
+        for (const record of fanned) add(record)
+      }
 
-  // Short TTL — search queries are user-typed, often-repeated within a
-  // session, but the underlying data can shift any moment.
-  await cache.set(cacheKey, response, {
-    ttl: 15,
-    tags: [`resource:${resource.id()}`],
-  })
-  return response
+      // 3. ID substring fallback. When we still don't have enough results,
+      //    scan a bounded batch (≤200) and keep any whose id stringifies to
+      //    something that contains the query. Practical for UUID/cuid pickers
+      //    where operators paste the trailing segment of a record id.
+      if (collected.length < RESULT_LIMIT) {
+        const batch = await resource.find(new Filter({}, resource), {
+          limit: 200,
+          offset: 0,
+        })
+        for (const record of batch) {
+          if (String(record.id()).toLowerCase().includes(query.toLowerCase())) {
+            add(record)
+            if (collected.length >= RESULT_LIMIT) break
+          }
+        }
+      }
+
+      // 4. Rank, then trim.
+      const ranked = collected
+        .map((record, index) => ({
+          record,
+          score: scoreRecord(record, query, titlePath, fields),
+          index,
+        }))
+        .sort((a, b) => (b.score - a.score) || (a.index - b.index))
+        .slice(0, RESULT_LIMIT)
+        .map((entry) => entry.record)
+
+      return {
+        records: ranked.map((r) => r.toJSON()),
+        meta: { total: ranked.length, page: 1, perPage: RESULT_LIMIT },
+      }
+    },
+  )
 }
 
 export const searchAction: Action<ListActionResponse> = {

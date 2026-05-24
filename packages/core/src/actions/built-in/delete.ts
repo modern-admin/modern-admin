@@ -1,4 +1,5 @@
 import { RecordNotFoundError } from '../../errors'
+import { listTag, recordTag } from '../cache-runtime.js'
 import type {
   Action,
   ActionContext,
@@ -18,7 +19,7 @@ const handler = async (
   if (!record) throw new RecordNotFoundError(id, resource.id())
 
   await resource.delete(id)
-  await cache.invalidateTag([`resource:${resource.id()}`, `record:${resource.id()}:${id}`])
+  await cache.invalidateTag([listTag(resource.id()), recordTag(resource.id(), id)])
   return {
     record: record.toJSON(),
     notice: { message: 'Record deleted', type: 'success' },

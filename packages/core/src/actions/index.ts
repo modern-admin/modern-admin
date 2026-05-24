@@ -18,6 +18,12 @@ export type {
   RecordActionResponse,
 } from './action.js'
 export { normalizeActionNesting } from './action.js'
+export {
+  CacheRuntime,
+  listTag,
+  recordTag,
+  type CacheRuntimeReadOptions,
+} from './cache-runtime.js'
 export { BUILT_IN_ACTIONS } from './built-in'
 export {
   listAction,

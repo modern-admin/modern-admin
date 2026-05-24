@@ -1,3 +1,4 @@
+import { listTag } from '../cache-runtime.js'
 import type {
   Action,
   ActionContext,
@@ -16,7 +17,10 @@ const handler = async (
   }
   const params = (request.payload ?? {}) as Record<string, unknown>
   const created = await resource.create(params)
-  await cache.invalidateTag(`resource:${resource.id()}`)
+  // A new row only affects list/search results — no existing `show`
+  // response can be made stale by an INSERT, so the per-record tags
+  // are left alone.
+  await cache.invalidateTag(listTag(resource.id()))
   const record = resource.build(created)
   return {
     record: record.toJSON(),

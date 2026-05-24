@@ -1,4 +1,5 @@
 import { RecordNotFoundError } from '../../errors'
+import { listTag, recordTag } from '../cache-runtime.js'
 import type {
   Action,
   ActionContext,
@@ -22,7 +23,10 @@ const handler = async (
 
   const payload = (request.payload ?? {}) as Record<string, unknown>
   const updated = await resource.update(id, payload)
-  await cache.invalidateTag([`resource:${resource.id()}`, `record:${resource.id()}:${id}`])
+  // The mutated row may shift in list order, change values, and the
+  // canonical show response is stale. Drop both tags but leave other
+  // records' show entries intact.
+  await cache.invalidateTag([listTag(resource.id()), recordTag(resource.id(), id)])
   return {
     record: resource.build(updated).toJSON(),
     notice: { message: 'Record updated', type: 'success' },
