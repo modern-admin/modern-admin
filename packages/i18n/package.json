@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/i18n",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Translation registry and locale dictionaries for Modern Admin (9 locales).",
   "type": "module",
   "license": "MIT",

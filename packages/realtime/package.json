@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/realtime",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "WebSocket gateway + realtime bus implementations for Modern Admin.",
   "type": "module",
   "license": "MIT",

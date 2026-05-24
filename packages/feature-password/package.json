@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/feature-password",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Hashed password property type for Modern Admin.",
   "type": "module",
   "license": "MIT",
