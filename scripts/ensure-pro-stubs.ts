@@ -33,7 +33,7 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
+import { dirname, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -65,9 +65,34 @@ function proAlreadyPopulated(): boolean {
   return existsSync(resolve(REPO_ROOT, 'pro-mirror/packages/feature-ai-fill/package.json'))
 }
 
+/**
+ * Manual mkdir -p. Bun 1.3.14's `mkdirSync(..., { recursive: true })`
+ * has been observed to fail with ENOENT on the leaf when the parent
+ * chain doesn't yet exist (e.g. creating `pro-mirror/apps/e2e` from
+ * scratch on a CI runner). Walk the path segment by segment and create
+ * each directory explicitly — boring but reliable.
+ */
+function mkdirPSafe(target: string): void {
+  // Split into segments. Keep a leading slash on POSIX.
+  const isAbs = target.startsWith(sep)
+  const segments = target.split(sep).filter((s) => s.length > 0)
+  let acc = isAbs ? sep : ''
+  for (const seg of segments) {
+    acc = acc + seg + sep
+    if (!existsSync(acc)) {
+      try {
+        mkdirSync(acc)
+      } catch (err) {
+        // Tolerate races (e.g. EEXIST) but re-throw anything else.
+        if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err
+      }
+    }
+  }
+}
+
 function writeStub(wsPath: string, stanza: WorkspaceStanza): void {
   const dir = resolve(REPO_ROOT, wsPath)
-  mkdirSync(dir, { recursive: true })
+  mkdirPSafe(dir)
   const pkg: Record<string, unknown> = {
     name: stanza.name,
     version: stanza.version,
