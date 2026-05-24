@@ -1,5 +1,11 @@
 # @modern-admin/react
 
+## 1.0.1
+
+### Patch Changes
+
+- [`6ca117b`](https://github.com/modern-admin/modern-admin/commit/6ca117b5305870e4fc6b7fdf70fa721934cb21b2) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Adds a new `showSidebarResourceIds` config option (default: false) that controls
+
 ## 1.0.0
 
 ### Minor Changes
