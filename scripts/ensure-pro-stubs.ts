@@ -70,20 +70,20 @@ function proAlreadyPopulated(): boolean {
  * has been observed to fail with ENOENT on the leaf when the parent
  * chain doesn't yet exist (e.g. creating `pro-mirror/apps/e2e` from
  * scratch on a CI runner). Walk the path segment by segment and create
- * each directory explicitly — boring but reliable.
+ * each directory explicitly, without trailing separators (bun's
+ * mkdirSync misbehaves on paths ending in `/`).
  */
 function mkdirPSafe(target: string): void {
-  // Split into segments. Keep a leading slash on POSIX.
   const isAbs = target.startsWith(sep)
   const segments = target.split(sep).filter((s) => s.length > 0)
-  let acc = isAbs ? sep : ''
+  let acc = isAbs ? '' : '.'
   for (const seg of segments) {
-    acc = acc + seg + sep
+    acc = acc + sep + seg
     if (!existsSync(acc)) {
       try {
         mkdirSync(acc)
       } catch (err) {
-        // Tolerate races (e.g. EEXIST) but re-throw anything else.
+        // Tolerate races (EEXIST) but re-throw anything else.
         if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err
       }
     }
