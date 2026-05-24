@@ -36,7 +36,7 @@
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "changeset": "changeset",
-    "version-packages": "changeset version && bun install --lockfile-only",
+    "version-packages": "bun scripts/ensure-pro-stubs.ts && changeset version && bun install --lockfile-only",
     "release": "bun scripts/release.ts"
   },
   "devDependencies": {

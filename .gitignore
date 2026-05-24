@@ -43,3 +43,6 @@ yarn-error.log*
 
 # bun
 bun-debug.log
+
+# Pro repo mirror (symlink locally, generated stubs in CI — never committed)
+pro-mirror

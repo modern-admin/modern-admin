@@ -59,24 +59,19 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # The committed package.json + bun.lock reference `pro-mirror/*`
-      # workspaces (the sibling Pro repo, gitignored symlink) and the
-      # `apps/api-prisma-pro` demo that depends on `@modern-admin-pro/*`
-      # workspaces. On CI those paths don't exist — strip them before
-      # frozen-lockfile install. See scripts/ci-strip-pro.ts.
-      - name: Strip Pro references for CI
-        run: bun scripts/ci-strip-pro.ts
+      # Open-core's package.json lists four `pro-mirror/*` workspaces
+      # (Pro feature plugins + Pro e2e harness) resolved locally via
+      # the gitignored `pro-mirror` symlink. CI has no symlink, so we
+      # materialise stub package.json files for those workspaces using
+      # data from bun.lock. The stubs are untracked (pro-mirror is in
+      # .gitignore) and survive the `git reset --hard` that
+      # changesets/action@v1 performs internally. See
+      # scripts/ensure-pro-stubs.ts.
+      - name: Ensure pro-mirror stubs
+        run: bun scripts/ensure-pro-stubs.ts
 
-      # NOTE: we do NOT use `--frozen-lockfile` here. The strip step
-      # above mutates package.json and bun.lock to remove `pro-mirror/*`
-      # workspaces and the `apps/api-prisma-pro` demo (which depends on
-      # Pro workspaces). That leaves orphan transitive deps in the
-      # packages section of bun.lock that bun's frozen check insists on
-      # cleaning. The strip script itself is deterministic, so plain
-      # `bun install` against the stripped state still produces a
-      # reproducible install — we just don't enforce zero-diff here.
       - name: Install dependencies
-        run: bun install
+        run: bun install --frozen-lockfile
 
       # Generate the Prisma client for app-api-prisma so its typecheck can
       # resolve `./generated/prisma/client`. The schema is checked in but
