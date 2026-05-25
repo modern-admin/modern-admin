@@ -150,6 +150,8 @@ export {
 export {
   ResourcesFactory,
   type Adapter,
+  type DatabaseClass,
+  type ResourceClass,
   type FeatureFn,
   type GlobalPlugin,
   type ResourceWithOptions,

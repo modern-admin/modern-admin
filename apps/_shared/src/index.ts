@@ -1,5 +1,8 @@
-// `@modern-admin/app-shared` — infrastructure shared between the
-// reference apps `apps/api` (InMemory) and `apps/api-prisma` (Prisma).
+// `@modern-admin/app-shared` — infrastructure shared by the reference
+// host app `apps/api-prisma` (Prisma + Postgres). Built as a separate
+// workspace package so an external host (your own Nest service) can
+// reuse the same controllers + Better Auth wiring without depending on
+// the demo's `prisma` schema.
 //
 // Covers:
 //   • Better Auth factory (api-key + email/password + social providers)

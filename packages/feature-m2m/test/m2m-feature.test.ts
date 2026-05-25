@@ -107,13 +107,10 @@ const tbl = (name: string, props: string[], rows: Row[] = []): Table => ({
   rows,
 })
 
-// `TestResource` requires a Table in its constructor but the adapter contract
-// is the abstract zero-arg shape — cast through unknown so the test harness
-// can plug it in without redoing the whole adapter API.
 const adapter = {
   Database: TestDatabase,
   Resource: TestResource,
-} as unknown as { Database: typeof BaseDatabase; Resource: typeof BaseResource }
+}
 
 // ─── Build admin instance helper ─────────────────────────────────────────────
 

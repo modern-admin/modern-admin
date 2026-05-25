@@ -12,9 +12,9 @@ import { expect, test, type APIRequestContext } from '@playwright/test'
  *   • Scalar arrays:  products.gallery (String[])
  *   • Hook-driven mutations: posts @Before fillSlug
  *
- * Backend: in-memory adapter from `apps/api/src/demo/in-memory-adapter.ts`
- * (the same shared controllers also back `apps/api-prisma`, so any contract
- * issue at this layer would reproduce on Prisma too).
+ * Backend: `apps/api-prisma` (Prisma 7 + Postgres) with the shared
+ * `@modern-admin/app-shared` controllers. Fixtures are populated by
+ * `SEED_DEMO=1` (see `apps/api-prisma/src/seed-demo.ts`).
  *
  * All created records are cleaned up via DELETE in a `finally` block.
  */
@@ -95,9 +95,9 @@ test.describe('Forms — customers: scalar + enum + date types', () => {
       expect(updated.record.params.name).toBe(renamed)
       expect(updated.record.params.tier).toBe('enterprise')
       expect(updated.record.params.score).toBe(99.9)
-      // The in-memory adapter keeps `'1991-06-15'`; Prisma normalises a
-      // date-only string to `'1991-06-15T00:00:00.000Z'`. Both encode the
-      // same calendar date, so accept either format.
+      // Prisma normalises a date-only string to `'1991-06-15T00:00:00.000Z'`;
+      // accept either the wire format the host echoes or the truncated
+      // ISO-date prefix so the assertion is robust to client tz padding.
       expect(String(updated.record.params.birthday)).toMatch(/^1991-06-15/)
       // Untouched fields survive partial update.
       expect(updated.record.params.email).toBe(`forms-${suffix}@example.com`)
@@ -495,8 +495,8 @@ test.describe('Forms — favorites: enum kind + optional polymorphic FKs', () =>
       const sbody = await swapped.json()
       expect(sbody.record.params.kind).toBe('product')
       expect(sbody.record.params.productId).toBe(productId)
-      // The old reference should be null (cleared) — the in-memory
-      // adapter preserves the explicit null we sent on update.
+      // The old reference should be null (cleared) — the Prisma adapter
+      // preserves the explicit null we sent on update.
       expect(sbody.record.params.postId == null).toBe(true)
     } finally {
       await cleanup(request, 'favorites', [favId])
@@ -557,11 +557,9 @@ test.describe('Forms — products: color + previewMedia + decimal types', () => 
     const suffix = uniqueSuffix()
     let productId: string | null = null
     try {
-      // Field names differ across adapters: the Prisma schema declares
-      // `thumbnail` (without `Url`); the in-memory adapter declares
-      // `thumbnailUrl` / `videoUrl`. Send both so the test exercises the
-      // shape on whichever backend is running. Adapter `writableData`
-      // strips unknown keys silently.
+      // The Prisma schema declares `thumbnail` / `video` (without `Url`).
+      // Send both old and new keys so the test stays robust to adapter
+      // changes — `writableData` strips unknown keys silently.
       const res = await request.post(adminApi('/resources/products/actions/new'), {
         data: {
           name: `Color ${suffix}`,

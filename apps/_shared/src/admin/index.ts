@@ -1,7 +1,8 @@
 // Barrel for the shared admin layer (controllers + supporting bits).
-// Used by both `apps/api` (InMemory) and `apps/api-prisma` (Prisma) —
-// each host registers its raw sources via `registerAdminSource(...)`
-// before NestJS bootstrap, then imports the per-resource feature modules.
+// Used by `apps/api-prisma` (Prisma + Postgres) and by any external
+// host app that wants to reuse the demo controllers. Each host
+// registers its raw sources via `registerAdminSource(...)` before
+// NestJS bootstrap, then imports the per-resource feature modules.
 
 export {
   registerAdminSource,

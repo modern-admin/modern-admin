@@ -11,7 +11,7 @@
 #   scripts/dev.sh logs    <service>       # print path to current log
 #   scripts/dev.sh tail    <service>       # follow log (Ctrl-C to stop)
 #
-# Known services: api, api-prisma, web.
+# Known services: api-prisma, web.
 # Logs:  .dev-logs/<service>.log   (truncated each start; previous run
 #                                    rotated to <service>.prev.log)
 # PIDs:  .dev-logs/<service>.pid
@@ -29,7 +29,6 @@ mkdir -p "$LOG_DIR"
 # service → working directory (relative to repo root)
 service_cwd() {
   case "$1" in
-    api)             echo "apps/api" ;;
     api-prisma)      echo "apps/api-prisma" ;;
     web)             echo "apps/web" ;;
     *) return 1 ;;
@@ -44,17 +43,13 @@ WEB_PORT=5173
 # service → extra env vars (one per line, KEY=VALUE)
 service_env() {
   case "$1" in
-    api)
-      printf 'API_PORT=%s\n' "$API_PORT"
-      printf 'WEB_ORIGIN=http://localhost:%s\n' "$WEB_PORT"
-      # Demo runs the in-process cache so HIT/MISS/BYPASS is observable
-      # via `x-cache` headers (and matches what the e2e config expects).
-      printf 'CACHE_BACKEND=memory\n'
-      ;;
     api-prisma)
       printf 'API_PORT=%s\n' "$API_PORT"
       printf 'WEB_ORIGIN=http://localhost:%s\n' "$WEB_PORT"
       printf 'CACHE_BACKEND=memory\n'
+      # Idempotent demo fixtures — mirrors the volumes the legacy
+      # in-memory adapter used to ship (30 customers / 200 posts / …).
+      printf 'SEED_DEMO=1\n'
       ;;
     web)
       printf 'WEB_PORT=%s\n' "$WEB_PORT"
@@ -63,7 +58,7 @@ service_env() {
   esac
 }
 
-ALL_SERVICES=(api api-prisma web)
+ALL_SERVICES=(api-prisma web)
 DEFAULT_SERVICES=(api-prisma web)
 
 log_file() { echo "$LOG_DIR/$1.log"; }

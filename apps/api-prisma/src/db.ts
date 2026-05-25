@@ -12,7 +12,7 @@ import type { DMMF } from '@prisma/client/runtime/client'
 
 const getDMMF = internals.getDMMF
 const schema = await getMergedSchemaContent()
-export const dmmf: DMMF.Document = await getDMMF({datamodel: schema})
+export const dmmf: DMMF.Document = await getDMMF({ datamodel: schema })
 
 const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,

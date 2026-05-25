@@ -1,24 +1,25 @@
 // Idempotent demo seed for the Prisma host of Modern Admin.
 //
-// Mirrors the row shapes produced by `apps/api/src/demo/seed.ts` (the
-// InMemory reference) but writes to the demo Prisma models declared in
-// `prisma/schema.prisma` (Customer, Post, …). Activated by `SEED_DEMO=1`
-// so production migrations never accidentally inject demo content.
+// Writes deterministic fixture rows to the demo Prisma models declared
+// in `prisma/schema.prisma` (Customer, Post, …). Activated by
+// `SEED_DEMO=1` so production migrations never accidentally inject
+// demo content.
 //
 // Idempotency strategy
 // --------------------
-// • Deterministic UUIDs: ids are `00000000-000<entity>-4000-8000-<seq>`
-//   — the same shape as the InMemory `uuidLike` precedent. Each entity
-//   has its own digit so cross-table primary-key collisions are impossible.
+// • Deterministic UUIDs: ids are `00000000-000<entity>-4000-8000-<seq>`.
+//   Each entity has its own digit so cross-table primary-key collisions
+//   are impossible.
 // • Every write goes through `upsert` keyed on `id` (or on the junction's
 //   composite-unique `(postId, tagId)` / `(productId, tagId)`), so re-running
 //   the seed updates rows in place rather than failing.
 // • A single PRNG seed (`mulberry32`) keeps random fields stable across
 //   re-runs.
 //
-// Volumes match the InMemory seed: 30 customers, 12 categories, 25 tags,
-// 200 posts (≈1–4 tags each), 1000 comments, 80 products (≈1–3 tags each),
-// 12 regional pages, 18 favorites.
+// Volumes: 30 customers, 12 categories, 25 tags, 200 posts (≈1–4 tags
+// each), 1000 comments, 80 products (≈1–3 tags each), 12 regional
+// pages, 18 favorites — large enough to exercise pagination, filters,
+// sorting, and time-series in the e2e suite.
 
 import { prisma } from './db.js'
 import { type Prisma } from './generated/prisma/client'
@@ -29,7 +30,7 @@ const shouldSeedDemo = (): boolean => {
   return value === '1' || value === 'true'
 }
 
-// ─── Deterministic PRNG (matches apps/api/src/demo/seed.ts) ──────────────
+// ─── Deterministic PRNG ─────────────────────────────────────────────────
 const mulberry32 = (seed: number): (() => number) => {
   let a = seed >>> 0
   return () => {

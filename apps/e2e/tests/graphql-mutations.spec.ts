@@ -11,7 +11,7 @@ import { test, expect, type APIRequestContext } from '@playwright/test'
  *
  * Also doubles as a smoke for the DataLoader-backed ref resolver: a single
  * GraphQL query fetching multiple posts with `author { id name }` must
- * round-trip without N+1 errors against the in-memory adapter.
+ * round-trip without N+1 errors against the Prisma adapter.
  */
 
 const API = process.env.E2E_API_URL ?? 'http://localhost:3001'

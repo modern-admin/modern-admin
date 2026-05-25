@@ -166,10 +166,11 @@ export class MemoryConfigStore implements IConfigStore {
  *
  * Lifecycle: instances are stateful — every appended entry stays on
  * `entries` for the lifetime of the JS process. Hosts that wire this
- * store as the default (e.g. `apps/api`) must reuse a single
- * `MemoryHistoryStore` across all consumers (the history feature, the
- * controller, plugin) by sharing the instance via DI / module-scope
- * singleton. Spinning up multiple instances yields divergent views.
+ * store as the default (e.g. tests / scaffolds without a persistent
+ * backend) must reuse a single `MemoryHistoryStore` across all
+ * consumers (the history feature, the controller, plugin) by sharing
+ * the instance via DI / module-scope singleton. Spinning up multiple
+ * instances yields divergent views.
  */
 export class MemoryHistoryStore implements IHistoryStore {
   public readonly entries: HistoryEntry[] = []

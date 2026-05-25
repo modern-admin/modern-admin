@@ -105,7 +105,10 @@ const buildOperatorClause = (
         return { has: coerceScalar(value, property) }
       case 'in': {
         if (Array.isArray(value)) {
-          return { hasSome: value.map((v) => coerceScalar(v as FilterValue, property)) }
+          const list = value.map((v) => coerceScalar(v as FilterValue, property))
+          // Empty selection ⇒ "no filter" (see scalar branch below).
+          if (!list.length) return undefined
+          return { hasSome: list }
         }
         return { hasSome: [coerceScalar(value, property)] }
       }
@@ -154,6 +157,11 @@ const buildOperatorClause = (
     case 'in': {
       if (Array.isArray(value)) {
         const list = value.map((v) => coerceScalar(v as FilterValue, property))
+        // Empty selection ⇒ "no filter applied", matching the Drizzle
+        // adapter. Without this guard Prisma executes `{ in: [] }` as
+        // "match nothing", which surprised users who unchecked the last
+        // item in the "Is one of" picker and expected the full list back.
+        if (!list.length) return undefined
         return { in: list }
       }
       // Single string passed for `in` — coerce to single-element array

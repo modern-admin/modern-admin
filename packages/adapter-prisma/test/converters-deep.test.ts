@@ -307,10 +307,13 @@ describe('filterToWhere — in operator', () => {
     expect(where({ name: 'in:Alice' })).toEqual({ name: { in: ['Alice'] } })
   })
 
-  test('in with empty string after operator → empty array → in: []', () => {
-    // Documents current behaviour: `field=in:` yields {in: []} which Prisma
-    // executes as "match nothing".
-    expect(where({ name: 'in:' })).toEqual({ name: { in: [] } })
+  test('in with empty string after operator → no filter applied', () => {
+    // `field=in:` arrives when the user unchecks the last item in the
+    // "Is one of" picker. The adapter drops the clause entirely so the
+    // unfiltered list is returned, matching the Drizzle behaviour. The
+    // previous "match nothing" semantics surprised users who expected
+    // the picker to behave like a no-op when empty.
+    expect(where({ name: 'in:' })).toEqual({})
   })
 
   test('in on scalar list field uses hasSome', () => {

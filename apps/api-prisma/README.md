@@ -1,9 +1,8 @@
 # `apps/api-prisma`
 
 Reference deployment of `@modern-admin/nest` against a real **PostgreSQL**
-database via **Prisma 7**. Lives alongside `apps/api` (bun:sqlite + Drizzle
-demo) so contributors can pick the integration shape closest to their host
-stack.
+database via **Prisma 7**. This is the canonical demo host — the
+Playwright e2e suite (`apps/e2e/`) drives every spec against it.
 
 ## What it shows
 
@@ -46,7 +45,8 @@ first boot via `seedDemoUser()`.
 
 ## Adding resources
 
-Declare per-feature modules with `AdminController` subclasses (same way
-`apps/api/src/admin/*` does it for the SQLite demo) and import them in
-`src/admin.module.ts`. The Prisma adapter discovers Prisma models from
-the shared `Prisma.dmmf` passed into `ModernAdminModule.forRoot`.
+Declare per-feature modules with `AdminController` subclasses (see the
+existing modules exported by `@modern-admin/app-shared` for examples)
+and import them in `src/admin.module.ts`. The Prisma adapter discovers
+Prisma models from the shared `Prisma.dmmf` passed into
+`ModernAdminModule.forRoot`.

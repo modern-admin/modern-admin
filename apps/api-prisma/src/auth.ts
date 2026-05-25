@@ -13,7 +13,6 @@ import { prismaAdapter } from 'better-auth/adapters/prisma'
 import { buildBetterAuth, seedDemoUser as runSeedDemoUser } from '@modern-admin/app-shared'
 import { prisma } from './db.js'
 import { admin } from 'better-auth/plugins'
-import { type BetterAuthPlugin } from 'better-auth'
 
 const built = buildBetterAuth({
   database: prismaAdapter(prisma, { provider: 'postgresql' }),
@@ -27,7 +26,7 @@ const built = buildBetterAuth({
   extraPlugins: [
     admin({
       defaultRole: process.env.DEMO_ADMIN_ROLE ?? 'admin',
-    }) as unknown as BetterAuthPlugin,
+    }),
   ],
 })
 

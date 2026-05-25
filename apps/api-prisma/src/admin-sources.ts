@@ -24,7 +24,7 @@
 // metadata for every model declared in `prisma/schema.prisma`.
 
 import { registerAdminSources } from '@modern-admin/app-shared'
-import type { DmmfModel, PrismaResourceConfig } from '@modern-admin/adapter-prisma'
+import type { PrismaResourceConfig } from '@modern-admin/adapter-prisma'
 import { dmmf, prisma } from './db.js'
 
 const lowerFirst = (s: string): string =>
@@ -59,9 +59,7 @@ const buildPrismaSource = (
   modelName: string,
   logicalId: string,
 ): (() => PrismaResourceConfig) => () => {
-  const model = dmmf.datamodel.models.find((m) => m.name === modelName) as
-    | DmmfModel
-    | undefined
+  const model = dmmf.datamodel.models.find((m) => m.name === modelName)
   if (!model) {
     throw new Error(
       `[admin] Prisma model "${modelName}" not found in DMMF — ` +
@@ -75,9 +73,9 @@ const buildPrismaSource = (
   })
   return {
     model: { ...model, name: logicalId, fields },
-    client: prisma as never,
+    client: prisma,
     clientKey: lowerFirst(modelName),
-    enums: dmmf.datamodel.enums as never,
+    enums: dmmf.datamodel.enums,
   }
 }
 

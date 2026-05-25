@@ -78,7 +78,7 @@ monorepo (`modern-admin-pro/apps/e2e/`) — not exercised here.
 
 | Item | Why |
 |---|---|
-| Run UI tests against `api-prisma` | Today all UI tests hit in-memory `apps/api`. Real adapter bugs (PrismaClientValidationError, form-coercion) would have been caught earlier with UI runs against Prisma |
+| ~~Run UI tests against `api-prisma`~~ | ✅ done — the entire suite now drives `apps/api-prisma` (Prisma 7 + Postgres). The legacy `apps/api` (in-memory adapter) has been removed |
 | Run UI tests against `api-drizzle` | Same logic — drizzle backend lives, no UI ever drives it |
 | WebSocket realtime | open two tabs, mutate in one → second tab updates live (`packages/realtime`) |
 | Cache invalidation via Redis pub/sub | 2 API processes, mutation in one → cache invalidates in the other |
@@ -106,9 +106,7 @@ Cheapest-first, highest-impact-first:
 5. ~~**`related-records-ui.spec.ts`**~~ ✅ done — Posts/Comments tabs, switch, paginate
 6. **`settings-api-keys.spec.ts`** — create API key, use in `Authorization:
    Bearer`, revoke
-7. **`forms-ui-prisma.spec.ts`** — re-run `forms-ui` matrix-style against
-   `api-prisma`
-8. **`ai-assistant.spec.ts`** — open chat, send prompt against mocked model,
+7. **`ai-assistant.spec.ts`** — open chat, send prompt against mocked model,
    verify reply
 
 ## Conventions

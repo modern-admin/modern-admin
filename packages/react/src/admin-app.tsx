@@ -55,7 +55,7 @@ import {
   Users,
 } from 'lucide-react'
 import { getSidebarExtensions } from './extension-registry.js'
-import { useCurrentUser, useFeatures, useLogout, useResources } from './hooks.js'
+import { useAdminConfig, useCurrentUser, useFeatures, useLogout, useResources } from './hooks.js'
 import { LoginPage } from './pages/login-page.js'
 import type { CurrentUser } from './types.js'
 import { Link, useRoute, useNavigate } from './router.js'
@@ -215,6 +215,8 @@ function AppSidebar({ showResourceIds }: { showResourceIds: boolean }): React.Re
   const features = useFeatures()
   const { t } = useI18n()
   const route = useRoute()
+  const { data: config } = useAdminConfig()
+  const appName = config?.branding?.companyName ?? t('common:appName')
   const { groups, ungrouped } = React.useMemo(() => buildNavGroups(resources), [resources])
   const { isMobile, setOpenMobile, state } = useSidebar()
 
@@ -244,7 +246,7 @@ function AppSidebar({ showResourceIds }: { showResourceIds: boolean }): React.Re
       <SidebarHeader className="h-12 flex-row items-center gap-2 border-b border-border px-3 py-0 sm:h-14 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
         <Database className="size-4 shrink-0 text-primary" />
         <span className="truncate text-sm font-semibold group-data-[collapsible=icon]:hidden">
-          {t('common:appName')}
+          {appName}
         </span>
       </SidebarHeader>
       <SidebarContent>

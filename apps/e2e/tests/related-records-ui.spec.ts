@@ -21,9 +21,9 @@ import { expect, test, type APIRequestContext, type Page } from '@playwright/tes
  *     while the row order changes — we capture the first row id before
  *     and after and assert they differ).
  *
- * Customer #1 is used because the in-memory seed reliably wires plenty of
- * posts + comments to it (see `apps/api` seed module), so the tests don't
- * have to fixture data first.
+ * Customer #1 is used because the demo seed reliably wires plenty of
+ * posts + comments to it (see `apps/api-prisma/src/seed-demo.ts`), so
+ * the tests don't have to fixture data first.
  */
 
 const API_URL = process.env.E2E_API_URL ?? 'http://localhost:3001'
@@ -107,12 +107,14 @@ test.describe('RelatedRecordsTabs — customers show page', () => {
   test('foreign-key filter is strict equality, not substring', async ({
     request,
   }) => {
-    // Regression: the in-memory matcher used to fall back to a case-
-    // insensitive `String.includes()` for any string-typed needle,
+    // Regression: an earlier in-memory matcher used to fall back to a
+    // case-insensitive `String.includes()` for any string-typed needle,
     // regardless of property type. With numeric-string FK ids that
     // makes `filters[authorId]=1` also match authorId="10", "11", "12",
     // …, "21" — so a customer's "Related Posts" tab leaked every post
-    // whose authorId merely *contained* the customer id.
+    // whose authorId merely *contained* the customer id. The Prisma
+    // adapter routes FK columns through strict equality; this spec
+    // pins that contract.
     //
     // The fix should treat reference / id columns as strict equality
     // (substring match is only meaningful for free-text string fields

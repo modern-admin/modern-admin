@@ -109,10 +109,10 @@ Run with `bun run prisma/seed.ts`.
      const lowerFirst = (s: string): string =>
        s.length === 0 ? s : s.charAt(0).toLowerCase() + s.slice(1)
      return {
-       model: model as never,
-       client: prisma as never,
+       model,
+       client: prisma,
        clientKey: lowerFirst(modelName),
-       enums: dmmf.datamodel.enums as never,
+       enums: dmmf.datamodel.enums,
      }
    }
 

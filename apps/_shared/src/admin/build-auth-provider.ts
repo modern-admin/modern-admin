@@ -8,7 +8,7 @@
 // Set `BETTER_AUTH_ENABLED=false` to bypass auth entirely (e.g. local dev
 // against a session-DB-less environment).
 
-import { BetterAuthProvider } from '@modern-admin/auth-better-auth'
+import { BetterAuthProvider, type BetterAuthProviderOptions } from '@modern-admin/auth-better-auth'
 import type { IApiKeyService } from '@modern-admin/nest'
 
 /**
@@ -20,7 +20,7 @@ export const buildBetterAuthProvider = (): BetterAuthProvider | undefined => {
   if (process.env.BETTER_AUTH_ENABLED === 'false') return undefined
   const auth = (globalThis as { __betterAuth?: unknown }).__betterAuth
   if (!auth) return undefined
-  return new BetterAuthProvider({ auth: auth as never })
+  return new BetterAuthProvider({ auth: auth as BetterAuthProviderOptions['auth'] })
 }
 
 /**

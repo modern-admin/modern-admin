@@ -3,8 +3,8 @@ import { test, expect } from '@playwright/test'
 /**
  * OpenAPI surface — `setupOpenApi()` in `packages/nest/src/openapi.ts`.
  *
- * The reference api opts in via `openApi: { ... }` in `apps/api/src/main.ts`,
- * which mounts:
+ * The reference api opts in via `openApi: { ... }` in
+ * `apps/api-prisma/src/main.ts`, which mounts:
  *
  *   GET /admin/api/openapi.json   — raw OpenAPI 3 document (wide-open CORS)
  *   GET /admin/api/docs           — Swagger UI

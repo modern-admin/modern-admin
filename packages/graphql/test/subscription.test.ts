@@ -3,8 +3,6 @@ import { execute, parse, subscribe } from 'graphql'
 import {
   InMemoryRealtimeBus,
   ModernAdmin,
-  type BaseDatabase,
-  type BaseResource,
   type RealtimeEvent,
 } from '@modern-admin/core'
 import { buildGraphqlSchema, createContext } from '../src/schema-builder.js'
@@ -16,8 +14,8 @@ const makeAdmin = () =>
     databases: [seed()],
     adapters: [
       {
-        Database: MemDatabase as unknown as typeof BaseDatabase,
-        Resource: MemResource as unknown as typeof BaseResource,
+        Database: MemDatabase,
+        Resource: MemResource,
       },
     ],
   })

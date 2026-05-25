@@ -3,9 +3,10 @@ import { test, expect, type APIRequestContext } from '@playwright/test'
 /**
  * Record-level revision history exposed by `feature-history`.
  *
- * The reference api wires `historyPlugin({ store: MemoryHistoryStore })` in
- * `apps/api/src/admin.module.ts`, so every `edit` action appends a revision
- * to the in-process store. The history controller exposes:
+ * The reference api wires `historyPlugin({ store: PrismaHistoryStore })`
+ * in `apps/api-prisma/src/admin.module.ts`, so every `edit` action
+ * appends a revision to `MaHistoryEntry`. The history controller
+ * exposes:
  *
  *   GET  /admin/api/resources/:id/records/:recordId/history
  *   GET  /admin/api/resources/:id/records/:recordId/history/:revisionId

@@ -46,7 +46,6 @@ import { DrizzleDatabase, DrizzleResource } from '@modern-admin/adapter-drizzle'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { Pool } from 'pg'
 import * as schema from './schema.js'
-import type { BaseDatabase, BaseResource } from '@modern-admin/core'
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 const db = drizzle(pool, { schema })
@@ -55,8 +54,8 @@ const db = drizzle(pool, { schema })
   imports: [
     ModernAdminModule.forRoot({
       adapters: [{
-        Database: DrizzleDatabase as unknown as typeof BaseDatabase,
-        Resource: DrizzleResource as unknown as typeof BaseResource,
+        Database: DrizzleDatabase,
+        Resource: DrizzleResource,
       }],
       databases: [{ client: db, schema }],
     }),

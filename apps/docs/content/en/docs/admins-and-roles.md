@@ -38,8 +38,9 @@ That overlap caused confusion. We split them:
 | Panel admin (login)  | Better Auth (`ma_user`, `ma_account`) | `admins`    |
 | Application end user | Your own table (`Customer`, etc.)    | `customers` |
 
-The reference apps use this split — see `apps/api/src/admin-sources.ts`
-and `apps/api-prisma/prisma/schema.prisma`.
+The reference app uses this split — see
+`apps/api-prisma/src/admin-sources.ts` and
+`apps/api-prisma/prisma/schema.prisma`.
 
 ### Better Auth `ma_*` tables
 

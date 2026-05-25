@@ -5,9 +5,14 @@ const WEB_PORT = 5173
 
 /**
  * Playwright config for the Modern Admin reference apps. Two web servers
- * boot in parallel: the NestJS API in `apps/api` (port 3001) and the
- * Vite-served React SPA in `apps/web` (port 5173). Tests target the SPA
- * URL and assume the in-memory demo adapter — no real database required.
+ * boot in parallel: the NestJS API in `apps/api-prisma` (port 3001,
+ * Prisma 7 + Postgres) and the Vite-served React SPA in `apps/web`
+ * (port 5173). Tests target the SPA URL.
+ *
+ * The Postgres database is provisioned via `bun run docker:up` (see
+ * `docker-compose.yml`) and migrated with `bun run --cwd apps/api-prisma
+ * prisma:migrate`. `SEED_DEMO=1` populates fixture rows used by the
+ * specs (idempotent — re-runs upsert in place).
  */
 export default defineConfig({
   testDir: './tests',
@@ -27,7 +32,7 @@ export default defineConfig({
 
   webServer: [
     {
-      command: 'bun run --cwd ../api dev',
+      command: 'bun run --cwd ../api-prisma dev',
       url: `http://localhost:${API_PORT}/admin/api/config`,
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
@@ -37,6 +42,9 @@ export default defineConfig({
         // Force the in-process MemoryCacheProvider so the caching e2e spec
         // can observe HIT/MISS/BYPASS without a Redis dependency.
         CACHE_BACKEND: 'memory',
+        // Idempotent fixture seed used by every spec (mirrors the volumes
+        // the legacy `apps/api` in-memory adapter used to ship).
+        SEED_DEMO: '1',
       },
     },
     {

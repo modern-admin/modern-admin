@@ -270,7 +270,7 @@ export function AuditLogPage(): React.ReactElement {
         </CardContent>
       </Card>
       <Card>
-        <CardContent className="p-4">
+        <CardContent>
           {log.isLoading ? (
             <div className="space-y-3">
               <Skeleton className="h-20 w-full" />

@@ -257,8 +257,8 @@ test.describe('Form UI — m2m combobox picker (products.tags)', () => {
       expect(patchRes.ok(), `PATCH failed: ${await patchRes.text()}`).toBeTruthy()
       const patchBody = await patchRes.json()
       const tags = patchBody.record.params.tags
-      // After removal the relation is empty (in-memory adapter persists
-      // an empty array; some adapters omit the key).
+      // After removal the relation is empty (some adapters serialise it
+      // as an empty array, others omit the key entirely).
       const ids = Array.isArray(tags)
         ? (tags as Array<{ id: unknown }>).map((t) => String(t.id))
         : []

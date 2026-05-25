@@ -186,6 +186,49 @@ model MaLog {
   @@map("ma_log")
 }
 
+model MaWebhook {
+  id            String   @id @default(uuid(7))
+  name          String
+  url           String
+  /// JSON array of dotted event names. Validated by `webhookZ`.
+  events        Json
+  /// Optional resource/model scope. Null means all resources.
+  resourceId    String?
+  enabled       Boolean  @default(true)
+  secret        String?
+  /// JSON object of extra HTTP headers.
+  headers       Json     @default("{}")
+  /// List-page-style filters matched against the mutation snapshot.
+  filters       Json     @default("{}")
+  /// Optional JSON array of field paths to include in outgoing payload.
+  payloadFields Json     @default("[]")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  deliveries MaWebhookDelivery[]
+
+  @@map("ma_webhook")
+}
+
+model MaWebhookDelivery {
+  id             String    @id @default(uuid(7))
+  webhookId      String
+  event          String
+  payload        Json
+  status         String
+  responseStatus Int?
+  responseBody   String?
+  error          String?
+  attempt        Int       @default(1)
+  createdAt      DateTime  @default(now())
+  deliveredAt    DateTime?
+
+  webhook MaWebhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([webhookId, createdAt])
+  @@map("ma_webhook_delivery")
+}
+
 model MaConfig {
   id        String   @id
   scope     String
@@ -205,11 +248,51 @@ model MaHistory {
   op             String
   userId         String?
   snapshot       Json
+  /// Snapshot of the record _before_ this revision was applied. Used by
+  /// the history controller's revert endpoint to undo the change.
   snapshotBefore Json?
   createdAt      DateTime @default(now())
 
   @@index([resourceId, recordId, createdAt])
   @@map("ma_history")
+}
+
+model MaAiTask {
+  id         String    @id @default(uuid(7))
+  kind       String
+  resourceId String?
+  recordId   String?
+  userId     String?
+  status     String
+  input      Json      @default("{}")
+  output     Json?
+  error      String?
+  /// 0..100 or null for indeterminate progress.
+  progress   Int?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  startedAt  DateTime?
+  finishedAt DateTime?
+
+  events MaAiTaskEvent[]
+
+  @@index([kind, status])
+  @@index([userId])
+  @@index([resourceId, recordId])
+  @@map("ma_ai_task")
+}
+
+model MaAiTaskEvent {
+  id        String   @id @default(uuid(7))
+  taskId    String
+  type      String
+  data      Json     @default("{}")
+  createdAt DateTime @default(now())
+
+  task MaAiTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, createdAt])
+  @@map("ma_ai_task_event")
 }
 
 model MaCache {

@@ -49,8 +49,8 @@ resources; all are aggregated under the same admin API:
 ```ts
 ModernAdminModule.forRoot({
   adapters: [
-    { Database: PrismaDatabase as unknown as typeof BaseDatabase, Resource: PrismaResource as unknown as typeof BaseResource },
-    { Database: DrizzleDatabase as unknown as typeof BaseDatabase, Resource: DrizzleResource as unknown as typeof BaseResource },
+    { Database: PrismaDatabase, Resource: PrismaResource },
+    { Database: DrizzleDatabase, Resource: DrizzleResource },
   ],
   databases: [
     { client: prisma, dmmf: Prisma.dmmf },                // Prisma on Postgres

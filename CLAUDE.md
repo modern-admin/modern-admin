@@ -38,7 +38,7 @@ When touching one of those, expect to update call sites for the new API.
 - **TypeScript** presets live in `packages/tsconfig`. Each package extends
   `@modern-admin/tsconfig/node.json` or `react.json`.
 - **Bun TS types**: `"types": ["bun"]` (not `bun-types`).
-- **NestJS legacy decorators** (apps/api): keep
+- **NestJS legacy decorators** (apps/api-prisma): keep
   `experimentalDecorators: true`, `emitDecoratorMetadata: true`,
   `useDefineForClassFields: false`.
 - **Tests**: `bun test`, files in `<pkg>/test/`.

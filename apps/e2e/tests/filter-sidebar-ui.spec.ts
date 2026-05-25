@@ -4,14 +4,14 @@ import { expect, test, type APIRequestContext, type Page } from '@playwright/tes
  * UI regression for the FilterPanel side-sheet
  * (`packages/react/src/pages/list-page.tsx:FilterPanel`).
  *
- * Why this spec exists: the in-memory adapter's catch-all filter branch
- * used to apply a case-insensitive substring match for *every* string
- * needle — including FK / id / numeric columns — which leaked unrelated
- * rows whenever a header- or sidebar-filter set a bare value. The
- * regression slipped through because no UI spec actually opened the
+ * Why this spec exists: an earlier in-memory adapter's catch-all filter
+ * branch used to apply a case-insensitive substring match for *every*
+ * string needle — including FK / id / numeric columns — which leaked
+ * unrelated rows whenever a header- or sidebar-filter set a bare value.
+ * The regression slipped through because no UI spec actually opened the
  * Filters sheet, applied a value, and checked that the visible rows
  * matched the filter. This file pins that contract from the UI down to
- * the API.
+ * the API (now against the Prisma adapter).
  *
  * Coverage:
  *   • Reference filter (posts.authorId via the customer combobox):

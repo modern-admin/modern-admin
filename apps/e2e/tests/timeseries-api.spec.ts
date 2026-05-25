@@ -14,9 +14,9 @@
 // and the chart legend previously showed raw FK ids.
 //
 // Data: 200 seeded `posts` × 12 seeded `categories`, both with random
-// `publishedAt` across calendar 2024 (apps/api/src/demo/seed.ts). Each
-// category row has `displayName = "<name> (section)"` so the test can
-// distinguish `displayName` from `name` value-wise.
+// `publishedAt` across calendar 2024 (apps/api-prisma/src/seed-demo.ts).
+// Each category row has `displayName = "<name> (section)"` so the test
+// can distinguish `displayName` from `name` value-wise.
 
 import { expect, test, type APIRequestContext } from '@playwright/test'
 

@@ -6,9 +6,9 @@ const adminApi = (path: string): string => `${API}/admin/api${path}`
 
 /**
  * Backend smoke covering the canonical CRUD lifecycle through REST against
- * the seeded in-memory adapter (`customers` resource — the demo app's
- * end users, NOT panel admins). Routes follow the AdminJS-style
- * `/actions/<name>` shape exposed by ResourceController.
+ * the Prisma-backed `customers` resource (the demo app's end users, NOT
+ * panel admins). Routes follow the AdminJS-style `/actions/<name>` shape
+ * exposed by ResourceController.
  */
 test.describe('REST CRUD — customers', () => {
   test('config endpoint exposes seeded resources', async ({ request }) => {

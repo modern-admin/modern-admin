@@ -1,0 +1,32 @@
+{
+  "name": "@modern-admin/skills",
+  "version": "1.0.0",
+  "description": "Claude Code skills for Modern Admin — distributed via npm-skills. Encodes the framework's non-obvious integration rules so AI coding agents (Claude Code, Cursor, Aider, …) get them for free in any host project that depends on Modern Admin.",
+  "license": "MIT",
+  "homepage": "https://github.com/modern-admin/modern-admin",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/modern-admin/modern-admin",
+    "directory": "packages/skills"
+  },
+  "bugs": "https://github.com/modern-admin/modern-admin/issues",
+  "keywords": [
+    "modern-admin",
+    "claude-code",
+    "ai-skills",
+    "npm-skills",
+    "agent-prompt",
+    "admin-panel",
+    "nestjs",
+    "prisma",
+    "better-auth"
+  ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "restricted"
+  },
+  "files": [
+    "skills",
+    "README.md"
+  ]
+}

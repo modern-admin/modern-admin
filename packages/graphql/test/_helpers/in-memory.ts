@@ -1,5 +1,7 @@
-// Tiny in-memory adapter dedicated to graphql tests. Mirrors the apps/api
-// demo adapter at a smaller scale.
+// Tiny in-memory adapter dedicated to graphql tests. Implements only
+// the BaseDatabase / BaseResource surface the graphql schema/resolver
+// tests touch — kept small and inline so the test suite doesn't depend
+// on any production adapter.
 
 import {
   BaseDatabase,

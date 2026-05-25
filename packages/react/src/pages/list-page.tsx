@@ -1439,7 +1439,7 @@ export function ResourceListPage({
           className={cn(
             'border-t border-border bg-card py-3',
             f.card
-              ? 'sticky bottom-0 z-20 -mx-2 mt-0 px-2 pr-14 shadow-[0_-4px_8px_-6px_rgba(0,0,0,0.08)] sm:-mx-6 sm:px-6 sm:pr-16'
+              ? 'sticky bottom-0 -mb-px z-20 -mx-2 mt-0 px-2 pr-14 shadow-[0_-4px_8px_-6px_rgba(0,0,0,0.08)] sm:-mx-6 sm:px-6 sm:pr-16'
               : 'shrink-0 px-6',
           )}
         >
@@ -1775,9 +1775,14 @@ function parseFilterString(raw: string): { op: StringFilterOp; val: string } {
 
 function encodeFilter(op: StringFilterOp, val: string): string {
   if (op === 'empty' || op === 'nempty') return `${op}:`
-  // Preserve `in:` even when no items are selected, so the operator doesn't
-  // reset to 'co' when the last checkbox is unchecked.
-  if (op === 'in') return `in:${val}`
+  // Unchecking the last item in the "Is one of" picker ⇒ no filter.
+  // We deliberately do NOT emit `in:` here: it would survive
+  // `setDraftFilter`'s empty-string guard and ship a phantom
+  // `filters[col]=in:` URL param (and a "1 active filter" badge) while
+  // the adapter layer drops the clause anyway. The operator resets to
+  // `co` on close, but `StringFilterField`'s auto-switch re-promotes
+  // low-cardinality fields back to `in` the next time the panel opens.
+  if (op === 'in') return val ? `in:${val}` : ''
   if (!val) return ''
   return `${op}:${val}`
 }

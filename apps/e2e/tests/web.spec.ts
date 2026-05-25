@@ -15,7 +15,7 @@ test.describe('Web SPA', () => {
   test('navigates to the customers resource list', async ({ page }) => {
     await page.goto('/resources/customers')
     // Wait for the table to mount with at least one seeded row. The data
-    // cell ("Ada Lovelace" — customer #1 per apps/api/src/demo/seed.ts) is
+    // cell ("Ada Lovelace" — customer #1 per apps/api-prisma/src/seed-demo.ts) is
     // wrapped in a `<span class="overflow-hidden break-words">`, which makes
     // bare `getByText` racy on `toBeVisible`. Match the ARIA cell role
     // (stable, normalized text) and require at least one to render.

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { execute, parse } from 'graphql'
-import { ModernAdmin, type BaseDatabase, type BaseResource } from '@modern-admin/core'
+import { ModernAdmin } from '@modern-admin/core'
 import { buildGraphqlSchema, createContext } from '../src/schema-builder.js'
 import { MemDatabase, MemResource, seed } from './_helpers/in-memory.js'
 
@@ -8,8 +8,8 @@ const makeAdmin = () =>
   new ModernAdmin({
     databases: [seed()],
     adapters: [{
-      Database: MemDatabase as unknown as typeof BaseDatabase,
-      Resource: MemResource as unknown as typeof BaseResource,
+      Database: MemDatabase,
+      Resource: MemResource,
     }],
   })
 

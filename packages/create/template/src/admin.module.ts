@@ -6,18 +6,19 @@
  * cache invalidation when `REDIS_URL` is set.
  */
 import { Module } from '@nestjs/common'
-import { type BaseDatabase, type BaseResource, type IAuthProvider } from '@modern-admin/core'
+import { type IAuthProvider } from '@modern-admin/core'
 import { ModernAdminModule } from '@modern-admin/nest'
 import { PrismaDatabase, PrismaResource } from '@modern-admin/adapter-prisma'
 import { setupPrismaSystem } from '@modern-admin/system-prisma'
 import { BetterAuthProvider } from '@modern-admin/auth-better-auth'
 import { RedisCacheProvider } from '@modern-admin/cache-redis'
+import { Redis } from 'ioredis'
 import { dmmf, prisma } from './db.js'
 import { auth, setAuditLogStore } from './auth.js'
 
 // System stores (logs, history, config, sessions, cache fallback) backed
 // by the `ma_*` tables in schema.prisma.
-const system = setupPrismaSystem(prisma as never)
+const system = setupPrismaSystem(prisma)
 
 // Wire the audit-log sink used by Better Auth's `session.create.after`
 // hook (see auth.ts). Doing it here — after `setupPrismaSystem()` builds
@@ -28,8 +29,15 @@ const authProvider = new BetterAuthProvider({ auth }) satisfies IAuthProvider
 
 // Redis is optional — when unset we use the in-process cache. Provide a
 // REDIS_URL to enable cross-instance invalidation when scaling out.
+//
+// `RedisCacheProvider` takes a Redis-like client, not a URL. ioredis
+// requires a *separate* subscriber connection for pub/sub (it won't
+// multiplex pub/sub on a command connection), so we create two.
 const cacheProvider = process.env.REDIS_URL
-  ? new RedisCacheProvider({ url: process.env.REDIS_URL })
+  ? new RedisCacheProvider({
+      client:     new Redis(process.env.REDIS_URL),
+      subscriber: new Redis(process.env.REDIS_URL),
+    })
   : undefined
 
 @Module({
@@ -37,8 +45,8 @@ const cacheProvider = process.env.REDIS_URL
     ModernAdminModule.forRoot({
       global: true,
       adapters: [{
-        Database: PrismaDatabase as unknown as typeof BaseDatabase,
-        Resource: PrismaResource as unknown as typeof BaseResource,
+        Database: PrismaDatabase,
+        Resource: PrismaResource,
       }],
       databases: [{ client: prisma, dmmf }],
       branding: { companyName: '{{name}}' },
@@ -49,6 +57,8 @@ const cacheProvider = process.env.REDIS_URL
       configStore: system.configStore,
       historyStore: system.historyStore,
       logStore: system.logStore,
+      webhookStore: system.webhookStore,
+      aiTaskStore: system.aiTaskStore,
       auth: authProvider,
       ...(cacheProvider ? { cache: cacheProvider } : {}),
     }),

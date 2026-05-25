@@ -1,12 +1,12 @@
-// Shared Better Auth factory used by every reference app.
-//
-// Both the bun:sqlite (`apps/api`) and Prisma+Postgres (`apps/api-prisma`)
-// flavours configure Better Auth identically apart from the `database`
-// slot and a couple of optional plugins (admin role plugin, passkey).
-// `buildBetterAuth()` consolidates the common bits — api-key plugin,
-// social providers, baseURL/trustedOrigins/email-and-password — and
-// publishes the resulting instance on globalThis so the admin module
-// loaders can pick it up at module-load time.
+// Shared Better Auth factory used by the reference host
+// (`apps/api-prisma`, Prisma + Postgres) and any external host that
+// wires `@modern-admin/app-shared`. The host passes its own `database`
+// slot (e.g. `prismaAdapter(prisma, { provider: 'postgresql' })`) plus
+// any extra plugins it needs (admin role plugin, passkey). The factory
+// consolidates the common bits — api-key plugin, social providers,
+// baseURL/trustedOrigins/email-and-password — and publishes the
+// resulting instance on globalThis so the admin module loaders can pick
+// it up at module-load time.
 
 import { betterAuth, type BetterAuthOptions, type BetterAuthPlugin } from 'better-auth'
 import { APIError } from 'better-auth/api'
@@ -17,7 +17,7 @@ export interface BuildBetterAuthOptions {
   /** Database slot to pass through to `betterAuth()`. */
   database: BetterAuthOptions['database']
   /** Plugins appended after the default api-key plugin (admin, passkey…). */
-  extraPlugins?: BetterAuthPlugin[]
+  extraPlugins?: unknown[]
   modelNames?: {
     user?: string
     session?: string
@@ -154,7 +154,7 @@ export const buildBetterAuth = ({
       rateLimit: { enabled: false },
       schema: { apikey: { modelName: resolvedModelNames.apikey } },
     }) as BetterAuthPlugin,
-    ...extraPlugins,
+    ...(extraPlugins as BetterAuthPlugin[]),
   ]
 
   // ─── databaseHooks ──────────────────────────────────────────────────────

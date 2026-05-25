@@ -11,8 +11,8 @@ import { expect, test, type APIRequestContext, type Page } from '@playwright/tes
  *     (client-side Zod schema short-circuits the network call).
  *
  * Successful create-from-UI is intentionally out of scope here — the
- * customers fixture has optional date columns whose UI defaults the in-memory
- * adapter rejects with 500, and a successful POST is already exercised
+ * customers fixture has optional date columns whose UI defaults the
+ * adapter may reject, and a successful POST is already exercised
  * end-to-end via `tests/api.spec.ts`.
  */
 

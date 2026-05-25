@@ -638,7 +638,7 @@ export function ResourceEditPage({
           onFilled={applyAiFillValues}
         />
       )}
-      <div className="sticky bottom-0 z-20 -mx-2 border-t border-border bg-card px-2 py-3 pr-14 sm:-mx-6 sm:px-6 sm:pr-16">
+      <div className="sticky bottom-0 -mb-px z-20 -mx-2 border-t border-border bg-card px-2 py-3 pr-14 sm:-mx-6 sm:px-6 sm:pr-16">
         <div className="flex items-center justify-between">
           <div>
             {submitError && (

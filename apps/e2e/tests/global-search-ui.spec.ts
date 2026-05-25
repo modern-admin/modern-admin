@@ -11,7 +11,7 @@ import { expect, test, type Page, type Locator } from '@playwright/test'
  * `GET /admin/api/global-search` (groups, per-hit snippet/matchedField,
  * score-sorted).
  *
- * Seeded data comes from `apps/api/src/demo/seed.ts`:
+ * Seeded data comes from `apps/api-prisma/src/seed-demo.ts`:
  *   customers[0].email === 'ada.lovelace1@example.com'
  *   customers[0].name  === 'Ada Lovelace'
  * → searching for "ada" always returns ≥1 customer.

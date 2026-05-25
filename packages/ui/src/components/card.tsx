@@ -42,9 +42,12 @@ export const CardDescription = React.forwardRef<
 ))
 CardDescription.displayName = 'CardDescription'
 
+// `[&:not(:first-child)]:pt-0` collapses the top padding only when this content
+// follows a sibling (typically a `CardHeader`), so a standalone `<Card><CardContent/>`
+// keeps full top padding instead of inheriting the header-aware `pt-0`.
 export const CardContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn('p-3 pt-0 sm:p-6 sm:pt-0', className)} {...props} />
+    <div ref={ref} className={cn('p-3 sm:p-6 [&:not(:first-child)]:pt-0', className)} {...props} />
   ),
 )
 CardContent.displayName = 'CardContent'

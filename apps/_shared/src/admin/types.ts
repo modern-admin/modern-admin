@@ -1,7 +1,7 @@
-// Row shapes for the demo resources. These are hand-rolled because the
-// shared admin layer must run on either the InMemory adapter (apps/api)
-// or the Prisma adapter (apps/api-prisma) — there's no single ORM
-// generator we can pull types from.
+// Row shapes for the demo resources. Kept hand-rolled in
+// `@modern-admin/app-shared` so external host apps can wire the same
+// controllers against their own ORM without depending on the demo's
+// `prisma/schema.prisma`.
 //
 // In a real single-ORM project you'd drop this file and import row
 // types straight from your ORM:
@@ -11,8 +11,8 @@
 //   • TypeORM — entity class as the type
 //   • Mongoose — `InferSchemaType<typeof userSchema>`
 //
-// Stays in lockstep with `apps/api/src/demo/seed.ts` and the Prisma
-// schema additions in `apps/api-prisma/prisma/schema.prisma`.
+// Stays in lockstep with `apps/api-prisma/prisma/schema.prisma` and the
+// demo seed in `apps/api-prisma/src/seed-demo.ts`.
 
 import type { M2MItem } from '@modern-admin/feature-m2m'
 

@@ -15,9 +15,9 @@ import { test, expect } from '@playwright/test'
  * captured by `auth.setup.ts` so the GET is authenticated.
  */
 
-// `apps/api`'s in-memory log store is created at module-load time and
-// lives for the lifetime of the dev server (no DB). That gives us a
-// stable surface to read from across the spec without seeding anything.
+// `apps/api-prisma` persists audit-log entries through `setupPrismaSystem`
+// (Postgres-backed `MaActionLog` table). That gives us a stable surface
+// to read from across the spec without seeding anything.
 const API = process.env.E2E_API_URL ?? 'http://localhost:3001'
 const admin = (path: string): string => `${API}/admin/api${path}`
 
@@ -50,19 +50,20 @@ test.describe('login → audit-log', () => {
     // session cookie; the `session.create.after` hook fires synchronously
     // and persists the audit entry before the HTTP response is returned.
     //
-    // Note: `apps/api`'s `bootstrap.ts` mounts the Better Auth handler at
-    // `/api/auth`, not `/admin/api/auth`. The SPA client config (in
-    // `apps/web/src/main.tsx`) reflects that with `authBasePath: '/api/auth'`.
-    // Better Auth requires an Origin header that matches `trustedOrigins`
-    // (CSRF protection). The api app is booted with
-    // `WEB_ORIGIN=http://localhost:5173` by `playwright.config.ts`.
+    // Note: `apps/api-prisma`'s `bootstrap.ts` mounts the Better Auth
+    // handler at `/api/auth`, not `/admin/api/auth`. The SPA client
+    // config (in `apps/web/src/main.tsx`) reflects that with
+    // `authBasePath: '/api/auth'`. Better Auth requires an Origin header
+    // that matches `trustedOrigins` (CSRF protection). The api app is
+    // booted with `WEB_ORIGIN=http://localhost:5173` by
+    // `playwright.config.ts`.
     const loginRes = await request.post(`${API}/api/auth/sign-in/email`, {
       data: { email: EMAIL, password: PASSWORD },
       headers: { origin: process.env.WEB_ORIGIN ?? 'http://localhost:5173' },
     })
     expect(loginRes.ok(), await loginRes.text().catch(() => '')).toBeTruthy()
 
-    // The store is in-memory and ordered by `at` desc by the controller's
+    // The store returns rows ordered by `at` desc by the controller's
     // default. Pull the latest login event and assert (a) it postdates the
     // pre-snapshot and (b) carries the expected shape.
     const afterRes = await request.get(admin('/audit-log?actions=login&limit=5'))

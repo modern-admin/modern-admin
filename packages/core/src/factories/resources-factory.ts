@@ -12,9 +12,34 @@ import {
 } from '../errors'
 import { deepMerge } from '../utils/merge-options.js'
 
+/**
+ * Concrete constructor + statics contract for a database adapter class.
+ *
+ * Intentionally NOT `typeof BaseDatabase`: that is an *abstract*
+ * constructor signature, and under TS 6.x stricter variance checks the
+ * concrete subclass constructors aren't assignable to it without an
+ * `as unknown as` cast at every adapter registration site. We use `any`
+ * in constructor input position so adapter classes with narrow ctor
+ * params (e.g. `new (cfg: InMemoryDb)`) remain assignable — constructor
+ * args are validated at runtime by the preceding `isAdapterFor(...)`
+ * check, so the static type is not load-bearing here.
+ */
+export interface DatabaseClass {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  new (db: any): BaseDatabase
+  isAdapterFor(db: unknown): boolean
+}
+
+/** Concrete constructor + statics contract for a resource adapter class. */
+export interface ResourceClass {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  new (raw: any): BaseResource
+  isAdapterFor(raw: unknown): boolean
+}
+
 export interface Adapter {
-  Database: typeof BaseDatabase
-  Resource: typeof BaseResource
+  Database: DatabaseClass
+  Resource: ResourceClass
 }
 
 export type FeatureFn = (options: ResourceOptions) => ResourceOptions
@@ -82,7 +107,7 @@ export class ResourcesFactory {
     for (const db of databases) {
       const adapter = adapters.find((a) => a.Database.isAdapterFor(db))
       if (!adapter) throw new NoDatabaseAdapterError(db)
-      const dbInstance = new (adapter.Database as unknown as new (db: unknown) => BaseDatabase)(db)
+      const dbInstance = new adapter.Database(db)
       result.push(...dbInstance.resources())
     }
     return result
@@ -104,7 +129,7 @@ export class ResourcesFactory {
       }
       const adapter = adapters.find((a) => a.Resource.isAdapterFor(target))
       if (!adapter) throw new NoResourceAdapterError(target)
-      const instance = new (adapter.Resource as unknown as new (raw: unknown) => BaseResource)(target)
+      const instance = new adapter.Resource(target)
       return {
         resource: instance,
         options: wrapped.options ?? {},

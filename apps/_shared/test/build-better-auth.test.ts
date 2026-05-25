@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { Database } from 'bun:sqlite'
 import type { ILogStore, ActionLogEntry } from '@modern-admin/core'
-import { buildBetterAuth, setAuditLogStore } from '../src/index.js'
+import { buildBetterAuth, setAuditLogStore, type BuildBetterAuthOptions } from '../src/index.js'
 
 /**
  * `buildBetterAuth()` produces both a Better Auth instance and the raw
@@ -15,8 +15,8 @@ import { buildBetterAuth, setAuditLogStore } from '../src/index.js'
  * the test runner with "unhandled error between tests" diagnostics.
  */
 
-const makeDatabase = (): never =>
-  new Database(':memory:') as unknown as never
+const makeDatabase = (): BuildBetterAuthOptions['database'] =>
+  new Database(':memory:') as unknown as BuildBetterAuthOptions['database']
 
 // In-memory log store that records every entry so the test can assert
 // what the audit hook emitted.
@@ -55,8 +55,8 @@ describe('buildBetterAuth', () => {
     const after = config.databaseHooks!.session!.create!.after!
     // The runtime calls this with the freshly-created session row.
     await after(
-      { userId: 'u-1', id: 's-1' } as never,
-      {} as never,
+      { userId: 'u-1', id: 's-1' } as unknown as Parameters<typeof after>[0],
+      {} as unknown as Parameters<typeof after>[1],
     )
     expect(store.entries).toHaveLength(1)
     expect(store.entries[0]).toMatchObject({
@@ -72,7 +72,7 @@ describe('buildBetterAuth', () => {
     const { config } = buildBetterAuth({ database: makeDatabase() })
     const after = config.databaseHooks!.session!.create!.after!
     // Should resolve without throwing even though no store is set.
-    await expect(after({ userId: 'u-1', id: 's-1' } as never, {} as never)).resolves.toBeUndefined()
+    await expect(after({ userId: 'u-1', id: 's-1' } as unknown as Parameters<typeof after>[0], {} as unknown as Parameters<typeof after>[1])).resolves.toBeUndefined()
   })
 
   test('audit hook swallows store errors so logins are never blocked', async () => {
@@ -86,7 +86,7 @@ describe('buildBetterAuth', () => {
     })
     const { config } = buildBetterAuth({ database: makeDatabase() })
     const after = config.databaseHooks!.session!.create!.after!
-    await expect(after({ userId: 'u-1', id: 's-1' } as never, {} as never)).resolves.toBeUndefined()
+    await expect(after({ userId: 'u-1', id: 's-1' } as unknown as Parameters<typeof after>[0], {} as unknown as Parameters<typeof after>[1])).resolves.toBeUndefined()
   })
 
   test('allowlistOnly: false leaves sign-up enabled and no user.create.before hook', () => {
@@ -101,7 +101,7 @@ describe('buildBetterAuth', () => {
     expect(config.emailAndPassword?.disableSignUp).toBe(true)
     expect(config.account?.accountLinking?.enabled).toBe(true)
     const before = config.databaseHooks!.user!.create!.before!
-    await expect(before({ email: 'unknown@example.com' } as never, {} as never)).rejects.toThrow(
+    await expect(before({ email: 'unknown@example.com' } as unknown as Parameters<typeof before>[0], {} as unknown as Parameters<typeof before>[1])).rejects.toThrow(
       /Sign-up is disabled/,
     )
   })

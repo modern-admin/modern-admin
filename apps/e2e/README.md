@@ -1,14 +1,26 @@
 # @modern-admin/app-e2e
 
-End-to-end smoke tests for the reference apps. Drives the seeded
-in-memory adapter — no real database needed.
+End-to-end smoke tests for the reference apps. Drives the
+`apps/api-prisma` Nest service against a real Prisma 7 + Postgres
+backend with deterministic demo fixtures.
 
 ## Setup
 
 ```sh
 bun install
 bun run install-browsers   # one-time chromium download
+
+# Bring up the Postgres + Redis services declared in docker-compose.yml
+bun run docker:up
+
+# Apply Prisma migrations
+bun run --cwd apps/api-prisma prisma:migrate
 ```
+
+`bun run docker:up` provisions Postgres on port 5432 and Redis on 6379.
+The `SEED_DEMO=1` env var (set by the Playwright `webServer` config)
+populates the same row volumes the legacy in-memory adapter used to
+ship — re-runs are idempotent (`upsert` by deterministic UUID).
 
 If your platform isn't supported by the bundled Playwright chromium build
 (e.g. pre-release Ubuntu), set `PLAYWRIGHT_CHANNEL=chrome` (or `chromium`)
@@ -27,9 +39,10 @@ bun run e2e --project=chromium  # only browser tests (auto-runs auth setup)
 bun run e2e:ui                  # Playwright UI
 ```
 
-Playwright launches the API (`apps/api`) on port 3001 and the web SPA
-(`apps/web`) on port 5173 automatically via `webServer` config — no need
-to start them manually.
+Playwright launches the API (`apps/api-prisma`) on port 3001 and the
+web SPA (`apps/web`) on port 5173 automatically via `webServer` config
+— no need to start them manually (but Postgres + Redis must already be
+running, see Setup above).
 
 ## Projects
 
@@ -59,9 +72,11 @@ its `storageState`, so every browser test starts already authenticated
 | `tests/edit-page.spec.ts`         | Edit form hydrates from the loaded record; Save fires a PATCH against the canonical action URL and redirects to the show page with the updated value; new-record form refuses submission (and never fires a POST) when required fields are missing. |
 | `tests/not-found.spec.ts`         | Existing resource + non-existent record id renders the localized `errors:notFound` card on both show and edit pages; unmatched paths and unknown sub-segments fall through to the router's default not-found component while keeping the URL intact. |
 
-## Adding a database backend
+## Running against a different adapter
 
-To run the same scenarios against the Prisma or Drizzle adapters,
-override `apps/api/src/admin.module.ts` to register the corresponding
-adapter and point `DATABASE_URL` at a test database. The CRUD spec is
-adapter-agnostic and should pass unchanged.
+The e2e suite is adapter-agnostic — the specs assert on the API
+contract, not on storage internals. To target the Drizzle adapter (or a
+custom one) instead of Prisma, point the `webServer.command` in
+`playwright.config.ts` at a host app that wires the desired adapter
+and provide a compatible seed (the `customers` / `posts` / `tags` /
+… fixtures the specs assume).

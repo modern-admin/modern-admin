@@ -3,8 +3,8 @@ import { test, expect, type APIRequestContext } from '@playwright/test'
 /**
  * Backend cache coverage. The Playwright `webServer` env sets
  * `CACHE_BACKEND=memory`, which wires `MemoryCacheProvider` into
- * `apps/api`; without that, the demo defaults to `NoopCacheProvider`
- * and every `x-cache` header would read `MISS`.
+ * `apps/api-prisma`; without that, the demo defaults to
+ * `NoopCacheProvider` and every `x-cache` header would read `MISS`.
  *
  * Behaviours under test:
  *   * GET responses are cached per `originalUrl` (`MISS` → `HIT`).

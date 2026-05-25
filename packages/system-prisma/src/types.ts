@@ -26,8 +26,17 @@ export interface PrismaDelegate<TRow = any> {
  * Whatever `prisma` instance the host injects. We index into it by model
  * name (default: `maLog`, `maWebhook`, …); see `setupPrismaSystem`'s
  * `models` option for renames.
+ *
+ * Uses `{ [K: string]: any }` (not `Record<string, PrismaDelegate>`) so that
+ * the generated `PrismaClient` — which carries utility methods like
+ * `$connect`, `$disconnect`, `$transaction` that are NOT `PrismaDelegate` —
+ * is directly assignable without a cast. TypeScript only waives the
+ * "missing index signature" check when the index value type is `any`; any
+ * other type (including `unknown`) still rejects `PrismaClient`. The shape
+ * of each delegate is validated at runtime in `resolveDelegate()`.
  */
-export type PrismaLike = Record<string, PrismaDelegate>
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type PrismaLike = { [K: string]: any }
 
 export const DEFAULT_MODELS = {
   log: 'maLog',
@@ -49,7 +58,7 @@ export function resolveDelegate(
   overrides: ModelOverrides | undefined,
 ): PrismaDelegate {
   const name = overrides?.[key] ?? DEFAULT_MODELS[key]
-  const delegate = (prisma as Record<string, unknown>)[name] as PrismaDelegate | undefined
+  const delegate = prisma[name] as PrismaDelegate | undefined
   if (!delegate || typeof delegate.findMany !== 'function') {
     throw new Error(
       `[modern-admin/system-prisma] missing delegate "prisma.${name}". ` +

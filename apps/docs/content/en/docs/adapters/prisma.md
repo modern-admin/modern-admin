@@ -41,14 +41,13 @@ import { ModernAdminModule } from '@modern-admin/nest'
 import { PrismaDatabase, PrismaResource } from '@modern-admin/adapter-prisma'
 import { Prisma } from './generated/prisma/index.js'   // generated client exports
 import { prisma } from './db.js'                       // your PrismaClient singleton
-import type { BaseDatabase, BaseResource } from '@modern-admin/core'
 
 @Module({
   imports: [
     ModernAdminModule.forRoot({
       adapters: [{
-        Database: PrismaDatabase as unknown as typeof BaseDatabase,
-        Resource: PrismaResource as unknown as typeof BaseResource,
+        Database: PrismaDatabase,
+        Resource: PrismaResource,
       }],
       databases: [{ client: prisma, dmmf: Prisma.dmmf }],
     }),

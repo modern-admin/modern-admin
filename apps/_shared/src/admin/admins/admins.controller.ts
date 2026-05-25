@@ -6,11 +6,9 @@
 // enforced by `ModernAdmin.invoke()`.
 //
 // Source is resolved at runtime via `adminSource('admins')`. In
-// `apps/api-prisma` it points at the `MaUser` Prisma model. In the
-// InMemory reference app (apps/api) it points at a standalone in-memory
-// `admins` table seeded by `apps/api/src/demo/seed.ts` — that copy is
-// independent from the bun:sqlite Better Auth store and exists purely
-// to drive the UI demos.
+// `apps/api-prisma` it points at the `MaUser` Prisma model (the same
+// table Better Auth writes session/account rows against), so the
+// `admins` resource and the auth layer share a single source of truth.
 //
 // Credentials are intentionally NOT managed through this resource:
 // Better Auth keeps password hashes in `ma_account`, not on the user

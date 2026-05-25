@@ -4,9 +4,9 @@
 //   • a custom record-level @Action that mutates the row through
 //     `ctx.record.update(...)` and returns a notice.
 //
-// Source is resolved at runtime via `adminSource('customers')` so the same
-// controller works against both the InMemory adapter (apps/api) and
-// Prisma (apps/api-prisma).
+// Source is resolved at runtime via `adminSource('customers')` so the
+// same controller works against any adapter — the reference host
+// `apps/api-prisma` wires it to the `Customer` Prisma model.
 //
 // Renamed from "users" to "customers" — admins (the people who log into
 // the panel) live in the Better Auth `ma_user` table and are exposed via

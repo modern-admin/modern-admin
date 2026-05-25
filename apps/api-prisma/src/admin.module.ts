@@ -1,8 +1,7 @@
 // Reference wiring of @modern-admin/nest with a real Prisma 7 + Postgres
 // host database.
 //
-// The interesting bits compared to `apps/api/src/admin.module.ts` (the
-// SQLite demo) are:
+// Highlights:
 //
 //   - The Prisma adapter is bound to the *same* PrismaClient that powers
 //     Better Auth — one connection pool, one migration history.
@@ -11,18 +10,28 @@
 //     `Ma*` tables included in `prisma/schema.prisma`. These stores back
 //     the corresponding Pro feature plugins when the host app wires them in.
 //
-// Resources are shared with `apps/api` via `@modern-admin/app-shared`:
-// the same `CustomersAdminModule`, `PostsAdminModule`, … wire one set of
-// `@AdminResource` controllers, and each host app provides its
-// adapter-specific raw source through `registerAdminSource(...)`. For
-// this app that wiring lives in `./admin-sources.ts`, which is imported
-// for side effects below.
+// Resources are sourced from the shared `@modern-admin/app-shared`
+// package: the same `CustomersAdminModule`, `PostsAdminModule`, … wire
+// one set of `@AdminResource` controllers, and this host provides its
+// Prisma-backed raw source through `registerAdminSource(...)`. The
+// wiring lives in `./admin-sources.ts`, which is imported for side
+// effects below.
 
 import { Module } from '@nestjs/common'
-import { type BaseDatabase, type BaseResource, type IAuthProvider } from '@modern-admin/core'
+import {
+  InMemoryRealtimeBus,
+  MemoryCacheProvider,
+  type IAuthProvider,
+  type ICacheProvider,
+  type IRealtimeBus,
+} from '@modern-admin/core'
 import { ModernAdminModule } from '@modern-admin/nest'
 import { PrismaDatabase, PrismaResource } from '@modern-admin/adapter-prisma'
+import { ModernAdminGraphqlModule } from '@modern-admin/graphql'
+import { ModernAdminRealtimeModule, RedisRealtimeBus, type RealtimeRedisLike } from '@modern-admin/realtime'
+import { RedisCacheProvider, type RedisCacheOptions } from '@modern-admin/cache-redis'
 import { ModernAdminUploadModule } from '@modern-admin/feature-upload/nest'
+import { uploadGraphqlExtension } from '@modern-admin/feature-upload/graphql'
 import { historyPlugin } from '@modern-admin/feature-history'
 import { setupPrismaSystem } from '@modern-admin/system-prisma'
 import {
@@ -40,13 +49,43 @@ import {
   setAuditLogStore,
   TagsAdminModule,
 } from '@modern-admin/app-shared'
+import { Redis } from 'ioredis'
 import { dmmf, prisma } from './db.js'
 // Side-effect import: registers Prisma resources with the shared admin
 // source registry before any `@AdminResource` decorator is evaluated.
 import './admin-sources.js'
 
+const buildCache = (): ICacheProvider | undefined => {
+  // `CACHE_BACKEND=memory` opts into the in-process MemoryCacheProvider.
+  // Used by the Playwright e2e suite so cache behaviour is observable
+  // without standing up Redis. Production deployments should leave this
+  // unset and provide `REDIS_URL` instead.
+  if (process.env.CACHE_BACKEND === 'memory') return new MemoryCacheProvider()
+  const url = process.env.REDIS_URL
+  if (!url) return undefined
+  const client = new Redis(url, { lazyConnect: true })
+  client.connect().catch((err) => {
+    // eslint-disable-next-line no-console
+    console.warn('[modern-admin/api-prisma] redis connect failed; falling back to noop cache', err)
+  })
+  return new RedisCacheProvider({ client: client as unknown as RedisCacheOptions['client'] })
+}
+
+const buildRealtime = (): IRealtimeBus => {
+  const url = process.env.REDIS_URL
+  if (!url) return new InMemoryRealtimeBus()
+  const client = new Redis(url, { lazyConnect: true })
+  client.connect().catch((err) => {
+    // eslint-disable-next-line no-console
+    console.warn('[modern-admin/api-prisma] redis connect failed; falling back to in-memory bus', err)
+  })
+  return new RedisRealtimeBus({ client: client as unknown as RealtimeRedisLike })
+}
+
+const realtimeBus = buildRealtime()
+
 /** System stores shared across the app — backed by Postgres via Prisma. */
-export const system = setupPrismaSystem(prisma as never)
+export const system = setupPrismaSystem(prisma)
 
 // Wire the audit-log sink used by Better Auth's `session.create.after`
 // hook. Must run AFTER `setupPrismaSystem()` (which builds the store) and
@@ -64,8 +103,8 @@ const apiKeyService = buildApiKeyService(authProvider)
     ModernAdminModule.forRoot({
       global: true,
       adapters: [{
-        Database: PrismaDatabase as unknown as typeof BaseDatabase,
-        Resource: PrismaResource as unknown as typeof BaseResource,
+        Database: PrismaDatabase,
+        Resource: PrismaResource,
       }],
       databases: [{ client: prisma, dmmf: dmmf }],
       branding: { companyName: 'Modern Admin (prisma demo)' },
@@ -74,6 +113,7 @@ const apiKeyService = buildApiKeyService(authProvider)
       // call to `invoke()`. Built-in roles `admin` (full) and `viewer`
       // (read-only) are seeded by `seed-demo.ts`.
       rolesResourceId: 'roles',
+      realtime: realtimeBus,
       plugins: [
         historyPlugin({ store: system.historyStore }),
       ],
@@ -105,6 +145,7 @@ const apiKeyService = buildApiKeyService(authProvider)
             })
         },
       }),
+      ...(buildCache() ? { cache: buildCache()! } : {}),
       ...(authProvider ? { auth: authProvider as IAuthProvider } : {}),
       ...(apiKeyService ? { apiKeyService } : {}),
     }),
@@ -117,6 +158,10 @@ const apiKeyService = buildApiKeyService(authProvider)
     CommentsAdminModule,
     ProductsAdminModule,
     RegionalAdminModule,
+    ModernAdminGraphqlModule.forRoot({
+      extensions: [uploadGraphqlExtension()],
+    }),
+    ModernAdminRealtimeModule.forRoot({ bus: realtimeBus }),
   ],
 })
 export class AdminModule {

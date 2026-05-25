@@ -92,7 +92,7 @@ test.describe('social login — /admin/api/auth/ui-props API', () => {
   test('demo config reports no social providers and emailAndPassword enabled', async ({
     request,
   }) => {
-    // The reference `apps/api` activates GitHub OAuth only when
+    // The reference `apps/api-prisma` activates GitHub OAuth only when
     // GITHUB_CLIENT_ID + GITHUB_CLIENT_SECRET are set. The Playwright
     // webServer block in playwright.config.ts does not set those vars, so
     // providers must be empty in the CI / local e2e environment.

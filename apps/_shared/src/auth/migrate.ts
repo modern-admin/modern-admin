@@ -1,6 +1,8 @@
 // Runs Better Auth's built-in schema migrations against the configured
-// database. Used by `apps/api` (bun:sqlite); `apps/api-prisma` runs
-// migrations through Prisma instead and does not call this.
+// database. Useful for hosts that use Better Auth's auto-migrator
+// (bun:sqlite, in-process MySQL, …). The reference host
+// `apps/api-prisma` runs migrations through Prisma instead and does
+// not call this.
 
 import { getMigrations } from 'better-auth/db/migration'
 import type { BetterAuthOptions } from 'better-auth'
