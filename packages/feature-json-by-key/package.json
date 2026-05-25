@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/feature-json-by-key",
-  "version": "1.1.1",
+  "version": "2.0.0",
   "description": "Editable JSON-by-key property type for Modern Admin.",
   "type": "module",
   "license": "MIT",
