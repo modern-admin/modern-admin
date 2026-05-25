@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/skills",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Claude Code skills for Modern Admin — distributed via npm-skills. Encodes the framework's non-obvious integration rules so AI coding agents (Claude Code, Cursor, Aider, …) get them for free in any host project that depends on Modern Admin.",
   "license": "MIT",
   "homepage": "https://github.com/modern-admin/modern-admin",

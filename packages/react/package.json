@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/react",
-  "version": "1.1.1",
+  "version": "2.0.0",
   "description": "React 19 frontend layer for Modern Admin — translation boundary, routing, hooks.",
   "type": "module",
   "license": "MIT",

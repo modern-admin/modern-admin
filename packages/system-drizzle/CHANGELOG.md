@@ -1,5 +1,12 @@
 # @modern-admin/system-drizzle
 
+## 2.0.0
+
+### Patch Changes
+
+- Updated dependencies [[`7683947`](https://github.com/modern-admin/modern-admin/commit/76839473cf5f6fe2cb00d3ecdce1121bd2184bdf)]:
+  - @modern-admin/core@2.0.0
+
 ## 1.1.1
 
 ### Patch Changes

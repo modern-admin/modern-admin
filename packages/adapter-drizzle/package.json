@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/adapter-drizzle",
-  "version": "1.1.1",
+  "version": "2.0.0",
   "description": "Drizzle ORM adapter for Modern Admin — implements BaseDatabase/BaseResource on Drizzle schemas.",
   "type": "module",
   "license": "MIT",
