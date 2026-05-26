@@ -1,6 +1,6 @@
 ---
 title: AI agent skills
-description: Ship Modern Admin's integration rules to your AI coding agent via @modern-admin/skills and npm-skills.
+description: Ship Modern Admin's integration rules to your AI coding agent via `npx skills`.
 ---
 
 # AI agent skills
@@ -12,46 +12,53 @@ Prisma models that `setupPrismaSystem` resolves eagerly, the
 client, subscriber })` shape, and many more. Re-discovering these
 through trial-and-error eats hours.
 
-The `@modern-admin/skills` package bundles those rules as a
+The framework repo publishes those rules as a
 [Claude Code skill](https://docs.claude.com/en/docs/agents-and-tools/skills)
-and ships it through [`npm-skills`](https://github.com/bluelibs/npm-skills),
-so any project depending on Modern Admin can hand them to its AI coding
-agent (Claude Code, Cursor, Aider, …) in a single command. The skill
-body loads lazily — Claude only reads it when a task actually touches
-Modern Admin, so it costs nothing in context the rest of the time.
+distributed through [`npx skills`](https://www.npmjs.com/package/skills) —
+the community-standard installer for AI agent skills. The skill body
+loads lazily, so Claude only reads it when a task actually touches
+Modern Admin; it costs nothing in context the rest of the time.
 
 ---
 
 ## Install
 
-In a host project that depends on `@modern-admin/*`:
+In any project where you use an AI coding agent:
 
 ```sh
-bun add -d npm-skills @modern-admin/skills
-bunx npm-skills extract
+npx skills add modern-admin/modern-admin
 ```
 
-`npm-skills extract` walks the project's `dependencies` and
-`devDependencies`, finds every directory that contains a `SKILL.md`,
-and copies it into `.agents/skills/<package-prefixed-name>/`. By
-default Modern Admin's skill lands at
-`.agents/skills/modern-admin-skills-modern-admin-integration/`.
+The CLI clones the repo, lists the skills it finds under `skills/`,
+and walks you through a small prompt:
 
-Want a different output directory (e.g. `.claude/skills/` so it sits
-next to project-local skills)? Add this to the host `package.json`:
+1. **Pick skills** — currently one: `modern-admin-integration`. Toggle
+   with space, confirm with enter.
+2. **Pick agents** — Claude Code, Cursor, GitHub Copilot, Windsurf,
+   Aider, opencode, Kiro, … 26+ supported. Multi-select.
+3. **Pick scope** — project (`./.claude/skills/`, `./.cursor/skills/`,
+   …) or global (`~/.claude/skills/`, …).
 
-```json
-{
-  "npmSkills": {
-    "consume": {
-      "output": ".claude/skills"
-    }
-  }
-}
+The CLI writes a `skills-lock.json` at the repo root with the resolved
+source and a content hash for every installed skill, so the rest of
+your team and CI restore the exact same files later:
+
+```sh
+npx skills experimental_install   # like `npm ci` — restore from lock
 ```
 
-To skip extraction on production builds, run with `--skip-production`
-(respects `NODE_ENV=production`).
+To install only the Modern Admin skill (skip the picker) or run
+non-interactively in CI:
+
+```sh
+npx skills add modern-admin/modern-admin --skill modern-admin-integration --yes
+```
+
+To pin a specific framework version, append a git ref:
+
+```sh
+npx skills add modern-admin/modern-admin#v1.2.0
+```
 
 ---
 
@@ -83,32 +90,33 @@ The skill triggers automatically on tasks that mention
 
 ## Source of truth
 
-The skill lives in [`packages/skills/skills/modern-admin-integration/`](https://github.com/modern-admin/modern-admin/tree/main/packages/skills/skills/modern-admin-integration)
+The skill lives in [`skills/modern-admin-integration/`](https://github.com/modern-admin/modern-admin/tree/main/skills/modern-admin-integration)
 in the framework monorepo. Treat that directory as the canonical
 location — when the framework gains a new pitfall worth documenting,
-edit the skill files there and bump `@modern-admin/skills` through the
-normal changeset flow. Host projects pick it up on the next
-`bunx npm-skills extract` after upgrading the dependency.
+edit the skill files there. Consumers pick up the change the next
+time they run `npx skills add modern-admin/modern-admin` (or
+`npx skills experimental_sync` to re-fetch existing entries).
 
-If you want to read the skill content without installing the package,
+If you want to read the skill content without installing anything,
 browse it on GitHub:
-[modern-admin/packages/skills/skills/modern-admin-integration/SKILL.md](https://github.com/modern-admin/modern-admin/blob/main/packages/skills/skills/modern-admin-integration/SKILL.md).
+[modern-admin/skills/modern-admin-integration/SKILL.md](https://github.com/modern-admin/modern-admin/blob/main/skills/modern-admin-integration/SKILL.md).
 
 ---
 
-## Using the skill outside Claude Code
+## Using the skill outside the supported agents
 
 `SKILL.md` and its references are plain markdown — every agent that
-can read local markdown files can consume them. Two practical options:
+can read local markdown files can consume them. `npx skills add`
+already supports the most common ones (Claude Code, Cursor, Copilot,
+Windsurf, Aider, opencode, Kiro, …). For anything it doesn't cover,
+clone the directory manually and point your agent at it as a system
+rule. The lazy-loading on `description` frontmatter is a Claude Code
+feature; in other agents you typically prepend the file directly to
+the system prompt for the session.
 
-- **Cursor / Aider / Continue**: point them at
-  `.agents/skills/<extracted>/SKILL.md` as a system rule. The
-  description-driven lazy loading is a Claude Code feature; in other
-  agents you typically prepend the file directly to the system prompt
-  for the session.
-- **CI checks / commit hooks**: scrape the skill's anti-patterns and
-  verification checklist into your repo's review template. The
-  `references/anti-patterns.md` table is structured for exactly that.
+For CI checks and commit hooks, scrape the skill's anti-patterns and
+verification checklist into your repo's review template. The
+`references/anti-patterns.md` table is structured for exactly that.
 
 ---
 
@@ -116,9 +124,7 @@ can read local markdown files can consume them. Two practical options:
 
 A future framework topic that deserves its own skill (e.g.
 "writing a `feature-*` plugin", "drizzle migration patterns")
-should land as a new directory under
-`packages/skills/skills/<skill-name>/SKILL.md` with the same layout
-(YAML frontmatter + body + optional `references/`). The npm package
-already ships every directory under `skills/`, so the new skill
-becomes available to consumers on the next release with no
-configuration change.
+should land as a new directory under `skills/<skill-name>/SKILL.md`
+in the framework repo, with the same layout (YAML frontmatter + body
++ optional `references/`). `npx skills add modern-admin/modern-admin`
+discovers it automatically — no package release required.

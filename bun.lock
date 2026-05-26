@@ -464,10 +464,6 @@
         "@nestjs/websockets",
       ],
     },
-    "packages/skills": {
-      "name": "@modern-admin/skills",
-      "version": "2.0.0",
-    },
     "packages/system-drizzle": {
       "name": "@modern-admin/system-drizzle",
       "version": "2.0.0",
@@ -874,8 +870,6 @@
     "@modern-admin/react": ["@modern-admin/react@workspace:packages/react"],
 
     "@modern-admin/realtime": ["@modern-admin/realtime@workspace:packages/realtime"],
-
-    "@modern-admin/skills": ["@modern-admin/skills@workspace:packages/skills"],
 
     "@modern-admin/system-drizzle": ["@modern-admin/system-drizzle@workspace:packages/system-drizzle"],
 
