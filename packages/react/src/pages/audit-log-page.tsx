@@ -173,24 +173,29 @@ export function AuditLogPage(): React.ReactElement {
     [locale],
   )
 
+  // `now` is a snapshot for relative-time labels — we want it to refresh
+  // whenever a new page of events arrives, even though `events` is not read
+  // inside the callback.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const now = React.useMemo(() => Date.now(), [events])
 
   // IntersectionObserver sentinel — triggers next page load when visible
   const sentinelRef = React.useRef<HTMLDivElement>(null)
+  const { hasNextPage, isFetchingNextPage, fetchNextPage } = log
   React.useEffect(() => {
     const el = sentinelRef.current
     if (!el) return
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0]?.isIntersecting && log.hasNextPage && !log.isFetchingNextPage) {
-          void log.fetchNextPage()
+        if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          void fetchNextPage()
         }
       },
       { rootMargin: '200px' },
     )
     observer.observe(el)
     return () => observer.disconnect()
-  }, [log.hasNextPage, log.isFetchingNextPage, log.fetchNextPage])
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
   const resetFilters = (patch: Partial<typeof filters>): void => {
     setFilters((prev) => ({ ...prev, ...patch }))

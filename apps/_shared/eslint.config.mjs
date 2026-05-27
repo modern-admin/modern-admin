@@ -1,4 +1,4 @@
-import { createAppConfig } from '../eslint.base.config.mjs'
+import { createAppConfig } from '../../eslint.base.config.mjs'
 
 export default createAppConfig({
   bun: true,

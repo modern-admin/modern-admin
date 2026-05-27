@@ -6,7 +6,7 @@
 // lifetime.
 
 import { Inject, Injectable } from '@nestjs/common'
-import { GraphQLSchema } from 'graphql'
+import { type GraphQLSchema } from 'graphql'
 import { MODERN_ADMIN } from '@modern-admin/nest'
 import type { ModernAdmin } from '@modern-admin/core'
 import { buildGraphqlSchema } from './schema-builder.js'

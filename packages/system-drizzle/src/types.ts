@@ -9,7 +9,7 @@
  * it satisfies this shape structurally.
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 
 import type { SystemTables } from './schema/pg.js'
 

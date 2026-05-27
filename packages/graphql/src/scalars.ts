@@ -9,7 +9,7 @@
  * mimeType) and can hand it directly to an upload provider.
  */
 
-import { GraphQLScalarType, GraphQLError, Kind } from 'graphql'
+import { GraphQLScalarType, GraphQLError } from 'graphql'
 
 /** Server-side runtime shape of the `Upload` scalar. */
 export interface UploadValue {

@@ -50,7 +50,7 @@ import {
   TagsAdminModule,
 } from '@modern-admin/app-shared'
 import { Redis } from 'ioredis'
-import { dmmf, prisma } from './db.js'
+import { prisma } from './db.js'
 // Side-effect import: registers Prisma resources with the shared admin
 // source registry before any `@AdminResource` decorator is evaluated.
 import './admin-sources.js'
@@ -65,7 +65,7 @@ const buildCache = (): ICacheProvider | undefined => {
   if (!url) return undefined
   const client = new Redis(url, { lazyConnect: true })
   client.connect().catch((err) => {
-    // eslint-disable-next-line no-console
+
     console.warn('[modern-admin/api-prisma] redis connect failed; falling back to noop cache', err)
   })
   return new RedisCacheProvider({ client: client as unknown as RedisCacheOptions['client'] })
@@ -76,7 +76,7 @@ const buildRealtime = (): IRealtimeBus => {
   if (!url) return new InMemoryRealtimeBus()
   const client = new Redis(url, { lazyConnect: true })
   client.connect().catch((err) => {
-    // eslint-disable-next-line no-console
+
     console.warn('[modern-admin/api-prisma] redis connect failed; falling back to in-memory bus', err)
   })
   return new RedisRealtimeBus({ client: client as unknown as RealtimeRedisLike })
@@ -106,7 +106,14 @@ const apiKeyService = buildApiKeyService(authProvider)
         Database: PrismaDatabase,
         Resource: PrismaResource,
       }],
-      databases: [{ client: prisma, dmmf: dmmf }],
+      // No `databases:` here on purpose. Every resource is registered
+      // explicitly via `@AdminResource` (see `./admin-sources.ts`) under
+      // a logical id (`customers`, `posts`, …). Passing
+      // `databases: [{ client, dmmf }]` would make `PrismaDatabase.resources()`
+      // auto-emit a second resource per Prisma model under its raw model
+      // name (`Customer`, `Post`, `MaUser`, …) — and the two sets would
+      // both end up registered, surfacing as duplicates in places like
+      // the Edit chart dropdown.
       branding: { companyName: 'Modern Admin (prisma demo)' },
       // Enable role-based access control. Each admin's `MaUser.role`
       // string is resolved against `MaRole.permissions` and gates every

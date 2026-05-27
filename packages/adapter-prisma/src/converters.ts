@@ -17,24 +17,24 @@ const coerceScalar = (
   if (typeof value !== 'string') return value
   if (!property) return value
   switch (property.type()) {
-    case 'number':
-    case 'currency': {
-      const n = Number(value)
-      return Number.isFinite(n) ? n : value
-    }
-    case 'float': {
-      const n = parseFloat(value)
-      return Number.isFinite(n) ? n : value
-    }
-    case 'boolean':
-      return value === 'true' || value === '1'
-    case 'date':
-    case 'datetime': {
-      const d = new Date(value)
-      return Number.isNaN(d.getTime()) ? value : d
-    }
-    default:
-      return value
+  case 'number':
+  case 'currency': {
+    const n = Number(value)
+    return Number.isFinite(n) ? n : value
+  }
+  case 'float': {
+    const n = parseFloat(value)
+    return Number.isFinite(n) ? n : value
+  }
+  case 'boolean':
+    return value === 'true' || value === '1'
+  case 'date':
+  case 'datetime': {
+    const d = new Date(value)
+    return Number.isNaN(d.getTime()) ? value : d
+  }
+  default:
+    return value
   }
 }
 
@@ -101,108 +101,108 @@ const buildOperatorClause = (
   // adapter never produces an invalid where clause.
   if (isArray) {
     switch (operator) {
-      case 'eq':
-        return { has: coerceScalar(value, property) }
-      case 'in': {
-        if (Array.isArray(value)) {
-          const list = value.map((v) => coerceScalar(v as FilterValue, property))
-          // Empty selection ⇒ "no filter" (see scalar branch below).
-          if (!list.length) return undefined
-          return { hasSome: list }
-        }
-        return { hasSome: [coerceScalar(value, property)] }
+    case 'eq':
+      return { has: coerceScalar(value, property) }
+    case 'in': {
+      if (Array.isArray(value)) {
+        const list = value.map((v) => coerceScalar(v as FilterValue, property))
+        // Empty selection ⇒ "no filter" (see scalar branch below).
+        if (!list.length) return undefined
+        return { hasSome: list }
       }
-      // `co`/`sw`/`ew`/`gt`/`lt`/`between`/`neq` have no list equivalent
-      // in Prisma. Dropping the clause is preferable to a 500.
-      default:
-        return undefined
+      return { hasSome: [coerceScalar(value, property)] }
+    }
+    // `co`/`sw`/`ew`/`gt`/`lt`/`between`/`neq` have no list equivalent
+    // in Prisma. Dropping the clause is preferable to a 500.
+    default:
+      return undefined
     }
   }
 
   switch (operator) {
-    case 'eq': {
-      const coerced = coerceScalar(value, property)
-      if (isString && typeof coerced === 'string') {
-        return { equals: coerced, mode: 'insensitive' }
-      }
-      return { equals: coerced }
+  case 'eq': {
+    const coerced = coerceScalar(value, property)
+    if (isString && typeof coerced === 'string') {
+      return { equals: coerced, mode: 'insensitive' }
     }
-    case 'neq': {
-      const coerced = coerceScalar(value, property)
-      if (isString && typeof coerced === 'string') {
-        // `notIn` + `mode` is valid at field level; `not: { equals, mode }` is NOT
-        // because NestedStringFilter has no `mode`.
-        return { notIn: [coerced], mode: 'insensitive' }
-      }
-      return { not: coerced }
+    return { equals: coerced }
+  }
+  case 'neq': {
+    const coerced = coerceScalar(value, property)
+    if (isString && typeof coerced === 'string') {
+      // `notIn` + `mode` is valid at field level; `not: { equals, mode }` is NOT
+      // because NestedStringFilter has no `mode`.
+      return { notIn: [coerced], mode: 'insensitive' }
     }
-    case 'co': {
-      // `contains`/`startsWith`/`endsWith` are only valid on string columns.
-      // Drop the clause on non-string fields instead of emitting an invalid
-      // where that crashes Prisma.
-      if (!isString) return undefined
-      const coerced = coerceScalar(value, property)
-      return { contains: String(coerced), mode: 'insensitive' }
+    return { not: coerced }
+  }
+  case 'co': {
+    // `contains`/`startsWith`/`endsWith` are only valid on string columns.
+    // Drop the clause on non-string fields instead of emitting an invalid
+    // where that crashes Prisma.
+    if (!isString) return undefined
+    const coerced = coerceScalar(value, property)
+    return { contains: String(coerced), mode: 'insensitive' }
+  }
+  case 'sw': {
+    if (!isString) return undefined
+    const coerced = coerceScalar(value, property)
+    return { startsWith: String(coerced), mode: 'insensitive' }
+  }
+  case 'ew': {
+    if (!isString) return undefined
+    const coerced = coerceScalar(value, property)
+    return { endsWith: String(coerced), mode: 'insensitive' }
+  }
+  case 'in': {
+    if (Array.isArray(value)) {
+      const list = value.map((v) => coerceScalar(v as FilterValue, property))
+      // Empty selection ⇒ "no filter applied", matching the Drizzle
+      // adapter. Without this guard Prisma executes `{ in: [] }` as
+      // "match nothing", which surprised users who unchecked the last
+      // item in the "Is one of" picker and expected the full list back.
+      if (!list.length) return undefined
+      return { in: list }
     }
-    case 'sw': {
-      if (!isString) return undefined
-      const coerced = coerceScalar(value, property)
-      return { startsWith: String(coerced), mode: 'insensitive' }
-    }
-    case 'ew': {
-      if (!isString) return undefined
-      const coerced = coerceScalar(value, property)
-      return { endsWith: String(coerced), mode: 'insensitive' }
-    }
-    case 'in': {
-      if (Array.isArray(value)) {
-        const list = value.map((v) => coerceScalar(v as FilterValue, property))
-        // Empty selection ⇒ "no filter applied", matching the Drizzle
-        // adapter. Without this guard Prisma executes `{ in: [] }` as
-        // "match nothing", which surprised users who unchecked the last
-        // item in the "Is one of" picker and expected the full list back.
-        if (!list.length) return undefined
-        return { in: list }
-      }
-      // Single string passed for `in` — coerce to single-element array
-      const coerced = coerceScalar(value, property)
-      return { in: [coerced] }
-    }
-    case 'gt': {
-      const coerced = coerceScalar(value, property)
-      return { gt: coerced }
-    }
-    case 'lt': {
-      const coerced = coerceScalar(value, property)
-      return { lt: coerced }
-    }
-    case 'between': {
-      const str = typeof value === 'string' ? value : ''
-      const comma = str.indexOf(',')
-      const fromStr = comma >= 0 ? str.slice(0, comma) : str
-      const toStr = comma >= 0 ? str.slice(comma + 1) : ''
-      const clause: Record<string, unknown> = {}
-      if (fromStr) clause.gte = coerceScalar(fromStr, property)
-      if (toStr) {
-        const upper = coerceScalar(toStr, property)
-        // For date-only `yyyy-MM-dd` upper bounds on DateTime columns the
-        // raw `new Date('2025-12-31')` lands at midnight UTC — excluding
-        // everything timestamped later that day. Bump to end-of-day so the
-        // user-visible "to 2025-12-31" actually includes 2025-12-31.
-        if (
-          upper instanceof Date &&
+    // Single string passed for `in` — coerce to single-element array
+    const coerced = coerceScalar(value, property)
+    return { in: [coerced] }
+  }
+  case 'gt': {
+    const coerced = coerceScalar(value, property)
+    return { gt: coerced }
+  }
+  case 'lt': {
+    const coerced = coerceScalar(value, property)
+    return { lt: coerced }
+  }
+  case 'between': {
+    const str = typeof value === 'string' ? value : ''
+    const comma = str.indexOf(',')
+    const fromStr = comma >= 0 ? str.slice(0, comma) : str
+    const toStr = comma >= 0 ? str.slice(comma + 1) : ''
+    const clause: Record<string, unknown> = {}
+    if (fromStr) clause.gte = coerceScalar(fromStr, property)
+    if (toStr) {
+      const upper = coerceScalar(toStr, property)
+      // For date-only `yyyy-MM-dd` upper bounds on DateTime columns the
+      // raw `new Date('2025-12-31')` lands at midnight UTC — excluding
+      // everything timestamped later that day. Bump to end-of-day so the
+      // user-visible "to 2025-12-31" actually includes 2025-12-31.
+      if (
+        upper instanceof Date &&
           /^\d{4}-\d{2}-\d{2}$/.test(toStr) &&
           (property?.type() === 'date' || property?.type() === 'datetime')
-        ) {
-          clause.lte = new Date(upper.getTime() + 24 * 60 * 60 * 1000 - 1)
-        } else {
-          clause.lte = upper
-        }
+      ) {
+        clause.lte = new Date(upper.getTime() + 24 * 60 * 60 * 1000 - 1)
+      } else {
+        clause.lte = upper
       }
-      return Object.keys(clause).length ? clause : undefined
     }
-    default:
-      return undefined
+    return Object.keys(clause).length ? clause : undefined
+  }
+  default:
+    return undefined
   }
 }
 

@@ -109,24 +109,22 @@ test.describe('RelatedRecordsTabs — customers show page', () => {
   }) => {
     // Regression: an earlier in-memory matcher used to fall back to a
     // case-insensitive `String.includes()` for any string-typed needle,
-    // regardless of property type. With numeric-string FK ids that
-    // makes `filters[authorId]=1` also match authorId="10", "11", "12",
-    // …, "21" — so a customer's "Related Posts" tab leaked every post
-    // whose authorId merely *contained* the customer id. The Prisma
-    // adapter routes FK columns through strict equality; this spec
-    // pins that contract.
+    // regardless of property type. The Prisma adapter must route FK
+    // columns through strict equality; this spec pins that contract.
     //
-    // The fix should treat reference / id columns as strict equality
-    // (substring match is only meaningful for free-text string fields
-    // like `title`). This test pins that contract from the API surface.
+    // Discover a real seeded authorId first (seed uses UUID v7, not
+    // numeric ids), then filter posts by that exact id and assert the
+    // response only contains posts whose authorId === target — no
+    // substring or prefix bleed.
+    const customerId = await customerWithRelations(request)
     const res = await request.get(
-      adminApi('/resources/posts/actions/list?perPage=200&filters[authorId]=1'),
+      adminApi(`/resources/posts/actions/list?perPage=200&filters[authorId]=${customerId}`),
     )
     expect(res.ok()).toBeTruthy()
     const body = await res.json()
     const records = body.records as Array<{ params: { authorId: string } }>
     const distinct = Array.from(new Set(records.map((r) => r.params.authorId)))
-    expect(distinct, `expected only authorId "1", got ${distinct.join(', ')}`).toEqual(['1'])
+    expect(distinct, `expected only authorId "${customerId}", got ${distinct.join(', ')}`).toEqual([customerId])
     expect(body.meta.total).toBe(records.length)
   })
 

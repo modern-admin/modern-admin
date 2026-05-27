@@ -584,7 +584,14 @@ export const SidebarMenuSkeleton = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement> & { showIcon?: boolean }
 >(({ className, showIcon = false, ...props }, ref) => {
-  const width = React.useMemo(() => `${Math.floor(Math.random() * 40) + 50}%`, [])
+  const id = React.useId()
+  // Derive a stable per-instance pseudo-random width (50%..90%) from useId so
+  // skeleton rows visually vary without violating component purity.
+  const width = React.useMemo(() => {
+    let h = 0
+    for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0
+    return `${50 + (Math.abs(h) % 40)}%`
+  }, [id])
   return (
     <div
       ref={ref}

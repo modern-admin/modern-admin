@@ -102,9 +102,9 @@ export interface KeyValueEditorProps {
 
 const defaultLabels: Required<Omit<KeyValueEditorLabels, 'combobox'>> &
   Pick<KeyValueEditorLabels, 'combobox'> = {
-  emptyOption: '—',
-  fieldLabelFallback: (key) => key,
-}
+    emptyOption: '—',
+    fieldLabelFallback: (key) => key,
+  }
 
 const toRecord = (value: unknown): Record<string, unknown> => {
   if (value && typeof value === 'object' && !Array.isArray(value)) {

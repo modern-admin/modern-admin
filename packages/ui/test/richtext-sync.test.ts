@@ -213,8 +213,8 @@ describe('format switch lifecycle (pure simulation)', () => {
   type EditorState = { html: string; md: string }
   const read =
     (state: EditorState) =>
-    (fmt: RichtextFormat): string =>
-      fmt === 'html' ? state.html : state.md
+      (fmt: RichtextFormat): string =>
+        fmt === 'html' ? state.html : state.md
 
   test('no corruption occurs across the full html→md switch sequence', () => {
     const editor: EditorState = {
@@ -244,7 +244,7 @@ describe('format switch lifecycle (pure simulation)', () => {
 
   test('external reset still triggers sync after a format switch', () => {
     const editor: EditorState = { html: '<p>A</p>', md: 'A' }
-    let pending = false // no format change, just a form reset
+    const pending = false // no format change, just a form reset
 
     const editorContent = read(editor)('html')
     const externalReset = '<p>Reset value</p>'

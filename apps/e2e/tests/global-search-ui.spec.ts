@@ -139,9 +139,9 @@ test.describe('global search — results', () => {
 
     await expect(dialog(page)).toBeHidden()
     // Show page URL = `/resources/customers/<recordId>` (no `/show` suffix —
-    // see `buildPath` in `packages/react/src/router.tsx`). The seed always
-    // assigns customer #1 the name "Ada Lovelace", so we anchor on id `1`.
-    await page.waitForURL(/\/resources\/customers\/1(?:[?#]|$)/, {
+    // see `buildPath` in `packages/react/src/router.tsx`). Seed ids are
+    // UUID v7, so just assert the path lands on the customers show page.
+    await page.waitForURL(/\/resources\/customers\/[^/?#]+(?:[?#]|$)/, {
       timeout: 10_000,
     })
   })

@@ -40,7 +40,10 @@ export function RevisionsButton({
   const dialogs = useDialogs()
   const notify = useNotify()
   const [open, setOpen] = React.useState(false)
-  const revisions = history.data?.revisions ?? []
+  const revisions = React.useMemo(
+    () => history.data?.revisions ?? [],
+    [history.data?.revisions],
+  )
   // Resolve revision authors to human-readable labels (email / name)
   // instead of showing raw user UUIDs.
   const userIds = React.useMemo(
@@ -76,10 +79,10 @@ export function RevisionsButton({
 
   const visibleFields = selected
     ? withLabels(
-        compareTo
-          ? diffSnapshots(compareTo.snapshot, selected.snapshot)
-          : fieldsFor(selected),
-      )
+      compareTo
+        ? diffSnapshots(compareTo.snapshot, selected.snapshot)
+        : fieldsFor(selected),
+    )
     : []
 
   React.useEffect(() => {

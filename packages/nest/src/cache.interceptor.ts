@@ -1,14 +1,14 @@
 import {
-  CallHandler,
-  ExecutionContext,
+  type CallHandler,
+  type ExecutionContext,
   Inject,
   Injectable,
-  NestInterceptor,
+  type NestInterceptor,
 } from '@nestjs/common'
 import type { Response } from 'express'
-import { Observable, from, of, switchMap, tap } from 'rxjs'
+import { type Observable, from, of, switchMap, tap } from 'rxjs'
 import {
-  ModernAdmin,
+  type ModernAdmin,
   ResourceNotFoundError,
   listTag,
   recordTag,

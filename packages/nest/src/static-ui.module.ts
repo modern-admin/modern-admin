@@ -21,8 +21,8 @@
  */
 
 import {
-  DynamicModule,
-  MiddlewareConsumer,
+  type DynamicModule,
+  type MiddlewareConsumer,
   Module,
   type NestModule,
   RequestMethod,
@@ -35,7 +35,7 @@ import {
 
 @Module({})
 export class ModernAdminStaticUiModule implements NestModule {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   private static options: ModernAdminStaticUiOptions = {}
 
   static forRoot(options: ModernAdminStaticUiOptions = {}): DynamicModule {

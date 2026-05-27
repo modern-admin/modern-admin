@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { type ApiKeyCreated, BetterAuthProvider } from '../src/index.js'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 const fakeAuth = (overrides: Partial<{
   user: unknown
   signInEmail: () => Promise<void>
@@ -44,7 +44,7 @@ const fakeAuth = (overrides: Partial<{
     socialProviders: { github: {} },
     emailAndPassword: { enabled: true },
   },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 }) as any
 
 describe('BetterAuthProvider', () => {

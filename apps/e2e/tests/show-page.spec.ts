@@ -81,8 +81,9 @@ test.describe('Show page — field rendering', () => {
         page.getByRole('heading', { name: new RegExp(`customers\\s*#${customer.id}`, 'i') }),
       ).toBeVisible({ timeout: 10_000 })
 
-      // Edit jumps to /resources/customers/:id/edit.
-      await page.getByRole('button', { name: 'Edit' }).click()
+      // Edit jumps to /resources/customers/:id/edit. The "Edit" trigger is
+      // rendered as a navigation link (anchor), not a button.
+      await page.getByRole('link', { name: 'Edit' }).click()
       await expect(page).toHaveURL(
         new RegExp(`/resources/customers/${customer.id}/edit$`),
       )

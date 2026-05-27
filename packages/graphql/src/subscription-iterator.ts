@@ -47,7 +47,7 @@ export const createRealtimeAsyncIterator = (
       if (waiter) waiter({ value: undefined, done: true })
       closed = true
       // Surface async subscribe failures via the next throw path.
-      // eslint-disable-next-line no-console
+
       console.error('[modern-admin/graphql] subscription bus.subscribe failed', err)
     },
   )

@@ -226,11 +226,11 @@ export const buildBetterAuth = ({
       modelName: resolvedModelNames.account,
       ...(allowlistOnly
         ? {
-            accountLinking: {
-              enabled: true,
-              trustedProviders,
-            },
-          }
+          accountLinking: {
+            enabled: true,
+            trustedProviders,
+          },
+        }
         : {}),
     },
     verification: { modelName: resolvedModelNames.verification },

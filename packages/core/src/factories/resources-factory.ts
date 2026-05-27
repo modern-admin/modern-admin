@@ -1,5 +1,5 @@
 import {
-  BaseDatabase,
+  type BaseDatabase,
   BaseResource,
 } from '../adapters'
 import {
@@ -25,14 +25,14 @@ import { deepMerge } from '../utils/merge-options.js'
  * check, so the static type is not load-bearing here.
  */
 export interface DatabaseClass {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   new (db: any): BaseDatabase
   isAdapterFor(db: unknown): boolean
 }
 
 /** Concrete constructor + statics contract for a resource adapter class. */
 export interface ResourceClass {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   new (raw: any): BaseResource
   isAdapterFor(raw: unknown): boolean
 }
@@ -91,9 +91,35 @@ export class ResourcesFactory {
     const fromOptions = ResourcesFactory.convertResources(resources, adapters)
     const optionIds = new Set(fromOptions.map((r) => r.resource.id()))
 
-    const fromDatabases = ResourcesFactory.convertDatabases(databases, adapters).filter(
-      (r) => !optionIds.has(r.id()),
-    )
+    const fromDatabasesAll = ResourcesFactory.convertDatabases(databases, adapters)
+    const fromDatabases = fromDatabasesAll.filter((r) => !optionIds.has(r.id()))
+
+    // Diagnostic: both sources populated but no id overlap. Typically
+    // happens when `@AdminResource` registrations remap to logical ids
+    // (e.g. `customers`) while `databases:` auto-emits the same models
+    // under raw names (`Customer`). Both sets then end up registered in
+    // parallel, surfacing as duplicates in dropdowns/dashboards. Honest
+    // false-positives exist (e.g. `databases:` auto-discovery + one
+    // unrelated custom resource via `resources:`) — emit `console.warn`
+    // rather than throw so the user can ignore if intentional.
+    if (
+      fromDatabasesAll.length > 0 &&
+      fromOptions.length > 0 &&
+      fromDatabases.length === fromDatabasesAll.length
+    ) {
+      const dbIds = fromDatabasesAll.map((r) => r.id())
+      const optIds = fromOptions.map((r) => r.resource.id())
+
+      console.warn(
+        `[modern-admin] Registered ${dbIds.length} resource(s) from \`databases:\` ` +
+        `(ids: ${dbIds.join(', ')}) and ${optIds.length} from \`resources:\`/\`@AdminResource\` ` +
+        `(ids: ${optIds.join(', ')}) with no id overlap. If your @AdminResource ` +
+        `registrations remap to logical ids, the \`databases:\` entries will register ` +
+        `a second, parallel set of resources under raw model names — usually a bug ` +
+        `(duplicates in dropdowns, dashboards). Remove \`databases:\` to register ` +
+        `resources only via @AdminResource, or align ids if you intend both.`,
+      )
+    }
 
     const merged = [
       ...fromDatabases.map((resource) => ({ resource, options: {} as ResourceOptions, features: [] as FeatureFn[] })),

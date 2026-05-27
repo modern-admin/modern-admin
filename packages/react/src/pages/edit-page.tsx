@@ -76,58 +76,58 @@ function coerceAiFillValue(property: PropertyJSON, value: unknown): unknown {
     return undefined
   }
   switch (property.type) {
-    case 'bigint':
-    case 'biginteger': {
-      // BigInt values are transported as digit strings end-to-end (matches
-      // BaseRecord.toJSON + the Prisma adapter's accept-string write path).
-      // Never round-trip via Number() — values >2^53 would lose precision.
-      if (typeof value === 'bigint') return value.toString()
-      if (typeof value === 'number') {
-        if (!Number.isFinite(value) || !Number.isInteger(value)) return undefined
-        return String(value)
-      }
-      if (typeof value !== 'string') return undefined
-      const trimmed = value.trim().replace(/[\s_]/g, '')
-      return /^-?\d+$/.test(trimmed) ? trimmed : undefined
+  case 'bigint':
+  case 'biginteger': {
+    // BigInt values are transported as digit strings end-to-end (matches
+    // BaseRecord.toJSON + the Prisma adapter's accept-string write path).
+    // Never round-trip via Number() — values >2^53 would lose precision.
+    if (typeof value === 'bigint') return value.toString()
+    if (typeof value === 'number') {
+      if (!Number.isFinite(value) || !Number.isInteger(value)) return undefined
+      return String(value)
     }
-    case 'number':
-    case 'float':
-    case 'currency':
-    case 'money':
-    case 'decimal':
-    case 'integer': {
-      if (typeof value === 'number') return Number.isFinite(value) ? value : undefined
-      if (typeof value !== 'string') return undefined
-      const trimmed = value.trim().replace(/[^\d.,\-+eE]/g, '')
-      if (trimmed === '' || trimmed === '-' || trimmed === '+') return undefined
-      const lastDot = trimmed.lastIndexOf('.')
-      const lastComma = trimmed.lastIndexOf(',')
-      const normalised = lastDot >= lastComma
-        ? trimmed.replace(/,/g, '')
-        : trimmed.replace(/\./g, '').replace(',', '.')
-      const n = Number(normalised)
-      if (!Number.isFinite(n)) return undefined
-      return property.type === 'integer' ? Math.trunc(n) : n
+    if (typeof value !== 'string') return undefined
+    const trimmed = value.trim().replace(/[\s_]/g, '')
+    return /^-?\d+$/.test(trimmed) ? trimmed : undefined
+  }
+  case 'number':
+  case 'float':
+  case 'currency':
+  case 'money':
+  case 'decimal':
+  case 'integer': {
+    if (typeof value === 'number') return Number.isFinite(value) ? value : undefined
+    if (typeof value !== 'string') return undefined
+    const trimmed = value.trim().replace(/[^\d.,\-+eE]/g, '')
+    if (trimmed === '' || trimmed === '-' || trimmed === '+') return undefined
+    const lastDot = trimmed.lastIndexOf('.')
+    const lastComma = trimmed.lastIndexOf(',')
+    const normalised = lastDot >= lastComma
+      ? trimmed.replace(/,/g, '')
+      : trimmed.replace(/\./g, '').replace(',', '.')
+    const n = Number(normalised)
+    if (!Number.isFinite(n)) return undefined
+    return property.type === 'integer' ? Math.trunc(n) : n
+  }
+  case 'boolean':
+    if (typeof value === 'boolean') return value
+    if (typeof value === 'number') return value !== 0
+    if (typeof value === 'string') {
+      const t = value.trim().toLowerCase()
+      if (['true', 'yes', 'y', '1', 'on'].includes(t)) return true
+      if (['false', 'no', 'n', '0', 'off'].includes(t)) return false
     }
-    case 'boolean':
-      if (typeof value === 'boolean') return value
-      if (typeof value === 'number') return value !== 0
-      if (typeof value === 'string') {
-        const t = value.trim().toLowerCase()
-        if (['true', 'yes', 'y', '1', 'on'].includes(t)) return true
-        if (['false', 'no', 'n', '0', 'off'].includes(t)) return false
-      }
-      return undefined
-    case 'date':
-    case 'datetime':
-    case 'datetime-local':
-      // Keep ISO-ish strings; date pickers cope with both YYYY-MM-DD and full
-      // ISO. Reject anything that doesn't at least look year-prefixed so we
-      // don't push "12 March 2026" into a <DatePicker>.
-      if (typeof value !== 'string') return undefined
-      return /^\d{4}-\d{2}-\d{2}/.test(value.trim()) ? value.trim() : undefined
-    default:
-      return value
+    return undefined
+  case 'date':
+  case 'datetime':
+  case 'datetime-local':
+    // Keep ISO-ish strings; date pickers cope with both YYYY-MM-DD and full
+    // ISO. Reject anything that doesn't at least look year-prefixed so we
+    // don't push "12 March 2026" into a <DatePicker>.
+    if (typeof value !== 'string') return undefined
+    return /^\d{4}-\d{2}-\d{2}/.test(value.trim()) ? value.trim() : undefined
+  default:
+    return value
   }
 }
 
@@ -523,12 +523,12 @@ export function ResourceEditPage({
     ...(isNew
       ? [{ label: t('common:new') }]
       : [
-          {
-            label: recordLabel ?? '',
-            to: { name: 'show' as const, resourceId, recordId: recordId! },
-          },
-          { label: t('common:edit') },
-        ]),
+        {
+          label: recordLabel ?? '',
+          to: { name: 'show' as const, resourceId, recordId: recordId! },
+        },
+        { label: t('common:edit') },
+      ]),
   ]
 
   return (

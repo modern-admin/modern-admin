@@ -20,12 +20,12 @@ import {
   type IAiTaskStore,
   type IConfigStore,
   type IDashboardStore,
-  ModernAdmin,
+  type ModernAdmin,
 } from '@modern-admin/core'
 import { builtinLocales, I18n } from '@modern-admin/i18n'
 import { MODERN_ADMIN, MODERN_ADMIN_OPTIONS } from './tokens.js'
 import type { ModernAdminModuleOptions } from './module.js'
-import { type AiAssistantCitation, type AiAssistantSqlResource, buildAiAssistantTools, } from './ai-assistant-tools.js'
+import { type AiAssistantCitation, type AiAssistantSqlResource, buildAiAssistantTools } from './ai-assistant-tools.js'
 import { AI_ASSISTANT_CHAT_JOB, AI_ASSISTANT_QUEUE } from './ai-assistant.constants.js'
 import type {
   AiAssistantChatJobData,
@@ -143,7 +143,7 @@ export class AiAssistantService {
             `Reusing AI assistant task ${existing.id} for duplicate request ${requestId}`,
           )
         }
-        return {taskId: existing.id, status: existing.status}
+        return { taskId: existing.id, status: existing.status }
       }
     }
     const task = await taskStore.enqueue({
@@ -151,24 +151,24 @@ export class AiAssistantService {
       userId,
       input: {
         messages,
-        ...(requestId ? {requestId} : {}),
-        ...(conversationId ? {conversationId} : {}),
-        ...(locale ? {locale} : {}),
-        ...(minimalAdmin ? {currentAdmin: minimalAdmin} : {}),
-        ...(clientContext ? {clientContext} : {}),
+        ...(requestId ? { requestId } : {}),
+        ...(conversationId ? { conversationId } : {}),
+        ...(locale ? { locale } : {}),
+        ...(minimalAdmin ? { currentAdmin: minimalAdmin } : {}),
+        ...(clientContext ? { clientContext } : {}),
       },
     })
-    await taskStore.appendEvent(task.id, 'queued', {queuedAt: new Date().toISOString()})
+    await taskStore.appendEvent(task.id, 'queued', { queuedAt: new Date().toISOString() })
     await this.requireQueue().add(
       AI_ASSISTANT_CHAT_JOB,
       {
         taskId: task.id,
         messages,
-        ...(requestId ? {requestId} : {}),
-        ...(conversationId ? {conversationId} : {}),
-        ...(locale ? {locale} : {}),
-        ...(minimalAdmin ? {currentAdmin: minimalAdmin} : {}),
-        ...(clientContext ? {clientContext} : {}),
+        ...(requestId ? { requestId } : {}),
+        ...(conversationId ? { conversationId } : {}),
+        ...(locale ? { locale } : {}),
+        ...(minimalAdmin ? { currentAdmin: minimalAdmin } : {}),
+        ...(clientContext ? { clientContext } : {}),
       } satisfies AiAssistantChatJobData,
       {
         attempts: this.options.aiAssistant?.queue?.attempts ?? 1,
@@ -180,7 +180,7 @@ export class AiAssistantService {
         removeOnFail: this.options.aiAssistant?.queue?.removeOnFail ?? 500,
       },
     )
-    return {taskId: task.id, status: task.status}
+    return { taskId: task.id, status: task.status }
   }
 
   async listChatHistory(currentAdmin?: CurrentAdmin): Promise<AiAssistantChatHistoryItem[]> {
@@ -191,7 +191,7 @@ export class AiAssistantService {
     }
     const tasks = await this.requireTaskStore().list({
       kind: 'assistant-chat',
-      ...(userId ? {userId} : {}),
+      ...(userId ? { userId } : {}),
       limit: 100,
     })
     const grouped = new Map<string, AiTask>()
@@ -232,7 +232,7 @@ export class AiAssistantService {
         `Starting AI assistant task ${data.taskId}; messages=${data.messages.length}`,
       )
     }
-    await taskStore.updateStatus(data.taskId, {status: 'running', progress: 10})
+    await taskStore.updateStatus(data.taskId, { status: 'running', progress: 10 })
     const settings = await this.loadSettings()
     if (!settings.enabled) {
       throw new ForbiddenException('AI assistant is disabled')
@@ -244,7 +244,7 @@ export class AiAssistantService {
     const openrouter = createOpenRouter({
       apiKey: settings.apiKey,
       appName: this.options.aiAssistant?.appName ?? 'Modern Admin',
-      ...(this.options.aiAssistant?.appUrl ? {appUrl: this.options.aiAssistant.appUrl} : {}),
+      ...(this.options.aiAssistant?.appUrl ? { appUrl: this.options.aiAssistant.appUrl } : {}),
     })
 
     // Build a thin dashboard store backed by the global configStore so the AI
@@ -275,8 +275,8 @@ export class AiAssistantService {
       excludeResourceIds: this.options.aiAssistant?.excludeResourceIds,
       maxRecordsPerTool: this.options.aiAssistant?.maxRecordsPerTool ?? 10,
       debug,
-      ...(this.options.aiAssistant?.rawQuery ? {rawQuery: this.options.aiAssistant.rawQuery} : {}),
-      ...(dashboardStore ? {dashboardStore} : {}),
+      ...(this.options.aiAssistant?.rawQuery ? { rawQuery: this.options.aiAssistant.rawQuery } : {}),
+      ...(dashboardStore ? { dashboardStore } : {}),
       uiActions,
     })
 
@@ -302,7 +302,7 @@ export class AiAssistantService {
       toolCount: Object.keys(built.tools).length,
       resourceIds: built.resourceIds,
     })
-    await taskStore.updateStatus(data.taskId, {status: 'running', progress: 30})
+    await taskStore.updateStatus(data.taskId, { status: 'running', progress: 30 })
 
     try {
       const result = await generateText({
@@ -329,7 +329,7 @@ export class AiAssistantService {
       const output: AiAssistantTaskOutput = {
         text: result.text.trim() || summarizeToolResults(result.toolResults, data.locale),
         citations: dedupeCitations(citations),
-        toolCalls: result.toolCalls.map((toolCall) => ({toolName: toolCall.toolName})),
+        toolCalls: result.toolCalls.map((toolCall) => ({ toolName: toolCall.toolName })),
         uiActions: dedupeUiActions(uiActions),
       }
       await taskStore.appendEvent(data.taskId, 'result', output)
@@ -347,7 +347,7 @@ export class AiAssistantService {
           error instanceof Error ? error.stack : undefined,
         )
       }
-      await taskStore.appendEvent(data.taskId, 'error', {message})
+      await taskStore.appendEvent(data.taskId, 'error', { message })
       await taskStore.updateStatus(data.taskId, {
         status: 'failed',
         error: message,
@@ -376,7 +376,7 @@ export class AiAssistantService {
   ): Promise<AiTask | null> {
     const tasks = await taskStore.list({
       kind: 'assistant-chat',
-      ...(userId ? {userId} : {}),
+      ...(userId ? { userId } : {}),
       status: ['pending', 'running', 'succeeded'],
       limit: 20,
     })
@@ -578,7 +578,7 @@ const titleFromTask = (task: AiTask): string => {
 }
 
 const translate = (locale: string | undefined, key: string, params?: Record<string, unknown>): string => {
-  const runtime = new I18n({locales: builtinLocales, defaultLocale: locale ?? 'en', fallbackLocale: 'en'})
+  const runtime = new I18n({ locales: builtinLocales, defaultLocale: locale ?? 'en', fallbackLocale: 'en' })
   return runtime.t(key, params)
 }
 
@@ -600,7 +600,7 @@ const summarizeToolResults = (
 
   const count = output.rowCount ?? output.total ?? rows.length
   const preview = rows.slice(0, 10).map((row, index) => `${index + 1}. ${formatToolRow(row)}`)
-  return [translate(locale, 'aiAssistant:fallback.rowsFound', {count}), ...preview].join('\n')
+  return [translate(locale, 'aiAssistant:fallback.rowsFound', { count }), ...preview].join('\n')
 }
 
 const formatToolRow = (row: unknown): string => {

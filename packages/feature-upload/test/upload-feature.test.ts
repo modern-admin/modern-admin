@@ -160,9 +160,9 @@ describe('uploadFeature() — hook chaining', () => {
   it('produces an after array for edit and delete actions', () => {
     const feature = uploadFeature({ properties: { avatar: { provider: makeProvider() } } })
     const result = feature(emptyOptions)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     expect(Array.isArray((result.actions?.edit as any)?.after)).toBe(true)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     expect(Array.isArray((result.actions?.delete as any)?.after)).toBe(true)
   })
 
@@ -173,7 +173,7 @@ describe('uploadFeature() — hook chaining', () => {
     }
     const feature = uploadFeature({ properties: { avatar: { provider: makeProvider() } } })
     const result = feature(incoming)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const hooks = (result.actions?.['edit'] as any).after as unknown[]
     expect(Array.isArray(hooks)).toBe(true)
     expect(hooks.length).toBe(2)
@@ -188,7 +188,7 @@ describe('uploadFeature() — hook chaining', () => {
     }
     const feature = uploadFeature({ properties: { avatar: { provider: makeProvider() } } })
     const result = feature(incoming)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const hooks = (result.actions?.['delete'] as any).after as unknown[]
     expect(hooks.length).toBe(3)
     expect(hooks[0]).toBe(h1)
@@ -205,7 +205,7 @@ describe('uploadFeature() — hook chaining', () => {
     const feature = uploadFeature({ properties: { avatar: { provider } } })
     const result = feature(incoming)
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const hooks = (result.actions?.['edit'] as any).after as Array<(r: unknown, q: unknown, c: unknown) => Promise<unknown>>
     const fakeResponse = { record: { params: { avatar: 'new.jpg' } } }
     const fakeRecord = makeRecord({ avatar: 'old.jpg' })
@@ -226,8 +226,8 @@ describe('uploadFeature() — delete hook', () => {
     const provider = makeProvider()
     const feature = uploadFeature({ properties: { avatar: { provider } } })
     const result = feature(emptyOptions)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
+
     type HookFn = (r: unknown, q: unknown, c: unknown) => Promise<unknown>
     const deleteHook = ((result.actions?.['delete'] as any).after as HookFn[])[0]!
 
@@ -239,8 +239,8 @@ describe('uploadFeature() — delete hook', () => {
     const provider = makeProvider()
     const feature = uploadFeature({ properties: { avatar: { provider } } })
     const result = feature(emptyOptions)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
+
     type HookFn = (r: unknown, q: unknown, c: unknown) => Promise<unknown>
     const deleteHook = ((result.actions?.['delete'] as any).after as HookFn[])[0]!
 
@@ -254,8 +254,8 @@ describe('uploadFeature() — delete hook', () => {
     })
     const feature = uploadFeature({ properties: { avatar: { provider } } })
     const result = feature(emptyOptions)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
+
     type HookFn = (r: unknown, q: unknown, c: unknown) => Promise<unknown>
     const deleteHook = ((result.actions?.['delete'] as any).after as HookFn[])[0]!
     const fakeResponse = { notice: { message: 'deleted', type: 'success' } }
@@ -274,8 +274,8 @@ describe('uploadFeature() — edit hook', () => {
     const provider = makeProvider()
     const feature = uploadFeature({ properties: { avatar: { provider } } })
     const result = feature(emptyOptions)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
+
     type HookFn = (r: unknown, q: unknown, c: unknown) => Promise<unknown>
     const editHook = ((result.actions?.['edit'] as any).after as HookFn[])[0]!
 
@@ -287,8 +287,8 @@ describe('uploadFeature() — edit hook', () => {
     const provider = makeProvider()
     const feature = uploadFeature({ properties: { avatar: { provider } } })
     const result = feature(emptyOptions)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
+
     type HookFn = (r: unknown, q: unknown, c: unknown) => Promise<unknown>
     const editHook = ((result.actions?.['edit'] as any).after as HookFn[])[0]!
 
@@ -300,8 +300,8 @@ describe('uploadFeature() — edit hook', () => {
     const provider = makeProvider()
     const feature = uploadFeature({ properties: { avatar: { provider } } })
     const result = feature(emptyOptions)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
+
     type HookFn = (r: unknown, q: unknown, c: unknown) => Promise<unknown>
     const editHook = ((result.actions?.['edit'] as any).after as HookFn[])[0]!
 
@@ -381,7 +381,7 @@ describe('uploadFeature() — isArray', () => {
     })
     const result = feature(emptyOptions)
     type HookFn = (r: unknown, q: unknown, c: unknown) => Promise<unknown>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const editHook = ((result.actions?.['edit'] as any).after as HookFn[])[0]!
 
     const oldList = ['a.jpg', 'b.jpg', 'c.jpg']
@@ -404,7 +404,7 @@ describe('uploadFeature() — isArray', () => {
     })
     const result = feature(emptyOptions)
     type HookFn = (r: unknown, q: unknown, c: unknown) => Promise<unknown>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const deleteHook = ((result.actions?.['delete'] as any).after as HookFn[])[0]!
 
     await deleteHook({}, {}, { record: makeRecord({ gallery: ['x.jpg', 'y.jpg', 'z.jpg'] }) })
@@ -420,9 +420,9 @@ describe('uploadFeature() — isArray', () => {
     })
     const result = feature(emptyOptions)
     type HookFn = (r: unknown, q: unknown, c: unknown) => Promise<unknown>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const deleteHook = ((result.actions?.['delete'] as any).after as HookFn[])[0]!
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const editHook = ((result.actions?.['edit'] as any).after as HookFn[])[0]!
 
     await deleteHook({}, {}, { record: makeRecord({ gallery: null }) })
@@ -451,7 +451,7 @@ describe('uploadFeature() — new.after hook & pending confirmation', () => {
   it('creates a new.after hook array', () => {
     const feature = uploadFeature({ properties: { avatar: { provider: makeProvider() } } })
     const result = feature(emptyOptions)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     expect(Array.isArray((result.actions?.['new'] as any)?.after)).toBe(true)
   })
 
@@ -461,7 +461,7 @@ describe('uploadFeature() — new.after hook & pending confirmation', () => {
     const result = feature({
       actions: { new: { after: existing } as ActionOptions },
     })
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const hooks = (result.actions?.['new'] as any).after as unknown[]
     expect(hooks.length).toBe(2)
     expect(hooks[0]).toBe(existing)
@@ -478,7 +478,7 @@ describe('uploadFeature() — new.after hook & pending confirmation', () => {
     expect(PendingUploadsRegistry.has('fresh-key.jpg')).toBe(true)
 
     type HookFn = (r: unknown, q: unknown, c: unknown) => unknown
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const newHook = ((result.actions?.['new'] as any).after as HookFn[])[0]!
     await newHook(
       { record: { params: { avatar: 'fresh-key.jpg' } } },
@@ -502,7 +502,7 @@ describe('uploadFeature() — new.after hook & pending confirmation', () => {
     expect(PendingUploadsRegistry.size()).toBe(3)
 
     type HookFn = (r: unknown, q: unknown, c: unknown) => unknown
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const newHook = ((result.actions?.['new'] as any).after as HookFn[])[0]!
     await newHook(
       { record: { params: { gallery: ['a.jpg', 'b.jpg', 'c.jpg'] } } },
@@ -520,7 +520,7 @@ describe('uploadFeature() — new.after hook & pending confirmation', () => {
     PendingUploadsRegistry.track('replaced-by.jpg', id, 60_000)
 
     type HookFn = (r: unknown, q: unknown, c: unknown) => Promise<unknown>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const editHook = ((result.actions?.['edit'] as any).after as HookFn[])[0]!
     await editHook(
       { record: { params: { avatar: 'replaced-by.jpg' } } },

@@ -11,7 +11,7 @@
 
 import { StrictMode } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { ComponentLoader } from '@modern-admin/react'
+import { type ComponentLoader } from '@modern-admin/react'
 import { initTheme } from '@modern-admin/ui'
 import '@modern-admin/ui/styles.css'
 import { App } from './app.js'

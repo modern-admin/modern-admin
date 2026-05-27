@@ -107,19 +107,19 @@ export async function bootstrapApp(options: BootstrapAppOptions): Promise<void> 
 
   if (afterListen) await afterListen(app)
 
-  // eslint-disable-next-line no-console
+
   console.log(`[${label}] listening on http://localhost:${port}`)
-  // eslint-disable-next-line no-console
+
   console.log(`[${label}] auth endpoints under /api/auth`)
   if (openApiPaths) {
-    // eslint-disable-next-line no-console
+
     console.log(`[${label}] OpenAPI JSON  http://localhost:${port}${openApiPaths.json}`)
     if (openApiPaths.swagger) {
-      // eslint-disable-next-line no-console
+
       console.log(`[${label}] Swagger UI    http://localhost:${port}${openApiPaths.swagger}`)
     }
     if (openApiPaths.scalar) {
-      // eslint-disable-next-line no-console
+
       console.log(`[${label}] Scalar UI     http://localhost:${port}${openApiPaths.scalar}`)
     }
   }

@@ -1,4 +1,4 @@
-import { expect, test, type APIRequestContext, type Page } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 
 /**
  * UI regression for the FilterPanel side-sheet
@@ -99,11 +99,18 @@ test.describe('FilterPanel — UI sidebar interactions', () => {
     page,
     request,
   }) => {
-    // Pick a customer id whose digit overlaps another id — that's the
-    // exact case where the substring-match regression surfaced
-    // (customer "1" vs "10", "11", …, "21"). Customer #1 always exists
-    // in the seed.
-    const authorId = '1'
+    // Discover a real seeded author id (seed uses UUID v7, not numeric
+    // ids). The substring-match regression we're guarding against would
+    // surface whenever the haystack column carries any ids that share a
+    // prefix/suffix with the needle — UUIDs satisfy that trivially.
+    const customers = (
+      await (
+        await request.get(adminApi('/resources/customers/actions/list?perPage=1'))
+      ).json()
+    ).records as Array<{ id: string; title: string }>
+    expect(customers.length).toBeGreaterThan(0)
+    const authorId = String(customers[0]!.id)
+    const authorName = String(customers[0]!.title)
 
     // Strict-API count → expected visible row count after the UI
     // applies the filter. If the substring bug regresses, the table
@@ -132,7 +139,9 @@ test.describe('FilterPanel — UI sidebar interactions', () => {
     // trigger is scoped to the sheet but the dropdown items live at
     // the page root.
     await filterField(page, 'Author').getByRole('combobox').click()
-    await page.getByPlaceholder(/^Search\b/i).last().fill(authorId)
+    // Type the author's display name (not the raw UUID) — the combobox
+    // filters by the resolved title, not by id.
+    await page.getByPlaceholder(/^Search\b/i).last().fill(authorName)
     await page.getByRole('option').first().click()
 
     await applyFilters(page)

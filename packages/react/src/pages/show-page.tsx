@@ -111,113 +111,113 @@ export function ResourceShowPage({
           { label: recordLabel },
         ]}
       />
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between gap-3">
-        <CardTitle className="truncate">
-          {resource.name} #{recordId}
-        </CardTitle>
-        {record.data && (
-          <div className="flex shrink-0 flex-wrap gap-2">
-            {features.history && (
-              <RevisionsButton resourceId={resourceId} recordId={recordId} />
-            )}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                {/* `asChild` + Link-as-Button keeps the rendered DOM a
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <CardTitle className="truncate">
+            {resource.name} #{recordId}
+          </CardTitle>
+          {record.data && (
+            <div className="flex shrink-0 flex-wrap gap-2">
+              {features.history && (
+                <RevisionsButton resourceId={resourceId} recordId={recordId} />
+              )}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  {/* `asChild` + Link-as-Button keeps the rendered DOM a
                  *  single `<a>` so it picks up the Button's `h-8` from
                  *  `size="sm"` instead of stacking a Link wrapper that
                  *  collapses to its anchor default height. */}
-                <Button variant="outline-primary" size="sm" asChild>
-                  <Link to={{ name: 'edit', resourceId, recordId }} aria-label={t('common:edit')}>
-                    <Pencil className="size-4" />
-                    <span className="hidden sm:inline">{t('common:edit')}</span>
-                  </Link>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent className="flex items-center gap-1.5">
-                <span>{t('common:edit')}</span>
-                <span className="inline-flex items-center gap-0.5">
-                  <Kbd>{modLabel}</Kbd>
-                  <span className="text-muted-foreground">+</span>
-                  <Kbd>E</Kbd>
-                </span>
-              </TooltipContent>
-            </Tooltip>
-            <Button
-              variant="outline-destructive"
-              size="sm"
-              disabled={remove.isPending}
-              onClick={() => void handleDelete()}
-              aria-label={t('common:delete')}
-            >
-              <Trash2 className="size-4" />
-              <span className="hidden sm:inline">{t('common:delete')}</span>
-            </Button>
-            {customRecordActions.length > 0 && (
-              <ActionMenu
-                actions={customRecordActions}
-                onAction={async (action) => {
-                  if (!await confirmGuard(action, dialogs)) return
-                  void invokeRecord
-                    .mutateAsync({ recordId, actionName: action.name })
-                    .then((res) => {
-                      if (res.notice) {
-                        const type = res.notice.type === 'error' ? 'error'
-                          : res.notice.type === 'warning' ? 'warning'
-                          : res.notice.type === 'info' ? 'info'
-                          : 'success'
-                        notify[type]({ message: res.notice.message })
-                      }
-                    })
-                    .catch((err: Error) =>
-                      notify.error({ message: err.message }),
-                    )
-                }}
-                t={t}
-                trigger={(
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={invokeRecord.isPending}
-                    aria-label={t('common:actions')}
-                  >
-                    <Zap className="size-4" />
-                    <span className="hidden sm:inline">{t('common:actions')}</span>
+                  <Button variant="outline-primary" size="sm" asChild>
+                    <Link to={{ name: 'edit', resourceId, recordId }} aria-label={t('common:edit')}>
+                      <Pencil className="size-4" />
+                      <span className="hidden sm:inline">{t('common:edit')}</span>
+                    </Link>
                   </Button>
-                )}
-              />
+                </TooltipTrigger>
+                <TooltipContent className="flex items-center gap-1.5">
+                  <span>{t('common:edit')}</span>
+                  <span className="inline-flex items-center gap-0.5">
+                    <Kbd>{modLabel}</Kbd>
+                    <span className="text-muted-foreground">+</span>
+                    <Kbd>E</Kbd>
+                  </span>
+                </TooltipContent>
+              </Tooltip>
+              <Button
+                variant="outline-destructive"
+                size="sm"
+                disabled={remove.isPending}
+                onClick={() => void handleDelete()}
+                aria-label={t('common:delete')}
+              >
+                <Trash2 className="size-4" />
+                <span className="hidden sm:inline">{t('common:delete')}</span>
+              </Button>
+              {customRecordActions.length > 0 && (
+                <ActionMenu
+                  actions={customRecordActions}
+                  onAction={async (action) => {
+                    if (!await confirmGuard(action, dialogs)) return
+                    void invokeRecord
+                      .mutateAsync({ recordId, actionName: action.name })
+                      .then((res) => {
+                        if (res.notice) {
+                          const type = res.notice.type === 'error' ? 'error'
+                            : res.notice.type === 'warning' ? 'warning'
+                              : res.notice.type === 'info' ? 'info'
+                                : 'success'
+                          notify[type]({ message: res.notice.message })
+                        }
+                      })
+                      .catch((err: Error) =>
+                        notify.error({ message: err.message }),
+                      )
+                  }}
+                  t={t}
+                  trigger={(
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={invokeRecord.isPending}
+                      aria-label={t('common:actions')}
+                    >
+                      <Zap className="size-4" />
+                      <span className="hidden sm:inline">{t('common:actions')}</span>
+                    </Button>
+                  )}
+                />
+              )}
+            </div>
+          )}
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {record.isLoading && <p className="text-muted-foreground">{t('common:loading')}</p>}
+            {record.isError && <PageError error={record.error} t={t} />}
+            {record.data && (
+              <dl className="[column-fill:_balance] md:columns-2">
+                {visibleRecordProperties(resource.properties, 'show')
+                  .map((p) => (
+                    <div key={p.path} className="mb-8 break-inside-avoid">
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        {p.label}
+                      </dt>
+                      <dd className="mt-1">
+                        <PropertyDisplay
+                          property={p}
+                          value={record.data!.record.params[p.path]}
+                          view="show"
+                          populated={record.data!.record.populated as Record<string, unknown> | undefined}
+                        />
+                      </dd>
+                    </div>
+                  ))}
+              </dl>
             )}
           </div>
-        )}
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-        {record.isLoading && <p className="text-muted-foreground">{t('common:loading')}</p>}
-        {record.isError && <PageError error={record.error} t={t} />}
-        {record.data && (
-          <dl className="[column-fill:_balance] md:columns-2">
-            {visibleRecordProperties(resource.properties, 'show')
-              .map((p) => (
-                <div key={p.path} className="mb-8 break-inside-avoid">
-                  <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    {p.label}
-                  </dt>
-                  <dd className="mt-1">
-                    <PropertyDisplay
-                      property={p}
-                      value={record.data!.record.params[p.path]}
-                      view="show"
-                      populated={record.data!.record.populated as Record<string, unknown> | undefined}
-                    />
-                  </dd>
-                </div>
-              ))}
-          </dl>
-        )}
-        </div>
-      </CardContent>
-    </Card>
-    {record.data && <RelatedRecordsTabs resource={resource} recordId={recordId} />}
+        </CardContent>
+      </Card>
+      {record.data && <RelatedRecordsTabs resource={resource} recordId={recordId} />}
     </div>
   )
 }

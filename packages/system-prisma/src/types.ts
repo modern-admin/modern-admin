@@ -8,7 +8,7 @@
  * structurally, no casts required.
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 
 export interface PrismaDelegate<TRow = any> {
   findMany(args?: any): Promise<TRow[]>
@@ -35,7 +35,7 @@ export interface PrismaDelegate<TRow = any> {
  * other type (including `unknown`) still rejects `PrismaClient`. The shape
  * of each delegate is validated at runtime in `resolveDelegate()`.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 export type PrismaLike = { [K: string]: any }
 
 export const DEFAULT_MODELS = {

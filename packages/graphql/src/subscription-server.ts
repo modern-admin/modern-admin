@@ -28,7 +28,7 @@ interface ConnectionParamsWithAdmin {
 
 @Injectable()
 export class GraphqlSubscriptionServer
-  implements OnApplicationBootstrap, OnApplicationShutdown
+implements OnApplicationBootstrap, OnApplicationShutdown
 {
   private wsServer: WebSocketServer | null = null
   private disposer: Disposable | null = null
@@ -47,7 +47,7 @@ export class GraphqlSubscriptionServer
     if (!this.options.subscriptionsEnabled) return
     const httpServer = this.adapterHost?.httpAdapter?.getHttpServer?.()
     if (!httpServer || typeof httpServer.on !== 'function') {
-      // eslint-disable-next-line no-console
+
       console.warn(
         '[modern-admin/graphql] subscriptions enabled but HTTP server is unavailable; skipping graphql-ws bootstrap',
       )

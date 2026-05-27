@@ -2,7 +2,7 @@ import { Inject, type OnModuleInit } from '@nestjs/common'
 import {
   ConnectedSocket,
   MessageBody,
-  OnGatewayInit,
+  type OnGatewayInit,
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,

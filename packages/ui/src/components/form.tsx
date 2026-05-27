@@ -30,12 +30,12 @@ export const FormField = <
   TFieldValues extends FieldValues = FieldValues,
   TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
 >({
-  ...props
-}: ControllerProps<TFieldValues, TName>): React.ReactElement => (
-  <FormFieldContext.Provider value={{ name: props.name } as FormFieldContextValue}>
-    <Controller {...props} />
-  </FormFieldContext.Provider>
-)
+    ...props
+  }: ControllerProps<TFieldValues, TName>): React.ReactElement => (
+    <FormFieldContext.Provider value={{ name: props.name } as FormFieldContextValue}>
+      <Controller {...props} />
+    </FormFieldContext.Provider>
+  )
 
 interface FormItemContextValue {
   id: string

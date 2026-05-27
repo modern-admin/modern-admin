@@ -79,18 +79,18 @@ export interface S3UploadOptions {
 }
 
 export class S3UploadProvider implements IUploadProvider {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   private _client: any = null
 
   constructor(
     private readonly options: S3UploadOptions,
     // Accept a pre-configured S3Client instance (share across providers /
     // inject in tests). When omitted the provider creates its own client.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     private readonly injectedClient?: any,
   ) {}
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   private async client(): Promise<any> {
     if (this.injectedClient) return this.injectedClient
     if (this._client) return this._client

@@ -36,7 +36,8 @@
   "scripts": {
     "build": "bun ../../scripts/clean.ts dist .tsbuildinfo && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "test": "bun test"
+    "test": "bun test",
+    "lint": "eslint ."
   },
   "dependencies": {
     "zod": "^4.4.3"

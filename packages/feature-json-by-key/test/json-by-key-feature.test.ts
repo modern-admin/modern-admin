@@ -29,11 +29,11 @@ const emptyOptions: ResourceOptions = {}
 type AnyHook = (...args: unknown[]) => Promise<unknown> | unknown
 
 const getAfter = (result: ResourceOptions, action: string): AnyHook[] =>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   ((result.actions?.[action] as any).after as AnyHook[]) ?? []
 
 const getBefore = (result: ResourceOptions, action: string): AnyHook[] =>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   ((result.actions?.[action] as any).before as AnyHook[]) ?? []
 
 // ─── property generation ─────────────────────────────────────────────────────

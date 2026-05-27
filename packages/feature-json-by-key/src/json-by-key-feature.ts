@@ -155,7 +155,7 @@ export function jsonByKeyFeature(options: JsonByKeyFeatureOptions): FeatureFn {
         // `(filename) => string`.
         const wrapped = userPath
           ? (filename: string): string =>
-              userPath(filename, { key, property: sourceProperty })
+            userPath(filename, { key, property: sourceProperty })
           : undefined
         UploadProviderRegistry.register(providerId, {
           provider,
@@ -206,11 +206,11 @@ export function jsonByKeyFeature(options: JsonByKeyFeatureOptions): FeatureFn {
         }
         const fileCustom = virtual.fileChild
           ? {
-              uploadProviderId: virtual.fileChild.providerId,
-              uploadUrlTemplate: virtual.fileChild.urlTemplate,
-              uploadMimeTypes: childMime,
-              uploadMaxSize: childMaxSize,
-            }
+            uploadProviderId: virtual.fileChild.providerId,
+            uploadUrlTemplate: virtual.fileChild.urlTemplate,
+            uploadMimeTypes: childMime,
+            uploadMaxSize: childMaxSize,
+          }
           : {}
         propOverrides[virtual.virtualPath] = {
           type: child.type ?? 'string',

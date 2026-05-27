@@ -3,7 +3,7 @@ import {
   BaseProperty,
   BaseRecord,
   BaseResource,
-  Filter,
+  type Filter,
   ModernAdmin,
   type FindOptions,
   type ParamsType,

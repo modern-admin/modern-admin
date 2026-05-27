@@ -32,7 +32,11 @@ export class PrismaProperty extends BaseProperty {
       type,
       isId: field.isId,
       isSortable: field.kind === 'scalar' && !field.isList,
-      isRequired: field.isRequired && !field.hasDefaultValue && !field.isId,
+      // Prisma scalar lists (`String[]`, `Int[]`, …) are non-nullable but
+      // implicitly default to `[]` at the storage level, so an empty array
+      // is a valid value. Treating them as required would force the UI to
+      // demand at least one element on every form, which is wrong.
+      isRequired: field.isRequired && !field.hasDefaultValue && !field.isId && !field.isList,
       isArray: field.isList,
       position,
       reference,

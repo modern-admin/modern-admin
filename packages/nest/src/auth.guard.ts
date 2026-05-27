@@ -1,5 +1,5 @@
-import { CanActivate, ExecutionContext, Inject, Injectable, UnauthorizedException } from '@nestjs/common'
-import { ModernAdmin } from '@modern-admin/core'
+import { type CanActivate, type ExecutionContext, Inject, Injectable, UnauthorizedException } from '@nestjs/common'
+import { type ModernAdmin } from '@modern-admin/core'
 import { MODERN_ADMIN } from './tokens.js'
 
 interface AdminRequest {

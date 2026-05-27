@@ -1,6 +1,6 @@
 import { Controller, Get, Inject, Req, UseGuards } from '@nestjs/common'
 import { ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
-import { ModernAdmin, type CurrentAdmin, type RolePermissions } from '@modern-admin/core'
+import { type ModernAdmin, type CurrentAdmin, type RolePermissions } from '@modern-admin/core'
 import { MODERN_ADMIN } from './tokens.js'
 import { ModernAdminAuthGuard } from './auth.guard.js'
 

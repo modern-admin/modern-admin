@@ -14,7 +14,7 @@ export const visibleRecordProperties = (
   view: 'list' | 'show' | 'edit' | 'filter',
 ): PropertyJSON[] =>
   properties.filter((property) =>
-    property.visibility[view] && !isToManyReferenceProperty(property)
+    property.visibility[view] && !isToManyReferenceProperty(property),
   )
 
 const relatedKey = (related: RelatedResource): string =>
@@ -35,7 +35,7 @@ export const resolveRelatedResources = (
     if (!target) continue
 
     const foreignKey = target.properties.find((candidate) =>
-      !candidate.isArray && candidate.reference === resource.id
+      !candidate.isArray && candidate.reference === resource.id,
     )
     if (!foreignKey) continue
 

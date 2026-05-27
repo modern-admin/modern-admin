@@ -47,13 +47,13 @@ export function createAppConfig({
         'no-trailing-spaces': 'error',
         'object-curly-spacing': ['error', 'always'],
         'prefer-const': 'error',
-        '@typescript-eslint/consistent-type-imports': [
-          'warn',
-          {
-            prefer: 'type-imports',
-            fixStyle: 'inline-type-imports',
-          },
-        ],
+        // `@typescript-eslint/consistent-type-imports` is intentionally NOT
+        // enabled. The codebase uses NestJS with `emitDecoratorMetadata: true`,
+        // where constructor parameter types must be value imports so the
+        // runtime reflect-metadata picks up the class reference. Enabling the
+        // rule's autofix silently rewrites those to `import type {...}`, which
+        // erases at runtime and breaks DI (Nest then sees `undefined` as the
+        // dependency).
         '@typescript-eslint/no-explicit-any': 'off',
         '@typescript-eslint/no-unused-vars': [
           'warn',
@@ -81,8 +81,17 @@ export function createAppConfig({
             plugins: {
               'react-hooks': reactHooks,
             },
+            // Only the classic rules. The React Compiler ruleset bundled
+            // into eslint-plugin-react-hooks@7 (set-state-in-effect, refs,
+            // purity, incompatible-library, components, …) targets projects
+            // built with babel-plugin-react-compiler. Modern Admin does not
+            // run the compiler, so those rules would flag idiomatic code and
+            // unavoidable third-party APIs (react-hook-form, tanstack-table)
+            // without buying us anything. Re-enable them if/when the
+            // compiler is adopted.
             rules: {
-              ...reactHooks.configs.recommended.rules,
+              'react-hooks/rules-of-hooks': 'error',
+              'react-hooks/exhaustive-deps': 'warn',
             },
           },
         ]

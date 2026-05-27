@@ -314,7 +314,7 @@ export const fr: LocaleBundle = {
     'dashboard:builder.range': 'Période',
     'dashboard:builder.filters': 'Filtres',
     'dashboard:builder.filtersHint': "Restreindre le jeu de données avant l'agrégation. Cochez un filtre pour l'afficher au-dessus du graphique.",
-    'dashboard:builder.quickFilterHint': "Afficher ce filtre au-dessus du graphique sur le tableau de bord.",
+    'dashboard:builder.quickFilterHint': 'Afficher ce filtre au-dessus du graphique sur le tableau de bord.',
     'dashboard:builder.quickFilterToggle': 'Exposer {field} comme filtre rapide',
     'dashboard:range.7d': '7j',
     'dashboard:range.30d': '30j',
@@ -485,4 +485,4 @@ export const fr: LocaleBundle = {
     'wizard:products.step3': 'Médias et tags',
   },
 }
- 
+

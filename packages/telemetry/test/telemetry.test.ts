@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test'
 import { ModernAdmin } from '@modern-admin/core'
 import { _resetInstanceId, _resetReported, collectTelemetryInfo, reportTelemetry } from '../src/index.js'
 

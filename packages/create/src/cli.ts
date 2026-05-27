@@ -89,36 +89,36 @@ const parseGenerate = (argv: string[]): GenerateArgs => {
 
 const runScaffold = async (args: ScaffoldArgs): Promise<number> => {
   if (args.help) {
-    // eslint-disable-next-line no-console
+
     console.log(usage())
     return 0
   }
   const name = args.name?.trim()
   if (!name) {
-    // eslint-disable-next-line no-console
+
     console.error(usage())
     return 1
   }
   const here = dirname(fileURLToPath(import.meta.url))
   const templateDir = join(here, '..', 'template')
   const targetDir = resolve(args.target ?? `./${name}`)
-  // eslint-disable-next-line no-console
+
   console.log(`Scaffolding "${name}" into ${targetDir}…`)
   const files = await scaffold({ name, templateDir, targetDir })
-  // eslint-disable-next-line no-console
+
   console.log(`Wrote ${files.length} files. Next steps:`)
-  // eslint-disable-next-line no-console
+
   console.log(`  cd ${targetDir}`)
-  // eslint-disable-next-line no-console
+
   console.log(`  bun install`)
-  // eslint-disable-next-line no-console
+
   console.log(`  bun run dev`)
   return 0
 }
 
 const runGenerate = async (args: GenerateArgs): Promise<number> => {
   if (args.help) {
-    // eslint-disable-next-line no-console
+
     console.log(usage())
     return 0
   }
@@ -129,17 +129,17 @@ const runGenerate = async (args: GenerateArgs): Promise<number> => {
     dryRun: args.dryRun,
   })
   const verb = args.dryRun ? 'Would add' : 'Added'
-  // eslint-disable-next-line no-console
+
   console.log(`Target (${result.orm}): ${result.schemaPath}`)
   if (result.added.length > 0) {
-    // eslint-disable-next-line no-console
+
     console.log(`${verb} (${result.added.length}): ${result.added.join(', ')}`)
   } else {
-    // eslint-disable-next-line no-console
+
     console.log('Already up to date — nothing to add.')
   }
   if (result.skipped.length > 0) {
-    // eslint-disable-next-line no-console
+
     console.log(`Skipped (${result.skipped.length}): ${result.skipped.join(', ')}`)
   }
   return 0
@@ -150,12 +150,12 @@ const main = async (argv: string[]): Promise<number> => {
   try {
     parsed = parse(argv)
   } catch (err) {
-    // eslint-disable-next-line no-console
+
     console.error((err as Error).message)
     return 1
   }
   if (parsed.command === 'help') {
-    // eslint-disable-next-line no-console
+
     console.log(usage())
     return 0
   }

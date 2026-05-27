@@ -67,7 +67,7 @@ test.describe('List page — sorting', () => {
     await gotoCustomers(page)
 
     // The column header for "Name" contains a sort-button with that label.
-    const nameHeader = page.getByRole('columnheader', { name: /\bName\b/ })
+    const nameHeader = page.getByRole('columnheader', { name: /\bFull name\b/i })
     const sortBtn = nameHeader.getByRole('button').first()
 
     // First click → ascending.
@@ -92,7 +92,7 @@ test.describe('List page — sorting', () => {
     // Capture the first name cell before sorting.
     const firstCell = page.locator('tbody tr').first().locator('td').nth(2) // name column (id, email, name…)
 
-    const nameHeader = page.getByRole('columnheader', { name: /\bName\b/ })
+    const nameHeader = page.getByRole('columnheader', { name: /\bFull name\b/i })
     await nameHeader.getByRole('button').first().click()
     // ascending — wait for the URL to update, then verify the first cell value
     // changed (it should now be the alphabetically lowest name).
@@ -189,18 +189,18 @@ test.describe('List page — column visibility', () => {
 
     // Hide "Name".
     await columnsBtn.click()
-    await page.getByRole('menuitemcheckbox', { name: /^Name$/i }).click()
+    await page.getByRole('menuitemcheckbox', { name: /^Full name$/i }).click()
     await page.keyboard.press('Escape')
     await expect(
-      page.getByRole('columnheader', { name: /\bName\b/ }),
+      page.getByRole('columnheader', { name: /\bFull name\b/i }),
     ).toBeHidden({ timeout: 5_000 })
 
     // Show "Name" again.
     await columnsBtn.click()
-    await page.getByRole('menuitemcheckbox', { name: /^Name$/i }).click()
+    await page.getByRole('menuitemcheckbox', { name: /^Full name$/i }).click()
     await page.keyboard.press('Escape')
     await expect(
-      page.getByRole('columnheader', { name: /\bName\b/ }),
+      page.getByRole('columnheader', { name: /\bFull name\b/i }),
     ).toBeVisible({ timeout: 5_000 })
   })
 })

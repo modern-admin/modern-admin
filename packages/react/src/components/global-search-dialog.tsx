@@ -89,10 +89,10 @@ const highlightMatch = (text: string, needle: string): React.ReactNode => {
 }
 
 export function GlobalSearchDialog({
-                                     open,
-                                     onOpenChange,
-                                   }: GlobalSearchDialogProps): React.ReactElement {
-  const {t} = useI18n()
+  open,
+  onOpenChange,
+}: GlobalSearchDialogProps): React.ReactElement {
+  const { t } = useI18n()
   const navigate = useNavigate()
   const [query, setQuery] = React.useState('')
   const [debounced, setDebounced] = React.useState('')
@@ -113,7 +113,7 @@ export function GlobalSearchDialog({
     return () => window.clearTimeout(timer)
   }, [query])
 
-  const {data, isFetching} = useGlobalSearch(debounced, open)
+  const { data, isFetching } = useGlobalSearch(debounced, open)
 
   // Capture the most recent successful query so it's available for the
   // "recent" list. We only persist on user-driven navigation (not every
@@ -135,7 +135,7 @@ export function GlobalSearchDialog({
     (resourceId: string, recordId: string): void => {
       persistRecent(debounced)
       onOpenChange(false)
-      navigate({name: 'show', resourceId, recordId})
+      navigate({ name: 'show', resourceId, recordId })
     },
     [debounced, navigate, onOpenChange, persistRecent],
   )
@@ -144,7 +144,7 @@ export function GlobalSearchDialog({
     (resourceId: string): void => {
       persistRecent(debounced)
       onOpenChange(false)
-      navigate({name: 'list', resourceId})
+      navigate({ name: 'list', resourceId })
     },
     [debounced, navigate, onOpenChange, persistRecent],
   )

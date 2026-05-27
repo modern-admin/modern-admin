@@ -3,15 +3,24 @@
 // SETs that map a tag to the keys it covers; mutating a record drops the set
 // and all referenced keys in one round-trip.
 
+import { createRequire } from 'node:module'
 import type { CacheSetOptions, ICacheProvider } from '@modern-admin/core'
 
-interface RedisLike {
+const require_ = createRequire(import.meta.url)
+
+// Structurally compatible with `ioredis.Redis` (and node-redis-style clients).
+// `set`/`sadd`/`del`/`publish` value types are widened to `string | number | Buffer`
+// and `set` is exposed as two overloads (with and without TTL) so the real
+// ioredis client — which has a dozen overloads on the same method — assigns
+// without requiring `as unknown as RedisLike` at the call site.
+export interface RedisLike {
   get(key: string): Promise<string | null>
-  set(key: string, value: string, mode?: 'EX', ttl?: number): Promise<unknown>
+  set(key: string, value: string | number | Buffer): Promise<unknown>
+  set(key: string, value: string | number | Buffer, mode: 'EX', ttl: number | string): Promise<unknown>
   del(...keys: string[]): Promise<unknown>
-  sadd(key: string, ...values: string[]): Promise<unknown>
+  sadd(key: string, ...values: (string | number | Buffer)[]): Promise<unknown>
   smembers(key: string): Promise<string[]>
-  publish?(channel: string, message: string): Promise<unknown>
+  publish?(channel: string, message: string | Buffer): Promise<unknown>
   duplicate?(): RedisLike
   subscribe?(channel: string): Promise<unknown>
   on?(event: 'message', handler: (channel: string, message: string) => void): unknown
@@ -132,4 +141,38 @@ export class RedisCacheProvider implements ICacheProvider {
     if (!this.client.publish) return
     await this.client.publish(this.k(channel), message)
   }
+}
+
+/**
+ * Convenience factory: spin up the cache provider directly from a Redis
+ * connection URL, hiding ioredis import + dual-client (main + subscriber)
+ * boilerplate from consumers.
+ *
+ * Usage:
+ *   const cache = process.env.REDIS_URL
+ *     ? createRedisCacheProvider({ url: process.env.REDIS_URL })
+ *     : undefined
+ *
+ * Requires `ioredis` to be installed (declared as a peer dependency of this
+ * package). If you already manage your Redis client(s) elsewhere, instantiate
+ * `RedisCacheProvider` directly instead.
+ */
+export interface CreateRedisCacheProviderOptions {
+  url: string
+  prefix?: string
+  defaultTtl?: number
+}
+
+export function createRedisCacheProvider(
+  opts: CreateRedisCacheProviderOptions,
+): RedisCacheProvider {
+  // Dynamic require keeps ioredis a true peer dep — pulled in only when this
+  // helper is actually called, not when the module is merely imported.
+  const Redis = require_('ioredis') as new (url: string) => RedisLike
+  return new RedisCacheProvider({
+    client: new Redis(opts.url),
+    subscriber: new Redis(opts.url),
+    ...(opts.prefix !== undefined ? { prefix: opts.prefix } : {}),
+    ...(opts.defaultTtl !== undefined ? { defaultTtl: opts.defaultTtl } : {}),
+  })
 }

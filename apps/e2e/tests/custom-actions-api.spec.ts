@@ -22,7 +22,7 @@ import { test, expect, type APIRequestContext } from '@playwright/test'
 const API = process.env.E2E_API_URL ?? 'http://localhost:3001'
 const admin = (path: string): string => `${API}/admin/api${path}`
 
-async function firstPost(request: APIRequestContext): Promise<{ id: string; published: boolean }> {
+async function _firstPost(request: APIRequestContext): Promise<{ id: string; published: boolean }> {
   const res = await request.get(admin('/resources/posts/actions/list?perPage=1'))
   expect(res.ok()).toBeTruthy()
   const body = await res.json()
@@ -31,7 +31,7 @@ async function firstPost(request: APIRequestContext): Promise<{ id: string; publ
   return { id: String(r.id), published: Boolean(r.params.published) }
 }
 
-async function firstProduct(request: APIRequestContext): Promise<{ id: string; inStock: boolean; sku: string }> {
+async function _firstProduct(request: APIRequestContext): Promise<{ id: string; inStock: boolean; sku: string }> {
   const res = await request.get(admin('/resources/products/actions/list?perPage=1'))
   expect(res.ok()).toBeTruthy()
   const body = await res.json()

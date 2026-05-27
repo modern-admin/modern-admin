@@ -99,10 +99,10 @@ export function resolveRange(
   if (range.preset === 'custom') return { from: range.from, to: range.to }
   const days =
     range.preset === '7d' ? 7
-    : range.preset === '30d' ? 30
-    : range.preset === '90d' ? 90
-    : range.preset === '1y' ? 365
-    : 3650 // 'all' → 10 years
+      : range.preset === '30d' ? 30
+        : range.preset === '90d' ? 90
+          : range.preset === '1y' ? 365
+            : 3650 // 'all' → 10 years
   const to = new Date(now)
   const from = new Date(now)
   from.setDate(from.getDate() - days)
@@ -264,14 +264,14 @@ export function useDashboardCharts(
         charts.map((c) =>
           c.id === id
             ? ({
-                ...c,
-                ...input,
-                id,
-                title: input.title ?? '',
-                filters: input.filters ?? {},
-                createdAt: c.createdAt,
-                updatedAt: new Date().toISOString(),
-              } as ChartDef)
+              ...c,
+              ...input,
+              id,
+              title: input.title ?? '',
+              filters: input.filters ?? {},
+              createdAt: c.createdAt,
+              updatedAt: new Date().toISOString(),
+            } as ChartDef)
             : c,
         ),
         groups,
@@ -318,11 +318,11 @@ export function useDashboardCharts(
         groups.map((g) =>
           g.id === id
             ? {
-                ...g,
-                ...(patch.name !== undefined ? { name: patch.name } : {}),
-                ...(patch.order !== undefined ? { order: patch.order } : {}),
-                updatedAt: now,
-              }
+              ...g,
+              ...(patch.name !== undefined ? { name: patch.name } : {}),
+              ...(patch.order !== undefined ? { order: patch.order } : {}),
+              updatedAt: now,
+            }
             : g,
         ),
       )

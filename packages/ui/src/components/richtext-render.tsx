@@ -45,7 +45,6 @@ export function RichtextRender({
   return (
     <div
       className={cn(proseRenderClass, className)}
-      // eslint-disable-next-line react/no-danger
       dangerouslySetInnerHTML={{ __html: html }}
     />
   )

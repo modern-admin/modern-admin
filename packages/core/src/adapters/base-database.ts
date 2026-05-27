@@ -2,7 +2,7 @@ import { NotImplementedError } from '../errors'
 import type { BaseResource } from './base-resource.js'
 
 export abstract class BaseDatabase {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars, no-useless-constructor, @typescript-eslint/no-empty-function
+
   constructor(_database: unknown) {}
 
   /**

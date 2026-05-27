@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { Badge, Button, Input, Label, Switch, Textarea, } from '@modern-admin/ui'
+import { Badge, Button, Input, Label, Switch, Textarea } from '@modern-admin/ui'
 import { Bot, KeyRound, Save } from 'lucide-react'
 import { useAdminClient } from '../provider.js'
 import { useNotify } from '../notify.js'
@@ -11,7 +11,7 @@ import { SettingsCard } from './settings-shared.js'
 export function AiAssistantSettingsSection(): React.ReactElement {
   const client = useAdminClient()
   const notify = useNotify()
-  const {t} = useI18n()
+  const { t } = useI18n()
   const settings = useQuery({
     queryKey: ['modern-admin', 'ai-assistant', 'settings'],
     queryFn: () => client.getAiAssistantSettings(),
@@ -38,16 +38,16 @@ export function AiAssistantSettingsSection(): React.ReactElement {
       client.updateAiAssistantSettings({
         enabled: form.enabled,
         model: form.model,
-        ...(form.apiKey.trim() ? {apiKey: form.apiKey.trim()} : {}),
+        ...(form.apiKey.trim() ? { apiKey: form.apiKey.trim() } : {}),
         systemPrompt: form.systemPrompt,
       }),
     onSuccess: () => {
       settings.refetch()
-      setForm((prev) => ({...prev, apiKey: ''}))
-      notify.success({message: t('aiAssistant:settings.saved')})
+      setForm((prev) => ({ ...prev, apiKey: '' }))
+      notify.success({ message: t('aiAssistant:settings.saved') })
     },
     onError: (err) => {
-      notify.error({message: err instanceof Error ? err.message : String(err)})
+      notify.error({ message: err instanceof Error ? err.message : String(err) })
     },
   })
 
@@ -84,11 +84,11 @@ export function AiAssistantSettingsSection(): React.ReactElement {
             {data.configured ? t('aiAssistant:settings.configured') : t('aiAssistant:settings.apiKeyRequired')}
           </Badge>
           <Badge variant="outline">{t('aiAssistant:settings.readOnly')}</Badge>
-          <Badge variant="outline">{t('aiAssistant:settings.provider', {provider: data.provider})}</Badge>
+          <Badge variant="outline">{t('aiAssistant:settings.provider', { provider: data.provider })}</Badge>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="flex items-center justify-between rounded-lg border p-3">
+          <div className="flex items-center justify-between rounded-lg border border-border p-3">
             <div className="space-y-1">
               <Label htmlFor="ai-assistant-enabled">{t('aiAssistant:settings.enableLabel')}</Label>
               <p className="text-xs text-muted-foreground">
@@ -99,7 +99,7 @@ export function AiAssistantSettingsSection(): React.ReactElement {
               id="ai-assistant-enabled"
               checked={form.enabled}
               disabled={!data.canManage || save.isPending}
-              onCheckedChange={(enabled) => setForm((prev) => ({...prev, enabled}))}
+              onCheckedChange={(enabled) => setForm((prev) => ({ ...prev, enabled }))}
             />
           </div>
 
@@ -109,7 +109,7 @@ export function AiAssistantSettingsSection(): React.ReactElement {
               id="ai-assistant-model"
               value={form.model}
               disabled={!data.canManage || save.isPending}
-              onChange={(e) => setForm((prev) => ({...prev, model: e.target.value}))}
+              onChange={(e) => setForm((prev) => ({ ...prev, model: e.target.value }))}
               placeholder="google/gemini-3.1-flash-lite-preview"
             />
           </div>
@@ -125,7 +125,7 @@ export function AiAssistantSettingsSection(): React.ReactElement {
             type="password"
             value={form.apiKey}
             disabled={!data.canManage || save.isPending}
-            onChange={(e) => setForm((prev) => ({...prev, apiKey: e.target.value}))}
+            onChange={(e) => setForm((prev) => ({ ...prev, apiKey: e.target.value }))}
             placeholder={data.maskedApiKey ?? 'sk-or-v1-...'}
           />
           <p className="text-xs text-muted-foreground">
@@ -139,13 +139,13 @@ export function AiAssistantSettingsSection(): React.ReactElement {
             id="ai-assistant-system-prompt"
             value={form.systemPrompt}
             disabled={!data.canManage || save.isPending}
-            onChange={(e) => setForm((prev) => ({...prev, systemPrompt: e.target.value}))}
+            onChange={(e) => setForm((prev) => ({ ...prev, systemPrompt: e.target.value }))}
             rows={8}
             placeholder={t('aiAssistant:settings.systemPromptPlaceholder')}
           />
         </div>
 
-        <div className="flex items-center justify-between gap-3 rounded-lg border p-3 text-sm">
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-border p-3 text-sm">
           <div>
             <div className="font-medium">{t('aiAssistant:settings.accessTitle')}</div>
             <div className="text-muted-foreground">

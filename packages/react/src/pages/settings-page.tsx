@@ -8,10 +8,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Badge,
   Button,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
   Checkbox,
   Dialog,
   DialogContent,
@@ -103,7 +99,7 @@ export function SettingsPage({ section }: { section?: string }): React.ReactElem
         isExtension: true as const,
       })),
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
     [features.apiKeys, features.webhooks, features.aiAssistant],
   )
   // Resolve the requested section. If the URL is bogus or the section is
@@ -262,65 +258,65 @@ function ApiKeysSection(): React.ReactElement {
         >
           <SettingsTableScroll>
             <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('settings:apiKeys.columns.name')}</TableHead>
-                    <TableHead className="hidden sm:table-cell">{t('settings:apiKeys.columns.start')}</TableHead>
-                    <TableHead className="hidden md:table-cell">{t('settings:apiKeys.columns.permissions')}</TableHead>
-                    <TableHead className="hidden md:table-cell">{t('settings:apiKeys.columns.expiresAt')}</TableHead>
-                    <TableHead>{t('settings:apiKeys.columns.enabled')}</TableHead>
-                    <TableHead className="text-right">{t('settings:apiKeys.columns.actions')}</TableHead>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('settings:apiKeys.columns.name')}</TableHead>
+                  <TableHead className="hidden sm:table-cell">{t('settings:apiKeys.columns.start')}</TableHead>
+                  <TableHead className="hidden md:table-cell">{t('settings:apiKeys.columns.permissions')}</TableHead>
+                  <TableHead className="hidden md:table-cell">{t('settings:apiKeys.columns.expiresAt')}</TableHead>
+                  <TableHead>{t('settings:apiKeys.columns.enabled')}</TableHead>
+                  <TableHead className="text-right">{t('settings:apiKeys.columns.actions')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {keys.map((k) => (
+                  <TableRow key={k.id}>
+                    <TableCell className="font-medium">
+                      <div className="flex flex-col">
+                        <span>{k.name ?? k.id}</span>
+                        {k.lastRequest && (
+                          <span className="text-xs text-muted-foreground">
+                            {t('settings:apiKeys.lastUsed', { date: formatDate(k.lastRequest) })}
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden font-mono text-xs sm:table-cell">
+                      {k.start ? `${k.start}…` : '—'}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      <PermissionsSummary permissions={k.permissions} />
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell text-xs">
+                      {k.expiresAt ? formatDate(k.expiresAt) : t('settings:apiKeys.expiresNever')}
+                    </TableCell>
+                    <TableCell>
+                      <Switch
+                        checked={k.enabled}
+                        onCheckedChange={(enabled) => toggleEnabledMut.mutate({ id: k.id, enabled })}
+                        aria-label={t('settings:apiKeys.columns.enabled')}
+                      />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="inline-flex gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => onEdit(k)} aria-label={t('settings:apiKeys.actions.edit')}>
+                          <Edit className="size-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onRevoke(k)}
+                          aria-label={t('settings:apiKeys.actions.revoke')}
+                          disabled={deleteMut.isPending}
+                        >
+                          <Trash2 className="size-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {keys.map((k) => (
-                    <TableRow key={k.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex flex-col">
-                          <span>{k.name ?? k.id}</span>
-                          {k.lastRequest && (
-                            <span className="text-xs text-muted-foreground">
-                              {t('settings:apiKeys.lastUsed', { date: formatDate(k.lastRequest) })}
-                            </span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden font-mono text-xs sm:table-cell">
-                        {k.start ? `${k.start}…` : '—'}
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        <PermissionsSummary permissions={k.permissions} />
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell text-xs">
-                        {k.expiresAt ? formatDate(k.expiresAt) : t('settings:apiKeys.expiresNever')}
-                      </TableCell>
-                      <TableCell>
-                        <Switch
-                          checked={k.enabled}
-                          onCheckedChange={(enabled) => toggleEnabledMut.mutate({ id: k.id, enabled })}
-                          aria-label={t('settings:apiKeys.columns.enabled')}
-                        />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="inline-flex gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => onEdit(k)} aria-label={t('settings:apiKeys.actions.edit')}>
-                            <Edit className="size-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => onRevoke(k)}
-                            aria-label={t('settings:apiKeys.actions.revoke')}
-                            disabled={deleteMut.isPending}
-                          >
-                            <Trash2 className="size-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                ))}
+              </TableBody>
+            </Table>
           </SettingsTableScroll>
         </SettingsListState>
       </SettingsCard>

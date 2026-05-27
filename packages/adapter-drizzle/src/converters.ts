@@ -18,24 +18,24 @@ const coerceScalar = (
   if (typeof value !== 'string') return value
   if (!property) return value
   switch (property.type()) {
-    case 'number':
-    case 'currency': {
-      const n = Number(value)
-      return Number.isFinite(n) ? n : value
-    }
-    case 'float': {
-      const n = parseFloat(value)
-      return Number.isFinite(n) ? n : value
-    }
-    case 'boolean':
-      return value === 'true' || value === '1'
-    case 'date':
-    case 'datetime': {
-      const d = new Date(value)
-      return Number.isNaN(d.getTime()) ? value : d
-    }
-    default:
-      return value
+  case 'number':
+  case 'currency': {
+    const n = Number(value)
+    return Number.isFinite(n) ? n : value
+  }
+  case 'float': {
+    const n = parseFloat(value)
+    return Number.isFinite(n) ? n : value
+  }
+  case 'boolean':
+    return value === 'true' || value === '1'
+  case 'date':
+  case 'datetime': {
+    const d = new Date(value)
+    return Number.isNaN(d.getTime()) ? value : d
+  }
+  default:
+    return value
   }
 }
 
@@ -116,96 +116,96 @@ const buildOperatorCondition = (
   const isString = property.type() === 'string'
 
   switch (operator) {
-    case 'eq': {
-      const coerced = coerceScalar(value, property)
-      if (isString && typeof coerced === 'string') {
-        const op = ciLike(column)
-        // Exact match via ILIKE without wildcards (case-insensitive equals)
-        return op(column as never, coerced as never)
-      }
-      return eq(column as never, coerced as never)
+  case 'eq': {
+    const coerced = coerceScalar(value, property)
+    if (isString && typeof coerced === 'string') {
+      const op = ciLike(column)
+      // Exact match via ILIKE without wildcards (case-insensitive equals)
+      return op(column as never, coerced as never)
     }
-    case 'neq': {
-      const coerced = coerceScalar(value, property)
-      if (isString && typeof coerced === 'string') {
-        const op = ciLike(column)
-        return not(op(column as never, coerced as never))
-      }
-      return ne(column as never, coerced as never)
+    return eq(column as never, coerced as never)
+  }
+  case 'neq': {
+    const coerced = coerceScalar(value, property)
+    if (isString && typeof coerced === 'string') {
+      const op = ciLike(column)
+      return not(op(column as never, coerced as never))
     }
-    case 'co': {
-      const coerced = coerceScalar(value, property)
-      if (typeof coerced === 'string') {
-        const op = ciLike(column)
-        return op(column as never, likeContains(coerced) as never)
-      }
-      return eq(column as never, coerced as never)
+    return ne(column as never, coerced as never)
+  }
+  case 'co': {
+    const coerced = coerceScalar(value, property)
+    if (typeof coerced === 'string') {
+      const op = ciLike(column)
+      return op(column as never, likeContains(coerced) as never)
     }
-    case 'nco': {
-      const coerced = coerceScalar(value, property)
-      if (typeof coerced === 'string') {
-        const op = ciLike(column)
-        return not(op(column as never, likeContains(coerced) as never))
-      }
-      return ne(column as never, coerced as never)
+    return eq(column as never, coerced as never)
+  }
+  case 'nco': {
+    const coerced = coerceScalar(value, property)
+    if (typeof coerced === 'string') {
+      const op = ciLike(column)
+      return not(op(column as never, likeContains(coerced) as never))
     }
-    case 'sw': {
-      const coerced = coerceScalar(value, property)
-      if (typeof coerced === 'string') {
-        const op = ciLike(column)
-        return op(column as never, likeStartsWith(coerced) as never)
-      }
-      return eq(column as never, coerced as never)
+    return ne(column as never, coerced as never)
+  }
+  case 'sw': {
+    const coerced = coerceScalar(value, property)
+    if (typeof coerced === 'string') {
+      const op = ciLike(column)
+      return op(column as never, likeStartsWith(coerced) as never)
     }
-    case 'ew': {
-      const coerced = coerceScalar(value, property)
-      if (typeof coerced === 'string') {
-        const op = ciLike(column)
-        return op(column as never, likeEndsWith(coerced) as never)
-      }
-      return eq(column as never, coerced as never)
+    return eq(column as never, coerced as never)
+  }
+  case 'ew': {
+    const coerced = coerceScalar(value, property)
+    if (typeof coerced === 'string') {
+      const op = ciLike(column)
+      return op(column as never, likeEndsWith(coerced) as never)
     }
-    case 'empty':
-      return or(
-        isNull(column as never),
-        eq(column as never, '' as never),
-      )
-    case 'nempty':
-      return and(
-        isNotNull(column as never),
-        ne(column as never, '' as never),
-      )
-    case 'in': {
-      if (Array.isArray(value)) {
-        const list = value.map((v) => coerceScalar(v as FilterValue, property)) as unknown[]
-        if (!list.length) return null
-        if (property.isArray()) return arrayOverlaps(column as never, list as never)
-        return inArray(column as never, list as never)
-      }
-      const coerced = coerceScalar(value, property)
-      return eq(column as never, coerced as never)
+    return eq(column as never, coerced as never)
+  }
+  case 'empty':
+    return or(
+      isNull(column as never),
+      eq(column as never, '' as never),
+    )
+  case 'nempty':
+    return and(
+      isNotNull(column as never),
+      ne(column as never, '' as never),
+    )
+  case 'in': {
+    if (Array.isArray(value)) {
+      const list = value.map((v) => coerceScalar(v as FilterValue, property)) as unknown[]
+      if (!list.length) return null
+      if (property.isArray()) return arrayOverlaps(column as never, list as never)
+      return inArray(column as never, list as never)
     }
-    case 'gt': {
-      const coerced = coerceScalar(value, property)
-      return gt(column as never, coerced as never)
-    }
-    case 'lt': {
-      const coerced = coerceScalar(value, property)
-      return lt(column as never, coerced as never)
-    }
-    case 'between': {
-      const str = typeof value === 'string' ? value : ''
-      const comma = str.indexOf(',')
-      const fromStr = comma >= 0 ? str.slice(0, comma) : str
-      const toStr = comma >= 0 ? str.slice(comma + 1) : ''
-      const conds: unknown[] = []
-      if (fromStr) conds.push(gte(column as never, coerceScalar(fromStr, property) as never))
-      if (toStr) conds.push(lte(column as never, coerceScalar(toStr, property) as never))
-      if (!conds.length) return null
-      return conds.length === 1 ? conds[0] : and(...(conds as never[]))
-    }
-    default:
-      return null
+    const coerced = coerceScalar(value, property)
+    return eq(column as never, coerced as never)
+  }
+  case 'gt': {
+    const coerced = coerceScalar(value, property)
+    return gt(column as never, coerced as never)
+  }
+  case 'lt': {
+    const coerced = coerceScalar(value, property)
+    return lt(column as never, coerced as never)
+  }
+  case 'between': {
+    const str = typeof value === 'string' ? value : ''
+    const comma = str.indexOf(',')
+    const fromStr = comma >= 0 ? str.slice(0, comma) : str
+    const toStr = comma >= 0 ? str.slice(comma + 1) : ''
+    const conds: unknown[] = []
+    if (fromStr) conds.push(gte(column as never, coerceScalar(fromStr, property) as never))
+    if (toStr) conds.push(lte(column as never, coerceScalar(toStr, property) as never))
+    if (!conds.length) return null
+    return conds.length === 1 ? conds[0] : and(...(conds as never[]))
+  }
+  default:
+    return null
   }
 }
 

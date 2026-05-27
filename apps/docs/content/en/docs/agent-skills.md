@@ -12,9 +12,10 @@ Prisma models that `setupPrismaSystem` resolves eagerly, the
 client, subscriber })` shape, and many more. Re-discovering these
 through trial-and-error eats hours.
 
-The framework repo publishes those rules as a
+Those rules ship as a
 [Claude Code skill](https://docs.claude.com/en/docs/agents-and-tools/skills)
-distributed through [`npx skills`](https://www.npmjs.com/package/skills) —
+from a dedicated repository — [`modern-admin/skills`](https://github.com/modern-admin/skills)
+— distributed through [`npx skills`](https://www.npmjs.com/package/skills),
 the community-standard installer for AI agent skills. The skill body
 loads lazily, so Claude only reads it when a task actually touches
 Modern Admin; it costs nothing in context the rest of the time.
@@ -26,7 +27,7 @@ Modern Admin; it costs nothing in context the rest of the time.
 In any project where you use an AI coding agent:
 
 ```sh
-npx skills add modern-admin/modern-admin
+npx skills add modern-admin/skills
 ```
 
 The CLI clones the repo, lists the skills it finds under `skills/`,
@@ -51,13 +52,21 @@ To install only the Modern Admin skill (skip the picker) or run
 non-interactively in CI:
 
 ```sh
-npx skills add modern-admin/modern-admin --skill modern-admin-integration --yes
+npx skills add modern-admin/skills --skill modern-admin-integration --yes
 ```
 
-To pin a specific framework version, append a git ref:
+To pin a specific skill version, append a git tag:
 
 ```sh
-npx skills add modern-admin/modern-admin#v1.2.0
+npx skills add modern-admin/skills#v2.0.0
+```
+
+Claude Code users can also install via the plugin mechanism — the
+[`modern-admin/skills`](https://github.com/modern-admin/skills) repo
+ships a `.claude-plugin/` manifest:
+
+```
+/plugin install modern-admin/skills
 ```
 
 ---
@@ -90,16 +99,32 @@ The skill triggers automatically on tasks that mention
 
 ## Source of truth
 
-The skill lives in [`skills/modern-admin-integration/`](https://github.com/modern-admin/modern-admin/tree/main/skills/modern-admin-integration)
-in the framework monorepo. Treat that directory as the canonical
-location — when the framework gains a new pitfall worth documenting,
-edit the skill files there. Consumers pick up the change the next
-time they run `npx skills add modern-admin/modern-admin` (or
+The skill lives in [`skills/modern-admin-integration/`](https://github.com/modern-admin/skills/tree/main/skills/modern-admin-integration)
+of the dedicated [`modern-admin/skills`](https://github.com/modern-admin/skills)
+repository. Treat that directory as the canonical location — when the
+framework gains a new pitfall worth documenting, edit the skill files
+there. Consumers pick up the change the next time they run
+`npx skills add modern-admin/skills` (or
 `npx skills experimental_sync` to re-fetch existing entries).
 
 If you want to read the skill content without installing anything,
 browse it on GitHub:
-[modern-admin/skills/modern-admin-integration/SKILL.md](https://github.com/modern-admin/modern-admin/blob/main/skills/modern-admin-integration/SKILL.md).
+[modern-admin/skills/skills/modern-admin-integration/SKILL.md](https://github.com/modern-admin/skills/blob/main/skills/modern-admin-integration/SKILL.md).
+
+---
+
+## Versioning
+
+Two versions matter and both are kept in sync by CI in the
+[`modern-admin/skills`](https://github.com/modern-admin/skills) repo:
+
+- **`.claude-plugin/plugin.json#version`** — what `claude /plugin update`
+  checks. CI requires it to bump when anything under `skills/` changes.
+- **`metadata.version` in each `SKILL.md`** — per-skill semver, also
+  bump-required on PRs that touch its content.
+
+Pushes to `main` automatically create a matching `vX.Y.Z` git tag, so
+you can pin with `npx skills add modern-admin/skills#vX.Y.Z`.
 
 ---
 
@@ -125,6 +150,7 @@ verification checklist into your repo's review template. The
 A future framework topic that deserves its own skill (e.g.
 "writing a `feature-*` plugin", "drizzle migration patterns")
 should land as a new directory under `skills/<skill-name>/SKILL.md`
-in the framework repo, with the same layout (YAML frontmatter + body
-+ optional `references/`). `npx skills add modern-admin/modern-admin`
-discovers it automatically — no package release required.
+in the [`modern-admin/skills`](https://github.com/modern-admin/skills)
+repo, with the same layout (YAML frontmatter + body + optional
+`references/`). `npx skills add modern-admin/skills` discovers it
+automatically on the next CI release — no package publishing needed.

@@ -257,6 +257,7 @@ async function seedDemo(): Promise<void> {
     categoryIds.push(id)
     const data = {
       name,
+      displayName: `${name} (section)`,
       slug: slugify(name),
       description: paragraph(2),
       position: i + 1,

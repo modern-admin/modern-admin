@@ -34,7 +34,7 @@ test.describe('OpenAPI document', () => {
 
     const doc = (await res.json()) as OpenApiDoc
     expect(doc.openapi).toMatch(/^3\./)
-    expect(doc.info.title).toBe('Modern Admin — Reference API')
+    expect(doc.info.title).toBe('Modern Admin — Prisma Reference API')
     expect(doc.info.version).toBe('0.0.0')
     expect(typeof doc.paths).toBe('object')
 

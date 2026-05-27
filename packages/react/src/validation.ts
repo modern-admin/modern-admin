@@ -269,37 +269,37 @@ function buildPropertySchemaInner(p: PropertyJSON, t: Translator): ZodType {
     return p.isArray ? multiReferenceSchema(p, t) : referenceSchema(p, t)
   }
   switch (p.type) {
-    case 'boolean':
-      return booleanSchema(p, t)
-    case 'number':
-    case 'float':
-    case 'currency':
-    case 'money':
-      return numberSchema(p, t, false)
-    case 'integer':
-      return numberSchema(p, t, true)
-    case 'date':
-    case 'datetime':
-    case 'datetime-local':
-      return dateSchema(p, t)
-    case 'email':
-      return stringSchema(p, t, 'email')
-    case 'url':
-      return stringSchema(p, t, 'url')
-    case 'uuid':
-      return stringSchema(p, t, 'uuid')
-    case 'json':
-      return jsonSchema(p, t)
-    case 'string':
-    case 'text':
-    case 'textarea':
-    case 'password':
-    case 'richtext':
-    case 'color':
-    case 'file':
-      return fileSchema(p, t)
-    default:
-      return stringSchema(p, t)
+  case 'boolean':
+    return booleanSchema(p, t)
+  case 'number':
+  case 'float':
+  case 'currency':
+  case 'money':
+    return numberSchema(p, t, false)
+  case 'integer':
+    return numberSchema(p, t, true)
+  case 'date':
+  case 'datetime':
+  case 'datetime-local':
+    return dateSchema(p, t)
+  case 'email':
+    return stringSchema(p, t, 'email')
+  case 'url':
+    return stringSchema(p, t, 'url')
+  case 'uuid':
+    return stringSchema(p, t, 'uuid')
+  case 'json':
+    return jsonSchema(p, t)
+  case 'string':
+  case 'text':
+  case 'textarea':
+  case 'password':
+  case 'richtext':
+  case 'color':
+  case 'file':
+    return fileSchema(p, t)
+  default:
+    return stringSchema(p, t)
   }
 }
 

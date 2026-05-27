@@ -31,7 +31,7 @@ function fieldInput(page: Page, labelPattern: RegExp) {
 
 async function gotoNewCustomer(page: Page): Promise<void> {
   await page.goto('/resources/customers/new')
-  await expect(fieldInput(page, /^Name/)).toBeVisible({ timeout: 15_000 })
+  await expect(fieldInput(page, /^Full name/i)).toBeVisible({ timeout: 15_000 })
 }
 
 async function clearDraftKey(page: Page): Promise<void> {
@@ -63,7 +63,7 @@ test.describe('Draft auto-save — new record form', () => {
 
   test('persists field input to localStorage when the user types', async ({ page }) => {
     const name = `Draft Auto ${Date.now()}`
-    const nameInput = fieldInput(page, /^Name/)
+    const nameInput = fieldInput(page, /^Full name/i)
     await nameInput.fill(name)
 
     // The watch subscription fires synchronously, but localStorage commits
@@ -75,7 +75,7 @@ test.describe('Draft auto-save — new record form', () => {
 
   test('restores the draft on revisit and shows a bottom-center toast with Undo', async ({ page }) => {
     const name = `Draft Revisit ${Date.now()}`
-    await fieldInput(page, /^Name/).fill(name)
+    await fieldInput(page, /^Full name/i).fill(name)
     await expect
       .poll(async () => (await readDraft(page))?.name, { timeout: 5_000 })
       .toBe(name)
@@ -86,7 +86,7 @@ test.describe('Draft auto-save — new record form', () => {
     await gotoNewCustomer(page)
 
     // Field hydrates with the stored draft.
-    await expect(fieldInput(page, /^Name/)).toHaveValue(name, { timeout: 5_000 })
+    await expect(fieldInput(page, /^Full name/i)).toHaveValue(name, { timeout: 5_000 })
 
     // The toaster container has `data-sonner-toaster` and a `position`
     // attribute matching the `position` option passed to the toast.
@@ -104,7 +104,7 @@ test.describe('Draft auto-save — new record form', () => {
 
   test('Undo action reverts to defaults and clears the draft', async ({ page }) => {
     const name = `Draft Undo ${Date.now()}`
-    await fieldInput(page, /^Name/).fill(name)
+    await fieldInput(page, /^Full name/i).fill(name)
     await expect
       .poll(async () => (await readDraft(page))?.name, { timeout: 5_000 })
       .toBe(name)
@@ -112,7 +112,7 @@ test.describe('Draft auto-save — new record form', () => {
     await page.goto('/resources/customers')
     await gotoNewCustomer(page)
 
-    await expect(fieldInput(page, /^Name/)).toHaveValue(name, { timeout: 5_000 })
+    await expect(fieldInput(page, /^Full name/i)).toHaveValue(name, { timeout: 5_000 })
 
     // Click the Undo toast action. Scope to the Sonner toaster portal so we
     // don't accidentally hit the RichTextEditor's `aria-label="Undo"` button
@@ -126,7 +126,7 @@ test.describe('Draft auto-save — new record form', () => {
     await undoButton.click()
 
     // Form reverts to empty default; storage is purged.
-    await expect(fieldInput(page, /^Name/)).toHaveValue('')
+    await expect(fieldInput(page, /^Full name/i)).toHaveValue('')
     await expect.poll(async () => readDraft(page), { timeout: 5_000 }).toBeNull()
   })
 
@@ -138,7 +138,7 @@ test.describe('Draft auto-save — new record form', () => {
     // that had just been restored. The init-once-per-resource guard now
     // protects the form across all subsequent dep changes.
     const name = `Draft Refetch ${Date.now()}`
-    await fieldInput(page, /^Name/).fill(name)
+    await fieldInput(page, /^Full name/i).fill(name)
     await expect
       .poll(async () => (await readDraft(page))?.name, { timeout: 5_000 })
       .toBe(name)
@@ -146,7 +146,7 @@ test.describe('Draft auto-save — new record form', () => {
     // Full reload so we exercise the same restore-on-mount path the user
     // hits when reopening the new-form route.
     await page.reload()
-    await expect(fieldInput(page, /^Name/)).toHaveValue(name, { timeout: 5_000 })
+    await expect(fieldInput(page, /^Full name/i)).toHaveValue(name, { timeout: 5_000 })
 
     // Trigger a background refetch by dispatching a window-focus event.
     // TanStack Query's `refetchOnWindowFocus` (default true) catches this
@@ -161,7 +161,7 @@ test.describe('Draft auto-save — new record form', () => {
     }
 
     // Form value must still be the restored draft — not wiped to default.
-    await expect(fieldInput(page, /^Name/)).toHaveValue(name)
+    await expect(fieldInput(page, /^Full name/i)).toHaveValue(name)
   })
 
   test('successful submit clears the persisted draft', async ({ page }) => {
@@ -169,7 +169,7 @@ test.describe('Draft auto-save — new record form', () => {
     const name = `Draft Submit ${suffix}`
     const email = `draft-submit-${suffix}@example.com`
 
-    await fieldInput(page, /^Name/).fill(name)
+    await fieldInput(page, /^Full name/i).fill(name)
     await fieldInput(page, /^Email/).fill(email)
     await expect
       .poll(async () => (await readDraft(page))?.name, { timeout: 5_000 })

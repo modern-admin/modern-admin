@@ -347,7 +347,7 @@ export function RichtextEditor({
     if (typeof chain.setLink === 'function') {
       chain.setLink({ href: url }).run()
     }
-  }, [editor])
+  }, [editor, l.urlPrompt])
 
   if (!editor) {
     return (

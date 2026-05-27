@@ -9,7 +9,7 @@
 import { type ReactElement, useMemo } from 'react'
 import {
   AdminApp,
-  ComponentLoader,
+  type ComponentLoader,
   I18nProvider,
   ModernAdminProvider,
 } from '@modern-admin/react'

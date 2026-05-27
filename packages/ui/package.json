@@ -38,7 +38,8 @@
   "scripts": {
     "build": "bun ../../scripts/clean.ts dist .tsbuildinfo && tsc -p tsconfig.build.json && bun ../../scripts/copy.ts src/styles.css dist/styles.css",
     "typecheck": "tsc --noEmit",
-    "test": "bun test"
+    "test": "bun test",
+    "lint": "eslint ."
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.12",

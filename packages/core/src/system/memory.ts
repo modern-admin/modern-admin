@@ -62,7 +62,7 @@ export class MemoryLogStore implements IQueryableLogStore {
 
 export class ConsoleLogStore implements ILogStore {
   record(entry: ActionLogEntry): void {
-    // eslint-disable-next-line no-console
+
     console.log('[modern-admin:action-log]', JSON.stringify(entry))
   }
 }
@@ -381,7 +381,7 @@ export function createMemorySystem(): ISystemStores & {
   history: MemoryHistoryStore
   aiTask: MemoryAiTaskStore
   cache: MemoryCacheStore
-} {
+  } {
   const log = new MemoryLogStore()
   const webhook = new MemoryWebhookStore()
   const config = new MemoryConfigStore()

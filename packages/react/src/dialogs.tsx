@@ -58,8 +58,6 @@ export interface DialogsApi {
   open<T = unknown>(opts: OpenOptions<T>): Promise<T | undefined>
 }
 
-type EntryKind = 'confirm' | 'alert' | 'custom'
-
 interface BaseEntry {
   id: number
   open: boolean
@@ -119,11 +117,11 @@ export function DialogsProvider({ children }: DialogsProviderProps): React.React
     const push = <T,>(
       build: (id: number, resolve: (value: T | undefined) => void) => DialogEntry,
     ): Promise<T | undefined> =>
-      new Promise<T | undefined>((resolve) => {
-        const id = nextId++
-        const entry = build(id, resolve)
-        setEntries((prev) => [...prev, entry])
-      })
+        new Promise<T | undefined>((resolve) => {
+          const id = nextId++
+          const entry = build(id, resolve)
+          setEntries((prev) => [...prev, entry])
+        })
 
     return {
       confirm: (opts = {}) =>

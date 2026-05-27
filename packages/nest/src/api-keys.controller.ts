@@ -16,7 +16,7 @@ import {
   UseGuards,
 } from '@nestjs/common'
 import { ApiCookieAuth, ApiTags } from '@nestjs/swagger'
-import { ModernAdmin, type CurrentAdmin, uuidv7 } from '@modern-admin/core'
+import { type ModernAdmin, type CurrentAdmin, uuidv7 } from '@modern-admin/core'
 import { z } from 'zod'
 import { MODERN_ADMIN, MODERN_ADMIN_API_KEY_SERVICE, MODERN_ADMIN_OPTIONS } from './tokens.js'
 import { ModernAdminAuthGuard } from './auth.guard.js'

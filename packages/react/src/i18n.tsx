@@ -183,20 +183,20 @@ export function I18nProvider({
             ? null
             : resource.navigation
               ? {
-                  ...resource.navigation,
-                  name: firstDefined(
-                    resourceLocale?.navigation?.name,
-                    resourceFallback?.navigation?.name,
-                    resource.navigation.name,
-                  ),
-                  group: firstDefined(
-                    resourceLocale?.navigation?.group,
-                    resourceFallback?.navigation?.group,
-                    group ? localeMeta?.navigation?.groups?.[group] : undefined,
-                    group ? fallbackMeta?.navigation?.groups?.[group] : undefined,
-                    resource.navigation.group,
-                  ),
-                }
+                ...resource.navigation,
+                name: firstDefined(
+                  resourceLocale?.navigation?.name,
+                  resourceFallback?.navigation?.name,
+                  resource.navigation.name,
+                ),
+                group: firstDefined(
+                  resourceLocale?.navigation?.group,
+                  resourceFallback?.navigation?.group,
+                  group ? localeMeta?.navigation?.groups?.[group] : undefined,
+                  group ? fallbackMeta?.navigation?.groups?.[group] : undefined,
+                  resource.navigation.group,
+                ),
+              }
               : resource.navigation,
         properties: resource.properties.map((property) =>
           localizeProperty(

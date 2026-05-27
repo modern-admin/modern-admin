@@ -30,7 +30,7 @@ export async function loadAndCheckLicense(
   const result = await verifyLicense(token, opts)
   if (!result.valid) {
     const pkgPrefix = opts.packageName ? `[${opts.packageName}] ` : ''
-    // eslint-disable-next-line no-console
+
     console.warn(
       `${pkgPrefix}[modern-admin/license] feature "${opts.feature}" disabled: ${result.reason}. ` +
         'Set MODERN_ADMIN_LICENSE_KEY to a valid license token to enable. ' +
@@ -38,7 +38,7 @@ export async function loadAndCheckLicense(
     )
   } else if (result.inGracePeriod) {
     const pkgPrefix = opts.packageName ? `[${opts.packageName}] ` : ''
-    // eslint-disable-next-line no-console
+
     console.warn(
       `${pkgPrefix}[modern-admin/license] license for "${opts.feature}" is past expiry but ` +
         'within the grace period. Renew at https://modernadminpro.com/renew.',

@@ -28,11 +28,7 @@ import { PrismaConfigStore } from './stores/config-store.js'
 import { PrismaHistoryStore } from './stores/history-store.js'
 import { PrismaAiTaskStore } from './stores/ai-task-store.js'
 import { PrismaCacheStore } from './stores/cache-store.js'
-import {
-  resolveDelegate,
-  type ModelOverrides,
-  type PrismaLike,
-} from './types.js'
+import { type ModelOverrides, type PrismaLike, resolveDelegate } from './types.js'
 
 export interface PrismaSystemOptions {
   /**

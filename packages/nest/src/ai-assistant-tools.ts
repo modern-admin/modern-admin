@@ -300,7 +300,7 @@ const hintSqlError = (message: string, sqlResources: AiAssistantSqlResource[]): 
   const tables = sqlResources.map((resource) => resource.tableName)
   if (column) {
     const match = sqlResources
-      .flatMap((resource) => resource.columns.map((item) => ({resource, column: item})))
+      .flatMap((resource) => resource.columns.map((item) => ({ resource, column: item })))
       .find((item) => item.column.name.toLowerCase() === column.toLowerCase())
     if (match && match.column.name !== column) {
       return `${message}\nHint: column "${match.column.name}" is case-sensitive in PostgreSQL. Use double quotes, for example "${match.resource.tableName}"."${match.column.name}".`
@@ -315,17 +315,17 @@ const hintSqlError = (message: string, sqlResources: AiAssistantSqlResource[]): 
 }
 
 export function buildAiAssistantTools({
-                                        admin,
-                                        currentAdmin,
-                                        includeResourceIds,
-                                        excludeResourceIds,
-                                        debug = false,
-                                        maxRecordsPerTool = 10,
-                                        maxFieldsPerRecord = 24,
-                                        rawQuery,
-                                        dashboardStore,
-                                        uiActions,
-                                      }: BuildAiAssistantToolsOptions): BuiltAiAssistantTools {
+  admin,
+  currentAdmin,
+  includeResourceIds,
+  excludeResourceIds,
+  debug = false,
+  maxRecordsPerTool = 10,
+  maxFieldsPerRecord = 24,
+  rawQuery,
+  dashboardStore,
+  uiActions,
+}: BuildAiAssistantToolsOptions): BuiltAiAssistantTools {
   const include = includeResourceIds ? new Set(includeResourceIds) : null
   const exclude = excludeResourceIds ? new Set(excludeResourceIds) : null
   const tools: Record<string, AiTool> = {}
@@ -357,7 +357,7 @@ export function buildAiAssistantTools({
     if (!baseName) continue
 
     const actionNames = new Set((json.actions ?? []).map((action) => action.name))
-    candidates.push({resource, json, resourceId: json.id, baseName, actionNames})
+    candidates.push({ resource, json, resourceId: json.id, baseName, actionNames })
   }
 
   // Build per-resource date/datetime property map. Used in dashboard chart
@@ -376,7 +376,7 @@ export function buildAiAssistantTools({
   }
 
   for (const candidate of pickResourceCandidates(candidates, debug)) {
-    const {resourceId, actionNames} = candidate
+    const { resourceId, actionNames } = candidate
     let registered = false
 
     if (actionNames.has('list')) {
@@ -391,16 +391,16 @@ export function buildAiAssistantTools({
             direction: z.enum(['asc', 'desc']).optional(),
             filters: z.record(z.string(), filterValueZ).optional(),
           }),
-          execute: async ({page, perPage, sortBy, direction, filters}) => {
+          execute: async ({ page, perPage, sortBy, direction, filters }) => {
             const result = await admin.invoke(
               {
-                params: {resourceId, action: 'list'},
+                params: { resourceId, action: 'list' },
                 method: 'get',
                 query: {
-                  ...(page !== undefined ? {page} : {}),
-                  ...(perPage !== undefined ? {perPage} : {}),
-                  ...(sortBy ? {sortBy} : {}),
-                  ...(direction ? {direction} : {}),
+                  ...(page !== undefined ? { page } : {}),
+                  ...(perPage !== undefined ? { perPage } : {}),
+                  ...(sortBy ? { sortBy } : {}),
+                  ...(direction ? { direction } : {}),
                   ...(filters
                     ? Object.fromEntries(
                       Object.entries(filters).map(([key, value]) => [`filters.${key}`, value]),
@@ -427,7 +427,7 @@ export function buildAiAssistantTools({
             }
           },
         })
-        descriptors.push({name, resourceId, action: 'list'})
+        descriptors.push({ name, resourceId, action: 'list' })
         registered = true
       }
     }
@@ -440,10 +440,10 @@ export function buildAiAssistantTools({
           inputSchema: z.object({
             recordId: z.string().min(1),
           }),
-          execute: async ({recordId}) => {
+          execute: async ({ recordId }) => {
             const result = await admin.invoke(
               {
-                params: {resourceId, recordId, action: 'show'},
+                params: { resourceId, recordId, action: 'show' },
                 method: 'get',
               },
               currentAdmin,
@@ -457,12 +457,12 @@ export function buildAiAssistantTools({
                 : `no record returned for ${resourceId}#${recordId}`,
               record,
               citations: record
-                ? [{resourceId, recordId: record.id, label: record.title}]
+                ? [{ resourceId, recordId: record.id, label: record.title }]
                 : [],
             }
           },
         })
-        descriptors.push({name, resourceId, action: 'show'})
+        descriptors.push({ name, resourceId, action: 'show' })
         registered = true
       }
     }
@@ -475,12 +475,12 @@ export function buildAiAssistantTools({
           inputSchema: z.object({
             query: z.string().min(1),
           }),
-          execute: async ({query}) => {
+          execute: async ({ query }) => {
             const result = await admin.invoke(
               {
-                params: {resourceId, action: 'search'},
+                params: { resourceId, action: 'search' },
                 method: 'get',
-                query: {q: query},
+                query: { q: query },
               },
               currentAdmin,
             ) as { records?: RecordJSON[] }
@@ -500,7 +500,7 @@ export function buildAiAssistantTools({
             }
           },
         })
-        descriptors.push({name, resourceId, action: 'search'})
+        descriptors.push({ name, resourceId, action: 'search' })
         registered = true
       }
     }
@@ -523,12 +523,12 @@ export function buildAiAssistantTools({
           'A SQL SELECT query using database table names from the SQL schema hints. No INSERT, UPDATE, DELETE, DROP, or multiple statements.',
         ),
       }),
-      execute: async ({query}) => {
+      execute: async ({ query }) => {
         const normalizedQuery = normalizeSqlInput(query)
         const err = validateSql(normalizedQuery)
         if (err) {
           logger.warn(`execute_sql rejected query: ${err}`)
-          return {error: err, rows: [], citations: []}
+          return { error: err, rows: [], citations: [] }
         }
         try {
           const rows = await rawQuery(normalizedQuery)
@@ -543,11 +543,11 @@ export function buildAiAssistantTools({
           const message = error instanceof Error ? error.message : String(error)
           const hinted = hintSqlError(message, sqlResources)
           logger.warn(`execute_sql failed: ${hinted}`)
-          return {error: hinted, rows: [], citations: []}
+          return { error: hinted, rows: [], citations: [] }
         }
       },
     })
-    descriptors.push({name: 'execute_sql', resourceId: '__sql__', action: 'list'})
+    descriptors.push({ name: 'execute_sql', resourceId: '__sql__', action: 'list' })
   }
 
   // ─── Dashboard chart tools ────────────────────────────────────────────
@@ -641,7 +641,7 @@ export function buildAiAssistantTools({
       .join('\n')
 
     tools['create_dashboard_chart'] = tool({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       ...(undefined as any),
       description:
         'Create a new chart on the shared dashboard. The chart becomes visible to all admins immediately. ' +
@@ -681,19 +681,19 @@ export function buildAiAssistantTools({
           dateField: resolvedDateField,
           step: input.step,
           metric: input.metric,
-          ...(input.field ? {field: input.field} : {}),
-          ...(input.groupBy ? {groupBy: input.groupBy} : {}),
+          ...(input.field ? { field: input.field } : {}),
+          ...(input.groupBy ? { groupBy: input.groupBy } : {}),
           filters: input.filters ?? {},
           quickFilters: input.quickFilters ?? [],
           topN: 10,
           width: input.width,
-          timeRange: {preset: input.timeRange},
-          ...(resolvedGroupId ? {groupId: resolvedGroupId} : {}),
+          timeRange: { preset: input.timeRange },
+          ...(resolvedGroupId ? { groupId: resolvedGroupId } : {}),
           createdAt: now,
           updatedAt: now,
         })
         if (!parseResult.success) {
-          return {ok: false, error: parseResult.error.message, citations: []}
+          return { ok: false, error: parseResult.error.message, citations: [] }
         }
         const chart = parseResult.data
         await dashboardStore.save('', {
@@ -702,8 +702,8 @@ export function buildAiAssistantTools({
           groups: blob.groups,
         })
         logger.log(`AI created dashboard chart "${chart.title}" (${chart.id})`)
-        uiActions?.push({kind: 'refresh', target: 'dashboard'})
-        return {ok: true, id: chart.id, title: chart.title, citations: []}
+        uiActions?.push({ kind: 'refresh', target: 'dashboard' })
+        return { ok: true, id: chart.id, title: chart.title, citations: [] }
       },
     }) as AiTool
 
@@ -715,10 +715,10 @@ export function buildAiAssistantTools({
         id: z.string().min(1).describe('Chart id from list_dashboard_charts'),
         patch: chartInputZ.partial().describe('Fields to update'),
       }),
-      execute: async ({id, patch}) => {
+      execute: async ({ id, patch }) => {
         const blob = await dashboardStore.load('')
         const idx = blob.charts.findIndex((c) => c.id === id)
-        if (idx < 0) return {ok: false, error: `Chart not found: ${id}`, citations: []}
+        if (idx < 0) return { ok: false, error: `Chart not found: ${id}`, citations: [] }
         const prev = blob.charts[idx]!
         // Validate groupId patch against existing groups.
         const patchGroupId = patch.groupId
@@ -739,22 +739,22 @@ export function buildAiAssistantTools({
         const merged = {
           ...prev,
           ...patch,
-          ...(patchDateField !== undefined ? {dateField: patchDateField} : {}),
-          ...(patchGroupId !== undefined ? {groupId: patchGroupId} : {}),
-          ...(patch.timeRange ? {timeRange: {preset: patch.timeRange}} : {}),
+          ...(patchDateField !== undefined ? { dateField: patchDateField } : {}),
+          ...(patchGroupId !== undefined ? { groupId: patchGroupId } : {}),
+          ...(patch.timeRange ? { timeRange: { preset: patch.timeRange } } : {}),
           id,
           updatedAt: new Date().toISOString(),
         }
         const parseResult = chartDefZ.safeParse(merged)
         if (!parseResult.success) {
-          return {ok: false, error: parseResult.error.message, citations: []}
+          return { ok: false, error: parseResult.error.message, citations: [] }
         }
         const updated = [...blob.charts]
         updated[idx] = parseResult.data
-        await dashboardStore.save('', {version: 1, charts: updated, groups: blob.groups})
+        await dashboardStore.save('', { version: 1, charts: updated, groups: blob.groups })
         logger.log(`AI updated dashboard chart "${parseResult.data.title}" (${id})`)
-        uiActions?.push({kind: 'refresh', target: 'dashboard'})
-        return {ok: true, id, title: parseResult.data.title, citations: []}
+        uiActions?.push({ kind: 'refresh', target: 'dashboard' })
+        return { ok: true, id, title: parseResult.data.title, citations: [] }
       },
     }) as AiTool
 
@@ -763,18 +763,18 @@ export function buildAiAssistantTools({
       inputSchema: z.object({
         id: z.string().min(1).describe('Chart id from list_dashboard_charts'),
       }),
-      execute: async ({id}) => {
+      execute: async ({ id }) => {
         const blob = await dashboardStore.load('')
         const chart = blob.charts.find((c) => c.id === id)
-        if (!chart) return {ok: false, error: `Chart not found: ${id}`, citations: []}
+        if (!chart) return { ok: false, error: `Chart not found: ${id}`, citations: [] }
         await dashboardStore.save('', {
           version: 1,
           charts: blob.charts.filter((c) => c.id !== id),
           groups: blob.groups,
         })
         logger.log(`AI deleted dashboard chart "${chart.title}" (${id})`)
-        uiActions?.push({kind: 'refresh', target: 'dashboard'})
-        return {ok: true, id, title: chart.title, citations: []}
+        uiActions?.push({ kind: 'refresh', target: 'dashboard' })
+        return { ok: true, id, title: chart.title, citations: [] }
       },
     }) as AiTool
   }
@@ -784,8 +784,8 @@ export function buildAiAssistantTools({
   // ask the frontend to navigate the user to a safe, read-only page.
   if (uiActions) {
     const navigateRouteZ = z.discriminatedUnion('name', [
-      z.object({name: z.literal('home')}),
-      z.object({name: z.literal('audit-log')}),
+      z.object({ name: z.literal('home') }),
+      z.object({ name: z.literal('audit-log') }),
       z.object({
         name: z.literal('list'),
         resourceId: z.string().min(1).describe('Resource id from the resources list'),
@@ -809,12 +809,12 @@ export function buildAiAssistantTools({
       inputSchema: z.object({
         route: navigateRouteZ.describe('Target route. Mirrors the safe subset of admin pages.'),
       }),
-      execute: async ({route}) => {
-        uiActions.push({kind: 'navigate', route})
-        return {ok: true, route, citations: []}
+      execute: async ({ route }) => {
+        uiActions.push({ kind: 'navigate', route })
+        return { ok: true, route, citations: [] }
       },
     })
-    descriptors.push({name: 'navigate_to', resourceId: '__ui__', action: 'list'})
+    descriptors.push({ name: 'navigate_to', resourceId: '__ui__', action: 'list' })
   }
 
   // ─── Debug instrumentation ────────────────────────────────────────────
@@ -827,5 +827,5 @@ export function buildAiAssistantTools({
     }
   }
 
-  return {tools, resourceIds, descriptors, sqlResources}
+  return { tools, resourceIds, descriptors, sqlResources }
 }

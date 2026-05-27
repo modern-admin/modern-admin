@@ -10,7 +10,7 @@ import {
 import { ApiCookieAuth, ApiTags } from '@nestjs/swagger'
 import {
   ForbiddenError,
-  ModernAdmin,
+  type ModernAdmin,
   type ListActionResponse,
   type RecordJSON,
   type CurrentAdmin,

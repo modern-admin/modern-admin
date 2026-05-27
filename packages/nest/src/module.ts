@@ -1,7 +1,7 @@
 import {
-  DynamicModule,
+  type DynamicModule,
   Module,
-  Type,
+  type Type,
   type Provider,
 } from '@nestjs/common'
 import { APP_INTERCEPTOR, DiscoveryModule } from '@nestjs/core'

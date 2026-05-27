@@ -50,25 +50,25 @@ const GraphQLJSON = new GraphQLScalarType({
   parseValue: (v) => v,
   parseLiteral(ast): unknown {
     switch (ast.kind) {
-      case Kind.STRING:
-      case Kind.BOOLEAN:
-        return ast.value
-      case Kind.INT:
-      case Kind.FLOAT:
-        return Number(ast.value)
-      case Kind.NULL:
-        return null
-      case Kind.LIST:
-        return ast.values.map((v) => GraphQLJSON.parseLiteral(v, undefined))
-      case Kind.OBJECT: {
-        const obj: Record<string, unknown> = {}
-        for (const field of ast.fields) {
-          obj[field.name.value] = GraphQLJSON.parseLiteral(field.value, undefined)
-        }
-        return obj
+    case Kind.STRING:
+    case Kind.BOOLEAN:
+      return ast.value
+    case Kind.INT:
+    case Kind.FLOAT:
+      return Number(ast.value)
+    case Kind.NULL:
+      return null
+    case Kind.LIST:
+      return ast.values.map((v) => GraphQLJSON.parseLiteral(v, undefined))
+    case Kind.OBJECT: {
+      const obj: Record<string, unknown> = {}
+      for (const field of ast.fields) {
+        obj[field.name.value] = GraphQLJSON.parseLiteral(field.value, undefined)
       }
-      default:
-        return null
+      return obj
+    }
+    default:
+      return null
     }
   },
 })
@@ -83,24 +83,24 @@ const GraphQLDateTime = new GraphQLScalarType({
 
 const scalarFor = (type: PropertyType) => {
   switch (type) {
-    case 'number':
-      return GraphQLInt
-    case 'float':
-    case 'currency':
-      return GraphQLFloat
-    case 'boolean':
-      return GraphQLBoolean
-    case 'date':
-    case 'datetime':
-      return GraphQLDateTime
-    case 'json':
-    case 'mixed':
-    case 'key-value':
-      return GraphQLJSON
-    case 'reference':
-      return GraphQLID
-    default:
-      return GraphQLString
+  case 'number':
+    return GraphQLInt
+  case 'float':
+  case 'currency':
+    return GraphQLFloat
+  case 'boolean':
+    return GraphQLBoolean
+  case 'date':
+  case 'datetime':
+    return GraphQLDateTime
+  case 'json':
+  case 'mixed':
+  case 'key-value':
+    return GraphQLJSON
+  case 'reference':
+    return GraphQLID
+  default:
+    return GraphQLString
   }
 }
 

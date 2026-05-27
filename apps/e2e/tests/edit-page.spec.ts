@@ -58,7 +58,7 @@ test.describe('Edit page — existing record', () => {
     try {
       await page.goto(`/resources/customers/${customer.id}/edit`)
       // The form is hydrated once the name input shows the seeded value.
-      await expect(fieldInput(page, /^Name/)).toHaveValue(customer.name, {
+      await expect(fieldInput(page, /^Full name/i)).toHaveValue(customer.name, {
         timeout: 10_000,
       })
       await expect(fieldInput(page, /^Email/)).toHaveValue(customer.email)
@@ -75,7 +75,7 @@ test.describe('Edit page — existing record', () => {
     const renamed = `${customer.name} (renamed)`
     try {
       await page.goto(`/resources/customers/${customer.id}/edit`)
-      const nameInput = fieldInput(page, /^Name/)
+      const nameInput = fieldInput(page, /^Full name/i)
       await expect(nameInput).toHaveValue(customer.name, { timeout: 10_000 })
 
       await nameInput.fill(renamed)
@@ -115,7 +115,7 @@ test.describe('Edit page — new record', () => {
   test('refuses submission with missing required fields', async ({ page }) => {
     await page.goto('/resources/customers/new')
     // Wait for the form to render — name field present.
-    await expect(fieldInput(page, /^Name/)).toBeVisible({ timeout: 10_000 })
+    await expect(fieldInput(page, /^Full name/i)).toBeVisible({ timeout: 10_000 })
 
     // Submit without filling anything → server is never hit (Zod resolver
     // short-circuits) and we stay on the new-record URL.
@@ -148,9 +148,9 @@ test.describe('Edit page — new record', () => {
 
     try {
       await page.goto('/resources/customers/new')
-      await expect(fieldInput(page, /^Name/)).toBeVisible({ timeout: 10_000 })
+      await expect(fieldInput(page, /^Full name/i)).toBeVisible({ timeout: 10_000 })
 
-      await fieldInput(page, /^Name/).fill(name)
+      await fieldInput(page, /^Full name/i).fill(name)
       await fieldInput(page, /^Email/).fill(email)
 
       // Explicitly pick a tier so the enum field isn't left as empty/null.

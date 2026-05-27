@@ -1,4 +1,4 @@
-import { BaseResource, type ParamsType, type RecordJSON } from './adapters'
+import { type BaseResource, type ParamsType, type RecordJSON } from './adapters'
 import { BUILT_IN_ACTIONS, CacheRuntime, type Action, type ActionContext, type ActionRequest, type ActionResponse, type After, type Before } from './actions'
 import type { ResourceJSON } from './decorators/resource-decorator.js'
 import { ResourcesFactory, type Adapter, type GlobalPlugin, type ResourceWithOptions } from './factories/resources-factory.js'
@@ -15,7 +15,7 @@ export interface RegisterResourcesArgs {
 }
 import { AnonymousAuthProvider, ComponentLoader, NoopCacheProvider, NoopRealtimeBus, type CurrentAdmin, type IAuthProvider, type ICacheProvider, type IComponentLoader, type IRealtimeBus, type RealtimeEvent } from './ports'
 import { setActiveFeatureFlags } from './feature-flags.js'
- 
+
 export interface ModernAdminOptions {
   databases?: unknown[]
   resources?: Array<unknown | ResourceWithOptions>

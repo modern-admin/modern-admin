@@ -12,7 +12,7 @@ import {
   BaseProperty,
   BaseRecord,
   BaseResource,
-  Filter,
+  type Filter,
   ModernAdmin,
   type CurrentAdmin,
   type FindOptions,

@@ -251,12 +251,15 @@ test.describe('feature-password — UI surface', () => {
       // Don't touch newPassword — just tweak the bio so the form is "dirty"
       // and the Save button posts something. The before-hook treats empty
       // newPassword as "don't change the hash".
-      const bioField = fieldByLabel(page, /^bio\*?$/i)
-      // Bio is a richtext editor; the inner contenteditable is its primary
-      // input. Falls back to a textarea if the project ever switches.
-      const bioEditor = bioField.locator('[contenteditable="true"], textarea').first()
-      await bioEditor.click()
-      await page.keyboard.type('Bio updated by password spec')
+      // Dirty the form by appending to the Full name field — it's a plain
+      // text input, far less fragile than the richtext Bio editor. We do
+      // NOT touch newPassword, so the password-hook's "empty → don't change
+      // hash" branch is the one under test.
+      const nameField = fieldByLabel(page, /^full name\*?$/i)
+      const nameInput = nameField.locator('input').first()
+      await nameInput.click()
+      await page.keyboard.press('End')
+      await page.keyboard.type(' (edited)')
 
       const savePromise = page.waitForResponse(
         (res) =>

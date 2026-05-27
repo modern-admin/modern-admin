@@ -20,7 +20,7 @@
 // i18n-unaware by design: all visible strings are passed via `labels`.
 
 import * as React from 'react'
-import { format, isValid, parse, parseISO } from 'date-fns'
+import { addMonths, format, isSameMonth, isValid, parse, parseISO, startOfMonth } from 'date-fns'
 import { CalendarRange, X } from 'lucide-react'
 import type { DateRange } from 'react-day-picker'
 import { cn } from '../lib/utils.js'
@@ -82,7 +82,7 @@ export function DateRangeInput({
     const f = parseDate(from)
     const t = parseDate(to)
     setPending(f ?? t ? { from: f, to: t } : undefined)
-  }, [from, to]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [from, to])
 
   // Number of calendar months — 1 on narrow, 2 on wide viewports.
   const [months, setMonths] = React.useState(() =>
@@ -96,6 +96,22 @@ export function DateRangeInput({
     return () => mq.removeEventListener('change', handle)
   }, [])
 
+  // Independent navigation for the two-panel layout. Each panel keeps its
+  // own visible month; the dropdowns on the right are constrained to
+  // months >= left (and the left to months <= right) so the panels can
+  // never cross over. State is (re)initialised from the committed range
+  // every time the popover opens (see `handleOpenChange`).
+  const [leftMonth, setLeftMonth] = React.useState<Date>(() => {
+    const f = parseDate(from)
+    return startOfMonth(f ?? new Date())
+  })
+  const [rightMonth, setRightMonth] = React.useState<Date>(() => {
+    const f = parseDate(from)
+    const t = parseDate(to)
+    const left = startOfMonth(f ?? new Date())
+    return t && !isSameMonth(left, t) ? startOfMonth(t) : addMonths(left, 1)
+  })
+
   const handleOpenChange = (next: boolean): void => {
     if (next) {
       // On open: only restore a COMPLETE committed range so the user sees
@@ -106,6 +122,15 @@ export function DateRangeInput({
       const f = parseDate(from)
       const t = parseDate(to)
       setPending(f && t ? { from: f, to: t } : undefined)
+      // Re-derive panel navigation from the committed range so reopening
+      // always lands the user on the months they were last looking at —
+      // independently for the left and right panels.
+      const left = startOfMonth(f ?? new Date())
+      const right = t && !isSameMonth(left, t)
+        ? startOfMonth(t)
+        : addMonths(left, 1)
+      setLeftMonth(left)
+      setRightMonth(right)
     } else {
       // Closed without Apply (Escape / outside click) — discard in-progress
       // selection and revert to the last committed values.
@@ -114,6 +139,24 @@ export function DateRangeInput({
       setPending(f ?? t ? { from: f, to: t } : undefined)
     }
     setOpen(next)
+  }
+
+  // Navigation guards. The right panel can never cross above the left's
+  // month, and the left can never cross above the right's. If a user
+  // navigates the LEFT forward past the right (via the prev/next arrow
+  // when the dropdown bounds don't disable it), push the right one month
+  // ahead; symmetric for the right going below the left.
+  const handleLeftMonthChange = (next: Date): void => {
+    setLeftMonth(next)
+    if (!isSameMonth(next, rightMonth) && next > rightMonth) {
+      setRightMonth(addMonths(next, 1))
+    }
+  }
+  const handleRightMonthChange = (next: Date): void => {
+    setRightMonth(next)
+    if (!isSameMonth(next, leftMonth) && next < leftMonth) {
+      setLeftMonth(addMonths(next, -1))
+    }
   }
 
   // Update the in-progress selection; never auto-commit.
@@ -152,9 +195,9 @@ export function DateRangeInput({
 
   const displayText = hasValue
     ? [
-        fromDate ? format(fromDate, DISPLAY_FMT) : '…',
-        toDate ? format(toDate, DISPLAY_FMT) : '…',
-      ].join(' – ')
+      fromDate ? format(fromDate, DISPLAY_FMT) : '…',
+      toDate ? format(toDate, DISPLAY_FMT) : '…',
+    ].join(' – ')
     : null
 
   return (
@@ -193,13 +236,49 @@ export function DateRangeInput({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
-        <Calendar
-          mode="range"
-          selected={pending}
-          onSelect={handleSelect}
-          numberOfMonths={months}
-          autoFocus
-        />
+        {months === 2 ? (
+          // Two-panel layout: each Calendar is a fully independent single-
+          // month instance with its own controlled `month` state. The left
+          // panel's dropdowns can't reach past the right panel's month
+          // (and vice versa) thanks to the shared start/end-month bounds.
+          // Range selection still spans both panels because they share
+          // the same `selected` + `onSelect`.
+          <div className="flex flex-col sm:flex-row">
+            <Calendar
+              mode="range"
+              selected={pending}
+              onSelect={handleSelect}
+              numberOfMonths={1}
+              month={leftMonth}
+              onMonthChange={handleLeftMonthChange}
+              endMonth={rightMonth}
+              autoFocus
+            />
+            <Calendar
+              mode="range"
+              selected={pending}
+              onSelect={handleSelect}
+              numberOfMonths={1}
+              month={rightMonth}
+              onMonthChange={handleRightMonthChange}
+              startMonth={leftMonth}
+            />
+          </div>
+        ) : (
+          <Calendar
+            mode="range"
+            selected={pending}
+            onSelect={handleSelect}
+            numberOfMonths={1}
+            // react-day-picker doesn't auto-navigate to the selected range on
+            // mount — it stays on today's month. The popover re-mounts the
+            // Calendar each time it opens, so deriving `defaultMonth` from
+            // the (already-restored) pending range puts the user back where
+            // they left off without controlling navigation explicitly.
+            defaultMonth={pending?.from ?? pending?.to ?? undefined}
+            autoFocus
+          />
+        )}
         <div className="flex items-center justify-between border-t border-border px-3 py-2">
           <Button variant="ghost" size="sm" onClick={handleClearPopover}>
             {clearLabel}

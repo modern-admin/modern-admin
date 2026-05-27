@@ -232,7 +232,6 @@ export function MediaPreview({
                 className="max-h-[68vh] w-auto max-w-full object-contain"
               />
             ) : kind === 'video' ? (
-              // eslint-disable-next-line jsx-a11y/media-has-caption
               <video
                 src={url}
                 controls

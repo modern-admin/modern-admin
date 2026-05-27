@@ -129,22 +129,22 @@ export const parseLocation = (pathname: string, searchStr: string): Route => {
  *  `<Link>` href generation. */
 export const buildHref = (route: Route): string => {
   switch (route.name) {
-    case 'home':
-      return '/'
-    case 'audit-log':
-      return '/audit-log'
-    case 'list':
-      return `/resources/${encodeURIComponent(route.resourceId)}${buildListQuery(route.query)}`
-    case 'show':
-      return `/resources/${encodeURIComponent(route.resourceId)}/${encodeURIComponent(route.recordId)}`
-    case 'edit':
-      return `/resources/${encodeURIComponent(route.resourceId)}/${encodeURIComponent(route.recordId)}/edit`
-    case 'new':
-      return `/resources/${encodeURIComponent(route.resourceId)}/new`
-    case 'settings':
-      return route.section ? `/settings/${encodeURIComponent(route.section)}` : '/settings'
-    case 'extension':
-      return `/ext/${encodeURIComponent(route.key)}`
+  case 'home':
+    return '/'
+  case 'audit-log':
+    return '/audit-log'
+  case 'list':
+    return `/resources/${encodeURIComponent(route.resourceId)}${buildListQuery(route.query)}`
+  case 'show':
+    return `/resources/${encodeURIComponent(route.resourceId)}/${encodeURIComponent(route.recordId)}`
+  case 'edit':
+    return `/resources/${encodeURIComponent(route.resourceId)}/${encodeURIComponent(route.recordId)}/edit`
+  case 'new':
+    return `/resources/${encodeURIComponent(route.resourceId)}/new`
+  case 'settings':
+    return route.section ? `/settings/${encodeURIComponent(route.section)}` : '/settings'
+  case 'extension':
+    return `/ext/${encodeURIComponent(route.key)}`
   }
 }
 

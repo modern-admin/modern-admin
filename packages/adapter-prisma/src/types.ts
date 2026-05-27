@@ -16,7 +16,7 @@ export interface PrismaModelDelegate {
   groupBy?(args: unknown): Promise<unknown[]>
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 export type PrismaClientLike = { [K: string]: any } & {
   $transaction?<T>(fn: (tx: PrismaClientLike) => Promise<T>): Promise<T>
 }

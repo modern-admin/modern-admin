@@ -79,7 +79,7 @@ async function openProductEdit(page: Page, id: string): Promise<void> {
 async function waitForUploadComplete(
   page: Page,
   field: Locator,
-  pngFilename: string,
+  _pngFilename: string,
 ): Promise<void> {
   // The persisted file row truncates to the storage key's basename. The
   // freshly-uploaded one keeps the original filename until the form is

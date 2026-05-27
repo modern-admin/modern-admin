@@ -144,8 +144,9 @@ test.describe('List page — CRUD interactions', () => {
     await menu.getByRole('menuitem', { name: 'Show' }).click()
     // /resources/customers/:id (no trailing /edit)
     await expect(page).toHaveURL(/\/resources\/customers\/[^/]+$/)
-    // Show page renders an "Edit" button in the header — distinct from list.
-    await expect(page.getByRole('button', { name: 'Edit' })).toBeVisible({ timeout: 10_000 })
+    // Show page renders an "Edit" navigation link in the header — distinct
+    // from the list (which has neither). It's an anchor, not a button.
+    await expect(page.getByRole('link', { name: 'Edit' })).toBeVisible({ timeout: 10_000 })
   })
 
   test('row actions → Delete removes the record from the list', async ({

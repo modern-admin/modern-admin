@@ -91,9 +91,9 @@ export function ChartWidget({
   // unreadable axis and cause significant memory pressure in Recharts.
   const renderStep: AggregationStep =
     isKpi ? 'all'
-    : config.timeRange.preset === 'all' && (config.step === 'day' || config.step === 'week') ? 'month'
-    : config.timeRange.preset === '1y' && config.step === 'day' ? 'week'
-    : config.step
+      : config.timeRange.preset === 'all' && (config.step === 'day' || config.step === 'week') ? 'month'
+        : config.timeRange.preset === '1y' && config.step === 'day' ? 'week'
+          : config.step
 
   // Resolve the time-range preset to concrete from/to per render so cards
   // automatically reflect "now" as days roll over without re-saving.
@@ -459,6 +459,7 @@ export function ChartWidget({
           <TimeSeriesChart
             series={chartSeries}
             height={320}
+            visualisation={config.visualisation === 'kpi' ? undefined : config.visualisation}
             tickFormatter={makeTickFormatter(renderStep, locale)}
             labelFormatter={makeLabelFormatter(renderStep, locale)}
             labels={{

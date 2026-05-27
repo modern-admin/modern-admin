@@ -2,11 +2,7 @@
 // Better Auth. We treat the Better Auth instance as opaque (`auth.api.*`) so
 // upgrades within Better Auth don't ripple through this adapter's surface.
 
-import type {
-  CurrentAdmin,
-  IAuthProvider,
-  LoginCredentials,
-} from '@modern-admin/core'
+import type { CurrentAdmin, IAuthProvider, LoginCredentials } from '@modern-admin/core'
 
 /** Wire shape of an apikey row returned by better-auth's api-key plugin. */
 export interface ApiKeyRow {
@@ -41,7 +37,9 @@ export interface ApiKeyAdminApi {
     }
     headers?: Headers
   }): Promise<ApiKeyCreated>
+
   listApiKeys(args: { headers: Headers }): Promise<ApiKeyRow[]>
+
   updateApiKey(args: {
     body: {
       keyId: string
@@ -53,6 +51,7 @@ export interface ApiKeyAdminApi {
     }
     headers?: Headers
   }): Promise<ApiKeyRow>
+
   deleteApiKey(args: { body: { keyId: string }; headers: Headers }): Promise<{ success: boolean }>
 }
 
@@ -61,8 +60,11 @@ interface BetterAuthApi extends Partial<ApiKeyAdminApi> {
     user?: { id: string; email?: string; name?: string; image?: string | null; [key: string]: unknown }
     session?: { id: string; expiresAt?: Date | string }
   } | null>
+
   signInEmail?(args: { body: { email: string; password: string } }): Promise<unknown>
+
   signOut?(args: { headers: Headers }): Promise<unknown>
+
   /** Optional, present when the @better-auth/api-key plugin is mounted. */
   verifyApiKey?(args: {
     body: { key: string; permissions?: Record<string, string[]> }
@@ -81,8 +83,20 @@ interface BetterAuthApi extends Partial<ApiKeyAdminApi> {
   }>
 }
 
-interface BetterAuthInstance {
-  api: BetterAuthApi
+/**
+ * Structural shape we accept for the configured Better Auth instance.
+ *
+ * `api` is intentionally typed as `Record<string, unknown>` rather than the
+ * strict `BetterAuthApi` interface above: at the type level, real Better Auth
+ * exposes every `api.*` method as `Promise<Response>` (it's an HTTP endpoint
+ * surface), but at runtime direct calls return the structured data objects
+ * `BetterAuthApi` describes. Matching those two views structurally would force
+ * consumers to write `auth as never` at every `new BetterAuthProvider({ auth })`
+ * call site. Instead we widen the public type and cast once internally via
+ * the `api` getter below.
+ */
+export interface BetterAuthInstance {
+  api: Record<string, unknown>
   /** UI hint surface — list of enabled providers/passkeys/etc. */
   options?: { socialProviders?: Record<string, unknown>; emailAndPassword?: { enabled?: boolean } }
 }
@@ -118,7 +132,13 @@ export interface BetterAuthProviderOptions {
 }
 
 export class BetterAuthProvider implements IAuthProvider {
-  constructor(private readonly options: BetterAuthProviderOptions) {}
+  constructor(private readonly options: BetterAuthProviderOptions) {
+  }
+
+  /** Internal accessor — narrows the widened `api` field back to BetterAuthApi. */
+  private get api(): BetterAuthApi {
+    return this.options.auth.api as unknown as BetterAuthApi
+  }
 
   getUiProps(): Record<string, unknown> {
     const opts = this.options.auth.options ?? {}
@@ -129,7 +149,7 @@ export class BetterAuthProvider implements IAuthProvider {
   }
 
   async login(credentials: LoginCredentials): Promise<CurrentAdmin | null> {
-    const api = this.options.auth.api
+    const api = this.api
     if (!api.signInEmail || !credentials.email || !credentials.password) return null
     try {
       await api.signInEmail({
@@ -146,7 +166,7 @@ export class BetterAuthProvider implements IAuthProvider {
     const req = requestContext as RequestLike | undefined
     if (!req) return null
     const headers = toHeaders(req.headers)
-    const session = await this.options.auth.api.getSession({ headers })
+    const session = await this.api.getSession({ headers })
     if (!session?.user) return null
 
     const principal: CurrentAdmin = {
@@ -163,7 +183,7 @@ export class BetterAuthProvider implements IAuthProvider {
     // attach permissions + key id onto the principal. The core invoke() gate
     // uses `apiKey.permissions` to allow/deny resource×action combinations.
     const apiKeyHeader = headers.get('x-api-key')
-    const verify = this.options.auth.api.verifyApiKey
+    const verify = this.api.verifyApiKey
     if (apiKeyHeader && verify) {
       try {
         const result = await verify({ body: { key: apiKeyHeader } })
@@ -185,8 +205,8 @@ export class BetterAuthProvider implements IAuthProvider {
 
   async logout(requestContext: unknown): Promise<void> {
     const req = requestContext as RequestLike | undefined
-    if (!req || !this.options.auth.api.signOut) return
-    await this.options.auth.api.signOut({ headers: toHeaders(req.headers) })
+    if (!req || !this.api.signOut) return
+    await this.api.signOut({ headers: toHeaders(req.headers) })
   }
 
   /**
@@ -202,7 +222,7 @@ export class BetterAuthProvider implements IAuthProvider {
     name?: string
     role?: string
   }): Promise<void> {
-    const api = this.options.auth.api as BetterAuthApi & {
+    const api = this.api as BetterAuthApi & {
       signUpEmail?: (args: {
         body: { email: string; password: string; name: string }
       }) => Promise<{ user?: { id?: string } } | null>
@@ -219,16 +239,16 @@ export class BetterAuthProvider implements IAuthProvider {
     try {
       const result = await api.signUpEmail({ body: { email: opts.email, password: opts.password, name } })
       userId = result?.user?.id
-      // eslint-disable-next-line no-console
+
       console.log(`[modern-admin] seeded root admin: ${opts.email}`)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       if (/exists|duplicate|UNIQUE/i.test(message)) {
-        // eslint-disable-next-line no-console
+
         console.log(`[modern-admin] root admin already present: ${opts.email}`)
         return
       }
-      // eslint-disable-next-line no-console
+
       console.warn(`[modern-admin] root admin seed failed:`, message)
       return
     }
@@ -240,7 +260,7 @@ export class BetterAuthProvider implements IAuthProvider {
         await api.adminSetRole({ body: { userId, role: opts.role } })
       } catch {
         // Role assignment is best-effort — sign-up succeeded; log and continue.
-        // eslint-disable-next-line no-console
+
         console.warn(`[modern-admin] could not set role '${opts.role}' for ${opts.email}`)
       }
     }
@@ -253,7 +273,7 @@ export class BetterAuthProvider implements IAuthProvider {
    * to better-auth internals directly.
    */
   getApiKeyAdmin(): ApiKeyAdminApi | null {
-    const api = this.options.auth.api
+    const api = this.api
     const { createApiKey, listApiKeys, updateApiKey, deleteApiKey } = api
     if (
       typeof createApiKey !== 'function' ||

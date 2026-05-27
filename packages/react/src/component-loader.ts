@@ -3,12 +3,12 @@
 // keep this synchronous (no rollup/runtime bundling) — apps import their
 // custom components as ES modules and call `.add()` at startup.
 
-import * as React from 'react'
+import type * as React from 'react'
 
 // We can't enforce a single prop shape because each registered slot accepts
 // different props (display vs editor). The renderer wraps the lookup with a
 // concrete prop type, so the loader stays untyped at the entry boundary.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 export type ComponentEntry = React.ComponentType<any>
 
 export class ComponentLoader {

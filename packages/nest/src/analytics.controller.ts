@@ -1,6 +1,6 @@
 import { Body, Controller, Inject, Optional, Post, Req, UseGuards } from '@nestjs/common'
 import { ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
-import { Filter, ModernAdmin, NotImplementedError } from '@modern-admin/core'
+import { Filter, type ModernAdmin, NotImplementedError } from '@modern-admin/core'
 import type {
   AggregationOp,
   CurrentAdmin,

@@ -33,7 +33,7 @@ export class NoopCacheProvider implements ICacheProvider {
     return null
   }
 
-  async set<T>(): Promise<void> {
+  async set(): Promise<void> {
     // no-op
   }
 
@@ -80,7 +80,7 @@ export class MemoryCacheProvider implements ICacheProvider {
   async set<T = unknown>(key: string, value: T, options: CacheSetOptions = {}): Promise<void> {
     const ttlMs = options.ttl != null ? options.ttl * 1000 : Number.POSITIVE_INFINITY
     const tags = options.tags ?? []
-    this.entries.set(key, {value, tags, expiresAt: Date.now() + ttlMs})
+    this.entries.set(key, { value, tags, expiresAt: Date.now() + ttlMs })
     for (const tag of tags) {
       let bucket = this.tagIndex.get(tag)
       if (!bucket) {

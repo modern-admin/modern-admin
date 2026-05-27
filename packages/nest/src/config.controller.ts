@@ -1,6 +1,6 @@
 import { Controller, Get, Inject, Req } from '@nestjs/common'
 import { ApiOperation, ApiTags } from '@nestjs/swagger'
-import { ModernAdmin, type CurrentAdmin, type ModernAdminJSON } from '@modern-admin/core'
+import { type ModernAdmin, type CurrentAdmin, type ModernAdminJSON } from '@modern-admin/core'
 import { MODERN_ADMIN } from './tokens.js'
 
 interface AdminRequest {

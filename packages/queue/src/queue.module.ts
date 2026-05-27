@@ -1,4 +1,4 @@
-import { DynamicModule, Module } from '@nestjs/common'
+import { type DynamicModule, Module } from '@nestjs/common'
 import { BullModule } from '@nestjs/bullmq'
 import type { QueueModuleOptions, QueueRootOptions } from './queue.types.js'
 

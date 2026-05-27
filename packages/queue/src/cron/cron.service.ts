@@ -1,8 +1,8 @@
 import {
   Injectable,
   Logger,
-  OnModuleDestroy,
-  OnModuleInit,
+  type OnModuleDestroy,
+  type OnModuleInit,
 } from '@nestjs/common'
 import { DiscoveryService, Reflector } from '@nestjs/core'
 import { InjectQueue } from '@nestjs/bullmq'

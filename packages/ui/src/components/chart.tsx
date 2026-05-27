@@ -288,6 +288,8 @@ export interface TimeSeriesChartLabels {
   hideAll?: string
 }
 
+export type TimeSeriesChartVisualisation = 'area' | 'line' | 'bar'
+
 export interface TimeSeriesChartProps {
   series: ReadonlyArray<TimeSeriesChartSeries>
   height?: number
@@ -297,6 +299,12 @@ export interface TimeSeriesChartProps {
   labelFormatter?: (iso: string) => string
   /** Tooltip / Y-axis number formatting. */
   valueFormatter?: (value: number) => string
+  /**
+   * Forces a specific Recharts primitive. When omitted, falls back to an
+   * auto heuristic: `area` for ≤2 series (single-metric look), `line`
+   * for more (multi-series comparison).
+   */
+  visualisation?: TimeSeriesChartVisualisation
   labels?: TimeSeriesChartLabels
   className?: string
 }
@@ -334,11 +342,15 @@ const TS_TOOLTIP_LABEL_STYLE: React.CSSProperties = {
 }
 
 /**
- * Date-axis chart used by dashboard widgets. Renders an `AreaChart` for
- * ≤2 series (single-metric look) and a `LineChart` for more (multi-series
- * comparison). Legend is clickable: click a label to toggle that series'
- * visibility; hover dims the rest. When >7 series a "show/hide all"
- * button appears under the chart.
+ * Date-axis chart used by dashboard widgets. The Recharts primitive is
+ * chosen by `visualisation` (`area` | `line` | `bar`). When the caller
+ * does not pass `visualisation` the component falls back to a heuristic:
+ * `area` for ≤2 series (single-metric look) and `line` for more
+ * (multi-series comparison).
+ *
+ * Legend is clickable: click a label to toggle that series' visibility;
+ * hover dims the rest. When >7 series a "show/hide all" button appears
+ * under the chart.
  *
  * Pure presentation — i18n-unaware. Caller supplies pre-aligned, zero-
  * filled `series` plus locale-aware tick/label/value formatters.
@@ -349,6 +361,7 @@ export function TimeSeriesChart({
   tickFormatter,
   labelFormatter,
   valueFormatter,
+  visualisation,
   labels,
   className,
 }: TimeSeriesChartProps): React.ReactElement {
@@ -391,8 +404,15 @@ export function TimeSeriesChart({
     )
   }
 
-  const useLineChart = series.length > 2
-  const ChartCmp = useLineChart ? LineChart : AreaChart
+  // Explicit `visualisation` wins; otherwise auto: area for ≤2 series,
+  // line for more (preserves legacy behaviour for callers that don't
+  // pass `visualisation`).
+  const resolvedVis: TimeSeriesChartVisualisation =
+    visualisation ?? (series.length > 2 ? 'line' : 'area')
+  const ChartCmp =
+    resolvedVis === 'bar' ? BarChart
+      : resolvedVis === 'line' ? LineChart
+        : AreaChart
   // Suppress animation for large datasets — animating thousands of path
   // points is expensive and retains old state in Recharts' animation subsystem.
   const animateChart = rows.length <= 200
@@ -467,23 +487,42 @@ export function TimeSeriesChart({
             }}
             onMouseLeave={() => setHovered(null)}
           />
-          {series.map((s, i) =>
-            useLineChart ? (
-              <Line
-                key={s.key}
-                type="monotone"
-                dataKey={s.key}
-                name={s.label}
-                stroke={palette[i]}
-                strokeWidth={2}
-                strokeOpacity={hovered === null || hovered === s.key ? 1 : 0.2}
-                dot={false}
-                activeDot={{ r: 4 }}
-                hide={hidden.has(s.key)}
-                isAnimationActive={animateChart}
-                animationDuration={300}
-              />
-            ) : (
+          {series.map((s, i) => {
+            if (resolvedVis === 'line') {
+              return (
+                <Line
+                  key={s.key}
+                  type="monotone"
+                  dataKey={s.key}
+                  name={s.label}
+                  stroke={palette[i]}
+                  strokeWidth={2}
+                  strokeOpacity={hovered === null || hovered === s.key ? 1 : 0.2}
+                  dot={false}
+                  activeDot={{ r: 4 }}
+                  hide={hidden.has(s.key)}
+                  isAnimationActive={animateChart}
+                  animationDuration={300}
+                />
+              )
+            }
+            if (resolvedVis === 'bar') {
+              return (
+                <Bar
+                  key={s.key}
+                  dataKey={s.key}
+                  name={s.label}
+                  fill={palette[i]}
+                  fillOpacity={hovered === null || hovered === s.key ? 1 : 0.25}
+                  radius={[3, 3, 0, 0] as never}
+                  maxBarSize={48}
+                  hide={hidden.has(s.key)}
+                  isAnimationActive={animateChart}
+                  animationDuration={300}
+                />
+              )
+            }
+            return (
               <Area
                 key={s.key}
                 type="monotone"
@@ -499,8 +538,8 @@ export function TimeSeriesChart({
                 isAnimationActive={animateChart}
                 animationDuration={300}
               />
-            ),
-          )}
+            )
+          })}
         </ChartCmp>
       </ResponsiveContainer>
       {series.length > 7 && (

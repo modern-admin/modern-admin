@@ -20,7 +20,7 @@ export class AuditLogService {
 
   record(entry: Omit<AuditEntry, 'at'>): void {
     this.entries.push({ ...entry, at: new Date() })
-    // eslint-disable-next-line no-console
+
     console.log(
       '[audit]',
       entry.actor,

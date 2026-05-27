@@ -394,10 +394,10 @@ const bucketExpr = (
       step === 'day'
         ? '%Y-%m-%d'
         : step === 'week'
-        ? '%x-W%v'
-        : step === 'month'
-        ? '%Y-%m-01'
-        : '%Y-01-01'
+          ? '%x-W%v'
+          : step === 'month'
+            ? '%Y-%m-01'
+            : '%Y-01-01'
     return sql`DATE_FORMAT(${dateCol}, ${fmt})`
   }
   // sqlite
@@ -405,10 +405,10 @@ const bucketExpr = (
     step === 'day'
       ? '%Y-%m-%d'
       : step === 'week'
-      ? '%Y-W%W'
-      : step === 'month'
-      ? '%Y-%m-01'
-      : '%Y-01-01'
+        ? '%Y-W%W'
+        : step === 'month'
+          ? '%Y-%m-01'
+          : '%Y-01-01'
   return sql`STRFTIME(${fmt}, ${dateCol})`
 }
 
@@ -421,14 +421,14 @@ const metricExpr = (
     throw new Error(`metric "${op}" requires field`)
   }
   switch (op) {
-    case 'sum':
-      return sql`SUM(${fieldCol})`
-    case 'avg':
-      return sql`AVG(${fieldCol})`
-    case 'min':
-      return sql`MIN(${fieldCol})`
-    case 'max':
-      return sql`MAX(${fieldCol})`
+  case 'sum':
+    return sql`SUM(${fieldCol})`
+  case 'avg':
+    return sql`AVG(${fieldCol})`
+  case 'min':
+    return sql`MIN(${fieldCol})`
+  case 'max':
+    return sql`MAX(${fieldCol})`
   }
 }
 
@@ -472,10 +472,10 @@ const buildDisplaySql = (
     query.step === 'all'
       ? `MIN(${dateCol})`
       : dialect === 'pg'
-      ? `DATE_TRUNC('${query.step}', ${dateCol})`
-      : dialect === 'mysql'
-      ? `DATE_FORMAT(${dateCol}, ${mysqlFmt(query.step)})`
-      : `STRFTIME(${sqliteFmt(query.step)}, ${dateCol})`
+        ? `DATE_TRUNC('${query.step}', ${dateCol})`
+        : dialect === 'mysql'
+          ? `DATE_FORMAT(${dateCol}, ${mysqlFmt(query.step)})`
+          : `STRFTIME(${sqliteFmt(query.step)}, ${dateCol})`
   const metric =
     query.metric === 'count'
       ? 'COUNT(*)'
@@ -512,16 +512,16 @@ const mysqlFmt = (step: TimeSeriesStep): string =>
   step === 'day'
     ? "'%Y-%m-%d'"
     : step === 'week'
-    ? "'%x-W%v'"
-    : step === 'month'
-    ? "'%Y-%m-01'"
-    : "'%Y-01-01'"
+      ? "'%x-W%v'"
+      : step === 'month'
+        ? "'%Y-%m-01'"
+        : "'%Y-01-01'"
 
 const sqliteFmt = (step: TimeSeriesStep): string =>
   step === 'day'
     ? "'%Y-%m-%d'"
     : step === 'week'
-    ? "'%Y-W%W'"
-    : step === 'month'
-    ? "'%Y-%m-01'"
-    : "'%Y-01-01'"
+      ? "'%Y-W%W'"
+      : step === 'month'
+        ? "'%Y-%m-01'"
+        : "'%Y-01-01'"

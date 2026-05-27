@@ -25,7 +25,7 @@
     "test": "bun --filter '*' --filter '!@modern-admin/docs' test",
     "e2e": "bun run --cwd apps/e2e e2e",
     "typecheck": "bun run --filter '*' --filter '!@modern-admin/docs' typecheck",
-    "lint": "bun run --cwd apps/_shared lint && bun run --cwd apps/api-prisma lint && bun run --cwd apps/web lint && bun run --cwd apps/e2e lint",
+    "lint": "bun run --filter '*' --filter '!@modern-admin/docs' lint",
     "docs:dev": "bun --filter @modern-admin/docs dev",
     "docs:build": "bun --filter @modern-admin/docs build",
     "docker:up": "docker compose up -d",

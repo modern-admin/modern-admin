@@ -59,6 +59,63 @@ describe('ResourcesFactory', () => {
     ).toThrow(NoResourceAdapterError)
   })
 
+  describe('disjoint-id-set warning', () => {
+    const captureWarn = (fn: () => void): string[] => {
+      const original = console.warn
+      const out: string[] = []
+
+      console.warn = (...args: any[]) => { out.push(args.map(String).join(' ')) }
+      try { fn() } finally { console.warn = original }
+      return out
+    }
+
+    test('warns when databases: and resources: have no id overlap', () => {
+      const rawTable: FakeTable = { name: 'Customer', rows: [] }
+      const remappedTable: FakeTable = { name: 'foo', rows: [] }
+      const warnings = captureWarn(() => {
+        ResourcesFactory.buildResources({
+          databases: [[rawTable]],
+          resources: [{ resource: remappedTable, options: { id: 'customers' } }],
+          adapters: [adapter],
+        })
+      })
+      expect(warnings).toHaveLength(1)
+      expect(warnings[0]).toContain('Customer')
+      expect(warnings[0]).toContain('foo') // resource.id() before options remap
+    })
+
+    test('stays silent when only databases: is provided', () => {
+      const warnings = captureWarn(() => {
+        ResourcesFactory.buildResources({
+          databases: [[{ name: 'Customer', rows: [] }]],
+          adapters: [adapter],
+        })
+      })
+      expect(warnings).toEqual([])
+    })
+
+    test('stays silent when only resources: is provided', () => {
+      const warnings = captureWarn(() => {
+        ResourcesFactory.buildResources({
+          resources: [{ resource: { name: 'foo', rows: [] }, options: { id: 'customers' } }],
+          adapters: [adapter],
+        })
+      })
+      expect(warnings).toEqual([])
+    })
+
+    test('stays silent when id sets overlap', () => {
+      const warnings = captureWarn(() => {
+        ResourcesFactory.buildResources({
+          databases: [[{ name: 'users', rows: [] }]],
+          resources: [{ resource: { name: 'users', rows: [] }, options: { id: 'users' } }],
+          adapters: [adapter],
+        })
+      })
+      expect(warnings).toEqual([])
+    })
+  })
+
   describe('global plugins', () => {
     const usersTable: FakeTable = { name: 'users', rows: [] }
     const postsTable: FakeTable = { name: 'posts', rows: [] }

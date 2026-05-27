@@ -156,8 +156,10 @@ export function ReferenceMultiTableDialog({
           {/* The list page is in embedded mode (`card: false`) so it
               manages its own internal scroll: the table area scrolls,
               the paginator sits below as a flush full-width bar.  The
-              body wrapper itself does NOT scroll. */}
-          <div className="flex min-h-0 flex-1 flex-col">
+              body wrapper itself does NOT scroll, and `overflow-hidden`
+              guarantees its children cannot bleed visually past the
+              flex-1 box (and onto the DialogFooter below). */}
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             <ResourceListPage
               resourceId={referenceResourceId}
               query={query}

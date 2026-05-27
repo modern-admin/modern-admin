@@ -9,7 +9,7 @@
 
 import { uuidv7 } from '@modern-admin/core'
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 
 type Where = Record<string, any>
 

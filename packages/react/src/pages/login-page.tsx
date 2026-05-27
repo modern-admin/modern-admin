@@ -10,7 +10,7 @@
 // other id falls back to Globe with a capitalised label.
 
 import * as React from 'react'
-import { Button, Field, FieldDescription, FieldError, FieldLabel, Input, PasswordInput, } from '@modern-admin/ui'
+import { Button, Field, FieldDescription, FieldError, FieldLabel, Input, PasswordInput } from '@modern-admin/ui'
 import { Database, Globe, LogIn } from 'lucide-react'
 import { useAuthUiProps, useLogin, useSocialLogin } from '../hooks.js'
 import { useI18n } from '../i18n.js'
@@ -57,9 +57,9 @@ function AppleIcon(): React.ReactElement {
 }
 
 const SOCIAL_PROVIDERS: Record<string, ProviderDef> = {
-  google: {label: 'Google', icon: <GoogleIcon/>},
-  github: {label: 'GitHub', icon: <GitHubIcon/>},
-  apple: {label: 'Apple', icon: <AppleIcon/>},
+  google: { label: 'Google', icon: <GoogleIcon/> },
+  github: { label: 'GitHub', icon: <GitHubIcon/> },
+  apple: { label: 'Apple', icon: <AppleIcon/> },
 }
 
 function resolveProvider(id: string): ProviderDef {
@@ -82,7 +82,7 @@ export interface LoginPageProps {
   tagline?: React.ReactNode
 }
 
-function BrandMark({size = 'md'}: { size?: 'sm' | 'md' }): React.ReactElement {
+function BrandMark({ size = 'md' }: { size?: 'sm' | 'md' }): React.ReactElement {
   const tile = size === 'sm' ? 'size-8 rounded-lg' : 'size-9 rounded-xl'
   const icon = size === 'sm' ? 'size-4' : 'size-5'
   return (
@@ -94,11 +94,11 @@ function BrandMark({size = 'md'}: { size?: 'sm' | 'md' }): React.ReactElement {
   )
 }
 
-export function LoginPage({title, hint, tagline}: LoginPageProps): React.ReactElement {
-  const {t} = useI18n()
+export function LoginPage({ title, hint, tagline }: LoginPageProps): React.ReactElement {
+  const { t } = useI18n()
   const login = useLogin()
   const socialLogin = useSocialLogin()
-  const {data: authUi} = useAuthUiProps()
+  const { data: authUi } = useAuthUiProps()
   const [email, setEmail] = React.useState('')
   const [password, setPassword] = React.useState('')
 
@@ -108,7 +108,7 @@ export function LoginPage({title, hint, tagline}: LoginPageProps): React.ReactEl
   const submit = (event: React.FormEvent<HTMLFormElement>): void => {
     event.preventDefault()
     if (login.isPending) return
-    login.mutate({email, password})
+    login.mutate({ email, password })
   }
 
   const errMessage = (() => {
@@ -160,7 +160,7 @@ export function LoginPage({title, hint, tagline}: LoginPageProps): React.ReactEl
           {providers.length > 0 && (
             <div className="mb-4 flex flex-col gap-2">
               {providers.map((id) => {
-                const {label, icon} = resolveProvider(id)
+                const { label, icon } = resolveProvider(id)
                 return (
                   <Button
                     key={id}

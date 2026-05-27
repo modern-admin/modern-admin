@@ -36,18 +36,18 @@ export async function seedDemoUser({
   if (typeof api.signUpEmail !== 'function') return
   try {
     await api.signUpEmail({ body: { email, password, name } })
-    // eslint-disable-next-line no-console
+
     console.log(`[${label}] seeded demo admin: ${email} / ${password}`)
   } catch (err) {
     // Better Auth throws when the user already exists — that's expected
     // on re-runs. Anything else gets surfaced for visibility.
     const message = err instanceof Error ? err.message : String(err)
     if (/exists|duplicate|UNIQUE/i.test(message)) {
-      // eslint-disable-next-line no-console
+
       console.log(`[${label}] demo admin already present: ${email}`)
       return
     }
-    // eslint-disable-next-line no-console
+
     console.warn(`[${label}] failed to seed demo admin:`, message)
   }
 }

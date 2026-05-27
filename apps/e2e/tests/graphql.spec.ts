@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type APIRequestContext } from '@playwright/test'
 
 const API = process.env.E2E_API_URL ?? 'http://localhost:3001'
 const GRAPHQL = `${API}/admin/graphql`
@@ -9,7 +9,7 @@ interface GqlResponse<T> {
 }
 
 const graphql = async (
-  request: import('@playwright/test').APIRequestContext,
+  request: APIRequestContext,
   query: string,
   variables?: Record<string, unknown>,
 ): Promise<GqlResponse<Record<string, unknown>>> => {
@@ -57,10 +57,22 @@ test.describe('GraphQL', () => {
   })
 
   test('customersOne resolves a record by id', async ({ request }) => {
-    const body = await graphql(request, '{ customersOne(id: "1") { id email name } }')
+    // Seed ids are UUID v7, not numeric — discover one through the list
+    // query first and then ask `customersOne` for that exact id.
+    const list = await graphql(request, '{ customersList { id email } }')
+    expect(list.errors).toBeUndefined()
+    const rows = list.data?.customersList as Array<{ id: string; email: string }>
+    expect(rows.length).toBeGreaterThan(0)
+    const target = rows[0]!
+
+    const body = await graphql(
+      request,
+      'query($id: ID!) { customersOne(id: $id) { id email name } }',
+      { id: target.id },
+    )
     expect(body.errors).toBeUndefined()
     const customer = body.data?.customersOne as { id: string; email: string } | null
-    expect(customer?.id).toBe('1')
+    expect(customer?.id).toBe(target.id)
     expect(customer?.email).toMatch(/@example\.com$/)
   })
 })

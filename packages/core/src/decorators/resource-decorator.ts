@@ -147,10 +147,10 @@ export class ResourceDecorator {
     const explicit = view === 'list'
       ? this.options.listProperties
       : view === 'show'
-      ? this.options.showProperties
-      : view === 'edit'
-      ? this.options.editProperties
-      : this.options.filterProperties
+        ? this.options.showProperties
+        : view === 'edit'
+          ? this.options.editProperties
+          : this.options.filterProperties
     if (explicit && explicit.length > 0) {
       return explicit
         .map((path) => this.getPropertyByKey(path))

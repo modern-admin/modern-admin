@@ -113,7 +113,7 @@ export class PrismaResource extends BaseResource {
   }
 
   private idClause(id: string | number): Record<string, unknown> {
-    return {[this.idField.name]: this.castId(id)}
+    return { [this.idField.name]: this.castId(id) }
   }
 
   private castId(id: string | number): unknown {
@@ -186,18 +186,18 @@ export class PrismaResource extends BaseResource {
     // Never mix `contains` + `not: null` in the same filter object — use AND.
     const isNullable = !modelField.isRequired
     const conditions: Record<string, unknown>[] = []
-    if (isNullable) conditions.push({[field]: {not: null}})
-    if (options?.search) conditions.push({[field]: {contains: options.search, mode: 'insensitive'}})
+    if (isNullable) conditions.push({ [field]: { not: null } })
+    if (options?.search) conditions.push({ [field]: { contains: options.search, mode: 'insensitive' } })
     const where: Record<string, unknown> =
       conditions.length === 0 ? {}
-      : conditions.length === 1 ? conditions[0]!
-      : {AND: conditions}
+        : conditions.length === 1 ? conditions[0]!
+          : { AND: conditions }
 
     const rows = (await this.delegate().findMany({
       where,
-      select: {[field]: true},
+      select: { [field]: true },
       distinct: [field],
-      orderBy: {[field]: 'asc'},
+      orderBy: { [field]: 'asc' },
       take: limit,
     })) as Array<Record<string, unknown>>
 
@@ -208,7 +208,7 @@ export class PrismaResource extends BaseResource {
 
   override async count(filter: Filter): Promise<number> {
     try {
-      return await this.delegate().count({where: filterToWhere(filter)})
+      return await this.delegate().count({ where: filterToWhere(filter) })
     } catch (err) {
       throw this.toValidationError(err)
     }
@@ -271,14 +271,14 @@ export class PrismaResource extends BaseResource {
   override async findMany(ids: Array<string | number>): Promise<BaseRecord[]> {
     if (ids.length === 0) return []
     const rows = (await this.delegate().findMany({
-      where: {[this.idField.name]: {in: ids.map((id) => this.castId(id))}},
+      where: { [this.idField.name]: { in: ids.map((id) => this.castId(id)) } },
     })) as ParamsType[]
     return rows.map((row) => new BaseRecord(row, this))
   }
 
   override async create(params: ParamsType): Promise<ParamsType> {
     try {
-      return (await this.delegate().create({data: this.writableData(params)})) as ParamsType
+      return (await this.delegate().create({ data: this.writableData(params) })) as ParamsType
     } catch (err) {
       throw this.toValidationError(err)
     }
@@ -296,7 +296,7 @@ export class PrismaResource extends BaseResource {
   }
 
   override async delete(id: string): Promise<void> {
-    await this.delegate().delete({where: this.idClause(id)})
+    await this.delegate().delete({ where: this.idClause(id) })
   }
 
   override supportsTimeSeries(): boolean {
@@ -314,12 +314,12 @@ export class PrismaResource extends BaseResource {
       const prevTo = new Date(query.from.getTime())
       const prevFrom = new Date(query.from.getTime() - span)
       previous = (
-        await this.runTimeSeries(filter, {...query, from: prevFrom, to: prevTo})
+        await this.runTimeSeries(filter, { ...query, from: prevFrom, to: prevTo })
       ).series
     }
     return {
       series: series.series,
-      ...(previous ? {previous} : {}),
+      ...(previous ? { previous } : {}),
       sql: series.sql,
     }
   }
@@ -354,9 +354,9 @@ export class PrismaResource extends BaseResource {
     const baseWhere = filterToWhere(filter)
     const where: Record<string, unknown> = {
       ...baseWhere,
-      [query.dateField]: {gte: query.from, lte: query.to},
+      [query.dateField]: { gte: query.from, lte: query.to },
     }
-    const select: Record<string, true> = {[query.dateField]: true}
+    const select: Record<string, true> = { [query.dateField]: true }
     if (query.field) select[query.field] = true
     if (query.groupBy) select[query.groupBy] = true
 
@@ -403,16 +403,16 @@ export class PrismaResource extends BaseResource {
       e: { sum: number; count: number; min: number; max: number },
     ): number => {
       switch (query.metric) {
-        case 'count':
-          return e.count
-        case 'sum':
-          return e.sum
-        case 'avg':
-          return e.count === 0 ? 0 : e.sum / e.count
-        case 'min':
-          return e.min
-        case 'max':
-          return e.max
+      case 'count':
+        return e.count
+      case 'sum':
+        return e.sum
+      case 'avg':
+        return e.count === 0 ? 0 : e.sum / e.count
+      case 'min':
+        return e.min
+      case 'max':
+        return e.max
       }
     }
 
@@ -431,7 +431,7 @@ export class PrismaResource extends BaseResource {
       for (const [bucket, e] of inner) {
         const cur = otherInner.get(bucket)
         if (!cur) {
-          otherInner.set(bucket, {...e})
+          otherInner.set(bucket, { ...e })
         } else {
           cur.sum += e.sum
           cur.count += e.count
@@ -446,9 +446,9 @@ export class PrismaResource extends BaseResource {
     const seriesOut: TimeSeriesSeries[] = []
     for (const [key, inner] of seriesMap) {
       const points = Array.from(inner.entries())
-        .map(([date, e]) => ({date, value: reduce(e)}))
+        .map(([date, e]) => ({ date, value: reduce(e) }))
         .sort((a, b) => a.date.localeCompare(b.date))
-      seriesOut.push({key, points})
+      seriesOut.push({ key, points })
     }
 
     return {
@@ -479,13 +479,13 @@ export class PrismaResource extends BaseResource {
       const fields = e.meta.target
       return new ValidationError(
         Object.fromEntries(
-          fields.map((f) => [f, {type: 'unique', message: `${f} must be unique`}]),
+          fields.map((f) => [f, { type: 'unique', message: `${f} must be unique` }]),
         ),
       )
     }
     if (e.code === 'P2003' && e.meta?.field_name) {
       return new ValidationError({
-        [e.meta.field_name]: {type: 'foreignKey', message: 'related record not found'},
+        [e.meta.field_name]: { type: 'foreignKey', message: 'related record not found' },
       })
     }
     // `PrismaClientValidationError` covers missing required arguments and
@@ -498,18 +498,18 @@ export class PrismaResource extends BaseResource {
       const missing = message.match(/Argument `([^`]+)` is missing\./)
       if (missing?.[1]) {
         return new ValidationError({
-          [missing[1]]: {type: 'required', message: `${missing[1]} is required`},
+          [missing[1]]: { type: 'required', message: `${missing[1]} is required` },
         })
       }
       // `Argument \`field\`: Invalid value provided.` covers type mismatches.
       const invalid = message.match(/Argument `([^`]+)`:\s*([^\n]+)/)
       if (invalid?.[1]) {
         return new ValidationError({
-          [invalid[1]]: {type: 'invalid', message: invalid[2]?.trim() ?? 'invalid value'},
+          [invalid[1]]: { type: 'invalid', message: invalid[2]?.trim() ?? 'invalid value' },
         })
       }
       // Generic fallback so the user still gets a 400 with a hint.
-      return new ValidationError({}, {type: 'validation', message: message.split('\n').slice(-2).join(' ').trim()})
+      return new ValidationError({}, { type: 'validation', message: message.split('\n').slice(-2).join(' ').trim() })
     }
     return err
   }
@@ -525,26 +525,26 @@ export class PrismaResource extends BaseResource {
  */
 const coerceFormScalar = (value: string, prismaType: string): unknown => {
   switch (prismaType) {
-    case 'Boolean': {
-      if (value === 'true' || value === '1' || value === 'on') return true
-      if (value === 'false' || value === '0' || value === 'off') return false
-      return value
-    }
-    case 'Int':
-    case 'BigInt': {
-      if (value === '') return value
-      const n = Number(value)
-      if (!Number.isFinite(n) || !Number.isInteger(n)) return value
-      return prismaType === 'BigInt' ? BigInt(value) : n
-    }
-    case 'Float':
-    case 'Decimal': {
-      if (value === '') return value
-      const n = Number(value)
-      return Number.isFinite(n) ? n : value
-    }
-    default:
-      return value
+  case 'Boolean': {
+    if (value === 'true' || value === '1' || value === 'on') return true
+    if (value === 'false' || value === '0' || value === 'off') return false
+    return value
+  }
+  case 'Int':
+  case 'BigInt': {
+    if (value === '') return value
+    const n = Number(value)
+    if (!Number.isFinite(n) || !Number.isInteger(n)) return value
+    return prismaType === 'BigInt' ? BigInt(value) : n
+  }
+  case 'Float':
+  case 'Decimal': {
+    if (value === '') return value
+    const n = Number(value)
+    return Number.isFinite(n) ? n : value
+  }
+  default:
+    return value
   }
 }
 
@@ -557,20 +557,20 @@ const truncateDate = (d: Date, step: TimeSeriesStep): string => {
   const m = d.getUTCMonth()
   const day = d.getUTCDate()
   switch (step) {
-    case 'day':
-      return isoDate(new Date(Date.UTC(y, m, day)))
-    case 'week': {
-      // ISO week: Monday-based.
-      const dow = (d.getUTCDay() + 6) % 7 // 0 = Mon
-      const monday = new Date(Date.UTC(y, m, day - dow))
-      return isoDate(monday)
-    }
-    case 'month':
-      return isoDate(new Date(Date.UTC(y, m, 1)))
-    case 'year':
-      return isoDate(new Date(Date.UTC(y, 0, 1)))
-    case 'all':
-      return isoDate(d)
+  case 'day':
+    return isoDate(new Date(Date.UTC(y, m, day)))
+  case 'week': {
+    // ISO week: Monday-based.
+    const dow = (d.getUTCDay() + 6) % 7 // 0 = Mon
+    const monday = new Date(Date.UTC(y, m, day - dow))
+    return isoDate(monday)
+  }
+  case 'month':
+    return isoDate(new Date(Date.UTC(y, m, 1)))
+  case 'year':
+    return isoDate(new Date(Date.UTC(y, 0, 1)))
+  case 'all':
+    return isoDate(d)
   }
 }
 

@@ -23,10 +23,13 @@ export class FakeRedis {
     return this.store.get(key) ?? null
   }
 
-  async set(key: string, value: string, mode?: 'EX', ttl?: number): Promise<'OK'> {
-    this.record('set', mode ? [key, value, mode, ttl] : [key, value])
-    this.store.set(key, value)
-    if (mode === 'EX' && typeof ttl === 'number') this.ttls.set(key, ttl)
+  async set(key: string, value: string | number | Buffer): Promise<'OK'>
+  async set(key: string, value: string | number | Buffer, mode: 'EX', ttl: number | string): Promise<'OK'>
+  async set(key: string, value: string | number | Buffer, mode?: 'EX', ttl?: number | string): Promise<'OK'> {
+    const v = typeof value === 'string' ? value : String(value)
+    this.record('set', mode ? [key, v, mode, ttl] : [key, v])
+    this.store.set(key, v)
+    if (mode === 'EX' && ttl !== undefined) this.ttls.set(key, Number(ttl))
     return 'OK'
   }
 
@@ -41,11 +44,12 @@ export class FakeRedis {
     return removed
   }
 
-  async sadd(key: string, ...values: string[]): Promise<number> {
-    this.record('sadd', [key, ...values])
+  async sadd(key: string, ...values: (string | number | Buffer)[]): Promise<number> {
+    const stringValues = values.map((v) => typeof v === 'string' ? v : String(v))
+    this.record('sadd', [key, ...stringValues])
     const set = this.sets.get(key) ?? new Set<string>()
     let added = 0
-    for (const v of values) {
+    for (const v of stringValues) {
       if (!set.has(v)) {
         set.add(v)
         added += 1
@@ -60,10 +64,11 @@ export class FakeRedis {
     return Array.from(this.sets.get(key) ?? [])
   }
 
-  async publish(channel: string, message: string): Promise<number> {
-    this.record('publish', [channel, message])
+  async publish(channel: string, message: string | Buffer): Promise<number> {
+    const text = typeof message === 'string' ? message : message.toString()
+    this.record('publish', [channel, text])
     const listeners = this.channels.get(channel) ?? []
-    for (const fn of listeners) fn(channel, message)
+    for (const fn of listeners) fn(channel, text)
     return listeners.length
   }
 

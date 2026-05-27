@@ -23,7 +23,7 @@ import {
   ValidationError,
   type ActionRequest,
   type ActionResponse,
-  ModernAdmin,
+  type ModernAdmin,
 } from '@modern-admin/core'
 import { MODERN_ADMIN } from './tokens.js'
 import { ModernAdminAuthGuard } from './auth.guard.js'

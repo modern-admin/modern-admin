@@ -49,8 +49,8 @@ export function ResourceWizardCreatePage({
     () =>
       resource
         ? visibleRecordProperties(resource.properties, 'edit').filter(
-            (p) => !p.isDisabled,
-          )
+          (p) => !p.isDisabled,
+        )
         : [],
     [resource],
   )

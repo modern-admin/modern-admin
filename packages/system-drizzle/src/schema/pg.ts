@@ -29,7 +29,7 @@
  */
 
 import { sql } from 'drizzle-orm'
-import { bigint, boolean, index, integer, jsonb, pgTable, text, timestamp, unique, uuid, } from 'drizzle-orm/pg-core'
+import { bigint, boolean, index, integer, jsonb, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core'
 
 // ─── Better Auth ──────────────────────────────────────────────────────────
 
@@ -51,25 +51,25 @@ export const maUser = pgTable('ma_user', {
   role: text('role'),
   banned: boolean('banned').default(false),
   banReason: text('ban_reason'),
-  banExpires: timestamp('ban_expires', {withTimezone: true}),
-  createdAt: timestamp('created_at', {withTimezone: true}).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', {withTimezone: true}).defaultNow().notNull(),
+  banExpires: timestamp('ban_expires', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 })
 
 export const maSession = pgTable('ma_session', {
   id: uuid('id').primaryKey().defaultRandom(),
-  expiresAt: timestamp('expires_at', {withTimezone: true}).notNull(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
   token: text('token').notNull().unique(),
   ipAddress: text('ip_address'),
   userAgent: text('user_agent'),
   userId: uuid('user_id')
     .notNull()
-    .references(() => maUser.id, {onDelete: 'cascade'}),
+    .references(() => maUser.id, { onDelete: 'cascade' }),
   /** Active impersonation source; admin plugin uses this to track
    *  "log in as" sessions so audit logs can attribute the real actor. */
   impersonatedBy: text('impersonated_by'),
-  createdAt: timestamp('created_at', {withTimezone: true}).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', {withTimezone: true}).defaultNow().notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 })
 
 export const maAccount = pgTable('ma_account', {
@@ -78,27 +78,27 @@ export const maAccount = pgTable('ma_account', {
   providerId: text('provider_id').notNull(),
   userId: uuid('user_id')
     .notNull()
-    .references(() => maUser.id, {onDelete: 'cascade'}),
+    .references(() => maUser.id, { onDelete: 'cascade' }),
   accessToken: text('access_token'),
   refreshToken: text('refresh_token'),
   idToken: text('id_token'),
-  accessTokenExpiresAt: timestamp('access_token_expires_at', {withTimezone: true}),
-  refreshTokenExpiresAt: timestamp('refresh_token_expires_at', {withTimezone: true}),
+  accessTokenExpiresAt: timestamp('access_token_expires_at', { withTimezone: true }),
+  refreshTokenExpiresAt: timestamp('refresh_token_expires_at', { withTimezone: true }),
   scope: text('scope'),
   /** Hashed password for the email/password strategy. OAuth/passkey rows
    *  leave this null — credentials are encoded in the provider tokens. */
   password: text('password'),
-  createdAt: timestamp('created_at', {withTimezone: true}).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', {withTimezone: true}).defaultNow().notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 })
 
 export const maVerification = pgTable('ma_verification', {
   id: uuid('id').primaryKey().defaultRandom(),
   identifier: text('identifier').notNull(),
   value: text('value').notNull(),
-  expiresAt: timestamp('expires_at', {withTimezone: true}).notNull(),
-  createdAt: timestamp('created_at', {withTimezone: true}).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', {withTimezone: true}).defaultNow().notNull(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 })
 
 /**
@@ -116,20 +116,20 @@ export const maApiKey = pgTable('ma_apikey', {
   key: text('key').notNull(),
   referenceId: uuid('reference_id')
     .notNull()
-    .references(() => maUser.id, {onDelete: 'cascade'}),
+    .references(() => maUser.id, { onDelete: 'cascade' }),
   refillInterval: integer('refill_interval'),
   refillAmount: integer('refill_amount'),
-  lastRefillAt: timestamp('last_refill_at', {withTimezone: true}),
+  lastRefillAt: timestamp('last_refill_at', { withTimezone: true }),
   enabled: boolean('enabled').notNull().default(true),
   rateLimitEnabled: boolean('rate_limit_enabled').notNull().default(false),
   rateLimitTimeWindow: integer('rate_limit_time_window'),
   rateLimitMax: integer('rate_limit_max'),
   requestCount: integer('request_count').notNull().default(0),
   remaining: integer('remaining'),
-  lastRequest: timestamp('last_request', {withTimezone: true}),
-  expiresAt: timestamp('expires_at', {withTimezone: true}),
-  createdAt: timestamp('created_at', {withTimezone: true}).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', {withTimezone: true}).defaultNow().notNull(),
+  lastRequest: timestamp('last_request', { withTimezone: true }),
+  expiresAt: timestamp('expires_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   permissions: jsonb('permissions'),
   metadata: jsonb('metadata'),
 })
@@ -155,8 +155,8 @@ export const maRole = pgTable('ma_role', {
   permissions: jsonb('permissions').notNull().default(sql`'{}'::jsonb`),
   /** Built-in roles are seeded on boot and cannot be deleted via the UI. */
   isBuiltin: boolean('is_builtin').notNull().default(false),
-  createdAt: timestamp('created_at', {withTimezone: true}).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', {withTimezone: true}).defaultNow().notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 })
 
 export const maLog = pgTable(
@@ -171,8 +171,8 @@ export const maLog = pgTable(
     payload: jsonb('payload'),
     result: jsonb('result'),
     /** Unix-ms timestamp captured at the after-hook. */
-    at: bigint('at', {mode: 'number'}).notNull(),
-    createdAt: timestamp('created_at', {withTimezone: true}).defaultNow().notNull(),
+    at: bigint('at', { mode: 'number' }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => ({
     resourceActionIdx: index('ma_log_resource_action_idx').on(t.resourceId, t.action),
@@ -192,8 +192,8 @@ export const maWebhook = pgTable('ma_webhook', {
   headers: jsonb('headers').notNull().default(sql`'{}'::jsonb`),
   filters: jsonb('filters').notNull().default(sql`'{}'::jsonb`),
   payloadFields: jsonb('payload_fields').notNull().default(sql`'[]'::jsonb`),
-  createdAt: timestamp('created_at', {withTimezone: true}).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', {withTimezone: true}).defaultNow().notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 })
 
 export const maWebhookDelivery = pgTable(
@@ -202,7 +202,7 @@ export const maWebhookDelivery = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     webhookId: uuid('webhook_id')
       .notNull()
-      .references(() => maWebhook.id, {onDelete: 'cascade'}),
+      .references(() => maWebhook.id, { onDelete: 'cascade' }),
     event: text('event').notNull(),
     payload: jsonb('payload').notNull(),
     status: text('status').notNull(),
@@ -210,8 +210,8 @@ export const maWebhookDelivery = pgTable(
     responseBody: text('response_body'),
     error: text('error'),
     attempt: integer('attempt').notNull().default(1),
-    createdAt: timestamp('created_at', {withTimezone: true}).defaultNow().notNull(),
-    deliveredAt: timestamp('delivered_at', {withTimezone: true}),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    deliveredAt: timestamp('delivered_at', { withTimezone: true }),
   },
   (t) => ({
     webhookCreatedAtIdx: index('ma_webhook_delivery_webhook_created_idx').on(
@@ -235,7 +235,7 @@ export const maConfig = pgTable(
     scopeId: text('scope_id'),
     key: text('key').notNull(),
     value: jsonb('value'),
-    updatedAt: timestamp('updated_at', {withTimezone: true}).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => ({
     // Postgres treats NULL values as distinct in unique constraints by
@@ -262,7 +262,7 @@ export const maHistory = pgTable(
     /** State of the record _before_ this revision — fed back into the
      *  resource on revert. Nullable for legacy rows. */
     snapshotBefore: jsonb('snapshot_before'),
-    createdAt: timestamp('created_at', {withTimezone: true}).defaultNow().notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => ({
     recordIdx: index('ma_history_record_idx').on(
@@ -286,10 +286,10 @@ export const maAiTask = pgTable(
     output: jsonb('output'),
     error: text('error'),
     progress: integer('progress'),
-    createdAt: timestamp('created_at', {withTimezone: true}).defaultNow().notNull(),
-    updatedAt: timestamp('updated_at', {withTimezone: true}).defaultNow().notNull(),
-    startedAt: timestamp('started_at', {withTimezone: true}),
-    finishedAt: timestamp('finished_at', {withTimezone: true}),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+    startedAt: timestamp('started_at', { withTimezone: true }),
+    finishedAt: timestamp('finished_at', { withTimezone: true }),
   },
   (t) => ({
     kindStatusIdx: index('ma_ai_task_kind_status_idx').on(t.kind, t.status),
@@ -304,10 +304,10 @@ export const maAiTaskEvent = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     taskId: uuid('task_id')
       .notNull()
-      .references(() => maAiTask.id, {onDelete: 'cascade'}),
+      .references(() => maAiTask.id, { onDelete: 'cascade' }),
     type: text('type').notNull(),
     data: jsonb('data').notNull().default(sql`'{}'::jsonb`),
-    createdAt: timestamp('created_at', {withTimezone: true}).defaultNow().notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => ({
     taskCreatedIdx: index('ma_ai_task_event_task_created_idx').on(
@@ -323,9 +323,9 @@ export const maCache = pgTable(
     key: text('key').primaryKey(),
     value: jsonb('value'),
     tags: jsonb('tags').notNull().default(sql`'[]'::jsonb`),
-    expiresAt: timestamp('expires_at', {withTimezone: true}),
-    createdAt: timestamp('created_at', {withTimezone: true}).defaultNow().notNull(),
-    updatedAt: timestamp('updated_at', {withTimezone: true}).defaultNow().notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => ({
     expiresIdx: index('ma_cache_expires_idx').on(t.expiresAt),

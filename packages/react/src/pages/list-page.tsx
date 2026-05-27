@@ -86,7 +86,7 @@ import {
   SlidersHorizontal,
   Trash2,
   X,
-  Zap
+  Zap,
 } from 'lucide-react'
 import {
   useBulkDeleteRecords,
@@ -207,26 +207,26 @@ function attachDragScroll(el: HTMLElement): () => void {
 function defaultColumnSize(property: PropertyJSON): number {
   if (property.isId) return 100
   switch (property.type) {
-    case 'boolean':
-      return 110
-    case 'date':
-      return 140
-    case 'datetime':
-      return 180
-    case 'number':
-    case 'float':
-    case 'money':
-    case 'currency':
-      return 120
-    case 'color':
-      return 140
-    case 'reference':
-      return 200
-    case 'richtext':
-    case 'textarea':
-      return 320
-    default:
-      return 200
+  case 'boolean':
+    return 110
+  case 'date':
+    return 140
+  case 'datetime':
+    return 180
+  case 'number':
+  case 'float':
+  case 'money':
+  case 'currency':
+    return 120
+  case 'color':
+    return 140
+  case 'reference':
+    return 200
+  case 'richtext':
+  case 'textarea':
+    return 320
+  default:
+    return 200
   }
 }
 
@@ -298,15 +298,15 @@ export interface ResourceListPageProps {
 }
 
 export function ResourceListPage({
-                                   resourceId,
-                                   query: controlledQuery,
-                                   onQueryChange,
-                                   lockedFilters,
-                                   features,
-                                   selectedIds: controlledSelectedIds,
-                                   onSelectionChange,
-                                   disableRowNavigation,
-                                 }: ResourceListPageProps): React.ReactElement {
+  resourceId,
+  query: controlledQuery,
+  onQueryChange,
+  lockedFilters,
+  features,
+  selectedIds: controlledSelectedIds,
+  onSelectionChange,
+  disableRowNavigation,
+}: ResourceListPageProps): React.ReactElement {
   const resource = useResource(resourceId)
   const navigate = useNavigate()
   const route = useRoute()
@@ -315,7 +315,7 @@ export function ResourceListPage({
   const invokeRecord = useInvokeRecordAction(resourceId)
   const invokeBulk = useInvokeBulkAction(resourceId)
   const invokeResource = useInvokeResourceAction(resourceId)
-  const {t} = useI18n()
+  const { t } = useI18n()
   const notify = useNotify()
   const dialogs = useDialogs()
 
@@ -381,14 +381,14 @@ export function ResourceListPage({
   const sorting = React.useMemo<SortingState>(
     () =>
       urlQuery.sortBy
-        ? [{id: urlQuery.sortBy, desc: urlQuery.direction === 'desc'}]
+        ? [{ id: urlQuery.sortBy, desc: urlQuery.direction === 'desc' }]
         : [],
     [urlQuery.sortBy, urlQuery.direction],
   )
   const columnFilters = React.useMemo<ColumnFiltersState>(
     () =>
       urlQuery.filters
-        ? Object.entries(urlQuery.filters).map(([id, value]) => ({id, value}))
+        ? Object.entries(urlQuery.filters).map(([id, value]) => ({ id, value }))
         : [],
     [urlQuery.filters],
   )
@@ -451,7 +451,7 @@ export function ResourceListPage({
 
   const updateUrlQuery = React.useCallback(
     (changes: Partial<ListQueryState>) => {
-      const merged: ListQueryState = {...urlQuery, ...changes}
+      const merged: ListQueryState = { ...urlQuery, ...changes }
       const next: ListQueryState = {}
       if (merged.page && merged.page > 1) next.page = merged.page
       if (merged.perPage && merged.perPage !== 20) next.perPage = merged.perPage
@@ -465,7 +465,7 @@ export function ResourceListPage({
       navigate({
         name: 'list',
         resourceId,
-        ...(Object.keys(next).length > 0 ? {query: next} : {}),
+        ...(Object.keys(next).length > 0 ? { query: next } : {}),
       })
     },
     [isControlled, onQueryChange, navigate, resourceId, urlQuery],
@@ -515,7 +515,7 @@ export function ResourceListPage({
     (updates: Record<string, string>) => {
       const next = columnFiltersRef.current.filter((f) => !(f.id in updates))
       for (const [id, value] of Object.entries(updates)) {
-        if (value) next.push({id, value})
+        if (value) next.push({ id, value })
       }
       handleFilterChange(next)
     },
@@ -542,17 +542,17 @@ export function ResourceListPage({
 
   const query = React.useMemo<ListQuery>(() => {
     // Locked filters are merged in but never written to URL or column state.
-    const mergedFilters = {...(lockedFilters ?? {}), ...(urlQuery.filters ?? {})}
+    const mergedFilters = { ...(lockedFilters ?? {}), ...(urlQuery.filters ?? {}) }
     return {
       page: urlQuery.page ?? 1,
       perPage: urlQuery.perPage ?? 20,
       ...(urlQuery.sortBy
         ? {
           sortBy: urlQuery.sortBy,
-          ...(urlQuery.direction ? {direction: urlQuery.direction} : {}),
+          ...(urlQuery.direction ? { direction: urlQuery.direction } : {}),
         }
         : {}),
-      ...(Object.keys(mergedFilters).length > 0 ? {filters: mergedFilters} : {}),
+      ...(Object.keys(mergedFilters).length > 0 ? { filters: mergedFilters } : {}),
     }
   }, [
     urlQuery.page,
@@ -605,7 +605,7 @@ export function ResourceListPage({
         enableResizing: false,
         size: 40,
         minSize: 0,
-        header: ({table}) => {
+        header: ({ table }) => {
           const all = table.getIsAllPageRowsSelected()
           const some = table.getIsSomePageRowsSelected()
           return (
@@ -616,7 +616,7 @@ export function ResourceListPage({
             />
           )
         },
-        cell: ({row}) => (
+        cell: ({ row }) => (
           <Checkbox
             checked={row.getIsSelected()}
             onCheckedChange={(v) => row.toggleSelected(!!v)}
@@ -631,7 +631,7 @@ export function ResourceListPage({
       accessorFn: (row) => row.params[property.path],
       size: defaultColumnSize(property),
       minSize: 80,
-      header: ({column}) => (
+      header: ({ column }) => (
         <div className="flex items-center gap-0.5">
           <SortHeader
             property={property}
@@ -662,7 +662,7 @@ export function ResourceListPage({
         </div>
       ),
       enableSorting: property.isSortable,
-      cell: ({row}) => (
+      cell: ({ row }) => (
         <CellContent
           resourceId={resourceId}
           recordId={row.original.id}
@@ -680,15 +680,15 @@ export function ResourceListPage({
       enableResizing: false,
       size: 44,
       minSize: 0,
-      cell: ({row}) => (
+      cell: ({ row }) => (
         <RowActions
           t={t}
           customActions={customRecordActions}
           onView={() =>
-            navigate({name: 'show', resourceId, recordId: row.original.id})
+            navigate({ name: 'show', resourceId, recordId: row.original.id })
           }
           onEdit={() =>
-            navigate({name: 'edit', resourceId, recordId: row.original.id})
+            navigate({ name: 'edit', resourceId, recordId: row.original.id })
           }
           onDelete={async () => {
             const ok = await dialogs.confirm({
@@ -699,18 +699,18 @@ export function ResourceListPage({
             })
             if (!ok) return
             remove.mutate(row.original.id, {
-              onSuccess: () => notify.success({key: 'toast:deleted'}),
+              onSuccess: () => notify.success({ key: 'toast:deleted' }),
               onError: (err) =>
                 notify.error(
-                  {key: 'toast:deleteFailed'},
-                  {description: err instanceof Error ? err.message : String(err)},
+                  { key: 'toast:deleteFailed' },
+                  { description: err instanceof Error ? err.message : String(err) },
                 ),
             })
           }}
           onInvokeAction={async (action) => {
             if (!await confirmGuard(action, dialogs)) return
             invokeRecord.mutate(
-              {recordId: row.original.id, actionName: action.name},
+              { recordId: row.original.id, actionName: action.name },
               {
                 onSuccess: (res) => {
                   if (res.notice) {
@@ -718,10 +718,10 @@ export function ResourceListPage({
                       : res.notice.type === 'warning' ? 'warning'
                         : res.notice.type === 'info' ? 'info'
                           : 'success'
-                    notify[type]({message: res.notice.message})
+                    notify[type]({ message: res.notice.message })
                   }
                 },
-                onError: (err) => notify.error({message: err.message}),
+                onError: (err) => notify.error({ message: err.message }),
               },
             )
           }}
@@ -752,7 +752,7 @@ export function ResourceListPage({
     data: records.data?.records ?? [],
     columns,
     pageCount,
-    state: {sorting, columnFilters, columnVisibility, pagination, rowSelection, columnSizing},
+    state: { sorting, columnFilters, columnVisibility, pagination, rowSelection, columnSizing },
     onSortingChange: handleSortingChange,
     onColumnFiltersChange: handleFilterChange,
     onColumnVisibilityChange: setColumnVisibility,
@@ -767,7 +767,7 @@ export function ResourceListPage({
     // 'onEnd' commits the new size only when the user releases the handle,
     // avoiding a re-render storm that 'onChange' triggers on every mousemove.
     columnResizeMode: 'onEnd',
-    defaultColumn: {minSize: 80, size: 200, maxSize: 800},
+    defaultColumn: { minSize: 80, size: 200, maxSize: 800 },
     getCoreRowModel: getCoreRowModel(),
     getRowId: (row) => row.id,
   })
@@ -788,28 +788,28 @@ export function ResourceListPage({
   useHotkey(
     'n',
     () => {
-      navigate({name: 'new', resourceId})
+      navigate({ name: 'new', resourceId })
     },
-    {enabled: f.create, description: t('common:new')},
+    { enabled: f.create, description: t('common:new') },
   )
   useHotkey(
     'r',
     () => {
       if (!records.isFetching) records.refetch()
     },
-    {enabled: f.refresh, description: t('common:refresh')},
+    { enabled: f.refresh, description: t('common:refresh') },
   )
   useHotkey(
     'f',
     () => {
       setFilterOpen((v) => !v)
     },
-    {enabled: f.filters, description: t('common:filters')},
+    { enabled: f.filters, description: t('common:filters') },
   )
 
   const handleBulkDelete = React.useCallback(async () => {
     const ok = await dialogs.confirm({
-      title: t('common:bulkDeleteConfirm', {count: selectedCount}),
+      title: t('common:bulkDeleteConfirm', { count: selectedCount }),
       confirmLabel: t('common:delete'),
       destructive: true,
     })
@@ -817,15 +817,15 @@ export function ResourceListPage({
     bulkRemove.mutate(selectedIds, {
       onSuccess: () => {
         setRowSelection({})
-        notify.success({key: 'toast:bulkDeleted', params: {count: selectedCount}})
+        notify.success({ key: 'toast:bulkDeleted', params: { count: selectedCount } })
       },
       onError: (err) =>
         notify.error(
-          {key: 'toast:bulkDeleteFailed'},
-          {description: err instanceof Error ? err.message : String(err)},
+          { key: 'toast:bulkDeleteFailed' },
+          { description: err instanceof Error ? err.message : String(err) },
         ),
     })
-  }, [bulkRemove, dialogs, notify, selectedCount, selectedIds, t])
+  }, [bulkRemove, dialogs, notify, selectedCount, selectedIds, setRowSelection, t])
 
   if (!resource) {
     return (
@@ -918,7 +918,7 @@ export function ResourceListPage({
                   size="sm"
                   onClick={() =>
                     dialogs.open({
-                      render: ({close}) => (
+                      render: ({ close }) => (
                         <ExportDialog
                           resourceId={resourceId}
                           resourceLabel={resource.name}
@@ -940,7 +940,7 @@ export function ResourceListPage({
                   onAction={async (action) => {
                     if (!await confirmGuard(action, dialogs)) return
                     invokeResource.mutate(
-                      {actionName: action.name},
+                      { actionName: action.name },
                       {
                         onSuccess: (res) => {
                           if (res.notice) {
@@ -948,10 +948,10 @@ export function ResourceListPage({
                               : res.notice.type === 'warning' ? 'warning'
                                 : res.notice.type === 'info' ? 'info'
                                   : 'success'
-                            notify[type]({message: res.notice.message})
+                            notify[type]({ message: res.notice.message })
                           }
                         },
-                        onError: (err) => notify.error({message: err.message}),
+                        onError: (err) => notify.error({ message: err.message }),
                       },
                     )
                   }}
@@ -967,7 +967,7 @@ export function ResourceListPage({
               {f.create && (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button size="sm" onClick={() => navigate({name: 'new', resourceId})}>
+                    <Button size="sm" onClick={() => navigate({ name: 'new', resourceId })}>
                       <Plus className="size-4"/>
                       <span className="hidden sm:inline">{t('common:new')}</span>
                     </Button>
@@ -992,11 +992,11 @@ export function ResourceListPage({
                 }
                 onValueChange={(v) => {
                   if (v === '_none_') {
-                    handleSortingChange([]);
+                    handleSortingChange([])
                     return
                   }
                   const sep = v.lastIndexOf(':')
-                  handleSortingChange([{id: v.slice(0, sep), desc: v.slice(sep + 1) === 'desc'}])
+                  handleSortingChange([{ id: v.slice(0, sep), desc: v.slice(sep + 1) === 'desc' }])
                 }}
               >
                 <SelectTrigger className="h-8 flex-1">
@@ -1030,13 +1030,13 @@ export function ResourceListPage({
               <EmptyTitle>{t('common:noRecords')}</EmptyTitle>
               {f.create && (
                 <EmptyDescription>
-                  {t('common:noRecordsHint', {resource: resource.name})}
+                  {t('common:noRecordsHint', { resource: resource.name })}
                 </EmptyDescription>
               )}
             </EmptyHeader>
             {f.create && (
               <EmptyContent>
-                <Button size="sm" onClick={() => navigate({name: 'new', resourceId})}>
+                <Button size="sm" onClick={() => navigate({ name: 'new', resourceId })}>
                   <Plus className="size-4"/>
                   {t('common:new')}
                 </Button>
@@ -1052,7 +1052,7 @@ export function ResourceListPage({
               <div
                 className="flex flex-row items-center justify-between gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2">
                 <div className="min-w-0 truncate text-sm font-medium">
-                  {t('common:selectedCount', {count: selectedCount})}
+                  {t('common:selectedCount', { count: selectedCount })}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <Button
@@ -1070,7 +1070,7 @@ export function ResourceListPage({
                       onAction={async (action) => {
                         if (!await confirmGuard(action, dialogs)) return
                         invokeBulk.mutate(
-                          {actionName: action.name, ids: selectedIds},
+                          { actionName: action.name, ids: selectedIds },
                           {
                             onSuccess: (res) => {
                               setRowSelection({})
@@ -1079,10 +1079,10 @@ export function ResourceListPage({
                                   : res.notice.type === 'warning' ? 'warning'
                                     : res.notice.type === 'info' ? 'info'
                                       : 'success'
-                                notify[type]({message: res.notice.message})
+                                notify[type]({ message: res.notice.message })
                               }
                             },
-                            onError: (err) => notify.error({message: err.message}),
+                            onError: (err) => notify.error({ message: err.message }),
                           },
                         )
                       }}
@@ -1109,7 +1109,7 @@ export function ResourceListPage({
             )}
             {/* Mobile: card-per-record stack. Hidden ≥ sm. */}
             <div className="space-y-2 sm:hidden">
-              {records.isFetching && Array.from({length: pagination.pageSize}, (_, i) => (
+              {records.isFetching && Array.from({ length: pagination.pageSize }, (_, i) => (
                 <div key={`skel-card-${i}`} className="rounded-lg border border-border bg-card p-3">
                   <div className="flex items-start gap-3">
                     <Skeleton className="mt-1 h-4 w-4 flex-none rounded"/>
@@ -1122,7 +1122,7 @@ export function ResourceListPage({
                         <Skeleton className="h-7 w-7 shrink-0 rounded"/>
                       </div>
                       <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2">
-                        {Array.from({length: 4}, (_, j) => (
+                        {Array.from({ length: 4 }, (_, j) => (
                           <div key={j} className="space-y-1">
                             <Skeleton className="h-2.5 w-14"/>
                             <Skeleton className={`h-4 ${SKEL_WIDTHS[(i * 3 + j) % SKEL_WIDTHS.length]}`}/>
@@ -1135,7 +1135,7 @@ export function ResourceListPage({
               ))}
               {!records.isFetching && records.isError && (
                 <div className="rounded-md border border-border px-4 py-8 text-left text-destructive">
-                  {t('common:loadFailed', {error: String(records.error)})}
+                  {t('common:loadFailed', { error: String(records.error) })}
                 </div>
               )}
               {!records.isFetching && table.getRowModel().rows.map((row) => (
@@ -1149,8 +1149,8 @@ export function ResourceListPage({
                   showSelect={showSelectColumn}
                   selected={row.getIsSelected()}
                   onToggleSelect={(v) => row.toggleSelected(v)}
-                  onView={() => navigate({name: 'show', resourceId, recordId: row.original.id})}
-                  onEdit={() => navigate({name: 'edit', resourceId, recordId: row.original.id})}
+                  onView={() => navigate({ name: 'show', resourceId, recordId: row.original.id })}
+                  onEdit={() => navigate({ name: 'edit', resourceId, recordId: row.original.id })}
                   onDelete={async () => {
                     const ok = await dialogs.confirm({
                       title: t('common:confirmDelete'),
@@ -1160,11 +1160,11 @@ export function ResourceListPage({
                     })
                     if (!ok) return
                     remove.mutate(row.original.id, {
-                      onSuccess: () => notify.success({key: 'toast:deleted'}),
+                      onSuccess: () => notify.success({ key: 'toast:deleted' }),
                       onError: (err) =>
                         notify.error(
-                          {key: 'toast:deleteFailed'},
-                          {description: err instanceof Error ? err.message : String(err)},
+                          { key: 'toast:deleteFailed' },
+                          { description: err instanceof Error ? err.message : String(err) },
                         ),
                     })
                   }}
@@ -1172,7 +1172,7 @@ export function ResourceListPage({
                   onInvokeAction={async (action) => {
                     if (!await confirmGuard(action, dialogs)) return
                     invokeRecord.mutate(
-                      {recordId: row.original.id, actionName: action.name},
+                      { recordId: row.original.id, actionName: action.name },
                       {
                         onSuccess: (res) => {
                           if (res.notice) {
@@ -1180,10 +1180,10 @@ export function ResourceListPage({
                               : res.notice.type === 'warning' ? 'warning'
                                 : res.notice.type === 'info' ? 'info'
                                   : 'success'
-                            notify[type]({message: res.notice.message})
+                            notify[type]({ message: res.notice.message })
                           }
                         },
-                        onError: (err) => notify.error({message: err.message}),
+                        onError: (err) => notify.error({ message: err.message }),
                       },
                     )
                   }}
@@ -1269,7 +1269,7 @@ export function ResourceListPage({
                             {hg.headers.map((header) => (
                               <TableHead
                                 key={header.id}
-                                style={{width: sizeOf(header.column.id, header.getSize())}}
+                                style={{ width: sizeOf(header.column.id, header.getSize()) }}
                                 className={cn(
                                   'relative select-none',
                                   header.column.id === '_actions' &&
@@ -1300,12 +1300,12 @@ export function ResourceListPage({
                       </TableHeader>
                       <TableBody>
                         {records.isFetching ? (
-                          Array.from({length: pagination.pageSize}, (_, i) => (
+                          Array.from({ length: pagination.pageSize }, (_, i) => (
                             <TableRow key={`skel-${i}`} className="pointer-events-none">
                               {table.getVisibleLeafColumns().map((col, j) => (
                                 <TableCell
                                   key={col.id}
-                                  style={{width: sizeOf(col.id, col.getSize())}}
+                                  style={{ width: sizeOf(col.id, col.getSize()) }}
                                   className={cn(
                                     col.id === '_actions' &&
                                       'sticky right-0 z-10 bg-card px-1 shadow-[-4px_0_8px_-6px_rgba(0,0,0,0.15)]',
@@ -1326,7 +1326,7 @@ export function ResourceListPage({
                           <TableRow>
                             <TableCell colSpan={columns.length} className="py-8">
                               <div className="sticky left-4 w-fit text-destructive">
-                                {t('common:loadFailed', {error: String(records.error)})}
+                                {t('common:loadFailed', { error: String(records.error) })}
                               </div>
                             </TableCell>
                           </TableRow>
@@ -1343,7 +1343,7 @@ export function ResourceListPage({
                                   row.toggleSelected(!row.getIsSelected())
                                   return
                                 }
-                                navigate({name: 'edit', resourceId, recordId: row.original.id})
+                                navigate({ name: 'edit', resourceId, recordId: row.original.id })
                               }}
                               onAuxClick={(e) => {
                                 if (e.button !== 1) return
@@ -1351,7 +1351,7 @@ export function ResourceListPage({
                                 if (target.closest('a, button, [role="menuitem"]')) return
                                 if (disableRowNavigation) return
                                 e.preventDefault()
-                                openRouteInNewTab({name: 'edit', resourceId, recordId: row.original.id})
+                                openRouteInNewTab({ name: 'edit', resourceId, recordId: row.original.id })
                               }}
                               onMouseDown={(e) => {
                                 if (e.button === 1) {
@@ -1364,7 +1364,7 @@ export function ResourceListPage({
                               {row.getVisibleCells().map((cell) => (
                                 <TableCell
                                   key={cell.id}
-                                  style={{width: sizeOf(cell.column.id, cell.column.getSize())}}
+                                  style={{ width: sizeOf(cell.column.id, cell.column.getSize()) }}
                                   className={cn(
                                     'overflow-hidden',
                                     cell.column.id === '_actions' &&
@@ -1385,7 +1385,7 @@ export function ResourceListPage({
                       <div
                         aria-hidden="true"
                         className="pointer-events-none absolute top-0 z-20 h-full w-px bg-primary"
-                        style={{left: resizeLeft}}
+                        style={{ left: resizeLeft }}
                       />
                     )}
                   </div>
@@ -1403,7 +1403,7 @@ export function ResourceListPage({
       {f.breadcrumbs && (
         <PageBreadcrumbs
           className="mb-2 sm:mb-4"
-          items={[homeCrumb(t('common:home')), {label: resource.name}]}
+          items={[homeCrumb(t('common:home')), { label: resource.name }]}
         />
       )}
       {f.card ? (
@@ -1451,10 +1451,10 @@ export function ResourceListPage({
 }
 
 function SortHeader({
-                      property,
-                      state,
-                      onSort,
-                    }: {
+  property,
+  state,
+  onSort,
+}: {
   property: PropertyJSON
   state: 'none' | 'asc' | 'desc'
   onSort(): void
@@ -1476,12 +1476,12 @@ function SortHeader({
 }
 
 function CellContent({
-                       resourceId,
-                       recordId,
-                       property,
-                       value,
-                       populated,
-                     }: {
+  resourceId,
+  recordId,
+  property,
+  value,
+  populated,
+}: {
   resourceId: string
   recordId: string
   property: PropertyJSON
@@ -1491,7 +1491,7 @@ function CellContent({
   if (property.isId) {
     return (
       <Link
-        to={{name: 'show', resourceId, recordId}}
+        to={{ name: 'show', resourceId, recordId }}
         className="font-mono text-sm font-medium text-foreground hover:underline"
         onClick={(e) => e.stopPropagation()}
       >
@@ -1532,13 +1532,13 @@ function CellContent({
 }
 
 function RowActions({
-                      onView,
-                      onEdit,
-                      onDelete,
-                      onInvokeAction,
-                      customActions = [],
-                      t,
-                    }: {
+  onView,
+  onEdit,
+  onDelete,
+  onInvokeAction,
+  customActions = [],
+  t,
+}: {
   onView(): void
   onEdit(): void
   onDelete(): void
@@ -1583,10 +1583,10 @@ function RowActions({
 }
 
 function ColumnVisibilityMenu<TData>({
-                                       table,
-                                       properties,
-                                       t,
-                                     }: {
+  table,
+  properties,
+  t,
+}: {
   table: ReturnType<typeof useReactTable<TData>>
   properties: PropertyJSON[]
   t: (key: string, params?: Record<string, string | number>) => string
@@ -1628,26 +1628,26 @@ function getPageRange(pageIndex: number, pageCount: number, windowSize = 10): nu
   let start = pageIndex - half
   let end = start + windowSize
   if (start < 0) {
-    start = 0;
+    start = 0
     end = windowSize
   }
   if (end > pageCount) {
-    end = pageCount;
+    end = pageCount
     start = Math.max(0, end - windowSize)
   }
-  return Array.from({length: end - start}, (_, i) => start + i)
+  return Array.from({ length: end - start }, (_, i) => start + i)
 }
 
 function Paginator<TData>({
-                            table,
-                            total,
-                            t,
-                          }: {
+  table,
+  total,
+  t,
+}: {
   table: ReturnType<typeof useReactTable<TData>>
   total: number
   t: (key: string, params?: Record<string, string | number>) => string
 }): React.ReactElement {
-  const {pageIndex, pageSize} = table.getState().pagination
+  const { pageIndex, pageSize } = table.getState().pagination
   const pageCount = table.getPageCount()
   const pages = getPageRange(pageIndex, pageCount)
   // Click-and-drag horizontal scroll on the page-buttons row, mirroring the
@@ -1680,7 +1680,7 @@ function Paginator<TData>({
           on desktop just the records-count label on the left. */}
       <div className="flex items-center justify-between gap-3 sm:justify-start">
         <div className="text-sm text-muted-foreground">
-          {t('common:recordsCount', {count: total})}
+          {t('common:recordsCount', { count: total })}
         </div>
         {/* Mobile-only per-page select inline with records count. */}
         <div className="sm:hidden">{perPageSelect}</div>
@@ -1765,12 +1765,12 @@ const ALL_STRING_OPS: StringFilterOp[] = ['co', 'nco', 'sw', 'ew', 'in', 'empty'
 const NULLARY_OPS: ReadonlySet<string> = new Set(['empty', 'nempty'])
 
 function parseFilterString(raw: string): { op: StringFilterOp; val: string } {
-  if (!raw) return {op: 'co', val: ''}
+  if (!raw) return { op: 'co', val: '' }
   const colonIdx = raw.indexOf(':')
-  if (colonIdx === -1) return {op: 'co', val: raw}
+  if (colonIdx === -1) return { op: 'co', val: raw }
   const prefix = raw.slice(0, colonIdx)
-  if (STRING_OPS.has(prefix)) return {op: prefix as StringFilterOp, val: raw.slice(colonIdx + 1)}
-  return {op: 'co', val: raw}
+  if (STRING_OPS.has(prefix)) return { op: prefix as StringFilterOp, val: raw.slice(colonIdx + 1) }
+  return { op: 'co', val: raw }
 }
 
 function encodeFilter(op: StringFilterOp, val: string): string {
@@ -1900,14 +1900,14 @@ function NumericFilterField({
 // ─── Filter panel (side sheet) ───────────────────────────────────────────────
 
 function FilterPanel({
-                       open,
-                       onOpenChange,
-                       properties,
-                       filters,
-                       onChange,
-                       resourceId,
-                       t,
-                     }: {
+  open,
+  onOpenChange,
+  properties,
+  filters,
+  onChange,
+  resourceId,
+  t,
+}: {
   open: boolean
   onOpenChange(open: boolean): void
   properties: PropertyJSON[]
@@ -1924,7 +1924,7 @@ function FilterPanel({
 
   const setDraftFilter = (id: string, value: unknown) => {
     const without = draft.filter((f) => f.id !== id)
-    setDraft(value != null && value !== '' ? [...without, {id, value}] : without)
+    setDraft(value != null && value !== '' ? [...without, { id, value }] : without)
   }
 
   const handleApply = () => {
@@ -1991,16 +1991,16 @@ function FilterPanel({
 // ─── Filter field (generic wrapper per property) ─────────────────────────────
 
 function FilterField({
-                       property,
-                       value,
-                       onChange,
-                       valueFrom,
-                       valueTo,
-                       onChangeFrom,
-                       onChangeTo,
-                       resourceId,
-                       t,
-                     }: {
+  property,
+  value,
+  onChange,
+  valueFrom,
+  valueTo,
+  onChangeFrom,
+  onChangeTo,
+  resourceId,
+  t,
+}: {
   property: PropertyJSON
   value: string | undefined
   onChange(v: unknown): void
@@ -2038,13 +2038,13 @@ function FilterField({
 }
 
 function DateRangeFilter({
-                           mode,
-                           from,
-                           to,
-                           onFromChange,
-                           onToChange,
-                           t,
-                         }: {
+  mode,
+  from,
+  to,
+  onFromChange,
+  onToChange,
+  t,
+}: {
   mode: 'date' | 'datetime'
   from: string | undefined
   to: string | undefined
@@ -2079,12 +2079,12 @@ function DateRangeFilter({
 // ─── Filter input (dispatches to type-specific UIs) ──────────────────────────
 
 function FilterInput({
-                       property,
-                       value,
-                       onChange,
-                       resourceId,
-                       t,
-                     }: {
+  property,
+  value,
+  onChange,
+  resourceId,
+  t,
+}: {
   property: PropertyJSON
   value: string
   onChange(v: unknown): void
@@ -2123,52 +2123,52 @@ function FilterInput({
   }
 
   switch (property.type) {
-    case 'boolean':
-      return (
-        <Select value={value || '_any_'} onValueChange={(v) => onChange(v === '_any_' ? '' : v)}>
-          <SelectTrigger className="h-8">
-            <SelectValue placeholder={t('common:any')}/>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="_any_">{t('common:any')}</SelectItem>
-            <SelectItem value="true">{t('common:yes')}</SelectItem>
-            <SelectItem value="false">{t('common:no')}</SelectItem>
-          </SelectContent>
-        </Select>
-      )
-    case 'number':
-    case 'float':
-    case 'money':
-    case 'currency':
-      return (
-        <NumericFilterField
-          value={value}
-          onChange={onChange}
-          t={t}
-        />
-      )
-    default:
-      return (
-        <StringFilterField
-          property={property}
-          value={value}
-          onChange={onChange}
-          resourceId={resourceId}
-          t={t}
-        />
-      )
+  case 'boolean':
+    return (
+      <Select value={value || '_any_'} onValueChange={(v) => onChange(v === '_any_' ? '' : v)}>
+        <SelectTrigger className="h-8">
+          <SelectValue placeholder={t('common:any')}/>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="_any_">{t('common:any')}</SelectItem>
+          <SelectItem value="true">{t('common:yes')}</SelectItem>
+          <SelectItem value="false">{t('common:no')}</SelectItem>
+        </SelectContent>
+      </Select>
+    )
+  case 'number':
+  case 'float':
+  case 'money':
+  case 'currency':
+    return (
+      <NumericFilterField
+        value={value}
+        onChange={onChange}
+        t={t}
+      />
+    )
+  default:
+    return (
+      <StringFilterField
+        property={property}
+        value={value}
+        onChange={onChange}
+        resourceId={resourceId}
+        t={t}
+      />
+    )
   }
 }
 
 // ─── String filter with operator selector + value picker ─────────────────────
 
 function StringFilterField({
-                             property,
-                             value,
-                             onChange,
-                             resourceId,
-                             t,
-                           }: {
+  property,
+  value,
+  onChange,
+  resourceId,
+  t,
+}: {
   property: PropertyJSON
   value: string
   onChange(v: unknown): void
@@ -2187,7 +2187,7 @@ function StringFilterField({
   }, [value])
 
   // Auto-detect: fetch distinct values to see if field is low-cardinality.
-  const {data: distinctData} = useDistinctValues(resourceId, property.path, {
+  const { data: distinctData } = useDistinctValues(resourceId, property.path, {
     limit: 101,
   })
   const isLowCardinality = distinctData != null && !distinctData.hasMore
@@ -2263,13 +2263,13 @@ function StringFilterField({
 // ─── Value picker (checkbox list with search, Metabase-style) ────────────────
 
 function FilterValuePicker({
-                             resourceId,
-                             field,
-                             selected,
-                             onChange,
-                             preloadedValues,
-                             t,
-                           }: {
+  resourceId,
+  field,
+  selected,
+  onChange,
+  preloadedValues,
+  t,
+}: {
   resourceId: string
   field: string
   selected: string[]
@@ -2283,20 +2283,20 @@ function FilterValuePicker({
 
   // Fetch values from server (skipped when preloaded values are available).
   const needsServerSearch = preloadedValues == null
-  const {data: serverData, isLoading} = useDistinctValues(
+  const { data: serverData, isLoading } = useDistinctValues(
     resourceId,
     field,
-    {search: needsServerSearch ? search : undefined, limit: 100, enabled: needsServerSearch},
+    { search: needsServerSearch ? search : undefined, limit: 100, enabled: needsServerSearch },
   )
 
-  // Use preloaded values or server data.
-  const allValues = preloadedValues ?? serverData?.values ?? []
-  // Client-side filter when using preloaded values.
+  // Client-side filter when using preloaded values, falling back to the
+  // server-fetched distinct values otherwise.
   const displayValues = React.useMemo(() => {
+    const allValues = preloadedValues ?? serverData?.values ?? []
     if (!preloadedValues || !search) return allValues
     const lower = search.toLowerCase()
     return allValues.filter((v) => v.toLowerCase().includes(lower))
-  }, [allValues, preloadedValues, search])
+  }, [preloadedValues, serverData?.values, search])
 
   const toggle = (val: string) => {
     if (selectedSet.has(val)) {
@@ -2383,7 +2383,7 @@ function FilterValuePicker({
       {/* Selected count */}
       {selected.length > 0 && (
         <div className="text-xs text-muted-foreground">
-          {t('common:selectedCount', {count: selected.length})}
+          {t('common:selectedCount', { count: selected.length })}
         </div>
       )}
     </div>
@@ -2395,12 +2395,12 @@ function FilterValuePicker({
 // Popover with the same full filter controls as the side panel (FilterField).
 // The icon is highlighted when a filter for this column is active.
 function ColumnFilterPopover({
-                               property,
-                               getFilters,
-                               onApply,
-                               resourceId,
-                               t,
-                             }: {
+  property,
+  getFilters,
+  onApply,
+  resourceId,
+  t,
+}: {
   property: PropertyJSON
   getFilters(): ColumnFiltersState
   onApply(updates: Record<string, string>): void
@@ -2468,7 +2468,7 @@ function ColumnFilterPopover({
             'inline-flex h-6 w-6 shrink-0 items-center justify-center rounded hover:bg-accent',
             isActive ? 'text-primary' : 'text-muted-foreground opacity-50 hover:opacity-100',
           )}
-          aria-label={t('common:filter', {label: property.label})}
+          aria-label={t('common:filter', { label: property.label })}
         >
           <ListFilter className="size-3.5"/>
         </button>
@@ -2504,19 +2504,19 @@ function ColumnFilterPopover({
 // Renders a single record as a tap-to-edit card with a header (avatar + title +
 // id), a 2-column grid of property values, and a contextual menu.
 function RecordCard({
-                      record,
-                      properties,
-                      resourceId,
-                      showSelect,
-                      selected,
-                      onToggleSelect,
-                      onView,
-                      onEdit,
-                      onDelete,
-                      customActions = [],
-                      onInvokeAction,
-                      t,
-                    }: {
+  record,
+  properties,
+  resourceId,
+  showSelect,
+  selected,
+  onToggleSelect,
+  onView,
+  onEdit,
+  onDelete,
+  customActions = [],
+  onInvokeAction,
+  t,
+}: {
   record: RecordJSON
   properties: PropertyJSON[]
   resourceId: string
@@ -2565,7 +2565,7 @@ function RecordCard({
     const target = e.target as HTMLElement
     if (target.closest('a, button, [role="menuitem"]')) return
     e.preventDefault()
-    openRouteInNewTab({name: 'edit', resourceId, recordId: record.id})
+    openRouteInNewTab({ name: 'edit', resourceId, recordId: record.id })
   }
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.button !== 1) return

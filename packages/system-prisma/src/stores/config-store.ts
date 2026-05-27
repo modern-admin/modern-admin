@@ -1,4 +1,4 @@
-import { uuidv7, type ConfigEntry, type ConfigScope, type IConfigStore } from '@modern-admin/core'
+import { type ConfigEntry, type ConfigScope, type IConfigStore, uuidv7 } from '@modern-admin/core'
 import type { PrismaDelegate } from '../types.js'
 
 interface ConfigRow {
@@ -22,12 +22,9 @@ const rowToEntry = (row: ConfigRow): ConfigEntry => ({
   updatedAt: row.updatedAt.toISOString(),
 })
 
-const compositeWhere = (scope: ConfigScope, scopeId: string | null, key: string) => ({
-  scope_scopeId_key: { scope, scopeId: encodeScopeId(scopeId), key },
-})
-
 export class PrismaConfigStore implements IConfigStore {
-  constructor(private readonly delegate: PrismaDelegate<ConfigRow>) {}
+  constructor(private readonly delegate: PrismaDelegate<ConfigRow>) {
+  }
 
   async get(scope: ConfigScope, scopeId: string | null, key: string): Promise<unknown> {
     // findFirst instead of findUnique: tolerates accidental duplicates and

@@ -26,9 +26,9 @@ export const normalizeActionNesting = (
     typeof item === 'string'
       ? { name: item }
       : {
-          name: item.name,
-          ...(item.icon !== undefined ? { icon: item.icon } : {}),
-        },
+        name: item.name,
+        ...(item.icon !== undefined ? { icon: item.icon } : {}),
+      },
   )
 }
 

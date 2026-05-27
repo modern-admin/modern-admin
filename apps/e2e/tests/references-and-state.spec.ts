@@ -119,7 +119,7 @@ test.describe('List page — deep-link URL state', () => {
     await waitForRows(page)
 
     const headers = await page.locator('thead tr').first().locator('th').allInnerTexts()
-    const nameIdx = headers.findIndex((h) => /^name$/i.test(h.trim()))
+    const nameIdx = headers.findIndex((h) => /^full name$/i.test(h.trim()))
     expect(nameIdx).toBeGreaterThanOrEqual(0)
 
     const firstName = (

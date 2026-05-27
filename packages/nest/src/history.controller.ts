@@ -18,7 +18,7 @@ import { ApiCookieAuth, ApiTags } from '@nestjs/swagger'
 import {
   ActionNotFoundError,
   ForbiddenError,
-  ModernAdmin,
+  type ModernAdmin,
   RecordNotFoundError,
   ResourceNotFoundError,
   ValidationError,
