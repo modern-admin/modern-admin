@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/telemetry",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Opt-in usage telemetry for Modern Admin (privacy-first, MODERN_ADMIN_TELEMETRY=1 required).",
   "type": "module",
   "license": "MIT",

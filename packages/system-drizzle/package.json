@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/system-drizzle",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Drizzle-backed implementation of Modern Admin system stores.",
   "type": "module",
   "license": "MIT",

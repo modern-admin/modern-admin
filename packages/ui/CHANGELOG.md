@@ -1,5 +1,11 @@
 # @modern-admin/ui
 
+## 2.0.1
+
+### Patch Changes
+
+- [`bfcac54`](https://github.com/modern-admin/modern-admin/commit/bfcac5448e5c30725c8729489832be2d6beeb709) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Removed deprecated skill documentation and performed codebase cleanup including ESLint config updates, adapter refactoring, and React component improvements across all packages.
+
 ## 2.0.0
 
 ### Patch Changes

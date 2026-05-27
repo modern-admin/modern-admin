@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/adapter-prisma",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Prisma 7 adapter for Modern Admin — implements BaseDatabase/BaseResource on top of PrismaClient.",
   "type": "module",
   "license": "MIT",

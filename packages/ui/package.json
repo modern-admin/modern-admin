@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/ui",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "i18n-unaware shadcn/ui-style React component library used by @modern-admin/react.",
   "type": "module",
   "license": "MIT",
