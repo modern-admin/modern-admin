@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.base.json",
+  "files": [],
+  "references": [
+    { "path": "./packages/core" },
+    { "path": "./packages/nest" },
+    { "path": "./packages/react" },
+    { "path": "./packages/ui" },
+    { "path": "./packages/web" },
+    { "path": "./packages/adapter-prisma" },
+    { "path": "./packages/adapter-drizzle" },
+    { "path": "./packages/auth-better-auth" },
+    { "path": "./packages/cache-redis" },
+    { "path": "./apps/api-prisma" },
+    { "path": "./apps/web" }
+  ]
+}

@@ -1,0 +1,266 @@
+{
+  "navigation": {
+    "groups": {
+      "Content": "Контент",
+      "Catalog": "Каталог",
+      "Access Control": "Доступ",
+      "Customers": "Клиенты",
+      "User Management": "Пользователи"
+    }
+  },
+  "resources": {
+    "admins": {
+      "label": "Администраторы",
+      "properties": {
+        "email": { "label": "Email" },
+        "name": { "label": "Полное имя" },
+        "role": { "label": "Роль" },
+        "image": { "label": "Фото профиля" },
+        "banned": { "label": "Заблокирован" },
+        "banReason": { "label": "Причина блокировки" },
+        "banExpires": { "label": "Блокировка до" },
+        "emailVerified": { "label": "Email подтверждён" },
+        "createdAt": { "label": "Создан" },
+        "updatedAt": { "label": "Обновлён" }
+      }
+    },
+    "roles": {
+      "label": "Роли и права",
+      "properties": {
+        "name": { "label": "Название роли" },
+        "description": { "label": "Описание" },
+        "permissions": { "label": "Разрешения" },
+        "isBuiltin": { "label": "Встроенная" },
+        "createdAt": { "label": "Создана" },
+        "updatedAt": { "label": "Обновлена" }
+      }
+    },
+    "categories": {
+      "label": "Категории",
+      "properties": {
+        "name": { "label": "Внутреннее имя" },
+        "displayName": { "label": "Отображаемое имя" },
+        "slug": { "label": "URL slug" },
+        "description": { "label": "Описание" },
+        "position": { "label": "Позиция" },
+        "iconUrl": { "label": "Иконка" }
+      }
+    },
+    "comments": {
+      "label": "Комментарии",
+      "properties": {
+        "postId": { "label": "Пост" },
+        "authorId": { "label": "Автор" },
+        "body": { "label": "Текст комментария" },
+        "rating": { "label": "Оценка" },
+        "createdAt": { "label": "Опубликован" }
+      }
+    },
+    "tags": {
+      "label": "Теги",
+      "actions": {
+        "recount": { "label": "Пересчитать использования" },
+        "recountAll": { "label": "Пересчитать все теги" }
+      },
+      "properties": {
+        "name": { "label": "Название тега" },
+        "slug": { "label": "URL slug" },
+        "color": { "label": "Цвет" },
+        "usageCount": { "label": "Использований" }
+      }
+    },
+    "customers": {
+      "label": "Клиенты",
+      "properties": {
+        "email": {
+          "label": "Email",
+          "description": "Основной контактный email, используется для входа и уведомлений."
+        },
+        "name": { "label": "Полное имя" },
+        "phone": { "label": "Телефон" },
+        "tier": { "label": "Уровень" },
+        "avatarUrl": { "label": "Аватар" },
+        "websiteUrl": { "label": "Сайт" },
+        "bio": { "label": "О себе" },
+        "score": { "label": "Рейтинг" },
+        "birthday": { "label": "День рождения" },
+        "lastLoginAt": { "label": "Последний вход" },
+        "createdAt": { "label": "Дата регистрации" },
+        "newPassword": { "label": "Новый пароль" }
+      },
+      "actions": {
+        "resetPassword": { "label": "Сбросить пароль" }
+      }
+    },
+    "posts": {
+      "label": "Посты",
+      "actions": {
+        "publish": { "label": "Опубликовать" },
+        "unpublish": { "label": "Снять с публикации" },
+        "publishMany": { "label": "Опубликовать выбранные" }
+      },
+      "properties": {
+        "title": {
+          "label": "Заголовок поста",
+          "description": "Основной заголовок, который показывается на странице поста, в списках и в поиске админки."
+        },
+        "slug": {
+          "label": "URL slug",
+          "description": "Используется в публичном URL. Если оставить пустым, будет сгенерирован автоматически из заголовка."
+        },
+        "excerpt": { "label": "Краткое описание" },
+        "body": { "label": "Содержимое" },
+        "authorId": { "label": "Автор" },
+        "categoryId": { "label": "Категория" },
+        "coverUrl": { "label": "Обложка" },
+        "viewsCount": { "label": "Просмотры" },
+        "rating": { "label": "Рейтинг" },
+        "published": { "label": "Опубликован" },
+        "publishedAt": { "label": "Дата публикации" },
+        "tags": { "label": "Теги" },
+        "metadata": {
+          "label": "Метаданные публикации",
+          "description": "Дополнительные метаданные, у которых описания показываются как инфо-иконки у label формы и вложенных key-value полей.",
+          "keyValueFields": {
+            "featured": {
+              "label": "Рекомендуемый пост",
+              "description": "Помечает пост как рекомендуемый, чтобы витрины и лендинги могли выделять его выше остальных."
+            },
+            "locale": {
+              "label": "Локаль контента",
+              "description": "Основной язык или локаль содержимого поста.",
+              "availableValues": {
+                "en": "Английский",
+                "ru": "Русский",
+                "de": "Немецкий"
+              }
+            },
+            "readingMinutes": {
+              "label": "Время чтения",
+              "description": "Оценочное время чтения для пользователей, в минутах.",
+              "placeholder": "например, 5"
+            },
+            "channel": {
+              "label": "Канал дистрибуции",
+              "description": "Основной канал привлечения или распространения этого поста.",
+              "placeholder": "например, рассылка",
+              "availableValues": {
+                "web": "Сайт",
+                "newsletter": "Рассылка",
+                "rss": "RSS",
+                "twitter": "Twitter / X",
+                "telegram": "Telegram"
+              }
+            },
+            "reviewerEmail": {
+              "label": "Email ревьюера",
+              "description": "Внутренний проверяющий или согласующий. Можно выбрать существующего пользователя или ввести любой email.",
+              "placeholder": "выберите пользователя или введите email"
+            }
+          }
+        }
+      }
+    },
+    "postTags": {
+      "label": "Теги постов",
+      "properties": {
+        "postId": { "label": "Пост" },
+        "tagId": { "label": "Тег" },
+        "addedAt": { "label": "Добавлено" }
+      }
+    },
+    "favorites": {
+      "label": "Избранное",
+      "properties": {
+        "label": {
+          "label": "Отображаемое название",
+          "description": "Понятное название, которое будет видно в интерфейсе для сохранённого элемента."
+        },
+        "kind": {
+          "label": "Тип избранного",
+          "description": "Определяет, какое из связанных полей ниже станет видимым."
+        },
+        "postId": {
+          "label": "Пост",
+          "description": "Используйте это поле, если элемент избранного ссылается на пост."
+        },
+        "productId": {
+          "label": "Товар",
+          "description": "Используйте это поле, если элемент избранного ссылается на товар."
+        },
+        "categoryId": {
+          "label": "Категория",
+          "description": "Используйте это поле, если элемент избранного ссылается на категорию."
+        },
+        "createdAt": { "label": "Сохранено" }
+      }
+    },
+    "regionalContent": {
+      "label": "Региональный контент",
+      "properties": {
+        "name": {
+          "label": "Название кампании",
+          "description": "Внутреннее название кампании или промо-материала для контент-команды."
+        },
+        "region": {
+          "label": "Регион",
+          "description": "Выберите активный регион, чтобы показать соответствующие локализованные поля title и preview."
+        },
+        "titles": { "label": "Заголовки" },
+        "previews": { "label": "Превью" },
+        "publishedAt": { "label": "Дата публикации" },
+        "titles__eu": { "label": "Заголовок \u2014 Европа" },
+        "titles__us": { "label": "Заголовок \u2014 США" },
+        "titles__asia": { "label": "Заголовок \u2014 АТР" },
+        "previews__eu": { "label": "Превью \u2014 Европа" },
+        "previews__us": { "label": "Превью \u2014 США" },
+        "previews__asia": { "label": "Превью \u2014 АТР" }
+      }
+    },
+    "products": {
+      "label": "Товары",
+      "actions": {
+        "archive": { "label": "Архивировать" },
+        "restock": { "label": "Пополнить запас" },
+        "duplicateSku": { "label": "Дублировать SKU" },
+        "markFeaturedPalette": { "label": "Применить рекомендуемую палитру" }
+      },
+      "properties": {
+        "name": { "label": "Название товара" },
+        "sku": { "label": "SKU" },
+        "slug": { "label": "URL slug" },
+        "summary": { "label": "Краткое описание" },
+        "description": { "label": "Описание" },
+        "price": { "label": "Цена" },
+        "currencyCode": { "label": "Валюта" },
+        "accentColor": { "label": "Акцентный цвет" },
+        "inStock": { "label": "В наличии" },
+        "quantity": { "label": "Количество" },
+        "rating": { "label": "Рейтинг" },
+        "launchedAt": { "label": "Дата запуска" },
+        "thumbnail": {
+          "label": "Превью-изображение",
+          "description": "Главное изображение, используемое в списках товаров."
+        },
+        "gallery": {
+          "label": "Галерея",
+          "description": "Дополнительные изображения товара. Поддерживается множественная загрузка."
+        },
+        "thumbnailUrl": { "label": "Превью" },
+        "galleryUrl": { "label": "Галерея" },
+        "videoUrl": { "label": "Видео" },
+        "specs": { "label": "Характеристики" },
+        "categoryId": { "label": "Категория" },
+        "tags": { "label": "Теги" }
+      }
+    },
+    "productTags": {
+      "label": "Теги товаров",
+      "properties": {
+        "productId": { "label": "Товар" },
+        "tagId": { "label": "Тег" },
+        "position": { "label": "Позиция" }
+      }
+    }
+  }
+}

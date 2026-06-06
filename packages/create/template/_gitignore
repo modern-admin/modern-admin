@@ -1,0 +1,11 @@
+node_modules
+dist
+.DS_Store
+.env
+.env.*
+!.env.example
+*.log
+prisma/migrations/.lock
+.tsbuildinfo
+# Prisma 7 client output (regenerate with `bun run db:generate`)
+src/generated/

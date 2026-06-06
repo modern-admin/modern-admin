@@ -1,0 +1,19 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@3.0.0/schema.json",
+  "changelog": [
+    "@changesets/changelog-github",
+    { "repo": "modern-admin/modern-admin" }
+  ],
+  "commit": false,
+  "fixed": [],
+  "linked": [["@modern-admin/*"]],
+  "access": "public",
+  "baseBranch": "main",
+  "updateInternalDependencies": "patch",
+  "ignore": [
+    "@modern-admin/app-shared",
+    "@modern-admin/app-api-prisma",
+    "@modern-admin/app-web",
+    "@modern-admin/app-e2e"
+  ]
+}

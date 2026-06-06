@@ -1,0 +1,9 @@
+{
+  "extends": "@modern-admin/tsconfig/node.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "composite": false,
+    "noEmit": true
+  },
+  "include": ["src/**/*", "test/**/*"]
+}

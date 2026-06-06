@@ -1,0 +1,46 @@
+/tmp
+/out-tsc
+
+# dependencies
+/node_modules
+**/node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+/.pnp
+.pnp.js
+
+# build output
+**/dist
+**/build
+**/.output
+**/.tanstack
+**/.nest
+*.tsbuildinfo
+
+.ai
+.playwright-mcp
+
+# dev server logs captured by scripts/dev.sh
+.dev-logs
+
+# env
+.env
+.env.*
+!.env.example
+.npmrc
+
+.agents
+.cursor
+
+# editors
+.vscode/*
+.idea/workspace.xml
+.idea/tasks.xml
+.idea
+
+# OS
+.DS_Store
+
+# bun
+bun-debug.log

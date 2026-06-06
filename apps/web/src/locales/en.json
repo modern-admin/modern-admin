@@ -1,0 +1,266 @@
+{
+  "navigation": {
+    "groups": {
+      "Content": "Content",
+      "Catalog": "Catalog",
+      "Access Control": "Access control",
+      "Customers": "Customers",
+      "User Management": "User management"
+    }
+  },
+  "resources": {
+    "admins": {
+      "label": "Administrators",
+      "properties": {
+        "email": { "label": "Email" },
+        "name": { "label": "Full name" },
+        "role": { "label": "Role" },
+        "image": { "label": "Profile image" },
+        "banned": { "label": "Banned" },
+        "banReason": { "label": "Ban reason" },
+        "banExpires": { "label": "Ban expires" },
+        "emailVerified": { "label": "Email verified" },
+        "createdAt": { "label": "Created at" },
+        "updatedAt": { "label": "Updated at" }
+      }
+    },
+    "roles": {
+      "label": "Roles & permissions",
+      "properties": {
+        "name": { "label": "Role name" },
+        "description": { "label": "Description" },
+        "permissions": { "label": "Permissions" },
+        "isBuiltin": { "label": "Built-in" },
+        "createdAt": { "label": "Created at" },
+        "updatedAt": { "label": "Updated at" }
+      }
+    },
+    "categories": {
+      "label": "Categories",
+      "properties": {
+        "name": { "label": "Internal name" },
+        "displayName": { "label": "Display name" },
+        "slug": { "label": "URL slug" },
+        "description": { "label": "Description" },
+        "position": { "label": "Position" },
+        "iconUrl": { "label": "Icon" }
+      }
+    },
+    "comments": {
+      "label": "Comments",
+      "properties": {
+        "postId": { "label": "Post" },
+        "authorId": { "label": "Author" },
+        "body": { "label": "Comment text" },
+        "rating": { "label": "Rating" },
+        "createdAt": { "label": "Posted at" }
+      }
+    },
+    "tags": {
+      "label": "Tags",
+      "actions": {
+        "recount": { "label": "Recount usages" },
+        "recountAll": { "label": "Recount all tags" }
+      },
+      "properties": {
+        "name": { "label": "Tag name" },
+        "slug": { "label": "URL slug" },
+        "color": { "label": "Color" },
+        "usageCount": { "label": "Usages" }
+      }
+    },
+    "customers": {
+      "label": "Customers",
+      "properties": {
+        "email": {
+          "label": "Email",
+          "description": "Primary contact email used for sign-in and notifications."
+        },
+        "name": { "label": "Full name" },
+        "phone": { "label": "Phone" },
+        "tier": { "label": "Tier" },
+        "avatarUrl": { "label": "Avatar" },
+        "websiteUrl": { "label": "Website" },
+        "bio": { "label": "Bio" },
+        "score": { "label": "Score" },
+        "birthday": { "label": "Birthday" },
+        "lastLoginAt": { "label": "Last login" },
+        "createdAt": { "label": "Member since" },
+        "newPassword": { "label": "New password" }
+      },
+      "actions": {
+        "resetPassword": { "label": "Reset password" }
+      }
+    },
+    "posts": {
+      "label": "Posts",
+      "actions": {
+        "publish": { "label": "Publish" },
+        "unpublish": { "label": "Unpublish" },
+        "publishMany": { "label": "Publish selected" }
+      },
+      "properties": {
+        "title": {
+          "label": "Post title",
+          "description": "The primary title shown on the post page, in listings, and in admin search results."
+        },
+        "slug": {
+          "label": "URL slug",
+          "description": "Used in the public URL. It is auto-generated from the title if you leave it empty."
+        },
+        "excerpt": { "label": "Excerpt" },
+        "body": { "label": "Body" },
+        "authorId": { "label": "Author" },
+        "categoryId": { "label": "Category" },
+        "coverUrl": { "label": "Cover image" },
+        "viewsCount": { "label": "Views" },
+        "rating": { "label": "Rating" },
+        "published": { "label": "Published" },
+        "publishedAt": { "label": "Published at" },
+        "tags": { "label": "Tags" },
+        "metadata": {
+          "label": "Publishing metadata",
+          "description": "Extra metadata rendered with inline info icons in the form label and for nested key-value fields.",
+          "keyValueFields": {
+            "featured": {
+              "label": "Featured post",
+              "description": "Marks the post as featured so storefronts or landing pages can prioritize it."
+            },
+            "locale": {
+              "label": "Content locale",
+              "description": "Primary language/locale of the post content.",
+              "availableValues": {
+                "en": "English",
+                "ru": "Russian",
+                "de": "German"
+              }
+            },
+            "readingMinutes": {
+              "label": "Reading time",
+              "description": "Estimated reading time shown to end users, in minutes.",
+              "placeholder": "e.g. 5"
+            },
+            "channel": {
+              "label": "Distribution channel",
+              "description": "The main acquisition or distribution channel for this post.",
+              "placeholder": "e.g. newsletter",
+              "availableValues": {
+                "web": "Website",
+                "newsletter": "Newsletter",
+                "rss": "RSS",
+                "twitter": "Twitter / X",
+                "telegram": "Telegram"
+              }
+            },
+            "reviewerEmail": {
+              "label": "Reviewer email",
+              "description": "Internal reviewer or approver for the content. You can pick an existing user or type any email.",
+              "placeholder": "pick a user or type any email"
+            }
+          }
+        }
+      }
+    },
+    "postTags": {
+      "label": "Post tags",
+      "properties": {
+        "postId": { "label": "Post" },
+        "tagId": { "label": "Tag" },
+        "addedAt": { "label": "Added at" }
+      }
+    },
+    "favorites": {
+      "label": "Favorites",
+      "properties": {
+        "label": {
+          "label": "Display label",
+          "description": "Friendly name shown in the UI for the saved favorite item."
+        },
+        "kind": {
+          "label": "Favorite type",
+          "description": "Controls which relation field becomes visible below."
+        },
+        "postId": {
+          "label": "Post",
+          "description": "Choose this when the favorite points to a post."
+        },
+        "productId": {
+          "label": "Product",
+          "description": "Choose this when the favorite points to a product."
+        },
+        "categoryId": {
+          "label": "Category",
+          "description": "Choose this when the favorite points to a category."
+        },
+        "createdAt": { "label": "Saved at" }
+      }
+    },
+    "regionalContent": {
+      "label": "Regional content",
+      "properties": {
+        "name": {
+          "label": "Campaign name",
+          "description": "Internal campaign or promo name used by the content team."
+        },
+        "region": {
+          "label": "Region",
+          "description": "Select the active region to reveal the matching localized title and preview fields."
+        },
+        "titles": { "label": "Titles" },
+        "previews": { "label": "Previews" },
+        "publishedAt": { "label": "Published at" },
+        "titles__eu": { "label": "Title \u2014 Europe" },
+        "titles__us": { "label": "Title \u2014 United States" },
+        "titles__asia": { "label": "Title \u2014 Asia-Pacific" },
+        "previews__eu": { "label": "Preview \u2014 Europe" },
+        "previews__us": { "label": "Preview \u2014 United States" },
+        "previews__asia": { "label": "Preview \u2014 Asia-Pacific" }
+      }
+    },
+    "products": {
+      "label": "Products",
+      "actions": {
+        "archive": { "label": "Archive" },
+        "restock": { "label": "Restock" },
+        "duplicateSku": { "label": "Duplicate SKU" },
+        "markFeaturedPalette": { "label": "Apply featured palette" }
+      },
+      "properties": {
+        "name": { "label": "Product name" },
+        "sku": { "label": "SKU" },
+        "slug": { "label": "URL slug" },
+        "summary": { "label": "Summary" },
+        "description": { "label": "Description" },
+        "price": { "label": "Price" },
+        "currencyCode": { "label": "Currency" },
+        "accentColor": { "label": "Accent color" },
+        "inStock": { "label": "In stock" },
+        "quantity": { "label": "Quantity" },
+        "rating": { "label": "Rating" },
+        "launchedAt": { "label": "Launch date" },
+        "thumbnail": {
+          "label": "Thumbnail image",
+          "description": "Main preview image used in product listings."
+        },
+        "gallery": {
+          "label": "Gallery",
+          "description": "Additional product images. Supports multiple uploads."
+        },
+        "thumbnailUrl": { "label": "Thumbnail" },
+        "galleryUrl": { "label": "Gallery" },
+        "videoUrl": { "label": "Video" },
+        "specs": { "label": "Specifications" },
+        "categoryId": { "label": "Category" },
+        "tags": { "label": "Tags" }
+      }
+    },
+    "productTags": {
+      "label": "Product tags",
+      "properties": {
+        "productId": { "label": "Product" },
+        "tagId": { "label": "Tag" },
+        "position": { "label": "Position" }
+      }
+    }
+  }
+}

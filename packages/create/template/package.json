@@ -1,0 +1,43 @@
+{
+  "name": "{{name}}",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch run src/main.ts",
+    "start": "bun run src/main.ts",
+    "build": "tsc",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "auth:secret": "bun --print 'Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b => b.toString(16).padStart(2, \"0\")).join(\"\")'"
+  },
+  "dependencies": {
+    "@modern-admin/adapter-prisma": "^0.1.0",
+    "@modern-admin/auth-better-auth": "^0.1.0",
+    "@modern-admin/cache-redis": "^0.1.0",
+    "@modern-admin/core": "^0.1.0",
+    "@modern-admin/nest": "^0.1.0",
+    "@modern-admin/system-prisma": "^0.1.0",
+    "@modern-admin/web": "^0.1.0",
+    "@better-auth/api-key": "^1.6.9",
+    "@nestjs/common": "^11.1.19",
+    "@nestjs/core": "^11.1.19",
+    "@nestjs/platform-express": "^11.1.19",
+    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "@prisma/client-runtime-utils": "^7.8.0",
+    "@prisma/internals": "^7.8.0",
+    "better-auth": "^1.6.9",
+    "ioredis": "^5.10.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.13",
+    "prisma": "^7.8.0",
+    "typescript": "^6.0.3"
+  }
+}

@@ -1,0 +1,308 @@
+// {{name}} — admin panel database schema.
+//
+// Points at the SAME Postgres database your main backend already owns.
+// The admin app reads/writes its own `ma_*` namespace plus whatever
+// application tables you expose as `@AdminResource`. Add your real
+// models below the system fragment — typically you'd `prisma db pull`
+// them from your live database, then keep this file as the source of
+// truth shared by both backends (via a shared workspace package).
+//
+// Prisma 7 specifics:
+//   - `provider = "prisma-client"` (the new ESM client; the old
+//     `prisma-client-js` is deprecated).
+//   - `output` is required and project-local — generated client lands
+//     in `src/generated/prisma/`. Add that path to `.gitignore`.
+//   - The datasource has no `url` line — the connection string is
+//     supplied at runtime via the `@prisma/adapter-pg` driver adapter
+//     in `src/db.ts`, which reads `DATABASE_URL` from the environment.
+//   - `@default(uuid(7))` produces UUID v7 (time-ordered) ids — the
+//     project's identifier policy.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Application models ──────────────────────────────────────────────────
+//
+// Add your business models here, or `prisma db pull` from your main
+// database to mirror its schema. Expose any model to the admin panel by
+// creating a `src/resources/<name>.resource.ts` file modelled on the
+// pattern in the README and importing the resulting `…AdminModule` in
+// `src/admin.module.ts`.
+
+// ─── Modern Admin system tables (ma_*) ───────────────────────────────────
+//
+// The models below power Better Auth (MaUser/MaSession/MaAccount/…) and
+// the framework's runtime stores (logs, history, config, AI tasks, etc.).
+// Mirrored from `@modern-admin/system-prisma`'s canonical fragment — if
+// you upgrade `@modern-admin/system-prisma` and the upstream shapes drift,
+// re-run `bunx modern-admin generate` to reconcile.
+
+model MaUser {
+  id            String    @id @default(uuid(7))
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  /// Role id (= name); resolves to a row in `ma_role` for permissions lookup.
+  role          String?
+  banned        Boolean?  @default(false)
+  banReason     String?
+  banExpires    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sessions MaSession[]
+  accounts MaAccount[]
+  apiKeys  MaApiKey[]
+
+  @@map("ma_user")
+}
+
+model MaSession {
+  id             String   @id @default(uuid(7))
+  expiresAt      DateTime
+  token          String   @unique
+  ipAddress      String?
+  userAgent      String?
+  userId         String
+  impersonatedBy String?
+
+  user MaUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("ma_session")
+}
+
+model MaAccount {
+  id                    String    @id @default(uuid(7))
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  /// Hashed password for the email/password strategy. OAuth/passkey rows
+  /// leave this null — credentials are encoded in the provider tokens.
+  password              String?
+
+  user MaUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("ma_account")
+}
+
+model MaVerification {
+  id         String   @id @default(uuid(7))
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("ma_verification")
+}
+
+/// Better Auth api-key plugin storage. `permissions` is a JSON object
+/// `{ resourceId: action[] }` consumed by `ModernAdmin.invoke()`'s
+/// api-key gate (see also `MaRole.permissions` for the role-based gate —
+/// both share the same matching helper).
+model MaApiKey {
+  id                  String    @id @default(uuid(7))
+  configId            String    @default("default")
+  name                String?
+  start               String?
+  prefix              String?
+  key                 String
+  referenceId         String
+  refillInterval      Int?
+  refillAmount        Int?
+  lastRefillAt        DateTime?
+  enabled             Boolean   @default(true)
+  rateLimitEnabled    Boolean   @default(false)
+  rateLimitTimeWindow Int?
+  rateLimitMax        Int?
+  requestCount        Int       @default(0)
+  remaining           Int?
+  lastRequest         DateTime?
+  expiresAt           DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  permissions         Json?
+  metadata            Json?
+
+  user MaUser @relation(fields: [referenceId], references: [id], onDelete: Cascade)
+
+  @@index([configId])
+  @@index([referenceId])
+  @@map("ma_apikey")
+}
+
+/// Configurable role with a permissions matrix.
+///
+/// `permissions` shape: `Record<resourceId, action[]>`, where `'*'` is a
+/// wildcard for actions or for a resource key. The `id` doubles as the
+/// user-visible role name. Seed at least `{ id: 'admin', permissions:
+/// { '*': ['*'] }, isBuiltin: true }` before the first login.
+model MaRole {
+  id          String   @id
+  description String?
+  permissions Json     @default("{}")
+  isBuiltin   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("ma_role")
+}
+
+model MaLog {
+  id         String   @id @default(uuid(7))
+  resourceId String
+  action     String
+  recordId   String?
+  recordIds  Json?
+  userId     String?
+  payload    Json?
+  result     Json?
+  /// Unix-ms timestamp captured at the after-hook.
+  at         BigInt
+  createdAt  DateTime @default(now())
+
+  @@index([resourceId, action])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("ma_log")
+}
+
+model MaWebhook {
+  id            String   @id @default(uuid(7))
+  name          String
+  url           String
+  /// JSON array of dotted event names. Validated by `webhookZ`.
+  events        Json
+  /// Optional resource/model scope. Null means all resources.
+  resourceId    String?
+  enabled       Boolean  @default(true)
+  secret        String?
+  /// JSON object of extra HTTP headers.
+  headers       Json     @default("{}")
+  /// List-page-style filters matched against the mutation snapshot.
+  filters       Json     @default("{}")
+  /// Optional JSON array of field paths to include in outgoing payload.
+  payloadFields Json     @default("[]")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  deliveries MaWebhookDelivery[]
+
+  @@map("ma_webhook")
+}
+
+model MaWebhookDelivery {
+  id             String    @id @default(uuid(7))
+  webhookId      String
+  event          String
+  payload        Json
+  status         String
+  responseStatus Int?
+  responseBody   String?
+  error          String?
+  attempt        Int       @default(1)
+  createdAt      DateTime  @default(now())
+  deliveredAt    DateTime?
+
+  webhook MaWebhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([webhookId, createdAt])
+  @@map("ma_webhook_delivery")
+}
+
+model MaConfig {
+  id        String   @id
+  scope     String
+  scopeId   String   @default("")
+  key       String
+  value     Json
+  updatedAt DateTime @updatedAt
+
+  @@unique([scope, scopeId, key])
+  @@map("ma_config")
+}
+
+model MaHistory {
+  id             String   @id @default(uuid(7))
+  resourceId     String
+  recordId       String
+  op             String
+  userId         String?
+  snapshot       Json
+  /// Snapshot of the record _before_ this revision was applied. Used by
+  /// the history controller's revert endpoint to undo the change.
+  snapshotBefore Json?
+  createdAt      DateTime @default(now())
+
+  @@index([resourceId, recordId, createdAt])
+  @@map("ma_history")
+}
+
+model MaAiTask {
+  id         String    @id @default(uuid(7))
+  kind       String
+  resourceId String?
+  recordId   String?
+  userId     String?
+  status     String
+  input      Json      @default("{}")
+  output     Json?
+  error      String?
+  /// 0..100 or null for indeterminate progress.
+  progress   Int?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  startedAt  DateTime?
+  finishedAt DateTime?
+
+  events MaAiTaskEvent[]
+
+  @@index([kind, status])
+  @@index([userId])
+  @@index([resourceId, recordId])
+  @@map("ma_ai_task")
+}
+
+model MaAiTaskEvent {
+  id        String   @id @default(uuid(7))
+  taskId    String
+  type      String
+  data      Json     @default("{}")
+  createdAt DateTime @default(now())
+
+  task MaAiTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, createdAt])
+  @@map("ma_ai_task_event")
+}
+
+model MaCache {
+  key       String    @id
+  value     Json
+  tags      Json      @default("[]")
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([expiresAt])
+  @@map("ma_cache")
+}

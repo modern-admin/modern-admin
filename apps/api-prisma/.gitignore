@@ -1,0 +1,13 @@
+dist/
+node_modules/
+.env
+.env.local
+
+# Prisma generated client lives next to the schema
+src/generated/
+
+# Migrations stay tracked, but the dev seeds local artefacts
+prisma/dev.db
+prisma/dev.db-journal
+
+uploads
