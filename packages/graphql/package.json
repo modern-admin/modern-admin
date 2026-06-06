@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/graphql",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Apollo + code-first GraphQL transport for @modern-admin/nest.",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/graphql#readme",
   "keywords": [
