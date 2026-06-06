@@ -17,7 +17,9 @@ export const actionOptionsZ = z
     nesting: z.union([z.string(), actionGroupZ, z.array(z.union([z.string(), actionGroupZ]))]).optional(),
     guard: z.string().optional(),
     component: z.union([z.string(), z.null()]).optional(),
-    label: z.string().optional(),
+    // No top-level `label`: action titles are resolved client-side from
+    // `custom.label` (see packages/react action-menu + i18n boundary), so a
+    // top-level field here would validate but never reach the descriptor/UI.
     custom: z.record(z.string(), z.unknown()).optional(),
   })
   .passthrough()

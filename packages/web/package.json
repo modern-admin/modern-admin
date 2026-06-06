@@ -3,6 +3,17 @@
   "version": "0.1.0",
   "type": "module",
   "description": "Pre-built React admin SPA. Mount it into a host page or let @modern-admin/nest serve the standalone bundle.",
+  "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/web#readme",
+  "keywords": [
+    "modern-admin",
+    "admin",
+    "admin-panel",
+    "admin-dashboard",
+    "react",
+    "spa",
+    "vite",
+    "frontend"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",

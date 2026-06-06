@@ -2,6 +2,16 @@
   "name": "@modern-admin/telemetry",
   "version": "0.1.0",
   "description": "Opt-in usage telemetry for Modern Admin (privacy-first, MODERN_ADMIN_TELEMETRY=1 required).",
+  "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/telemetry#readme",
+  "keywords": [
+    "modern-admin",
+    "admin",
+    "admin-panel",
+    "admin-dashboard",
+    "telemetry",
+    "observability",
+    "logging"
+  ],
   "type": "module",
   "license": "MIT",
   "repository": {

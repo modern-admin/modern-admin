@@ -2,6 +2,16 @@
   "name": "@modern-admin/feature-json-by-key",
   "version": "0.1.0",
   "description": "Editable JSON-by-key property type for Modern Admin.",
+  "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/feature-json-by-key#readme",
+  "keywords": [
+    "modern-admin",
+    "admin",
+    "admin-panel",
+    "admin-dashboard",
+    "json",
+    "feature",
+    "field"
+  ],
   "type": "module",
   "license": "MIT",
   "repository": {

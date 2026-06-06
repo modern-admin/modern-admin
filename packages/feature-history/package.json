@@ -2,6 +2,17 @@
   "name": "@modern-admin/feature-history",
   "version": "0.1.0",
   "description": "Record revision history feature plugin for Modern Admin.",
+  "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/feature-history#readme",
+  "keywords": [
+    "modern-admin",
+    "admin",
+    "admin-panel",
+    "admin-dashboard",
+    "audit",
+    "history",
+    "versioning",
+    "feature"
+  ],
   "type": "module",
   "license": "MIT",
   "repository": {

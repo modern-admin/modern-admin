@@ -2,6 +2,16 @@
   "name": "@modern-admin/tsconfig",
   "version": "0.1.0",
   "description": "Shared TypeScript configuration presets for the Modern Admin monorepo.",
+  "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/tsconfig#readme",
+  "keywords": [
+    "modern-admin",
+    "admin",
+    "admin-panel",
+    "admin-dashboard",
+    "tsconfig",
+    "typescript",
+    "config"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",

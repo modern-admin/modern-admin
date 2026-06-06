@@ -2,6 +2,17 @@
   "name": "@modern-admin/nest",
   "version": "0.1.0",
   "description": "NestJS module wrapping @modern-admin/core — REST controllers, guards, cache, OpenAPI.",
+  "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/nest#readme",
+  "keywords": [
+    "modern-admin",
+    "admin",
+    "admin-panel",
+    "admin-dashboard",
+    "nestjs",
+    "rest",
+    "openapi",
+    "backend"
+  ],
   "type": "module",
   "license": "MIT",
   "repository": {

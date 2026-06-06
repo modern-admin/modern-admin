@@ -2,6 +2,16 @@
   "name": "@modern-admin/i18n",
   "version": "0.1.0",
   "description": "Translation registry and locale dictionaries for Modern Admin (9 locales).",
+  "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/i18n#readme",
+  "keywords": [
+    "modern-admin",
+    "admin",
+    "admin-panel",
+    "admin-dashboard",
+    "i18n",
+    "internationalization",
+    "localization"
+  ],
   "type": "module",
   "license": "MIT",
   "repository": {

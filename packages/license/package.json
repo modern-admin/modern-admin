@@ -2,6 +2,15 @@
   "name": "@modern-admin/license",
   "version": "0.1.0",
   "description": "Ed25519/JWS license-key verification helpers for Modern Admin commercial packages.",
+  "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/license#readme",
+  "keywords": [
+    "modern-admin",
+    "admin",
+    "admin-panel",
+    "admin-dashboard",
+    "license",
+    "licensing"
+  ],
   "type": "module",
   "license": "MIT",
   "repository": {

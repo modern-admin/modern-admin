@@ -2,6 +2,16 @@
   "name": "@modern-admin/react",
   "version": "0.1.0",
   "description": "React 19 frontend layer for Modern Admin — translation boundary, routing, hooks.",
+  "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/react#readme",
+  "keywords": [
+    "modern-admin",
+    "admin",
+    "admin-panel",
+    "admin-dashboard",
+    "react",
+    "hooks",
+    "frontend"
+  ],
   "type": "module",
   "license": "MIT",
   "repository": {

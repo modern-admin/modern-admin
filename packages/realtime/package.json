@@ -2,6 +2,16 @@
   "name": "@modern-admin/realtime",
   "version": "0.1.0",
   "description": "WebSocket gateway + realtime bus implementations for Modern Admin.",
+  "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/realtime#readme",
+  "keywords": [
+    "modern-admin",
+    "admin",
+    "admin-panel",
+    "admin-dashboard",
+    "websocket",
+    "realtime",
+    "subscriptions"
+  ],
   "type": "module",
   "license": "MIT",
   "repository": {

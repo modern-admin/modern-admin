@@ -2,6 +2,17 @@
   "name": "@modern-admin/core",
   "version": "0.1.0",
   "description": "Core abstractions of the Modern Admin framework — adapters, resources, decorators, actions, ports.",
+  "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/core#readme",
+  "keywords": [
+    "modern-admin",
+    "admin",
+    "admin-panel",
+    "admin-dashboard",
+    "framework",
+    "headless",
+    "crud",
+    "typescript"
+  ],
   "type": "module",
   "license": "MIT",
   "repository": {

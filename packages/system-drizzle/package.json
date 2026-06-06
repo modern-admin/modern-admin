@@ -2,6 +2,16 @@
   "name": "@modern-admin/system-drizzle",
   "version": "0.1.0",
   "description": "Drizzle-backed implementation of Modern Admin system stores.",
+  "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/system-drizzle#readme",
+  "keywords": [
+    "modern-admin",
+    "admin",
+    "admin-panel",
+    "admin-dashboard",
+    "drizzle",
+    "system",
+    "store"
+  ],
   "type": "module",
   "license": "MIT",
   "repository": {
