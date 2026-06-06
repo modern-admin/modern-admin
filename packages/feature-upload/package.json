@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/feature-upload",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "File upload feature plugin for Modern Admin (local + S3 providers).",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/feature-upload#readme",
   "keywords": [
