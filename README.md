@@ -41,7 +41,6 @@ weaknesses:
 | Cache        | Redis (backend) + TanStack Query 5 (frontend)     |
 | Queue        | BullMQ + `@nestjs/bullmq` (jobs, cron, webhooks)  |
 | Validation   | Zod 4 end-to-end                                  |
-| Docs site    | Nextra 4 / Next.js                                |
 | Language     | TypeScript 6 (strict)                             |
 
 > Dependency policy: this project always pins to the latest stable release of
@@ -73,17 +72,16 @@ modern-admin/
 │   ├── system-prisma/             — persistent system stores (logs/history/webhooks/AI/config/cache)
 │   ├── system-drizzle/            — same for Drizzle
 │   ├── feature-upload/            — Local + S3 file uploads, busboy, multipart
-│   ├── feature-logging/           — action log (per-resource + global plugin)
 │   ├── feature-history/           — revision history + field diff
-│   ├── feature-webhooks/          — outbound webhooks (BullMQ, HMAC, retries)
-│   ├── feature-ai-fill/           — AI fill form from photo/file
 │   ├── feature-m2m/               — many-to-many junction tables
 │   ├── feature-password/          — argon2/bcrypt password hashing
 │   ├── feature-json-by-key/       — declarative JSON sub-properties
+│   ├── license/                   — license-gate (jose, Ed25519/JWS) for Pro packages
+│   ├── telemetry/                 — anonymous usage telemetry
 │   ├── create/                    — `bun create @modern-admin <name>` scaffolder
 │   └── tsconfig/                  — shared TS presets
 ├── .changeset/                    — Changesets workflow
-├── .github/workflows/release.yml  — CI publish → GitHub Packages
+├── .github/workflows/release.yml  — CI publish → npm (registry.npmjs.org)
 ├── scripts/                       — dev.sh orchestrator, release.ts
 ├── RELEASING.md                   — full release procedure
 ├── docker-compose.yml             — Postgres + Redis for development
@@ -188,23 +186,7 @@ bun create @modern-admin my-admin
 
 ## Documentation
 
-The full docs site lives in the separate `modern-admin-docs` repo (Nextra 4)
-and covers:
-getting-started, architecture, decorators, resources, backend, frontend,
-adapters (`prisma`, `drizzle`, `custom`), auth, cache, realtime, queue,
-i18n, design-system, ui-components, integration-standalone, cli, agent
-prompt, admins-and-roles, api-keys, AI assistant (+ architecture),
-features (`upload`, `logging`, `history`, `webhooks`, `m2m`, `password`,
-`json-by-key`) and APIs (`rest`, `graphql`, `openapi`).
-
-Run locally:
-
-```bash
-bun run docs:dev
-```
-
-> Note: the docs site is scaffolded i18n-ready (`content/<locale>/…`), but
-> only English content ships from the repo. Other locales are added manually.
+Full documentation lives at **<https://docs.modernadminpro.com/docs/getting-started>**.
 
 ## Development conventions
 
