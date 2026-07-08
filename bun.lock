@@ -238,12 +238,6 @@
         "@types/bun": "^1.3.13",
         "typescript": "^6.0.3",
       },
-      "peerDependencies": {
-        "@modern-admin/feature-upload": "workspace:*",
-      },
-      "optionalPeers": [
-        "@modern-admin/feature-upload",
-      ],
     },
     "packages/feature-m2m": {
       "name": "@modern-admin/feature-m2m",
@@ -293,15 +287,11 @@
       },
       "peerDependencies": {
         "@aws-sdk/client-s3": "^3.0.0",
-        "@modern-admin/graphql": "workspace:*",
-        "@modern-admin/nest": "workspace:*",
         "@nestjs/swagger": "^11.4.2",
         "graphql": "^16.0.0",
       },
       "optionalPeers": [
         "@aws-sdk/client-s3",
-        "@modern-admin/graphql",
-        "@modern-admin/nest",
         "@nestjs/swagger",
         "graphql",
       ],
@@ -505,14 +495,13 @@
     "packages/telemetry": {
       "name": "@modern-admin/telemetry",
       "version": "0.1.1",
-      "devDependencies": {
+      "dependencies": {
         "@modern-admin/core": "workspace:*",
+      },
+      "devDependencies": {
         "@modern-admin/tsconfig": "workspace:*",
         "@types/bun": "^1.3.13",
         "typescript": "^6.0.3",
-      },
-      "peerDependencies": {
-        "@modern-admin/core": "workspace:*",
       },
     },
     "packages/tsconfig": {
