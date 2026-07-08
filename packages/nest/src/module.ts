@@ -163,6 +163,10 @@ const deriveFeatures = (
   webhooks: options.webhookStore !== undefined,
   apiKeys: options.apiKeyService !== undefined,
   aiAssistant: options.aiAssistant !== undefined,
+  // A wired realtime bus implies the host also mounts the WS gateway
+  // (`ModernAdminRealtimeModule`); hosts that only publish server-side
+  // can override with `features: { realtime: false }`.
+  realtime: options.realtime !== undefined,
   ...(options.features ?? {}),
 })
 

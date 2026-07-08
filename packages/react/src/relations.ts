@@ -30,6 +30,11 @@ export const resolveRelatedResources = (
 
   for (const property of resource.properties) {
     if (!isToManyReferenceProperty(property) || !property.reference) continue
+    // Point-hide: a to-many reference property that's hidden from the `show`
+    // view opts its auto-discovered tab out of the related-records section.
+    // Explicitly-configured `relatedResources` are unaffected — they're an
+    // intentional opt-in and carry no backing property visibility.
+    if (property.visibility.show === false) continue
 
     const target = byId.get(property.reference)
     if (!target) continue

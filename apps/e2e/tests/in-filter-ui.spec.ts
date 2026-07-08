@@ -24,11 +24,12 @@ import { expect, test, type Page } from '@playwright/test'
  *   • `packages/react/src/pages/list-page.tsx`: `encodeFilter('in', '')`
  *     returns `''` so the draft cleans up to "no filter".
  *
- * Resource pick: `categories.name` is the cleanest target for the UI side
- * — a plain auto-detected string property (12 distinct values in the
- * seed) with NO `availableValues` constraint. The combination drives
- * the `StringFilterField` auto-switch into the checkbox picker. Other
- * obvious candidates are unsuitable:
+ * Resource pick for the auto-switch tests: `tags.color` — a plain
+ * auto-detected string property with 6 distinct seed values, under the
+ * `ONE_OF_DEFAULT_MAX` (10) cap that gates the auto-switch to the
+ * checkbox picker. `categories.name` (12 distinct values) sits ABOVE the
+ * cap and pins the opposite default ("Contains" + manual switch still
+ * works). Other obvious candidates are unsuitable:
  *   • `customers.tier` has `availableValues: [...TIERS]` in the seed
  *     schema, so the UI routes it to the enum `<Select>` (showing
  *     "Any" placeholder) — no `in` operator at all.
@@ -73,6 +74,11 @@ function filterParam(page: Page, key: string): string | null {
 
 async function openCategoriesList(page: Page): Promise<void> {
   await page.goto('/resources/categories?perPage=50')
+  await expect(page.locator('tbody tr').first()).toBeVisible({ timeout: 15_000 })
+}
+
+async function openTagsList(page: Page): Promise<void> {
+  await page.goto('/resources/tags?perPage=50')
   await expect(page.locator('tbody tr').first()).toBeVisible({ timeout: 15_000 })
 }
 
@@ -138,27 +144,52 @@ test.describe('Filter — "Is one of" (in) operator: UI', () => {
   test('auto-switches to checkbox picker on low-cardinality string field', async ({
     page,
   }) => {
-    await openCategoriesList(page)
+    await openTagsList(page)
     await openFilters(page)
 
-    const nameField = filterField(page, 'Internal name')
+    // `tags.color` has 6 distinct seed values — under the
+    // ONE_OF_DEFAULT_MAX (10) cap, so the field defaults to "Is one of".
+    const colorField = filterField(page, 'Color')
 
     // Auto-switch only fires after the distinct-values request resolves.
     // The Select trigger shows the localised operator label — for `in` it's
     // "Is one of" in English. Anchor on the (English) label since the
     // e2e fixture user runs in `en` by default.
-    await expect(nameField.getByRole('combobox')).toContainText(/Is one of/i, {
+    await expect(colorField.getByRole('combobox')).toContainText(/Is one of/i, {
       timeout: 10_000,
     })
 
     // The checkbox picker exposes one button per distinct value. The
     // distinct endpoint returns names sorted alphabetically. Pick a few
     // known seed values to confirm the picker has hydrated.
+    await expect(colorField.getByRole('button', { name: 'amber' })).toBeVisible({
+      timeout: 10_000,
+    })
+    await expect(colorField.getByRole('button', { name: 'blue' })).toBeVisible()
+    await expect(colorField.getByRole('button', { name: 'green' })).toBeVisible()
+  })
+
+  test('field above the one-of cap defaults to Contains; manual switch shows the picker', async ({
+    page,
+  }) => {
+    await openCategoriesList(page)
+    await openFilters(page)
+
+    // `categories.name` has 12 distinct seed values — above the cap, so
+    // the default stays free-text "Contains" (no unwieldy checkbox wall).
+    const nameField = filterField(page, 'Internal name')
+    await expect(nameField.getByRole('combobox')).toContainText(/Contains/i, {
+      timeout: 10_000,
+    })
+
+    // Manually picking "Is one of" still brings up the checkbox picker
+    // with the distinct values.
+    await nameField.getByRole('combobox').click()
+    await page.getByRole('option', { name: /^Is one of$/i }).click()
     await expect(nameField.getByRole('button', { name: 'Design' })).toBeVisible({
       timeout: 10_000,
     })
     await expect(nameField.getByRole('button', { name: 'DevOps' })).toBeVisible()
-    await expect(nameField.getByRole('button', { name: 'Engineering' })).toBeVisible()
   })
 
   test('selecting two values filters the list to that subset', async ({
@@ -168,30 +199,30 @@ test.describe('Filter — "Is one of" (in) operator: UI', () => {
     // Strict-API expectation for the row count after the filter applies.
     const apiBody = await (
       await request.get(
-        adminApi('/resources/categories/actions/list?filters[name]=in:Design,DevOps&perPage=200'),
+        adminApi('/resources/tags/actions/list?filters[color]=in:blue,green&perPage=200'),
       )
     ).json()
     const expectedCount = (apiBody.records as unknown[]).length
     expect(expectedCount).toBeGreaterThan(0)
 
-    await openCategoriesList(page)
+    await openTagsList(page)
     await openFilters(page)
 
-    const nameField = filterField(page, 'Internal name')
+    const colorField = filterField(page, 'Color')
     // Wait for the auto-switch + distinct values to render.
-    await expect(nameField.getByRole('button', { name: 'Design' })).toBeVisible({
+    await expect(colorField.getByRole('button', { name: 'blue' })).toBeVisible({
       timeout: 10_000,
     })
 
-    await nameField.getByRole('button', { name: 'Design' }).click()
-    await nameField.getByRole('button', { name: 'DevOps' }).click()
+    await colorField.getByRole('button', { name: 'blue' }).click()
+    await colorField.getByRole('button', { name: 'green' }).click()
 
     await applyFilters(page)
 
     // URL carries `in:` prefix + the two selected values. Order matches
     // the click sequence (FilterValuePicker pushes onto `selected`).
-    await expect.poll(() => filterParam(page, 'name'), { timeout: 5_000 })
-      .toBe('in:Design,DevOps')
+    await expect.poll(() => filterParam(page, 'color'), { timeout: 5_000 })
+      .toBe('in:blue,green')
 
     const pageSize = Math.min(50, expectedCount)
     await expect(page.locator('tbody tr')).toHaveCount(pageSize, { timeout: 10_000 })
@@ -204,10 +235,11 @@ test.describe('Filter — "Is one of" (in) operator: UI', () => {
     // picker in "in" mode with one item selected.
     await page.goto('/resources/categories?perPage=50&filters[name]=in:Design')
     await expect.poll(() => filterParam(page, 'name')).toBe('in:Design')
-    await expect(page.locator('tbody tr').first()).toBeVisible({ timeout: 15_000 })
-
-    const filteredCount = await page.locator('tbody tr').count()
-    expect(filteredCount).toBeGreaterThan(0)
+    // Category names are unique in the seed, so `in:Design` matches exactly
+    // one row. Use the auto-retrying assertion (not an instant `.count()`)
+    // so a transient pre-filter render can't be captured as the baseline.
+    const filteredCount = 1
+    await expect(page.locator('tbody tr')).toHaveCount(filteredCount, { timeout: 15_000 })
 
     await openFilters(page)
 

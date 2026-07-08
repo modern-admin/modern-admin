@@ -29,32 +29,22 @@ import {
   useSidebar,
 } from '@modern-admin/ui'
 import {
-  BookOpen,
   ChevronDown,
   ChevronLeft,
   Database,
-  FileText,
-  FolderOpen,
-  FolderTree,
   Home,
-  Image,
-  LayoutGrid,
   Loader2,
   LogOut,
   History,
-  Mail,
   Menu,
-  MessageSquare,
-  Package,
   Search,
   Settings,
-  ShoppingCart,
-  Tag,
-  type LucideProps,
   User,
-  Users,
 } from 'lucide-react'
 import { getSidebarExtensions } from './extension-registry.js'
+import { useAdminClient } from './provider.js'
+import { useRealtimeInvalidation } from './realtime.js'
+import { createSocketRealtimeSubscriber } from './realtime-socket.js'
 import { useAdminConfig, useCurrentUser, useFeatures, useLogout, useResources } from './hooks.js'
 import { LoginPage } from './pages/login-page.js'
 import type { CurrentUser } from './types.js'
@@ -67,36 +57,18 @@ import { DialogsProvider } from './dialogs.js'
 import { HotkeyRegistryProvider } from './hotkey-registry.js'
 import { HotkeyHelpButton } from './hotkey-help.js'
 import type { ResourceJSON } from './types.js'
-import { AiAssistantWidget } from './components/ai-assistant-widget.js'
-import { GlobalSearchDialog } from './components/global-search-dialog.js'
+import { NavIcon } from './nav-icon.js'
 import { useHotkey } from './use-hotkey.js'
 
-// ─── Icon registry ────────────────────────────────────────────────────────────
-
-type IconComponent = React.ComponentType<LucideProps>
-
-const ICON_MAP: Record<string, IconComponent> = {
-  BookOpen,
-  Database,
-  FileText,
-  FolderOpen,
-  FolderTree,
-  Home,
-  Image,
-  LayoutGrid,
-  Mail,
-  MessageSquare,
-  Package,
-  Settings,
-  ShoppingCart,
-  Tag,
-  Users,
-}
-
-function NavIcon({ name, className }: { name?: string; className?: string }): React.ReactElement {
-  const Icon: IconComponent = (name && ICON_MAP[name]) || Database
-  return <Icon className={className} />
-}
+// Heavy, conditionally shown surfaces stay out of the critical-path chunk:
+// the assistant widget only mounts when the backend advertises the feature,
+// and the search dialog only after the user first opens it.
+const AiAssistantWidget = React.lazy(() =>
+  import('./components/ai-assistant-widget.js').then((m) => ({ default: m.AiAssistantWidget })),
+)
+const GlobalSearchDialog = React.lazy(() =>
+  import('./components/global-search-dialog.js').then((m) => ({ default: m.GlobalSearchDialog })),
+)
 
 // ─── Navigation helpers ───────────────────────────────────────────────────────
 
@@ -474,6 +446,10 @@ function Header({ user }: { user: CurrentUser | null }): React.ReactElement {
   const { t } = useI18n()
   const { setOpenMobile } = useSidebar()
   const [searchOpen, setSearchOpen] = React.useState(false)
+  // Mount the dialog (and fetch its chunk) only once the palette has been
+  // opened; keep it mounted afterwards so the close animation still plays.
+  const everOpened = React.useRef(false)
+  if (searchOpen) everOpened.current = true
   // Cmd+K on macOS, Ctrl+K elsewhere — both expressed via `mod`. Allowed in
   // input contexts so users can pop the palette while typing in any field.
   useHotkey('mod+k', () => setSearchOpen((prev) => !prev), {
@@ -505,7 +481,11 @@ function Header({ user }: { user: CurrentUser | null }): React.ReactElement {
           </Button>
         )}
       </div>
-      <GlobalSearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+      {(searchOpen || everOpened.current) && (
+        <React.Suspense fallback={null}>
+          <GlobalSearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
+        </React.Suspense>
+      )}
     </header>
   )
 }
@@ -558,6 +538,20 @@ function FullscreenSpinner(): React.ReactElement {
   )
 }
 
+// Invisible bridge: while mounted (i.e. the user is authenticated and the
+// backend advertises `features.realtime`), keeps a socket.io connection to
+// the realtime gateway and live-invalidates the query cache on mutation
+// events from other sessions/instances.
+function RealtimeCacheBridge(): null {
+  const client = useAdminClient()
+  const subscriber = React.useMemo(
+    () => createSocketRealtimeSubscriber({ baseUrl: client.apiBaseUrl }),
+    [client],
+  )
+  useRealtimeInvalidation(subscriber)
+  return null
+}
+
 // `ShellLayout` is the rootRoute component supplied to TSR via context.
 // `useCurrentUser()` here is safe — provider/query state is set up upstream
 // in `AdminApp`, and by the time this layout renders the user is guaranteed
@@ -570,6 +564,7 @@ function ShellLayout({
   showSidebarResourceIds: boolean
 }): React.ReactElement {
   const { user } = useCurrentUser()
+  const features = useFeatures()
   return (
     <HotkeyRegistryProvider>
       <DialogsProvider>
@@ -599,7 +594,12 @@ function ShellLayout({
             <main className="min-h-0 min-w-0 flex-1 overflow-auto px-2 pt-2 sm:px-6 sm:pt-6">
               {children}
             </main>
-            <AiAssistantWidget />
+            {features.aiAssistant && (
+              <React.Suspense fallback={null}>
+                <AiAssistantWidget />
+              </React.Suspense>
+            )}
+            {features.realtime && <RealtimeCacheBridge />}
           </SidebarInset>
           <NotifyToaster />
         </SidebarProvider>
@@ -614,6 +614,11 @@ export function AdminApp({
   showSidebarResourceIds,
 }: AdminAppProps = {}): React.ReactElement {
   const { user, isLoading, isAuthenticated } = useCurrentUser()
+  // Kick off the bootstrap config fetch in parallel with the session check.
+  // The shell needs both, and serialising them (me → render shell → config)
+  // costs a full extra round-trip on every cold load. A 401 while logged
+  // out is harmless — `useLogin` invalidates the config query on success.
+  useAdminConfig()
   const showIds = showSidebarResourceIds ?? false
   // Capture the option in a stable layout component so the router doesn't
   // remount the whole shell whenever the prop reference changes.

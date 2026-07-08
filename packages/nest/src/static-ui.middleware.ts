@@ -83,6 +83,12 @@ const MIME_TYPES: Record<string, string> = {
   '.map': 'application/json; charset=utf-8',
 }
 
+// Order matters: brotli compresses ~15-20% better than gzip, try it first.
+const PRECOMPRESSED_VARIANTS = [
+  { encoding: 'br', suffix: '.br' },
+  { encoding: 'gzip', suffix: '.gz' },
+] as const
+
 export const MODERN_ADMIN_STATIC_UI_OPTIONS = Symbol(
   'MODERN_ADMIN_STATIC_UI_OPTIONS',
 )
@@ -120,6 +126,19 @@ export class ModernAdminStaticUiMiddleware implements NestMiddleware {
         const mime = MIME_TYPES[extname(filePath).toLowerCase()] ?? 'application/octet-stream'
         res.setHeader('Content-Type', mime)
         res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+        res.setHeader('Vary', 'Accept-Encoding')
+        // Prefer the precompressed sibling emitted at build time
+        // (`asset.js.br` / `asset.js.gz`) when the client accepts it —
+        // the standalone JS is an order of magnitude smaller over the wire.
+        const acceptEncoding = String(req.headers['accept-encoding'] ?? '')
+        for (const { encoding, suffix } of PRECOMPRESSED_VARIANTS) {
+          const variantPath = `${filePath}${suffix}`
+          if (acceptEncoding.includes(encoding) && existsSync(variantPath)) {
+            res.setHeader('Content-Encoding', encoding)
+            createReadStream(variantPath).pipe(res)
+            return
+          }
+        }
         createReadStream(filePath).pipe(res)
         return
       }

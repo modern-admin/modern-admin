@@ -365,6 +365,11 @@ const buildWriteHook = (relation: M2MRelation): HookFn =>
         incoming,
       ),
     )
+    // The junction rows were written directly (not via `invoke`), so the
+    // junction resource's own response caches — and those of any other
+    // resource hydrating from it — must be dropped here. The parent's
+    // caches are re-invalidated centrally after all after-hooks run.
+    await admin.invalidateResourceCaches(relation.through)
     await hydrateRecordParams(single.record, admin, relation)
     return response
   }
@@ -382,6 +387,11 @@ const buildDeleteHook = (relation: M2MRelation): HookFn =>
     }
     const rows = await junctionRowsForParent(junction, relation.localKey, String(id))
     await Promise.all(rows.map((r) => junction.delete(r.id())))
+    if (rows.length > 0) {
+      // Direct junction writes bypass `invoke` — drop the junction's own
+      // response caches (and its dependents') explicitly.
+      await admin.invalidateResourceCaches(relation.through)
+    }
     return response
   }
 

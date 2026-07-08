@@ -23,6 +23,7 @@ export interface ResourceJSON {
   name: string
   navigation: ResourceOptions['navigation']
   relatedResources: ReadonlyArray<RelatedResource>
+  showRelatedResources: boolean
   properties: PropertyJSON[]
   actions: ReturnType<ActionDecorator['toDescriptor']>[]
 }
@@ -48,6 +49,7 @@ export class ResourceDecorator {
   public readonly actions: Map<string, ActionDecorator<ActionResponse>>
   public readonly navigation: ResourceOptions['navigation']
   public readonly relatedResources: ReadonlyArray<RelatedResource>
+  public readonly showRelatedResources: boolean
 
   constructor(
     public readonly resource: BaseResource,
@@ -57,6 +59,7 @@ export class ResourceDecorator {
     this.name = options.name ?? humanize(this.id)
     this.navigation = normalizeNavigation(options.navigation)
     this.relatedResources = options.relatedResources ?? []
+    this.showRelatedResources = options.showRelatedResources ?? true
     this.properties = this.buildPropertyDecorators(resource.properties())
     this.actions = this.buildActionDecorators(options.actions ?? {})
   }
@@ -110,6 +113,7 @@ export class ResourceDecorator {
         ...(c.guard !== undefined ? { guard: c.guard } : {}),
         ...(c.component !== undefined ? { component: c.component } : {}),
         ...(c.custom !== undefined ? { custom: c.custom } : {}),
+        ...(c.invalidates !== undefined ? { invalidates: c.invalidates } : {}),
       }
       result.set(name, new ActionDecorator(action, {}, this.id))
     }
@@ -184,6 +188,7 @@ export class ResourceDecorator {
           name: this.name,
           navigation: this.navigation,
           relatedResources: this.relatedResources,
+          showRelatedResources: this.showRelatedResources,
           properties,
           actions: descriptors.filter((d): d is ReturnType<ActionDecorator['toDescriptor']> => d !== null),
         }
@@ -194,6 +199,7 @@ export class ResourceDecorator {
       name: this.name,
       navigation: this.navigation,
       relatedResources: this.relatedResources,
+      showRelatedResources: this.showRelatedResources,
       properties: this.properties.map((p) => p.toJSON()),
       actions: Array.from(this.actions.values()).map((a) => a.toDescriptor()),
     }

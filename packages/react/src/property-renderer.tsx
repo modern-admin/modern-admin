@@ -18,7 +18,7 @@ import {
   KeyValueEditor,
   KeyValueView,
   MediaPreview,
-  RichtextEditor,
+  type RichtextEditorProps,
   RichtextRender,
   Select,
   SelectContent,
@@ -50,6 +50,29 @@ import {
 } from './reference.js'
 import { ReferenceMultiTableDialog } from './components/reference-multi-table-dialog.js'
 import { useResource } from './hooks.js'
+
+// The tiptap-based editor lives in its own async chunk (see heavy-fields.ts)
+// so record forms without richtext/markdown properties never pay for it.
+// The skeleton mirrors the editor's footprint to avoid layout shift.
+const RichtextEditorImpl = React.lazy(() =>
+  import('./heavy-fields.js').then((m) => ({ default: m.RichtextEditor })),
+)
+
+function LazyRichtextEditor(props: RichtextEditorProps): React.ReactElement {
+  return (
+    <React.Suspense
+      fallback={
+        <div
+          role="status"
+          aria-busy="true"
+          className="min-h-40 w-full animate-pulse rounded-md border border-border bg-muted/30"
+        />
+      }
+    >
+      <RichtextEditorImpl {...props} />
+    </React.Suspense>
+  )
+}
 
 const formatDate = (value: unknown): string => {
   if (value == null) return ''
@@ -1009,7 +1032,7 @@ export function PropertyEditor({
     )
   case 'richtext':
     return (
-      <RichtextEditor
+      <LazyRichtextEditor
         value={stringValue}
         onChange={(v) => onChange(v)}
         format="html"
@@ -1039,7 +1062,7 @@ export function PropertyEditor({
     )
   case 'markdown':
     return (
-      <RichtextEditor
+      <LazyRichtextEditor
         value={stringValue}
         onChange={(v) => onChange(v)}
         format="markdown"

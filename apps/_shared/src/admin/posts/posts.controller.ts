@@ -28,6 +28,14 @@ const slugify = (text: string): string =>
   navigation: { icon: 'FileText', group: 'Content' },
   relatedResources: [{ resourceId: 'comments', foreignKey: 'postId' }],
   properties: {
+    // Render the post body with the tiptap rich-text editor. The column is
+    // hidden from the list (HTML markup is noise in a table cell) but shown
+    // and edited as formatted content. This is also the reference
+    // deployment's showcase of the lazily-loaded richtext field chunk.
+    body: {
+      type: 'richtext',
+      isVisible: { list: false, show: true, edit: true },
+    },
     metadata: {
       keyValueFields: [
         { key: 'featured', type: 'boolean', label: 'Featured' },

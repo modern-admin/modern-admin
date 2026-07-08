@@ -40,6 +40,15 @@ export const listTag = (resourceId: string): string => `list:${resourceId}`
 export const recordTag = (resourceId: string, recordId: string): string =>
   `record:${resourceId}:${recordId}`
 
+/**
+ * Resource-wide tag attached to every show/record-scoped cache entry in
+ * addition to its per-record tag. Lets cross-resource invalidation drop
+ * *all* cached record responses of a resource at once — needed when a
+ * referenced/related resource changes and the ids of the affected parent
+ * records are unknown (populated references, m2m hydration).
+ */
+export const recordsTag = (resourceId: string): string => `records:${resourceId}`
+
 export class CacheRuntime {
   private readonly inFlight = new Map<string, Promise<unknown>>()
 

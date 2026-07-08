@@ -58,6 +58,7 @@ export {
   useLogout,
   useAuthUiProps,
   useSocialLogin,
+  invalidateResourceData,
   type CurrentUserResult,
 } from './hooks.js'
 export {
@@ -129,6 +130,10 @@ export {
   type RealtimeSubscriber,
   type RealtimeWireEvent,
 } from './realtime.js'
+export {
+  createSocketRealtimeSubscriber,
+  type SocketRealtimeOptions,
+} from './realtime-socket.js'
 export { ResourceListPage } from './pages/list-page.js'
 export { ResourceShowPage } from './pages/show-page.js'
 export { ResourceEditPage } from './pages/edit-page.js'

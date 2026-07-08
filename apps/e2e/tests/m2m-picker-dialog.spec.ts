@@ -30,9 +30,12 @@ async function firstPostId(request: APIRequestContext): Promise<string> {
 async function openPostEdit(page: Page, request: APIRequestContext): Promise<void> {
   const id = await firstPostId(request)
   await page.goto(`/resources/posts/${id}/edit`)
-  // Wait for the form to finish hydrating — the submit button is rendered
-  // after the post payload arrives.
-  await expect(page.getByRole('button', { name: /^save$/i }).first()).toBeVisible({
+  // Wait for the form to finish hydrating. The Save button renders
+  // immediately but stays DISABLED until the record payload has been
+  // applied to the form (`isHydrating` in edit-page) — waiting for enabled
+  // guarantees m2m fields (the Tags picker trigger label) show the
+  // committed value, not the pre-hydration default.
+  await expect(page.getByRole('button', { name: /^save$/i }).first()).toBeEnabled({
     timeout: 15_000,
   })
 }

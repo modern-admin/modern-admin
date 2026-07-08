@@ -1,5 +1,4 @@
 import { RecordNotFoundError } from '../../errors'
-import { listTag, recordTag } from '../cache-runtime.js'
 import type {
   Action,
   ActionContext,
@@ -11,7 +10,7 @@ const handler = async (
   request: ActionRequest,
   context: ActionContext,
 ): Promise<RecordActionResponse> => {
-  const { resource, cache } = context
+  const { resource } = context
   const id = request.params.recordId
   if (!id) throw new Error('delete action requires recordId')
 
@@ -19,7 +18,8 @@ const handler = async (
   if (!record) throw new RecordNotFoundError(id, resource.id())
 
   await resource.delete(id)
-  await cache.invalidateTag([listTag(resource.id()), recordTag(resource.id(), id)])
+  // Cache invalidation happens centrally in `ModernAdmin.invoke()` after
+  // all after-hooks have run — see `invalidateMutationCaches`.
   return {
     record: record.toJSON(),
     notice: { message: 'Record deleted', type: 'success' },

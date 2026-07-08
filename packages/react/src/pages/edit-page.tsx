@@ -207,6 +207,15 @@ export function ResourceEditPage({
   // a draft that we just decided not to keep.
   const skipNextPersistRef = React.useRef(false)
 
+  // Hard off-switch for draft persistence, set by `clearDraft` after a
+  // successful submit. Between the submit and the unmount of this form,
+  // cache invalidations (mutation fan-out, the realtime bridge echoing the
+  // just-created record back to this tab) can re-render the page and fire
+  // the watch subscription with the submitted values still in the form —
+  // re-saving the draft that was just cleared. The flag stays on until the
+  // hydration effect re-initialises the form for the next `/new` visit.
+  const draftPersistDisabledRef = React.useRef(false)
+
   // Hydrate when the existing record arrives (edit mode) or after the resource
   // schema settles (new mode).
   React.useEffect(() => {
@@ -221,6 +230,7 @@ export function ResourceEditPage({
       // against an empty defaults map and then refuse to ever re-init.
       if (editable.length === 0) return
       newFormInitForRef.current = resourceId
+      draftPersistDisabledRef.current = false
 
       // Attempt to restore a saved draft. If we find one, reset to the
       // merged snapshot and surface a bottom-center toast with an Undo
@@ -296,6 +306,7 @@ export function ResourceEditPage({
   React.useEffect(() => {
     if (!isNew || !draftKey || editable.length === 0 || typeof window === 'undefined') return
     const subscription = form.watch((values) => {
+      if (draftPersistDisabledRef.current) return
       if (skipNextPersistRef.current) {
         skipNextPersistRef.current = false
         return
@@ -330,6 +341,9 @@ export function ResourceEditPage({
     // to fall back to defaults instead of retaining the just-submitted
     // values.
     newFormInitForRef.current = undefined
+    // Stop persisting until the next new-form init — post-submit re-renders
+    // must not resurrect the draft we're about to remove.
+    draftPersistDisabledRef.current = true
     if (!draftKey || typeof window === 'undefined') return
     try {
       window.localStorage.removeItem(draftKey)

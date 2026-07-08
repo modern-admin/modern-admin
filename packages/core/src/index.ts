@@ -92,6 +92,7 @@ export {
   CacheRuntime,
   listTag,
   recordTag,
+  recordsTag,
   type CacheRuntimeReadOptions,
   type Action,
   type ActionContext,
@@ -115,11 +116,14 @@ export {
 // Ports / plugin contracts
 export {
   AnonymousAuthProvider,
+  CACHE_INVALIDATION_CHANNEL,
   ComponentLoader,
+  CrossInstanceCacheProvider,
   InMemoryRealtimeBus,
   MemoryCacheProvider,
   NoopCacheProvider,
   NoopRealtimeBus,
+  withCrossInstanceInvalidation,
   type CacheSetOptions,
   type ComponentLoaderEntry,
   type CurrentAdmin,

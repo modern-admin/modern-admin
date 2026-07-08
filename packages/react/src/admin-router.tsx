@@ -28,22 +28,40 @@ import {
   Outlet,
   RouterProvider,
 } from '@tanstack/react-router'
+import { Loader2 } from 'lucide-react'
 import { BasepathContext } from './router.js'
 import { getRouteExtension } from './extension-registry.js'
-import { ResourceListPage } from './pages/list-page.js'
-import { ResourceShowPage } from './pages/show-page.js'
-import { ResourceEditPage } from './pages/edit-page.js'
-import { ResourceWizardCreatePage } from './pages/wizard-create-page.js'
-import { HomePage } from './pages/home-page.js'
-import { SettingsPage } from './pages/settings-page.js'
-import { AuditLogPage } from './pages/audit-log-page.js'
 import { useI18n } from './i18n.js'
 import type { WizardStep } from './components/wizard-form.js'
+
+// Every page is a lazy chunk so the critical-path bundle stops at the shell
+// (sidebar + header). Heavy dependencies then ride in the page chunk that
+// actually uses them — recharts with the dashboard, tiptap with the record
+// pages — instead of blocking first paint for all of them on every load.
+const HomePage = React.lazy(() => import('./pages/home-page.js').then((m) => ({ default: m.HomePage })))
+const AuditLogPage = React.lazy(() => import('./pages/audit-log-page.js').then((m) => ({ default: m.AuditLogPage })))
+const SettingsPage = React.lazy(() => import('./pages/settings-page.js').then((m) => ({ default: m.SettingsPage })))
+const ResourceListPage = React.lazy(() => import('./pages/list-page.js').then((m) => ({ default: m.ResourceListPage })))
+const ResourceShowPage = React.lazy(() => import('./pages/show-page.js').then((m) => ({ default: m.ResourceShowPage })))
+const ResourceEditPage = React.lazy(() => import('./pages/edit-page.js').then((m) => ({ default: m.ResourceEditPage })))
+const ResourceWizardCreatePage = React.lazy(() =>
+  import('./pages/wizard-create-page.js').then((m) => ({ default: m.ResourceWizardCreatePage })),
+)
 
 // ─── Route tree ───────────────────────────────────────────────────────────────
 
 interface RouterContext {
   ShellLayout: React.ComponentType<{ children: React.ReactNode }>
+}
+
+// Suspense fallback while a lazy page chunk streams in. Purely visual —
+// no text, so it needs no i18n wiring.
+function PageChunkSpinner(): React.ReactElement {
+  return (
+    <div role="status" aria-busy="true" className="flex items-center justify-center py-24 text-muted-foreground">
+      <Loader2 className="size-5 animate-spin" aria-hidden="true" />
+    </div>
+  )
 }
 
 const rootRoute = createRootRouteWithContext<RouterContext>()({
@@ -54,7 +72,9 @@ const rootRoute = createRootRouteWithContext<RouterContext>()({
     const { ShellLayout } = rootRoute.useRouteContext()
     return (
       <ShellLayout>
-        <Outlet />
+        <React.Suspense fallback={<PageChunkSpinner />}>
+          <Outlet />
+        </React.Suspense>
       </ShellLayout>
     )
   },

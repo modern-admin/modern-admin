@@ -1,5 +1,5 @@
 import { type BaseResource, type ParamsType, type RecordJSON } from './adapters'
-import { BUILT_IN_ACTIONS, CacheRuntime, type Action, type ActionContext, type ActionRequest, type ActionResponse, type After, type Before } from './actions'
+import { BUILT_IN_ACTIONS, CacheRuntime, listTag, recordTag, recordsTag, type Action, type ActionContext, type ActionRequest, type ActionResponse, type After, type Before } from './actions'
 import type { ResourceJSON } from './decorators/resource-decorator.js'
 import { ResourcesFactory, type Adapter, type GlobalPlugin, type ResourceWithOptions } from './factories/resources-factory.js'
 import { ResourceNotFoundError, ActionNotFoundError, ForbiddenError } from './errors'
@@ -13,7 +13,7 @@ export interface RegisterResourcesArgs {
   /** Defaults to plugins passed at construction time. */
   plugins?: GlobalPlugin[]
 }
-import { AnonymousAuthProvider, ComponentLoader, NoopCacheProvider, NoopRealtimeBus, type CurrentAdmin, type IAuthProvider, type ICacheProvider, type IComponentLoader, type IRealtimeBus, type RealtimeEvent } from './ports'
+import { AnonymousAuthProvider, ComponentLoader, CrossInstanceCacheProvider, NoopCacheProvider, NoopRealtimeBus, withCrossInstanceInvalidation, type CurrentAdmin, type IAuthProvider, type ICacheProvider, type IComponentLoader, type IRealtimeBus, type RealtimeEvent } from './ports'
 import { setActiveFeatureFlags } from './feature-flags.js'
 
 export interface ModernAdminOptions {
@@ -107,6 +107,10 @@ export interface AdminFeatures {
   apiKeys: boolean
   /** AI assistant floating widget + Settings section. Backed by `aiAssistant` options. */
   aiAssistant: boolean
+  /** Realtime WebSocket gateway (`@modern-admin/realtime`). When true the
+   *  SPA connects to it and live-invalidates its query cache on mutation
+   *  events from other sessions/instances. */
+  realtime: boolean
 }
 
 const ALL_FEATURES_OFF: AdminFeatures = {
@@ -115,6 +119,7 @@ const ALL_FEATURES_OFF: AdminFeatures = {
   webhooks: false,
   apiKeys: false,
   aiAssistant: false,
+  realtime: false,
 }
 
 const resolveFeatures = (options?: Partial<AdminFeatures>): AdminFeatures => ({
@@ -152,6 +157,22 @@ export class ModernAdmin {
    */
   private readonly rolePermsCache = new Map<string, RolePermissions | null>()
 
+  /**
+   * Reverse cache-dependency map: for resource B, the set of resources
+   * whose cached responses embed B's data and therefore go stale when B
+   * mutates. Sources:
+   *
+   *   * scalar reference properties — `list` batch-populates referenced
+   *     records into the response (`populateReferences`),
+   *   * m2m properties — read hooks hydrate reference + junction rows
+   *     into both list and show responses (dependency on the reference
+   *     resource comes from the property's `reference()`, on the junction
+   *     from `custom().m2m.through`).
+   *
+   * Built lazily, reset when `registerResources` adds resources.
+   */
+  private cacheDependents: Map<string, Set<string>> | null = null
+
   constructor(public readonly options: ModernAdminOptions = {}) {
     // Publish the opted-in commercial feature flags into the process-global
     // registry before resources are built. Pro plugins read the registry
@@ -160,7 +181,10 @@ export class ModernAdmin {
     setActiveFeatureFlags(options.featureFlags ?? [])
     this.rootPath = options.rootPath ?? '/admin'
     this.auth = options.auth ?? new AnonymousAuthProvider()
-    this.cache = options.cache ?? new NoopCacheProvider()
+    // Providers with pub/sub support (RedisCacheProvider with a subscriber
+    // client) get wrapped so tag invalidations broadcast to sibling
+    // instances; providers without it are used as-is.
+    this.cache = withCrossInstanceInvalidation(options.cache ?? new NoopCacheProvider())
     this.cacheRuntime = new CacheRuntime(this.cache)
     this.componentLoader = options.componentLoader ?? new ComponentLoader()
     this.realtime = options.realtime ?? new NoopRealtimeBus()
@@ -217,6 +241,70 @@ export class ModernAdmin {
     }
   }
 
+  private getCacheDependents(resourceId: string): ReadonlySet<string> {
+    if (!this.cacheDependents) {
+      const map = new Map<string, Set<string>>()
+      const add = (dependency: string, dependent: string): void => {
+        if (dependency === dependent) return
+        let bucket = map.get(dependency)
+        if (!bucket) {
+          bucket = new Set()
+          map.set(dependency, bucket)
+        }
+        bucket.add(dependent)
+      }
+      for (const resource of this.resources) {
+        const decorator = resource.decorate()
+        for (const property of decorator.properties) {
+          const reference = property.reference()
+          if (reference) add(reference, decorator.id)
+          const m2m = property.custom().m2m as { through?: string } | undefined
+          if (m2m?.through) add(m2m.through, decorator.id)
+        }
+      }
+      this.cacheDependents = map
+    }
+    return this.cacheDependents.get(resourceId) ?? new Set()
+  }
+
+  /**
+   * Drop every cached response that can be stale after `resourceId`
+   * mutated: its own list/search caches, its record caches (the given
+   * `recordIds` when the affected rows are known — sibling records' show
+   * caches survive — or all of them via the resource-wide `records:` tag
+   * when they aren't), and the list/record caches of every resource whose
+   * responses embed this resource's data (populated references, m2m
+   * hydration).
+   *
+   * Built-in mutations call this automatically after their after-hooks;
+   * custom action handlers and out-of-band writers (queues, scripts using
+   * the ORM directly) can call it manually.
+   */
+  async invalidateResourceCaches(resourceId: string, recordIds: string[] = []): Promise<void> {
+    const tags = new Set<string>([listTag(resourceId)])
+    if (recordIds.length > 0) {
+      for (const id of recordIds) tags.add(recordTag(resourceId, id))
+    } else {
+      tags.add(recordsTag(resourceId))
+    }
+    for (const dependent of this.getCacheDependents(resourceId)) {
+      tags.add(listTag(dependent))
+      tags.add(recordsTag(dependent))
+    }
+    await this.cache.invalidateTag(Array.from(tags))
+  }
+
+  /**
+   * Release long-lived resources held by the orchestrator (currently the
+   * cross-instance cache invalidation subscription). Transports call this
+   * on graceful shutdown.
+   */
+  async dispose(): Promise<void> {
+    if (this.cache instanceof CrossInstanceCacheProvider) {
+      await this.cache.dispose()
+    }
+  }
+
   findResource(id: string): BaseResource {
     const r = this.resources.find((res) => res.decorate().id === id)
     if (!r) throw new ResourceNotFoundError(id)
@@ -250,6 +338,7 @@ export class ModernAdmin {
       existing.add(id)
       added.push(r)
     }
+    if (added.length > 0) this.cacheDependents = null
     return added
   }
 
@@ -340,9 +429,56 @@ export class ModernAdmin {
         response = await fn(response, req, context)
       }
     }
+    await this.invalidateMutationCaches(actionDecorator.name(), action.invalidates, response, request, context)
     response = await this.filterActionResponseProperties(response, context)
     await this.emitMutationEvents(actionDecorator.name(), response, request, context)
     return response
+  }
+
+  /**
+   * Central post-hook cache invalidation for mutations. The built-in
+   * handlers already invalidate their own tags, but they run *before*
+   * after-hooks — anything an after-hook writes (m2m junction diffs,
+   * upload persistence) could otherwise be re-cached by a concurrent read
+   * landing between the handler's invalidation and the hook. Running the
+   * full invalidation again here — after every hook completed — closes
+   * that window and additionally drops dependent resources' caches
+   * (populated references, m2m hydration).
+   *
+   * Custom actions participate by declaring `invalidates` on the action.
+   */
+  private async invalidateMutationCaches(
+    actionName: string,
+    invalidates: Action['invalidates'],
+    response: ActionResponse,
+    request: ActionRequest,
+    context: ActionContext,
+  ): Promise<void> {
+    const resourceId = context.resource.decorate().id
+    const isBuiltInMutation =
+      actionName === 'new' || actionName === 'edit' || actionName === 'delete' || actionName === 'bulkDelete'
+    if (!isBuiltInMutation && invalidates === undefined) return
+
+    // `new` GET renders the blank form; `edit` GET renders the current
+    // values — neither mutates anything.
+    if (isBuiltInMutation && request.method === 'get') return
+
+    const recordResponse = response as { record?: { id?: string } }
+    const recordIds = new Set<string>()
+    if (request.params.recordId) recordIds.add(request.params.recordId)
+    for (const id of (request.params.recordIds ?? '').split(',').filter(Boolean)) recordIds.add(id)
+    if (recordResponse.record?.id) recordIds.add(String(recordResponse.record.id))
+
+    const targets = new Set<string>()
+    if (isBuiltInMutation || invalidates === true) targets.add(resourceId)
+    if (Array.isArray(invalidates)) for (const id of invalidates) targets.add(id)
+
+    for (const target of targets) {
+      await this.invalidateResourceCaches(
+        target,
+        target === resourceId ? Array.from(recordIds) : [],
+      )
+    }
   }
 
   /**

@@ -11,6 +11,11 @@ export {
   type CacheSetOptions,
 } from './cache-provider.js'
 export {
+  CACHE_INVALIDATION_CHANNEL,
+  CrossInstanceCacheProvider,
+  withCrossInstanceInvalidation,
+} from './cross-instance-cache.js'
+export {
   ComponentLoader,
   type ComponentLoaderEntry,
   type IComponentLoader,

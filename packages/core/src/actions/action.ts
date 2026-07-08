@@ -154,6 +154,21 @@ export interface Action<R extends ActionResponse = ActionResponse> {
   after?: After<R> | After<R>[]
   /** Free-form custom payload passed through to the UI. */
   custom?: Record<string, unknown>
+  /**
+   * Declarative cache invalidation for custom mutating actions. After the
+   * handler and after-hooks complete, `invoke()` drops the response caches
+   * (list/search, record entries, HTTP) of the listed resources plus
+   * everything that depends on them (populated references, m2m).
+   *
+   *   * `true`  → invalidate the action's own resource
+   *   * `['a', 'b']` → invalidate resources `a` and `b` (in addition to
+   *     nothing else — include the own resource id explicitly if needed)
+   *
+   * Built-in mutations (`new`/`edit`/`delete`/`bulkDelete`) invalidate
+   * automatically and don't need this. Read-only custom actions should
+   * omit it so their responses stay cacheable.
+   */
+  invalidates?: true | string[]
 }
 
 /**

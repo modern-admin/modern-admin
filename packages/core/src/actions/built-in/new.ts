@@ -1,4 +1,3 @@
-import { listTag } from '../cache-runtime.js'
 import type {
   Action,
   ActionContext,
@@ -10,17 +9,17 @@ const handler = async (
   request: ActionRequest,
   context: ActionContext,
 ): Promise<RecordActionResponse> => {
-  const { resource, cache } = context
+  const { resource } = context
   if (request.method === 'get') {
     // Render form: return a blank record skeleton.
     return { record: resource.build({}).toJSON() }
   }
   const params = (request.payload ?? {}) as Record<string, unknown>
   const created = await resource.create(params)
-  // A new row only affects list/search results — no existing `show`
-  // response can be made stale by an INSERT, so the per-record tags
-  // are left alone.
-  await cache.invalidateTag(listTag(resource.id()))
+  // Cache invalidation happens centrally in `ModernAdmin.invoke()` after
+  // every after-hook has run (see `invalidateMutationCaches`) — the
+  // handler-level invalidation used to race with hooks that write related
+  // rows (m2m diffs) and leave repopulated stale entries behind.
   const record = resource.build(created)
   return {
     record: record.toJSON(),

@@ -8,6 +8,7 @@ import {
   useQuery,
   useQueryClient,
   type InfiniteData,
+  type QueryClient,
   type UseInfiniteQueryResult,
   type UseMutationResult,
   type UseQueryResult,
@@ -48,6 +49,65 @@ const keyHistoryRevision = (resourceId: string, recordId: string, revisionId: st
   ['modern-admin', resourceId, 'history', recordId, revisionId] as const
 const keyAuditLog = (query?: AuditLogQuery) =>
   ['modern-admin', 'audit-log', query ?? null] as const
+
+/**
+ * Resources whose cached queries embed data of `resourceId` or aggregate
+ * over it — computed from the bootstrap config's reference graph:
+ *
+ *   * resources with a property referencing `resourceId` (their list rows
+ *     render its records via `populated`),
+ *   * resources that `resourceId` itself references (their show pages
+ *     surface child rows / counts through related-records tables).
+ *
+ * Mirrors the server-side dependents map in `ModernAdmin` so both cache
+ * layers drop the same scopes on a mutation.
+ */
+const linkedResourceIds = (
+  config: AdminConfig | undefined,
+  resourceId: string,
+): Set<string> => {
+  const linked = new Set<string>()
+  for (const resource of config?.resources ?? []) {
+    if (resource.id === resourceId) {
+      for (const property of resource.properties) {
+        if (property.reference) linked.add(property.reference)
+      }
+    } else if (resource.properties.some((p) => p.reference === resourceId)) {
+      linked.add(resource.id)
+    }
+  }
+  linked.delete(resourceId)
+  return linked
+}
+
+/**
+ * Central client-side invalidation for a mutation on `resourceId`. Marks
+ * stale (active queries refetch immediately, inactive on next mount):
+ *
+ *   * everything under `['modern-admin', <resourceId>]` — list/show/
+ *     values/search of the mutated resource,
+ *   * the same prefix for every linked resource (see `linkedResourceIds`)
+ *     so populated reference labels and related-record tables refresh,
+ *   * cross-resource aggregate caches that key a literal at index 1 and
+ *     therefore never prefix-match a resource id: field suggestions, the
+ *     user directory, global search, dashboard time series, audit log.
+ *
+ * Exported for realtime wiring and imperative call sites; the mutation
+ * hooks below all route through it.
+ */
+export const invalidateResourceData = (qc: QueryClient, resourceId: string): void => {
+  void qc.invalidateQueries({ queryKey: ['modern-admin', resourceId] })
+  const config = qc.getQueryData<AdminConfig>(KEY_CONFIG)
+  for (const linked of linkedResourceIds(config, resourceId)) {
+    void qc.invalidateQueries({ queryKey: ['modern-admin', linked] })
+  }
+  void qc.invalidateQueries({ queryKey: ['modern-admin', 'fieldSuggestions', resourceId] })
+  void qc.invalidateQueries({ queryKey: ['modern-admin', 'user-dir', resourceId] })
+  void qc.invalidateQueries({ queryKey: ['modern-admin', 'global-search'] })
+  void qc.invalidateQueries({ queryKey: ['modern-admin', 'timeseries'] })
+  void qc.invalidateQueries({ queryKey: ['modern-admin', 'audit-log'] })
+  void qc.invalidateQueries({ queryKey: ['modern-admin', 'audit-log-infinite'] })
+}
 
 export const useAdminConfig = (): UseQueryResult<AdminConfig> => {
   const client = useAdminClient()
@@ -137,7 +197,7 @@ export const useCreateRecord = (
   return useMutation({
     mutationFn: (payload) => client.create(resourceId, payload),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['modern-admin', resourceId] })
+      invalidateResourceData(qc, resourceId)
     },
   })
 }
@@ -153,9 +213,8 @@ export const useUpdateRecord = (
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ id, payload }) => client.update(resourceId, id, payload),
-    onSuccess: (_data, { id }) => {
-      qc.invalidateQueries({ queryKey: ['modern-admin', resourceId] })
-      qc.invalidateQueries({ queryKey: keyShow(resourceId, id) })
+    onSuccess: () => {
+      invalidateResourceData(qc, resourceId)
     },
   })
 }
@@ -168,7 +227,7 @@ export const useDeleteRecord = (
   return useMutation({
     mutationFn: (id) => client.delete(resourceId, id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['modern-admin', resourceId] })
+      invalidateResourceData(qc, resourceId)
     },
   })
 }
@@ -181,7 +240,7 @@ export const useBulkDeleteRecords = (
   return useMutation({
     mutationFn: (ids) => client.bulkDelete(resourceId, ids),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['modern-admin', resourceId] })
+      invalidateResourceData(qc, resourceId)
     },
   })
 }
@@ -306,9 +365,8 @@ export const useInvokeRecordAction = (
   return useMutation({
     mutationFn: ({ recordId, actionName }) =>
       client.invokeRecordAction(resourceId, recordId, actionName),
-    onSuccess: (_data, { recordId }) => {
-      qc.invalidateQueries({ queryKey: ['modern-admin', resourceId] })
-      qc.invalidateQueries({ queryKey: ['modern-admin', resourceId, 'show', recordId] })
+    onSuccess: () => {
+      invalidateResourceData(qc, resourceId)
     },
   })
 }
@@ -321,7 +379,7 @@ export const useInvokeBulkAction = (
   return useMutation({
     mutationFn: ({ actionName, ids }) => client.invokeBulkAction(resourceId, actionName, ids),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['modern-admin', resourceId] })
+      invalidateResourceData(qc, resourceId)
     },
   })
 }
@@ -334,7 +392,7 @@ export const useInvokeResourceAction = (
   return useMutation({
     mutationFn: ({ actionName, payload }) => client.invokeResourceAction(resourceId, actionName, payload),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['modern-admin', resourceId] })
+      invalidateResourceData(qc, resourceId)
     },
   })
 }
@@ -460,11 +518,11 @@ export const useRevertRevision = (
   return useMutation({
     mutationFn: ({ revisionId, reason }) =>
       client.revertHistoryRevision(resourceId, recordId, revisionId, { reason }),
-    onSuccess: (_data, { revisionId }) => {
-      qc.invalidateQueries({ queryKey: ['modern-admin', resourceId] })
-      qc.invalidateQueries({ queryKey: keyShow(resourceId, recordId) })
-      qc.invalidateQueries({ queryKey: keyHistory(resourceId, recordId) })
-      qc.invalidateQueries({ queryKey: keyHistoryRevision(resourceId, recordId, revisionId) })
+    onSuccess: () => {
+      // `['modern-admin', resourceId]` already prefix-covers show/history/
+      // revision keys of this record; the helper adds linked resources +
+      // aggregate caches.
+      invalidateResourceData(qc, resourceId)
     },
   })
 }

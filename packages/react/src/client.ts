@@ -86,6 +86,12 @@ export class AdminClient {
     this.signOutPath = `${this.authBasePath}/sign-out`
   }
 
+  /** Base URL the client was configured with ('' = same-origin). The
+   *  realtime bridge derives the WS endpoint from it. */
+  get apiBaseUrl(): string {
+    return this.baseUrl
+  }
+
   private async requestOnce<T>(path: string, init: RequestInit = {}): Promise<T> {
     const res = await fetch(`${this.baseUrl}${path}`, {
       credentials: this.credentials,

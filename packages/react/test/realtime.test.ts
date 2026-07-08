@@ -20,7 +20,7 @@ const makeClient = (
 
 describe('applyDeletionLocally', () => {
   test('removes the matching record and decrements meta.total', () => {
-    const key = JSON.stringify(['users', 'list'])
+    const key = JSON.stringify(['modern-admin', 'users', 'list'])
     const { client, data } = makeClient({
       [key]: {
         records: [
@@ -38,7 +38,7 @@ describe('applyDeletionLocally', () => {
   })
 
   test('returns input untouched when record id not present', () => {
-    const key = JSON.stringify(['users', 'list'])
+    const key = JSON.stringify(['modern-admin', 'users', 'list'])
     const original = {
       records: [{ id: '2', email: 'b' }],
       meta: { total: 1 },
@@ -49,7 +49,7 @@ describe('applyDeletionLocally', () => {
   })
 
   test('returns input untouched when no records array', () => {
-    const key = JSON.stringify(['users', 'list'])
+    const key = JSON.stringify(['modern-admin', 'users', 'list'])
     const original = { records: undefined }
     const { client, data } = makeClient({ [key]: original })
     applyDeletionLocally(client as never, 'users', '1')
@@ -57,7 +57,7 @@ describe('applyDeletionLocally', () => {
   })
 
   test('clamps total at zero', () => {
-    const key = JSON.stringify(['users', 'list'])
+    const key = JSON.stringify(['modern-admin', 'users', 'list'])
     const { client, data } = makeClient({
       [key]: {
         records: [{ id: '1' }],

@@ -84,6 +84,9 @@ export interface ResourceJSON {
   name: string
   navigation: { name?: string; icon?: string; group?: string } | null
   relatedResources?: RelatedResource[]
+  /** Master switch for the show-page "Related records" section. When
+   *  explicitly `false`, the whole block is hidden. Defaults to shown. */
+  showRelatedResources?: boolean
   properties: PropertyJSON[]
   actions: ActionDescriptor[]
 }
@@ -109,6 +112,8 @@ export interface AdminFeatures {
   webhooks: boolean
   apiKeys: boolean
   aiAssistant: boolean
+  /** Realtime WS gateway is mounted — the SPA live-invalidates its cache. */
+  realtime: boolean
 }
 
 const ALL_FEATURES_OFF: AdminFeatures = {
@@ -117,6 +122,7 @@ const ALL_FEATURES_OFF: AdminFeatures = {
   webhooks: false,
   apiKeys: false,
   aiAssistant: false,
+  realtime: false,
 }
 
 /** Defensive resolver for older API servers that don't yet surface

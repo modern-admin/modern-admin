@@ -1,5 +1,4 @@
 import { RecordNotFoundError } from '../../errors'
-import { listTag, recordTag } from '../cache-runtime.js'
 import type {
   Action,
   ActionContext,
@@ -11,7 +10,7 @@ const handler = async (
   request: ActionRequest,
   context: ActionContext,
 ): Promise<RecordActionResponse> => {
-  const { resource, cache } = context
+  const { resource } = context
   const id = request.params.recordId
   if (!id) throw new Error('edit action requires recordId')
 
@@ -23,10 +22,8 @@ const handler = async (
 
   const payload = (request.payload ?? {}) as Record<string, unknown>
   const updated = await resource.update(id, payload)
-  // The mutated row may shift in list order, change values, and the
-  // canonical show response is stale. Drop both tags but leave other
-  // records' show entries intact.
-  await cache.invalidateTag([listTag(resource.id()), recordTag(resource.id(), id)])
+  // Cache invalidation happens centrally in `ModernAdmin.invoke()` after
+  // all after-hooks have run — see `invalidateMutationCaches`.
   return {
     record: resource.build(updated).toJSON(),
     notice: { message: 'Record updated', type: 'success' },

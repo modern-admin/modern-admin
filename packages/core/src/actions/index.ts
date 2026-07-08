@@ -22,6 +22,7 @@ export {
   CacheRuntime,
   listTag,
   recordTag,
+  recordsTag,
   type CacheRuntimeReadOptions,
 } from './cache-runtime.js'
 export { BUILT_IN_ACTIONS } from './built-in'

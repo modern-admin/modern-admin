@@ -1,5 +1,5 @@
 import { RecordNotFoundError } from '../../errors'
-import { recordTag } from '../cache-runtime.js'
+import { recordTag, recordsTag } from '../cache-runtime.js'
 import { resolveResourceCacheConfig } from '../../decorators/cache-config.js'
 import type {
   Action,
@@ -27,8 +27,11 @@ const handler = async (
       // Show responses are scoped to a single record — mutating any
       // other record of the same resource does NOT invalidate this
       // entry (the `list:<resourceId>` tag is enough for list-side
-      // invalidation).
-      tags: [recordTag(resource.id(), id)],
+      // invalidation). The resource-wide `records:` tag exists for
+      // cross-resource invalidation: when a referenced/related resource
+      // changes, the affected parent record ids are unknown, so all
+      // record entries of the resource drop together.
+      tags: [recordTag(resource.id(), id), recordsTag(resource.id())],
     },
     async () => {
       const record = await resource.findOne(id)

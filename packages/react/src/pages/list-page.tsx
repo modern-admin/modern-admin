@@ -295,6 +295,13 @@ export interface ResourceListPageProps {
   /** Disable row click → edit and link cells. Used by the picker dialog
    *  so clicking a row just toggles selection. */
   disableRowNavigation?: boolean
+  /** In embedded mode (`card: false`), whether the internal scroll container
+   *  and paginator carry their own horizontal padding (`px-6`). Defaults to
+   *  true — correct for the picker dialog whose body has no padding. Set to
+   *  false when the host already pads the list (e.g. the related-records tabs
+   *  embed inside a `CardContent`), otherwise the two paddings stack and the
+   *  table no longer spans the block's full width. */
+  embedPadding?: boolean
 }
 
 export function ResourceListPage({
@@ -306,6 +313,7 @@ export function ResourceListPage({
   selectedIds: controlledSelectedIds,
   onSelectionChange,
   disableRowNavigation,
+  embedPadding = true,
 }: ResourceListPageProps): React.ReactElement {
   const resource = useResource(resourceId)
   const navigate = useNavigate()
@@ -1417,7 +1425,20 @@ export function ResourceListPage({
         // inside a flex column to actually constrain its height. Horizontal
         // + top padding lives on the scroll container — the paginator is
         // a sibling so it stays edge-to-edge.
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pt-4">{inner}</div>
+        <div
+          className={cn(
+            'flex min-h-0 flex-1 flex-col',
+            // `embedPadding` doubles as the "self-contained scroll box" flag:
+            // the picker dialog is a fixed-height host, so the table area
+            // scrolls internally (`overflow-y-auto`) with its own padding.
+            // The related-records embed flows in the page — no internal
+            // vertical scroll, no padding — so the host scrollbar is the
+            // only one and the vertical gutter here disappears.
+            embedPadding && 'overflow-y-auto px-6 pt-4',
+          )}
+        >
+          {inner}
+        </div>
       )}
       {!showStandaloneEmptyState && (
         // Standalone page mode: sticky at the page-wrapper level so the
@@ -1441,7 +1462,7 @@ export function ResourceListPage({
             'border-t border-border bg-card py-3',
             f.card
               ? 'sticky bottom-0 -mb-px z-20 -mx-2 mt-0 px-2 pr-14 shadow-[0_-4px_8px_-6px_rgba(0,0,0,0.08)] sm:-mx-6 sm:px-6 sm:pr-16'
-              : 'shrink-0 px-6',
+              : cn('shrink-0', embedPadding && 'px-6'),
           )}
         >
           <Paginator table={table} total={total} t={t}/>
@@ -1764,6 +1785,10 @@ type StringFilterOp = 'co' | 'nco' | 'sw' | 'ew' | 'eq' | 'neq' | 'empty' | 'nem
 const STRING_OPS: ReadonlySet<string> = new Set(['co', 'nco', 'sw', 'ew', 'eq', 'neq', 'empty', 'nempty', 'in'])
 const ALL_STRING_OPS: StringFilterOp[] = ['co', 'nco', 'sw', 'ew', 'in', 'empty', 'nempty']
 const NULLARY_OPS: ReadonlySet<string> = new Set(['empty', 'nempty'])
+
+/** Max distinct values for which a string filter defaults to "is one of"
+ *  (checkbox list). Fields with more choices default to "contains". */
+const ONE_OF_DEFAULT_MAX = 10
 
 function parseFilterString(raw: string): { op: StringFilterOp; val: string } {
   if (!raw) return { op: 'co', val: '' }
@@ -2194,16 +2219,21 @@ function StringFilterField({
   const isLowCardinality = distinctData != null && !distinctData.hasMore
   const distinctValues = distinctData?.values ?? []
 
-  // If low cardinality, no existing filter, and default op (co with empty val):
-  // auto-switch to "is one of" mode to match Metabase behavior.
+  // Default to "is one of" only for fields with few distinct values; fields with
+  // more choices default to "contains" (free-text) since a long checkbox list is
+  // unwieldy.
+  const shouldDefaultToOneOf = isLowCardinality && distinctValues.length <= ONE_OF_DEFAULT_MAX
+
+  // If few distinct values, no existing filter, and default op (co with empty
+  // val): auto-switch to "is one of" mode to match Metabase behavior.
   const autoSwitchedRef = React.useRef(false)
   React.useEffect(() => {
     if (autoSwitchedRef.current) return
-    if (isLowCardinality && !value && op === 'co' && val === '') {
+    if (shouldDefaultToOneOf && !value && op === 'co' && val === '') {
       autoSwitchedRef.current = true
       setOp('in')
     }
-  }, [isLowCardinality, value, op, val])
+  }, [shouldDefaultToOneOf, value, op, val])
 
   const emit = (nextOp: StringFilterOp, nextVal: string) => {
     setOp(nextOp)

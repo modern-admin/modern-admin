@@ -104,6 +104,12 @@ export const resourceOptionsZ = z.object({
     .optional(),
   /** Reverse 1:N relations to render as tabs on the show page. */
   relatedResources: z.array(relatedResourceZ).optional(),
+  /** Master switch for the "Related records" section on the show page.
+   *  Defaults to `true`. Set to `false` to hide the whole block — no tabs
+   *  are rendered even if `relatedResources` is set or reverse relations
+   *  are auto-discovered. Point-hide a single relation by hiding its
+   *  to-many reference property from the `show` view instead. */
+  showRelatedResources: z.boolean().optional(),
   /**
    * Server-side response cache configuration for this resource. See
    * `cacheOptionsZ` / `resolveResourceCacheConfig` for the resolution

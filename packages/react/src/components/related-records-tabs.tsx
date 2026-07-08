@@ -54,6 +54,9 @@ function RelatedRecordsTab({
       query={query}
       onQueryChange={setQuery}
       lockedFilters={{ [related.foreignKey]: parentRecordId }}
+      // The host `CardContent` already pads the tab body — don't double it,
+      // or the table stops spanning the block's full width.
+      embedPadding={false}
       features={{
         breadcrumbs: false,
         title: false,
@@ -76,9 +79,12 @@ export function RelatedRecordsTabs({
 }: RelatedRecordsTabsProps): React.ReactElement | null {
   const { t } = useI18n()
   const allResources = useResources()
+  // Master switch: `showRelatedResources: false` in the resource config hides
+  // the whole section regardless of configured/auto-discovered relations.
+  const enabled = resource.showRelatedResources !== false
   const tabs = React.useMemo(
-    () => resolveRelatedResources(resource, allResources),
-    [resource, allResources],
+    () => (enabled ? resolveRelatedResources(resource, allResources) : []),
+    [enabled, resource, allResources],
   )
   // Hooks must run before any early return — call useState unconditionally.
   const [active, setActive] = React.useState<string>(

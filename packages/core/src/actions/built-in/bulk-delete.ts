@@ -1,4 +1,3 @@
-import { listTag, recordTag } from '../cache-runtime.js'
 import type {
   Action,
   ActionContext,
@@ -10,7 +9,7 @@ const handler = async (
   request: ActionRequest,
   context: ActionContext,
 ): Promise<BulkActionResponse> => {
-  const { resource, cache } = context
+  const { resource } = context
   const idsRaw = request.params.recordIds ?? ''
   const ids = idsRaw.split(',').filter(Boolean)
   if (ids.length === 0) throw new Error('bulkDelete requires recordIds')
@@ -21,10 +20,8 @@ const handler = async (
       await resource.delete(id)
     }
   })
-  await cache.invalidateTag([
-    listTag(resource.id()),
-    ...ids.map((id) => recordTag(resource.id(), id)),
-  ])
+  // Cache invalidation happens centrally in `ModernAdmin.invoke()` after
+  // all after-hooks have run — see `invalidateMutationCaches`.
   return {
     records: records.map((r) => r.toJSON()),
     notice: { message: `Deleted ${ids.length} record(s)`, type: 'success' },

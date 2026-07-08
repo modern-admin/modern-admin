@@ -15,6 +15,9 @@
     "tailwind"
   ],
   "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",
