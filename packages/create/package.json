@@ -60,8 +60,8 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@modern-admin/system-prisma": "workspace:*",
-    "@modern-admin/system-drizzle": "workspace:*"
+    "@modern-admin/system-prisma": "workspace:^",
+    "@modern-admin/system-drizzle": "workspace:^"
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",

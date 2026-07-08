@@ -50,8 +50,8 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@modern-admin/core": "workspace:*",
-    "@modern-admin/nest": "workspace:*",
+    "@modern-admin/core": "workspace:^",
+    "@modern-admin/nest": "workspace:^",
     "busboy": "^1.6.0",
     "dataloader": "^2.2.3",
     "graphql-ws": "^6.0.8",

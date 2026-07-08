@@ -67,7 +67,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@modern-admin/core": "workspace:*",
+    "@modern-admin/core": "workspace:^",
     "@nestjs/common": "^11.1.19",
     "@nestjs/core": "^11.1.19",
     "busboy": "^1.6.0",

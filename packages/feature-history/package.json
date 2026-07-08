@@ -51,7 +51,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@modern-admin/core": "workspace:*"
+    "@modern-admin/core": "workspace:^"
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",

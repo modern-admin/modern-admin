@@ -33,9 +33,12 @@
  * the workflow exports `GITHUB_TOKEN` → `BUN_AUTH_TOKEN`.
  */
 
-import { readFile, writeFile } from 'node:fs/promises'
-import { join, resolve } from 'node:path'
+import { readFile, writeFile, readdir, rm } from 'node:fs/promises'
+import { join, resolve, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
+
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
 interface PackageJson {
   name: string
@@ -97,6 +100,79 @@ function applyPublishOverrides(pkg: PackageJson): PackageJson {
 /** Resolve `bun` reliably whether or not it's on PATH inside the spawn env. */
 const BUN_BIN = process.execPath
 
+/** Current version of every workspace package, by package name. */
+async function workspaceVersions(): Promise<Map<string, string>> {
+  const versions = new Map<string, string>()
+  for (const root of ['packages', 'apps']) {
+    let entries: string[]
+    try {
+      entries = await readdir(join(REPO_ROOT, root))
+    } catch {
+      continue
+    }
+    for (const dir of entries) {
+      try {
+        const pkg = JSON.parse(
+          await readFile(join(REPO_ROOT, root, dir, 'package.json'), 'utf8'),
+        ) as { name?: string; version?: string }
+        if (pkg.name && pkg.version) versions.set(pkg.name, pkg.version)
+      } catch {
+        /* skip */
+      }
+    }
+  }
+  return versions
+}
+
+/**
+ * Guard against shipping stale internal dependency ranges.
+ *
+ * `bun publish` substitutes `workspace:^` ranges from **bun.lock**, whose
+ * workspace versions bun does not refresh after `changeset version` — that
+ * is how `@modern-admin/*@0.2.0` shipped pinning `core@0.1.1` and crashed
+ * consumers with nested-copy resolution. We pack the tarball first, read
+ * the manifest it would publish, and require every `@modern-admin/*`
+ * range to be `^<current workspace version>` (no `workspace:` remnants,
+ * no stale numbers). Any mismatch aborts the publish.
+ */
+async function verifyPackedInternalDeps(pkgDir: string, pkg: PackageJson): Promise<void> {
+  console.log('  → bun pm pack (verify internal dependency ranges)')
+  run(['pm', 'pack', '--quiet'], pkgDir)
+  const tarball = join(
+    pkgDir,
+    `${pkg.name.replace('@', '').replace('/', '-')}-${pkg.version}.tgz`,
+  )
+  try {
+    const r = spawnSync('tar', ['-xzOf', tarball, 'package/package.json'], {
+      encoding: 'utf8',
+    })
+    if (r.status !== 0) throw new Error(`tar failed: ${r.stderr}`)
+    const packed = JSON.parse(r.stdout) as PackageJson
+    const versions = await workspaceVersions()
+    const problems: string[] = []
+    for (const key of ['dependencies', 'peerDependencies', 'optionalDependencies'] as const) {
+      const deps = (packed[key] ?? {}) as Record<string, string>
+      for (const [name, range] of Object.entries(deps)) {
+        if (!name.startsWith('@modern-admin/')) continue
+        const expected = `^${versions.get(name)}`
+        if (range !== expected) {
+          problems.push(`${key}.${name} = "${range}" (expected "${expected}")`)
+        }
+      }
+    }
+    if (problems.length > 0) {
+      throw new Error(
+        `Packed manifest of ${pkg.name}@${pkg.version} carries wrong internal ranges:\n` +
+          problems.map((p) => `    ✗ ${p}`).join('\n') +
+          '\n  Likely a stale bun.lock — run `bun scripts/sync-lock-workspace-versions.ts` and retry.',
+      )
+    }
+    console.log('  ✓ internal dependency ranges verified')
+  } finally {
+    await rm(tarball, { force: true })
+  }
+}
+
 function run(args: string[], cwd: string): void {
   const r = spawnSync(BUN_BIN, args, { cwd, stdio: 'inherit', env: process.env })
   if (r.status !== 0) {
@@ -124,6 +200,7 @@ async function main(): Promise<void> {
   await writeJson(pkgJsonPath, transformed)
 
   try {
+    await verifyPackedInternalDeps(pkgDir, transformed)
     // `bun publish --dry-run` still performs the registry auth handshake,
     // which makes local smoke-testing without a token impossible. Route
     // dry-runs through `bun pm pack --dry-run` instead — it operates on

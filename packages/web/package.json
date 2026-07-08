@@ -65,10 +65,10 @@
     "react-dom": "^19.2.6"
   },
   "dependencies": {
-    "@modern-admin/core": "workspace:*",
-    "@modern-admin/i18n": "workspace:*",
-    "@modern-admin/react": "workspace:*",
-    "@modern-admin/ui": "workspace:*",
+    "@modern-admin/core": "workspace:^",
+    "@modern-admin/i18n": "workspace:^",
+    "@modern-admin/react": "workspace:^",
+    "@modern-admin/ui": "workspace:^",
     "@tanstack/react-query": "^5.100.9"
   },
   "devDependencies": {

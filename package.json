@@ -28,7 +28,7 @@
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "changeset": "changeset",
-    "version-packages": "changeset version && bun install --lockfile-only",
+    "version-packages": "changeset version && bun scripts/sync-lock-workspace-versions.ts && bun install --lockfile-only",
     "release": "bun scripts/release.ts"
   },
   "devDependencies": {
