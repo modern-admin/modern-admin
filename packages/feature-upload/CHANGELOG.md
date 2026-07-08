@@ -1,5 +1,12 @@
 # @modern-admin/feature-upload
 
+## 0.2.0
+
+### Patch Changes
+
+- Updated dependencies [[`64f17a6`](https://github.com/modern-admin/modern-admin/commit/64f17a63626ab2990aee38fb035469aed8992e99)]:
+  - @modern-admin/core@0.2.0
+
 ## 0.1.1
 
 ### Patch Changes

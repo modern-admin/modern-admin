@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/system-drizzle",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Drizzle-backed implementation of Modern Admin system stores.",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/system-drizzle#readme",
   "keywords": [
