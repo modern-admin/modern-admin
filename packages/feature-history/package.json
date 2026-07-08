@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/feature-history",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Record revision history feature plugin for Modern Admin.",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/feature-history#readme",
   "keywords": [

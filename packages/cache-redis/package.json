@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/cache-redis",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Redis cache + pub/sub invalidation provider for Modern Admin.",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/cache-redis#readme",
   "keywords": [

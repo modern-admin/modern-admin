@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/telemetry",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Opt-in usage telemetry for Modern Admin (privacy-first, MODERN_ADMIN_TELEMETRY=1 required).",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/telemetry#readme",
   "keywords": [
