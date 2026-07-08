@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/create",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Scaffolder for a standalone @modern-admin admin-panel service. Invoke via `bun create @modern-admin <name>` (or `npm create @modern-admin`).",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/create#readme",
   "keywords": [
