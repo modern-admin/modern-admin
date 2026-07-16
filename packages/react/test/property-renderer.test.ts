@@ -12,13 +12,25 @@ describe('formatDate', () => {
     expect(formatDate('2026-07-16T14:32:00.000Z')).toBe('2026-07-16')
   })
 
-  test('datetime (withTime=true) includes hours and minutes', () => {
-    expect(formatDate(new Date('2026-07-16T14:32:00.000Z'), true)).toBe('2026-07-16 14:32')
-    expect(formatDate('2026-07-16T14:32:00.000Z', true)).toBe('2026-07-16 14:32')
+  const localExpected = (iso: string): string => {
+    const d = new Date(iso)
+    const pad = (n: number): string => String(n).padStart(2, '0')
+    return (
+      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ` +
+      `${pad(d.getHours())}:${pad(d.getMinutes())}`
+    )
+  }
+
+  test('datetime (withTime=true) includes hours and minutes in local time', () => {
+    const expected = localExpected('2026-07-16T14:32:00.000Z')
+    expect(formatDate(new Date('2026-07-16T14:32:00.000Z'), true)).toBe(expected)
+    expect(formatDate('2026-07-16T14:32:00.000Z', true)).toBe(expected)
   })
 
   test('datetime truncates seconds/milliseconds, keeps minute precision', () => {
-    expect(formatDate('2026-07-16T14:32:59.999Z', true)).toBe('2026-07-16 14:32')
+    expect(formatDate('2026-07-16T14:32:59.999Z', true)).toBe(
+      localExpected('2026-07-16T14:32:59.999Z'),
+    )
   })
 
   test('returns the raw string for unparsable values', () => {

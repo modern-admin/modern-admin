@@ -76,10 +76,25 @@ function LazyRichtextEditor(props: RichtextEditorProps): React.ReactElement {
 
 export const formatDate = (value: unknown, withTime = false): string => {
   if (value == null) return ''
-  // date-only → YYYY-MM-DD; datetime → YYYY-MM-DD HH:MM (UTC, minute precision)
-  const render = (d: Date): string =>
-    withTime ? d.toISOString().slice(0, 16).replace('T', ' ') : d.toISOString().slice(0, 10)
-  if (value instanceof Date) return render(value)
+  const pad = (n: number): string => String(n).padStart(2, '0')
+  const render = (d: Date): string => {
+    // datetime → YYYY-MM-DD HH:MM in the viewer's local timezone (minute
+    // precision). We build the string from the local Date accessors rather
+    // than toISOString(), which is always UTC.
+    if (withTime) {
+      return (
+        `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ` +
+        `${pad(d.getHours())}:${pad(d.getMinutes())}`
+      )
+    }
+    // date-only → YYYY-MM-DD. Extract in UTC so a midnight-UTC calendar date
+    // is not shifted to the previous day in negative-offset timezones.
+    return d.toISOString().slice(0, 10)
+  }
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) return String(value)
+    return render(value)
+  }
   const d = new Date(String(value))
   if (Number.isNaN(d.getTime())) return String(value)
   return render(d)
