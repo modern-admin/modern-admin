@@ -1,5 +1,27 @@
 # @modern-admin/system-drizzle
 
+## 0.3.0
+
+### Minor Changes
+
+- [`69606d4`](https://github.com/modern-admin/modern-admin/commit/69606d4c2e2ee6204dde978fa59e4454e3ca7ac2) Thanks [@SergiyIva](https://github.com/SergiyIva)! - harden search fallback scan, avoid payload mutation in json-by-key, paginate cache invalidateTags, and make history writes fire-and-forget
+
+### Patch Changes
+
+- [`69606d4`](https://github.com/modern-admin/modern-admin/commit/69606d4c2e2ee6204dde978fa59e4454e3ca7ac2) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Deduplicate adapter and system-store internals into shared `@modern-admin/core`
+  helpers. The Prisma and Drizzle adapters no longer keep byte-identical copies of
+  the filter-value coercion (`coerceScalar`, `isRangeValue`, `between` parsing) or
+  the time-series utilities (`isoDate`, `toNumber`, `stringifyKey`, `toDate`,
+  `sumValues`, `buildDisplaySql`, row cap) — these now live in
+  `core/src/adapters/filter-coerce.ts` and `core/src/adapters/time-series.ts`.
+  Likewise the six ORM-backed system stores share one set of row → domain mappers
+  in `core/src/system/row-mappers.ts` instead of maintaining duplicates in
+  `system-prisma` and `system-drizzle`. Behaviour is unchanged; adapter-specific
+  pieces (Prisma `where` objects, Drizzle SQL builders, top-N/`__other__`
+  bucketing, the config scope-id sentinel) stay in their adapters.
+- Updated dependencies [[`69606d4`](https://github.com/modern-admin/modern-admin/commit/69606d4c2e2ee6204dde978fa59e4454e3ca7ac2), [`69606d4`](https://github.com/modern-admin/modern-admin/commit/69606d4c2e2ee6204dde978fa59e4454e3ca7ac2), [`69606d4`](https://github.com/modern-admin/modern-admin/commit/69606d4c2e2ee6204dde978fa59e4454e3ca7ac2)]:
+  - @modern-admin/core@0.3.0
+
 ## 0.2.1
 
 ### Patch Changes

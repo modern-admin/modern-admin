@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/queue",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "BullMQ-based queue + cron module for Modern Admin (NestJS).",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/queue#readme",
   "keywords": [

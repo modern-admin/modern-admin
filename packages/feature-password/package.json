@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/feature-password",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Hashed password property type for Modern Admin.",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/feature-password#readme",
   "keywords": [
