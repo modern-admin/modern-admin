@@ -1,5 +1,33 @@
 # @modern-admin/feature-history
 
+## 0.3.0
+
+### Minor Changes
+
+- [`69606d4`](https://github.com/modern-admin/modern-admin/commit/69606d4c2e2ee6204dde978fa59e4454e3ca7ac2) Thanks [@SergiyIva](https://github.com/SergiyIva)! - History revisions now support retention and redact secrets by default.
+
+  - `IHistoryStore` gains an optional `prune(retention)` method and a new
+    `HistoryRetention` type (`keepLast`, `keepDays`). `MemoryHistoryStore`
+    takes a retention policy in its constructor and self-trims on append
+    (per-record ring buffer + age cutoff), so the default in-memory store no
+    longer grows unbounded — it previously kept two full snapshots per
+    revision forever.
+  - `historyFeature` / `historyPlugin` accept `keepLast` and `keepDays`,
+    passed to the default store and enforced after every append on any store
+    that implements `prune`.
+  - The in-memory fallback now logs a one-time warning outside tests when no
+    persistent store is configured.
+  - Snapshots exclude secrets by default: `password`-typed properties and
+    statically inaccessible properties (`isAccessible: false`) are stripped
+    from `snapshot` / `snapshotBefore`. Opt back in with `includeSecrets: true`.
+
+- [`69606d4`](https://github.com/modern-admin/modern-admin/commit/69606d4c2e2ee6204dde978fa59e4454e3ca7ac2) Thanks [@SergiyIva](https://github.com/SergiyIva)! - harden search fallback scan, avoid payload mutation in json-by-key, paginate cache invalidateTags, and make history writes fire-and-forget
+
+### Patch Changes
+
+- Updated dependencies [[`69606d4`](https://github.com/modern-admin/modern-admin/commit/69606d4c2e2ee6204dde978fa59e4454e3ca7ac2), [`69606d4`](https://github.com/modern-admin/modern-admin/commit/69606d4c2e2ee6204dde978fa59e4454e3ca7ac2), [`69606d4`](https://github.com/modern-admin/modern-admin/commit/69606d4c2e2ee6204dde978fa59e4454e3ca7ac2)]:
+  - @modern-admin/core@0.3.0
+
 ## 0.2.1
 
 ### Patch Changes

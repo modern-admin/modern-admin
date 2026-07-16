@@ -1,5 +1,12 @@
 # @modern-admin/telemetry
 
+## 0.3.0
+
+### Patch Changes
+
+- Updated dependencies [[`69606d4`](https://github.com/modern-admin/modern-admin/commit/69606d4c2e2ee6204dde978fa59e4454e3ca7ac2), [`69606d4`](https://github.com/modern-admin/modern-admin/commit/69606d4c2e2ee6204dde978fa59e4454e3ca7ac2), [`69606d4`](https://github.com/modern-admin/modern-admin/commit/69606d4c2e2ee6204dde978fa59e4454e3ca7ac2)]:
+  - @modern-admin/core@0.3.0
+
 ## 0.2.1
 
 ### Patch Changes

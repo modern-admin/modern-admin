@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/web",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "type": "module",
   "sideEffects": false,
   "description": "Pre-built React admin SPA. Mount it into a host page or let @modern-admin/nest serve the standalone bundle.",

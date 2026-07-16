@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/tsconfig",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Shared TypeScript configuration presets for the Modern Admin monorepo.",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/tsconfig#readme",
   "keywords": [
