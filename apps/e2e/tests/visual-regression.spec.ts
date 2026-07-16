@@ -7,12 +7,18 @@ import { expect, test, type Locator, type Page } from '@playwright/test'
  * automatically by Playwright on the first run; checked in to git so CI can
  * compare against them).
  *
- * Adding / updating baselines (after intentional UI changes):
+ * Adding / updating baselines (after intentional UI changes). The CI job
+ * `e2e-visual` runs this spec INSIDE the official Playwright container so font
+ * rendering is deterministic — baselines therefore MUST be regenerated in that
+ * same image, not with a host browser (whose fonts differ by ~3% and trip the
+ * diff). With the api (:3001) and web (:5173) dev servers already running on
+ * the host:
  *
- *   PLAYWRIGHT_CHANNEL=chrome bun run --cwd apps/e2e e2e \
- *     visual-regression --update-snapshots
+ *   docker run --rm --network host -v "$PWD:/work" -w /work/apps/e2e \
+ *     mcr.microsoft.com/playwright:v1.61.1-noble \
+ *     npx playwright test visual-regression --update-snapshots
  *
- * Then commit the regenerated PNGs.
+ * Then commit the regenerated `*-chromium-linux.png` files.
  *
  * Pages covered (stable, seed-deterministic):
  *   • / (home dashboard — empty chart state)

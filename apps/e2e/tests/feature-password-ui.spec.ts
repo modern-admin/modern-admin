@@ -1,4 +1,5 @@
 import { expect, test, type APIRequestContext, type Locator, type Page } from '@playwright/test'
+import postgres from 'postgres'
 
 /**
  * End-to-end coverage for `feature-password`
@@ -39,6 +40,27 @@ import { expect, test, type APIRequestContext, type Locator, type Page } from '@
 const API_URL = process.env.E2E_API_URL ?? 'http://localhost:3001'
 const adminApi = (path: string): string => `${API_URL}/admin/api${path}`
 
+// The encrypted `password` column is `isAccessible: false`, so the API never
+// serialises it (by design — the hash must not ship in record JSON, history,
+// or realtime payloads). To assert the hash actually changes (or doesn't), we
+// read the column straight from Postgres. `DATABASE_URL` is set by CI and
+// resolved from `apps/api-prisma/.env` for local runs (see playwright.config).
+const DATABASE_URL = process.env.DATABASE_URL
+if (!DATABASE_URL) {
+  throw new Error(
+    'feature-password-ui.spec needs DATABASE_URL to read the hashed password ' +
+      'column directly (the API intentionally never exposes it).',
+  )
+}
+// Strip Prisma-only query params (`?schema=…`) that postgres.js would forward
+// as unknown startup parameters and reject.
+const pgUrl = new URL(DATABASE_URL)
+pgUrl.searchParams.delete('schema')
+const sql = postgres(pgUrl.toString(), { max: 2 })
+test.afterAll(async () => {
+  await sql.end({ timeout: 5 })
+})
+
 interface CustomerFixture {
   id: string
   email: string
@@ -63,7 +85,7 @@ async function createCustomer(request: APIRequestContext): Promise<CustomerFixtu
   expect(res.ok(), `fixture create failed: ${await res.text()}`).toBeTruthy()
   const body = await res.json()
   const id = String(body.record.id)
-  const initialHash = await readPasswordHash(request, id)
+  const initialHash = await readPasswordHash(id)
   // Sanity: the feature hook ran and an argon2id hash landed in the column.
   expect(initialHash.length).toBeGreaterThan(0)
   expect(initialHash).not.toBe('OriginalSecret123!')
@@ -77,17 +99,15 @@ async function deleteCustomerSilently(
   await request.delete(adminApi(`/resources/customers/records/${id}/actions/delete`))
 }
 
-/** The encrypted column is hidden from the UI by `isVisible: { show: false, ... }`
- *  but the REST payload still carries it — the flag is render-side, not data-side.
- *  We use it as a back-channel to assert the hash mutates correctly. */
-async function readPasswordHash(
-  request: APIRequestContext,
-  id: string,
-): Promise<string> {
-  const res = await request.get(adminApi(`/resources/customers/records/${id}/actions/show`))
-  expect(res.ok(), `read hash failed: ${await res.text()}`).toBeTruthy()
-  const body = await res.json()
-  const raw = body.record.params.password
+/** Read the argon2id hash straight from the `customer.password` column. The
+ *  API never exposes it (`isAccessible: false`), so a direct DB read is the
+ *  only way to assert the stored hash mutates correctly. Returns '' when the
+ *  column is null/absent. */
+async function readPasswordHash(id: string): Promise<string> {
+  const rows = await sql<{ password: string | null }[]>`
+    SELECT password FROM customer WHERE id = ${id}
+  `
+  const raw = rows[0]?.password
   return typeof raw === 'string' ? raw : ''
 }
 
@@ -223,18 +243,18 @@ test.describe('feature-password — UI surface', () => {
       ).toBeTruthy()
 
       // The before-hook strips `newPassword` from the payload, so the echoed
-      // record never carries the plaintext value. The encrypted hash, on the
-      // other hand, IS in the response (visibility is render-side only).
+      // record never carries the plaintext value — and the encrypted hash is
+      // `isAccessible: false`, so it isn't in the response either.
       const body = await saveRes.json()
       expect(body.record.params.newPassword).toBeUndefined()
-      const newHash = String(body.record.params.password ?? '')
+      expect(body.record.params.password).toBeUndefined()
+
+      // Read the stored hash straight from the column: it must be a fresh
+      // argon2id hash, not the old one and never the plaintext.
+      const newHash = await readPasswordHash(fix.id)
       expect(newHash.length).toBeGreaterThan(0)
       expect(newHash).not.toBe(fix.initialHash)
       expect(newHash).not.toBe('BrandNewSecret456!')
-
-      // Belt-and-braces — re-read via show endpoint, hash should match.
-      const refetched = await readPasswordHash(request, fix.id)
-      expect(refetched).toBe(newHash)
     } finally {
       await deleteCustomerSilently(request, fix.id)
     }
@@ -270,7 +290,7 @@ test.describe('feature-password — UI surface', () => {
       const saveRes = await savePromise
       expect(saveRes.ok()).toBeTruthy()
 
-      const afterHash = await readPasswordHash(request, fix.id)
+      const afterHash = await readPasswordHash(fix.id)
       // The hook deletes the encrypted column from the payload when the
       // virtual field is empty, so the adapter leaves the stored hash alone.
       expect(afterHash).toBe(fix.initialHash)

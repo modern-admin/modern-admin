@@ -159,14 +159,14 @@ test.describe('Filter — "Is one of" (in) operator: UI', () => {
       timeout: 10_000,
     })
 
-    // The checkbox picker exposes one button per distinct value. The
+    // The checkbox picker exposes one `role="checkbox"` row per distinct value. The
     // distinct endpoint returns names sorted alphabetically. Pick a few
     // known seed values to confirm the picker has hydrated.
-    await expect(colorField.getByRole('button', { name: 'amber' })).toBeVisible({
+    await expect(colorField.getByRole('checkbox', { name: 'amber' })).toBeVisible({
       timeout: 10_000,
     })
-    await expect(colorField.getByRole('button', { name: 'blue' })).toBeVisible()
-    await expect(colorField.getByRole('button', { name: 'green' })).toBeVisible()
+    await expect(colorField.getByRole('checkbox', { name: 'blue' })).toBeVisible()
+    await expect(colorField.getByRole('checkbox', { name: 'green' })).toBeVisible()
   })
 
   test('field above the one-of cap defaults to Contains; manual switch shows the picker', async ({
@@ -186,10 +186,10 @@ test.describe('Filter — "Is one of" (in) operator: UI', () => {
     // with the distinct values.
     await nameField.getByRole('combobox').click()
     await page.getByRole('option', { name: /^Is one of$/i }).click()
-    await expect(nameField.getByRole('button', { name: 'Design' })).toBeVisible({
+    await expect(nameField.getByRole('checkbox', { name: 'Design' })).toBeVisible({
       timeout: 10_000,
     })
-    await expect(nameField.getByRole('button', { name: 'DevOps' })).toBeVisible()
+    await expect(nameField.getByRole('checkbox', { name: 'DevOps' })).toBeVisible()
   })
 
   test('selecting two values filters the list to that subset', async ({
@@ -210,12 +210,12 @@ test.describe('Filter — "Is one of" (in) operator: UI', () => {
 
     const colorField = filterField(page, 'Color')
     // Wait for the auto-switch + distinct values to render.
-    await expect(colorField.getByRole('button', { name: 'blue' })).toBeVisible({
+    await expect(colorField.getByRole('checkbox', { name: 'blue' })).toBeVisible({
       timeout: 10_000,
     })
 
-    await colorField.getByRole('button', { name: 'blue' }).click()
-    await colorField.getByRole('button', { name: 'green' }).click()
+    await colorField.getByRole('checkbox', { name: 'blue' }).click()
+    await colorField.getByRole('checkbox', { name: 'green' }).click()
 
     await applyFilters(page)
 
@@ -244,12 +244,12 @@ test.describe('Filter — "Is one of" (in) operator: UI', () => {
     await openFilters(page)
 
     const nameField = filterField(page, 'Internal name')
-    // The toggle button is the same one used to select — clicking it again
+    // The toggle checkbox is the same one used to select — clicking it again
     // deselects. Wait for it to be visible (distinct endpoint resolved).
-    await expect(nameField.getByRole('button', { name: 'Design' })).toBeVisible({
+    await expect(nameField.getByRole('checkbox', { name: 'Design' })).toBeVisible({
       timeout: 10_000,
     })
-    await nameField.getByRole('button', { name: 'Design' }).click()
+    await nameField.getByRole('checkbox', { name: 'Design' }).click()
 
     await applyFilters(page)
 

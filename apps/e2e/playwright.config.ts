@@ -1,7 +1,35 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { defineConfig, devices } from '@playwright/test'
 
 const API_PORT = 3001
 const WEB_PORT = 5173
+
+/**
+ * A couple of specs (e.g. `feature-password-ui`) read a column straight from
+ * Postgres to assert a hash that the API intentionally never serialises
+ * (`isAccessible: false`). CI sets `DATABASE_URL` at the job level; for local
+ * runs resolve it from `apps/api-prisma/.env` (which interpolates the
+ * `POSTGRES_*` vars) so `bun run e2e` works without extra shell setup.
+ */
+function ensureDatabaseUrl(): void {
+  if (process.env.DATABASE_URL) return
+  const env: Record<string, string> = {}
+  for (const file of ['../api-prisma/.env', '../../.env']) {
+    try {
+      for (const line of readFileSync(resolve(import.meta.dirname, file), 'utf8').split('\n')) {
+        const m = /^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/.exec(line)
+        if (m && m[1] && !(m[1] in env)) env[m[1]] = (m[2] ?? '').replace(/^["']|["']$/g, '')
+      }
+    } catch {
+      // File missing — fall through; the spec throws a clear error if still unset.
+    }
+  }
+  const raw = env.DATABASE_URL
+  if (!raw) return
+  process.env.DATABASE_URL = raw.replace(/\$\{([A-Z0-9_]+)\}/g, (_, k) => env[k] ?? '')
+}
+ensureDatabaseUrl()
 
 /**
  * Playwright config for the Modern Admin reference apps. Two web servers

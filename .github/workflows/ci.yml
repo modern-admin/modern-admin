@@ -10,7 +10,15 @@
 #           repo's docker-compose.yml (same containers as local dev), the
 #           schema is pushed with `prisma db push` (no checked-in
 #           migrations), and Playwright boots both dev servers itself
-#           (see apps/e2e/playwright.config.ts webServer entries).
+#           (see apps/e2e/playwright.config.ts webServer entries). Excludes
+#           the visual-regression spec (see below).
+#
+#   e2e-visual — the visual-regression spec only, run INSIDE the official
+#           Playwright container so font rendering is deterministic and the
+#           checked-in `*-chromium-linux.png` baselines match byte-for-byte.
+#           Isolated from the main e2e job so a container/service hiccup can't
+#           take the other specs down. Baselines are regenerated in the same
+#           image (`mcr.microsoft.com/playwright:v1.61.1-noble`).
 
 name: CI
 
@@ -101,13 +109,82 @@ jobs:
         run: bunx playwright install --with-deps chromium
         working-directory: apps/e2e
 
+      # Everything except the visual-regression spec — that one runs in the
+      # `e2e-visual` job (container) so baselines are font-deterministic.
       - name: Run e2e tests
-        run: bun run e2e
+        run: bun run e2e -- --grep-invert "Visual regression"
 
       - name: Upload Playwright report
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
+          path: apps/e2e/playwright-report/
+          retention-days: 7
+
+  e2e-visual:
+    name: E2E Visual Regression
+    runs-on: ubuntu-latest
+    # Run inside the official Playwright image so chromium + its fonts match
+    # the environment the checked-in baselines were generated in. Pin the tag
+    # to the installed @playwright/test version (1.61.1).
+    container:
+      image: mcr.microsoft.com/playwright:v1.61.1-noble
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: admin
+          POSTGRES_PASSWORD: admin
+          POSTGRES_DB: modern_admin
+        options: >-
+          --health-cmd "pg_isready -U admin -d modern_admin"
+          --health-interval 10s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s --health-timeout 5s --health-retries 10
+    env:
+      # Inside a job container, services are reachable by their label as host.
+      DATABASE_URL: postgresql://admin:admin@postgres:5432/modern_admin?schema=public
+      REDIS_URL: redis://redis:6379
+      BETTER_AUTH_SECRET: ci-e2e-better-auth-secret-0123456789abcdef
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # The Playwright image is Debian-based but ships no `unzip`, which
+      # oven-sh/setup-bun needs to extract the bun archive.
+      - name: Install unzip
+        run: apt-get update && apt-get install -y --no-install-recommends unzip
+
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: bun run --filter @modern-admin/app-api-prisma prisma:generate
+
+      - name: Push Prisma schema
+        run: bun run --filter @modern-admin/app-api-prisma prisma:push
+
+      - name: Build web standalone shell
+        run: bun run --filter @modern-admin/web build:standalone
+
+      # Browsers are pre-installed in the image; don't set PLAYWRIGHT_CHANNEL,
+      # so the bundled chromium (which the baselines were captured with) is used.
+      - name: Run visual-regression spec
+        run: bun run e2e visual-regression
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-visual
           path: apps/e2e/playwright-report/
           retention-days: 7
