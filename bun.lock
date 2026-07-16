@@ -121,7 +121,7 @@
     },
     "packages/adapter-drizzle": {
       "name": "@modern-admin/adapter-drizzle",
-      "version": "0.2.1",
+      "version": "0.3.0",
       "dependencies": {
         "@modern-admin/core": "workspace:^",
       },
@@ -137,7 +137,7 @@
     },
     "packages/adapter-prisma": {
       "name": "@modern-admin/adapter-prisma",
-      "version": "0.2.1",
+      "version": "0.3.0",
       "dependencies": {
         "@modern-admin/core": "workspace:^",
       },
@@ -154,7 +154,7 @@
     },
     "packages/auth-better-auth": {
       "name": "@modern-admin/auth-better-auth",
-      "version": "0.2.1",
+      "version": "0.3.0",
       "dependencies": {
         "@modern-admin/core": "workspace:^",
       },
@@ -170,7 +170,7 @@
     },
     "packages/cache-redis": {
       "name": "@modern-admin/cache-redis",
-      "version": "0.2.1",
+      "version": "0.3.0",
       "dependencies": {
         "@modern-admin/core": "workspace:^",
       },
@@ -186,7 +186,7 @@
     },
     "packages/core": {
       "name": "@modern-admin/core",
-      "version": "0.2.1",
+      "version": "0.3.0",
       "dependencies": {
         "zod": "^4.4.3",
       },
@@ -198,7 +198,7 @@
     },
     "packages/create": {
       "name": "@modern-admin/create",
-      "version": "0.2.1",
+      "version": "0.3.0",
       "bin": {
         "create-modern-admin": "./src/cli.ts",
         "modern-admin": "./src/cli.ts",
@@ -215,7 +215,7 @@
     },
     "packages/feature-history": {
       "name": "@modern-admin/feature-history",
-      "version": "0.2.1",
+      "version": "0.3.0",
       "dependencies": {
         "@modern-admin/core": "workspace:^",
       },
@@ -227,7 +227,7 @@
     },
     "packages/feature-json-by-key": {
       "name": "@modern-admin/feature-json-by-key",
-      "version": "0.2.1",
+      "version": "0.3.0",
       "dependencies": {
         "@modern-admin/core": "workspace:^",
         "zod": "^4.4.3",
@@ -241,7 +241,7 @@
     },
     "packages/feature-m2m": {
       "name": "@modern-admin/feature-m2m",
-      "version": "0.2.1",
+      "version": "0.3.0",
       "dependencies": {
         "@modern-admin/core": "workspace:^",
         "zod": "^4.4.3",
@@ -254,7 +254,7 @@
     },
     "packages/feature-password": {
       "name": "@modern-admin/feature-password",
-      "version": "0.2.1",
+      "version": "0.3.0",
       "dependencies": {
         "@modern-admin/core": "workspace:^",
       },
@@ -266,7 +266,7 @@
     },
     "packages/feature-upload": {
       "name": "@modern-admin/feature-upload",
-      "version": "0.2.1",
+      "version": "0.3.0",
       "dependencies": {
         "@modern-admin/core": "workspace:^",
         "@nestjs/common": "^11.1.19",
@@ -298,7 +298,7 @@
     },
     "packages/graphql": {
       "name": "@modern-admin/graphql",
-      "version": "0.2.1",
+      "version": "0.3.0",
       "dependencies": {
         "@modern-admin/core": "workspace:^",
         "@modern-admin/nest": "workspace:^",
@@ -325,7 +325,7 @@
     },
     "packages/i18n": {
       "name": "@modern-admin/i18n",
-      "version": "0.2.1",
+      "version": "0.3.0",
       "devDependencies": {
         "@modern-admin/tsconfig": "workspace:*",
         "@types/bun": "^1.3.13",
@@ -346,7 +346,7 @@
     },
     "packages/nest": {
       "name": "@modern-admin/nest",
-      "version": "0.2.1",
+      "version": "0.3.0",
       "dependencies": {
         "@modern-admin/core": "workspace:^",
         "@modern-admin/i18n": "workspace:^",
@@ -382,7 +382,7 @@
     },
     "packages/queue": {
       "name": "@modern-admin/queue",
-      "version": "0.2.1",
+      "version": "0.3.0",
       "devDependencies": {
         "@modern-admin/tsconfig": "workspace:*",
         "@nestjs/bullmq": "^11.0.4",
@@ -404,7 +404,7 @@
     },
     "packages/react": {
       "name": "@modern-admin/react",
-      "version": "0.2.1",
+      "version": "0.3.0",
       "dependencies": {
         "@hookform/resolvers": "^5.2.2",
         "@modern-admin/core": "workspace:^",
@@ -432,7 +432,7 @@
     },
     "packages/realtime": {
       "name": "@modern-admin/realtime",
-      "version": "0.2.1",
+      "version": "0.3.0",
       "dependencies": {
         "@modern-admin/core": "workspace:^",
         "@modern-admin/nest": "workspace:^",
@@ -457,7 +457,7 @@
     },
     "packages/system-drizzle": {
       "name": "@modern-admin/system-drizzle",
-      "version": "0.2.1",
+      "version": "0.3.0",
       "dependencies": {
         "@modern-admin/core": "workspace:^",
       },
@@ -476,7 +476,7 @@
     },
     "packages/system-prisma": {
       "name": "@modern-admin/system-prisma",
-      "version": "0.2.1",
+      "version": "0.3.0",
       "dependencies": {
         "@modern-admin/core": "workspace:^",
       },
@@ -494,7 +494,7 @@
     },
     "packages/telemetry": {
       "name": "@modern-admin/telemetry",
-      "version": "0.2.1",
+      "version": "0.3.0",
       "dependencies": {
         "@modern-admin/core": "workspace:^",
       },
@@ -506,11 +506,11 @@
     },
     "packages/tsconfig": {
       "name": "@modern-admin/tsconfig",
-      "version": "0.2.1",
+      "version": "0.3.0",
     },
     "packages/ui": {
       "name": "@modern-admin/ui",
-      "version": "0.2.1",
+      "version": "0.3.0",
       "dependencies": {
         "@radix-ui/react-accordion": "^1.2.12",
         "@radix-ui/react-alert-dialog": "^1.1.15",
@@ -562,7 +562,7 @@
     },
     "packages/web": {
       "name": "@modern-admin/web",
-      "version": "0.2.1",
+      "version": "0.3.0",
       "dependencies": {
         "@modern-admin/core": "workspace:^",
         "@modern-admin/i18n": "workspace:^",

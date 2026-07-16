@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/ui",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "i18n-unaware shadcn/ui-style React component library used by @modern-admin/react.",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/ui#readme",
   "keywords": [
