@@ -90,6 +90,13 @@ jobs:
       - name: Push Prisma schema
         run: bun run --filter @modern-admin/app-api-prisma prisma:push
 
+      # The api-prisma server wires ModernAdminStaticUiModule, whose middleware
+      # reads `packages/web/dist/standalone/index.html` at bootstrap and throws
+      # if it is missing. e2e drives the UI via the vite dev server, but the
+      # api still needs the standalone shell present to boot, so build it.
+      - name: Build web standalone shell
+        run: bun run --filter @modern-admin/web build:standalone
+
       - name: Install Playwright browsers
         run: bunx playwright install --with-deps chromium
         working-directory: apps/e2e
