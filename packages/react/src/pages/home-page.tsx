@@ -11,6 +11,7 @@ import {
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
+  Skeleton,
   Tabs,
   TabsList,
   TabsTrigger,
@@ -21,11 +22,27 @@ import { Link } from '../router.js'
 import { useDashboardCharts, ServerDashboardStore } from '../use-dashboard-charts.js'
 import { useAdminClient } from '../provider.js'
 import { useDialogs } from '../dialogs.js'
-import { ChartWidget } from '../components/chart-widget.js'
+import type { ChartWidgetProps } from '../components/chart-widget.js'
 import { ChartBuilderDialog } from '../components/chart-builder-dialog.js'
 import { GroupSettingsDialog } from '../components/group-settings-dialog.js'
 import { MoveChartDialog } from '../components/move-chart-dialog.js'
 import type { ChartDef, ChartGroup } from '@modern-admin/core'
+
+// ChartWidget statically pulls in Recharts (via ui's TimeSeriesChart/KpiCard).
+// Split it into its own async chunk so the dashboard's charting library never
+// loads until a chart is actually rendered — dashboards with no charts (and
+// the initial home-page paint) skip the Recharts payload entirely.
+const ChartWidgetImpl = React.lazy(() =>
+  import('../components/chart-widget.js').then((m) => ({ default: m.ChartWidget })),
+)
+
+function LazyChartWidget(props: ChartWidgetProps): React.ReactElement {
+  return (
+    <React.Suspense fallback={<Skeleton className="h-[320px] w-full rounded-md" />}>
+      <ChartWidgetImpl {...props} />
+    </React.Suspense>
+  )
+}
 
 export function HomePage(): React.ReactElement {
   const { t } = useI18n()
@@ -200,7 +217,7 @@ export function HomePage(): React.ReactElement {
                   key={c.id}
                   className={c.width === 'full' ? 'md:col-span-2' : undefined}
                 >
-                  <ChartWidget
+                  <LazyChartWidget
                     config={c}
                     onEdit={() => setEditingId(c.id)}
                     onDelete={() => void handleDeleteChart(c)}

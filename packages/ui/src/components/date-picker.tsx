@@ -203,7 +203,7 @@ export function DatePicker({
           autoFocus
         />
         {mode === 'datetime' && (
-          <div className="flex items-center gap-2 border-t p-3">
+          <div className="flex items-center gap-2 border-t border-border p-3">
             <span className="text-xs text-muted-foreground">{timeLabel}</span>
             <Input
               type="time"

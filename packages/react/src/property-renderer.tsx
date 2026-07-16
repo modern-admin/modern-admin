@@ -74,12 +74,15 @@ function LazyRichtextEditor(props: RichtextEditorProps): React.ReactElement {
   )
 }
 
-const formatDate = (value: unknown): string => {
+export const formatDate = (value: unknown, withTime = false): string => {
   if (value == null) return ''
-  if (value instanceof Date) return value.toISOString().slice(0, 10)
+  // date-only → YYYY-MM-DD; datetime → YYYY-MM-DD HH:MM (UTC, minute precision)
+  const render = (d: Date): string =>
+    withTime ? d.toISOString().slice(0, 16).replace('T', ' ') : d.toISOString().slice(0, 10)
+  if (value instanceof Date) return render(value)
   const d = new Date(String(value))
   if (Number.isNaN(d.getTime())) return String(value)
-  return d.toISOString().slice(0, 10)
+  return render(d)
 }
 
 export const formatMoneyValue = (
@@ -197,10 +200,13 @@ export function PropertyDisplay({ property, value, view = 'list', populated }: P
   if (value == null || value === '') return <span className="text-muted-foreground">—</span>
   switch (property.type) {
   case 'boolean':
-    return <Badge variant={value ? 'default' : 'outline'}>{value ? 'true' : 'false'}</Badge>
+    return <Badge variant={value ? 'default' : 'outline'}>{value ? t('common:yes') : t('common:no')}</Badge>
   case 'date':
-  case 'datetime':
-    return withCopy(view === 'list' ? <ListCellText>{formatDate(value)}</ListCellText> : <span>{formatDate(value)}</span>)
+  case 'datetime': {
+    const withTime = property.type === 'datetime'
+    const formatted = formatDate(value, withTime)
+    return withCopy(view === 'list' ? <ListCellText>{formatted}</ListCellText> : <span>{formatted}</span>)
+  }
   case 'money': {
     const currency = typeof property.custom?.currency === 'string'
       ? property.custom.currency

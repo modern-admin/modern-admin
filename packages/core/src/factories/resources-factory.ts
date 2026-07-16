@@ -10,7 +10,7 @@ import {
   NoDatabaseAdapterError,
   NoResourceAdapterError,
 } from '../errors'
-import { deepMerge } from '../utils/merge-options.js'
+import { deepMerge, RESOURCE_OPTIONS_ARRAY_STRATEGIES } from '../utils/merge-options.js'
 
 /**
  * Concrete constructor + statics contract for a database adapter class.
@@ -42,7 +42,18 @@ export interface Adapter {
   Resource: ResourceClass
 }
 
-export type FeatureFn = (options: ResourceOptions) => ResourceOptions
+/**
+ * Per-resource transformation applied at bootstrap. Receives the accumulated
+ * {@link ResourceOptions} and the {@link BaseResource} it is being applied to.
+ *
+ * The `resource` argument (added later, mirrors {@link GlobalPlugin.apply})
+ * lets a feature derive a stable, resource-scoped identity — e.g.
+ * `@modern-admin/feature-upload` keys its provider registry by
+ * `resource.id()` so the same id resolves on every replica behind a load
+ * balancer. It is optional so existing `(options) => options` features stay
+ * assignable; the factory always passes it at runtime.
+ */
+export type FeatureFn = (options: ResourceOptions, resource?: BaseResource) => ResourceOptions
 
 export interface ResourceWithOptions {
   resource: unknown
@@ -170,7 +181,7 @@ export class ResourcesFactory {
   ): BaseResource[] {
     return items.map(({ resource, options, features }) => {
       const fromFeatures = features.reduce<ResourceOptions>(
-        (opts, feature) => feature(opts),
+        (opts, feature) => feature(opts, resource),
         {},
       )
 
@@ -183,7 +194,7 @@ export class ResourcesFactory {
         return plugin.apply(opts, resource)
       }, fromFeatures)
 
-      const merged = deepMerge(fromPlugins, options)
+      const merged = deepMerge(fromPlugins, options, RESOURCE_OPTIONS_ARRAY_STRATEGIES)
       const decorator = new ResourceDecorator(resource, merged)
       resource.assignDecorator(decorator)
       return resource

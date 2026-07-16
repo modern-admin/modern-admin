@@ -103,7 +103,6 @@ import { ReferenceCombobox, ReferenceLink, ReferenceLinkList } from '../referenc
 import {
   Link,
   type ListQueryState,
-  type Route,
   useNavigate,
   useOpenInNewTab,
   useRoute,
@@ -114,9 +113,28 @@ import { useDialogs } from '../dialogs.js'
 import { useHotkey } from '../use-hotkey.js'
 import { homeCrumb, PageBreadcrumbs } from '../breadcrumbs.js'
 import { ExportDialog } from './export-dialog.js'
+import {
+  ALL_NUMERIC_OPS,
+  ALL_STRING_OPS,
+  encodeFilter,
+  encodeNumericFilter,
+  type NumericFilterOp,
+  NUMERIC_NULLARY,
+  NULLARY_OPS,
+  ONE_OF_DEFAULT_MAX,
+  parseFilterString,
+  parseNumericFilter,
+  type StringFilterOp,
+} from './filter-codecs.js'
 import { ActionMenu, ActionMenuItems } from '../action-menu.js'
 import { visibleRecordProperties } from '../relations.js'
-import type { ActionDescriptor, ListQuery, PropertyJSON, RecordJSON } from '../types.js'
+import type {
+  ActionDescriptor,
+  CustomActionResponse,
+  ListQuery,
+  PropertyJSON,
+  RecordJSON,
+} from '../types.js'
 import { confirmGuard } from '../action-guard.js'
 
 const PAGE_SIZES = [10, 20, 50, 100] as const
@@ -255,6 +273,21 @@ function saveColumnSizing(resourceId: string, sizing: ColumnSizingState): void {
     window.localStorage.setItem(COLUMN_SIZE_STORAGE_PREFIX + resourceId, JSON.stringify(toSave))
   } catch { /* quota / private mode — ignore */
   }
+}
+
+type NotifyApi = ReturnType<typeof useNotify>
+
+/** Map a custom-action `notice` to the matching toast, defaulting any
+ *  unrecognised type to a success toast. No-op when there's no notice.
+ *  Centralises the notice→toast plumbing shared by every custom-action
+ *  invocation (record / bulk / resource). */
+function showNotice(notify: NotifyApi, notice: CustomActionResponse['notice']): void {
+  if (!notice) return
+  const type = notice.type === 'error' ? 'error'
+    : notice.type === 'warning' ? 'warning'
+      : notice.type === 'info' ? 'info'
+        : 'success'
+  notify[type]({ message: notice.message })
 }
 
 /** Toggles for individual chrome / toolbar pieces. All default to `true`. */
@@ -583,24 +616,67 @@ export function ResourceListPage({
     return all
   }, [resource, lockedFilters])
 
-  const builtInActionNames = new Set([
-    'list',
-    'show',
-    'new',
-    'edit',
-    'delete',
-    'bulkDelete',
-    'search',
-    'values',
-  ])
-  const customResourceActions = (resource?.actions ?? []).filter(
-    (a) => a.actionType === 'resource' && !builtInActionNames.has(a.name),
+  const { customResourceActions, customRecordActions, customBulkActions } = React.useMemo(() => {
+    const builtInActionNames = new Set([
+      'list',
+      'show',
+      'new',
+      'edit',
+      'delete',
+      'bulkDelete',
+      'search',
+      'values',
+    ])
+    const actions = resource?.actions ?? []
+    return {
+      customResourceActions: actions.filter(
+        (a) => a.actionType === 'resource' && !builtInActionNames.has(a.name),
+      ),
+      customRecordActions: actions.filter(
+        (a) => a.actionType === 'record' && !builtInActionNames.has(a.name),
+      ),
+      customBulkActions: actions.filter(
+        (a) => a.actionType === 'bulk' && !builtInActionNames.has(a.name),
+      ),
+    }
+  }, [resource])
+
+  // Delete + custom-action handlers are identical for the desktop table rows
+  // and the mobile record cards, so both surfaces share these factories rather
+  // than each carrying its own copy of the confirm-dialog / mutate plumbing.
+  const makeDeleteHandler = React.useCallback(
+    (record: RecordJSON) => async () => {
+      const ok = await dialogs.confirm({
+        title: t('common:confirmDelete'),
+        description: record.title || record.id,
+        confirmLabel: t('common:delete'),
+        destructive: true,
+      })
+      if (!ok) return
+      remove.mutate(record.id, {
+        onSuccess: () => notify.success({ key: 'toast:deleted' }),
+        onError: (err) =>
+          notify.error(
+            { key: 'toast:deleteFailed' },
+            { description: err instanceof Error ? err.message : String(err) },
+          ),
+      })
+    },
+    [dialogs, t, remove, notify],
   )
-  const customRecordActions = (resource?.actions ?? []).filter(
-    (a) => a.actionType === 'record' && !builtInActionNames.has(a.name),
-  )
-  const customBulkActions = (resource?.actions ?? []).filter(
-    (a) => a.actionType === 'bulk' && !builtInActionNames.has(a.name),
+
+  const makeInvokeRecordHandler = React.useCallback(
+    (record: RecordJSON) => async (action: ActionDescriptor) => {
+      if (!await confirmGuard(action, dialogs)) return
+      invokeRecord.mutate(
+        { recordId: record.id, actionName: action.name },
+        {
+          onSuccess: (res) => showNotice(notify, res.notice),
+          onError: (err) => notify.error({ message: err.message }),
+        },
+      )
+    },
+    [dialogs, invokeRecord, notify],
   )
 
   const showSelectColumn = f.bulk || isSelectionControlled
@@ -699,41 +775,8 @@ export function ResourceListPage({
           onEdit={() =>
             navigate({ name: 'edit', resourceId, recordId: row.original.id })
           }
-          onDelete={async () => {
-            const ok = await dialogs.confirm({
-              title: t('common:confirmDelete'),
-              description: row.original.title || row.original.id,
-              confirmLabel: t('common:delete'),
-              destructive: true,
-            })
-            if (!ok) return
-            remove.mutate(row.original.id, {
-              onSuccess: () => notify.success({ key: 'toast:deleted' }),
-              onError: (err) =>
-                notify.error(
-                  { key: 'toast:deleteFailed' },
-                  { description: err instanceof Error ? err.message : String(err) },
-                ),
-            })
-          }}
-          onInvokeAction={async (action) => {
-            if (!await confirmGuard(action, dialogs)) return
-            invokeRecord.mutate(
-              { recordId: row.original.id, actionName: action.name },
-              {
-                onSuccess: (res) => {
-                  if (res.notice) {
-                    const type = res.notice.type === 'error' ? 'error'
-                      : res.notice.type === 'warning' ? 'warning'
-                        : res.notice.type === 'info' ? 'info'
-                          : 'success'
-                    notify[type]({ message: res.notice.message })
-                  }
-                },
-                onError: (err) => notify.error({ message: err.message }),
-              },
-            )
-          }}
+          onDelete={makeDeleteHandler(row.original)}
+          onInvokeAction={makeInvokeRecordHandler(row.original)}
         />
       ),
     })
@@ -742,16 +785,14 @@ export function ResourceListPage({
     visible,
     resourceId,
     navigate,
-    remove,
     t,
-    notify,
-    dialogs,
     handleColumnFilterApply,
     f.headerFilters,
     showSelectColumn,
     disableRowNavigation,
     customRecordActions,
-    invokeRecord,
+    makeDeleteHandler,
+    makeInvokeRecordHandler,
   ])
 
   const total = records.data?.meta.total ?? 0
@@ -786,7 +827,22 @@ export function ResourceListPage({
   // whenever the user has at least one row selected.
   const selectedIds = React.useMemo(() => Object.keys(rowSelection), [rowSelection])
   const selectedCount = selectedIds.length
-  const showStandaloneEmptyState = !records.isFetching && !records.isError && total === 0
+  // An empty result set has two flavours. When there are NO active filters the
+  // resource is genuinely empty, so we swap the whole toolbar for a "create your
+  // first record" empty state. When filters ARE active the resource may well
+  // hold records — the current filters just match none — so we must KEEP the
+  // toolbar (and its filter button) reachable, otherwise the user is stranded
+  // with no way to relax the filters. This bites the related-records embed,
+  // where a filter that matches nothing would otherwise hide the filter button.
+  const isEmpty = !records.isPending && !records.isError && total === 0
+  const hasActiveFilters = columnFilters.length > 0
+  const showStandaloneEmptyState = isEmpty && !hasActiveFilters
+  const showFilteredEmptyState = isEmpty && hasActiveFilters
+  // Skeletons appear only on the true first load, where `placeholderData:
+  // keepPreviousData` has nothing to hold. Page/sort/filter changes and
+  // background invalidations keep the prior rows on screen (isFetching, not
+  // isPending) so the table never blanks out from under the user.
+  const showSkeletons = records.isPending
 
   // ── Keyboard shortcuts ──
   // Plain `n` creates, `r` refreshes, `f` opens the filters drawer.
@@ -951,15 +1007,7 @@ export function ResourceListPage({
                     invokeResource.mutate(
                       { actionName: action.name },
                       {
-                        onSuccess: (res) => {
-                          if (res.notice) {
-                            const type = res.notice.type === 'error' ? 'error'
-                              : res.notice.type === 'warning' ? 'warning'
-                                : res.notice.type === 'info' ? 'info'
-                                  : 'success'
-                            notify[type]({ message: res.notice.message })
-                          }
-                        },
+                        onSuccess: (res) => showNotice(notify, res.notice),
                         onError: (err) => notify.error({ message: err.message }),
                       },
                     )
@@ -1052,6 +1100,23 @@ export function ResourceListPage({
               </EmptyContent>
             )}
           </Empty>
+        ) : showFilteredEmptyState ? (
+          // Filters are active but match nothing. The toolbar (with its filter
+          // button) stays visible above, so here we only offer a quick reset.
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia>
+                <ListFilter/>
+              </EmptyMedia>
+              <EmptyTitle>{t('common:noMatchingRecords')}</EmptyTitle>
+            </EmptyHeader>
+            <EmptyContent>
+              <Button variant="outline" size="sm" onClick={() => handleFilterChange([])}>
+                <X className="size-4"/>
+                {t('common:clearFilters')}
+              </Button>
+            </EmptyContent>
+          </Empty>
         ) : (
           <>
             {/* Bulk action bar — only visible when at least one row is selected.
@@ -1083,13 +1148,7 @@ export function ResourceListPage({
                           {
                             onSuccess: (res) => {
                               setRowSelection({})
-                              if (res.notice) {
-                                const type = res.notice.type === 'error' ? 'error'
-                                  : res.notice.type === 'warning' ? 'warning'
-                                    : res.notice.type === 'info' ? 'info'
-                                      : 'success'
-                                notify[type]({ message: res.notice.message })
-                              }
+                              showNotice(notify, res.notice)
                             },
                             onError: (err) => notify.error({ message: err.message }),
                           },
@@ -1118,7 +1177,7 @@ export function ResourceListPage({
             )}
             {/* Mobile: card-per-record stack. Hidden ≥ sm. */}
             <div className="space-y-2 sm:hidden">
-              {records.isFetching && Array.from({ length: pagination.pageSize }, (_, i) => (
+              {showSkeletons && Array.from({ length: pagination.pageSize }, (_, i) => (
                 <div key={`skel-card-${i}`} className="rounded-lg border border-border bg-card p-3">
                   <div className="flex items-start gap-3">
                     <Skeleton className="mt-1 h-4 w-4 flex-none rounded"/>
@@ -1142,12 +1201,12 @@ export function ResourceListPage({
                   </div>
                 </div>
               ))}
-              {!records.isFetching && records.isError && (
+              {!showSkeletons && records.isError && (
                 <div className="rounded-md border border-border px-4 py-8 text-left text-destructive">
                   {t('common:loadFailed', { error: String(records.error) })}
                 </div>
               )}
-              {!records.isFetching && table.getRowModel().rows.map((row) => (
+              {!showSkeletons && table.getRowModel().rows.map((row) => (
                 <RecordCard
                   key={row.id}
                   record={row.original}
@@ -1160,42 +1219,9 @@ export function ResourceListPage({
                   onToggleSelect={(v) => row.toggleSelected(v)}
                   onView={() => navigate({ name: 'show', resourceId, recordId: row.original.id })}
                   onEdit={() => navigate({ name: 'edit', resourceId, recordId: row.original.id })}
-                  onDelete={async () => {
-                    const ok = await dialogs.confirm({
-                      title: t('common:confirmDelete'),
-                      description: row.original.title || row.original.id,
-                      confirmLabel: t('common:delete'),
-                      destructive: true,
-                    })
-                    if (!ok) return
-                    remove.mutate(row.original.id, {
-                      onSuccess: () => notify.success({ key: 'toast:deleted' }),
-                      onError: (err) =>
-                        notify.error(
-                          { key: 'toast:deleteFailed' },
-                          { description: err instanceof Error ? err.message : String(err) },
-                        ),
-                    })
-                  }}
+                  onDelete={makeDeleteHandler(row.original)}
                   customActions={customRecordActions}
-                  onInvokeAction={async (action) => {
-                    if (!await confirmGuard(action, dialogs)) return
-                    invokeRecord.mutate(
-                      { recordId: row.original.id, actionName: action.name },
-                      {
-                        onSuccess: (res) => {
-                          if (res.notice) {
-                            const type = res.notice.type === 'error' ? 'error'
-                              : res.notice.type === 'warning' ? 'warning'
-                                : res.notice.type === 'info' ? 'info'
-                                  : 'success'
-                            notify[type]({ message: res.notice.message })
-                          }
-                        },
-                        onError: (err) => notify.error({ message: err.message }),
-                      },
-                    )
-                  }}
+                  onInvokeAction={makeInvokeRecordHandler(row.original)}
                   t={t}
                 />
               ))}
@@ -1308,7 +1334,7 @@ export function ResourceListPage({
                         ))}
                       </TableHeader>
                       <TableBody>
-                        {records.isFetching ? (
+                        {showSkeletons ? (
                           Array.from({ length: pagination.pageSize }, (_, i) => (
                             <TableRow key={`skel-${i}`} className="pointer-events-none">
                               {table.getVisibleLeafColumns().map((col, j) => (
@@ -1440,7 +1466,7 @@ export function ResourceListPage({
           {inner}
         </div>
       )}
-      {!showStandaloneEmptyState && (
+      {!isEmpty && (
         // Standalone page mode: sticky at the page-wrapper level so the
         // paginator pins to the viewport bottom while the user scrolls
         // through the list. The bar extends edge-to-edge via negative
@@ -1730,6 +1756,7 @@ function Paginator<TData>({
               size="sm"
               onClick={() => table.setPageIndex(0)}
               disabled={!table.getCanPreviousPage()}
+              aria-label={t('common:firstPage')}
             >
               <ChevronsLeft className="size-4"/>
             </Button>
@@ -1738,6 +1765,7 @@ function Paginator<TData>({
               size="sm"
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
+              aria-label={t('common:previousPage')}
             >
               <ChevronLeft className="size-4"/>
             </Button>
@@ -1758,6 +1786,7 @@ function Paginator<TData>({
               size="sm"
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
+              aria-label={t('common:nextPage')}
             >
               <ChevronRight className="size-4"/>
             </Button>
@@ -1766,6 +1795,7 @@ function Paginator<TData>({
               size="sm"
               onClick={() => table.setPageIndex(pageCount - 1)}
               disabled={!table.getCanNextPage()}
+              aria-label={t('common:lastPage')}
             >
               <ChevronsRight className="size-4"/>
             </Button>
@@ -1776,72 +1806,7 @@ function Paginator<TData>({
   )
 }
 
-// ─── Filter operator helpers ─────────────────────────────────────────────────
-// Operators are encoded in the filter value string: `OPERATOR:VALUE`.
-// Legacy values (no prefix) default to `co` (contains) for strings.
-
-type StringFilterOp = 'co' | 'nco' | 'sw' | 'ew' | 'eq' | 'neq' | 'empty' | 'nempty' | 'in'
-
-const STRING_OPS: ReadonlySet<string> = new Set(['co', 'nco', 'sw', 'ew', 'eq', 'neq', 'empty', 'nempty', 'in'])
-const ALL_STRING_OPS: StringFilterOp[] = ['co', 'nco', 'sw', 'ew', 'in', 'empty', 'nempty']
-const NULLARY_OPS: ReadonlySet<string> = new Set(['empty', 'nempty'])
-
-/** Max distinct values for which a string filter defaults to "is one of"
- *  (checkbox list). Fields with more choices default to "contains". */
-const ONE_OF_DEFAULT_MAX = 10
-
-function parseFilterString(raw: string): { op: StringFilterOp; val: string } {
-  if (!raw) return { op: 'co', val: '' }
-  const colonIdx = raw.indexOf(':')
-  if (colonIdx === -1) return { op: 'co', val: raw }
-  const prefix = raw.slice(0, colonIdx)
-  if (STRING_OPS.has(prefix)) return { op: prefix as StringFilterOp, val: raw.slice(colonIdx + 1) }
-  return { op: 'co', val: raw }
-}
-
-function encodeFilter(op: StringFilterOp, val: string): string {
-  if (op === 'empty' || op === 'nempty') return `${op}:`
-  // Unchecking the last item in the "Is one of" picker ⇒ no filter.
-  // We deliberately do NOT emit `in:` here: it would survive
-  // `setDraftFilter`'s empty-string guard and ship a phantom
-  // `filters[col]=in:` URL param (and a "1 active filter" badge) while
-  // the adapter layer drops the clause anyway. The operator resets to
-  // `co` on close, but `StringFilterField`'s auto-switch re-promotes
-  // low-cardinality fields back to `in` the next time the panel opens.
-  if (op === 'in') return val ? `in:${val}` : ''
-  if (!val) return ''
-  return `${op}:${val}`
-}
-
 // ─── Numeric filter with operator selector ────────────────────────────────────
-
-type NumericFilterOp = 'eq' | 'neq' | 'gt' | 'lt' | 'between' | 'empty' | 'nempty'
-
-const NUMERIC_OP_SET = new Set<string>(['eq', 'neq', 'gt', 'lt', 'between', 'empty', 'nempty'])
-const ALL_NUMERIC_OPS: NumericFilterOp[] = ['eq', 'neq', 'gt', 'lt', 'between', 'empty', 'nempty']
-const NUMERIC_NULLARY: ReadonlySet<string> = new Set(['empty', 'nempty'])
-
-function parseNumericFilter(raw: string): { op: NumericFilterOp; from: string; to: string } {
-  if (!raw) return { op: 'eq', from: '', to: '' }
-  const colonIdx = raw.indexOf(':')
-  if (colonIdx === -1) return { op: 'eq', from: raw, to: '' }
-  const prefix = raw.slice(0, colonIdx)
-  if (!NUMERIC_OP_SET.has(prefix)) return { op: 'eq', from: raw, to: '' }
-  const rest = raw.slice(colonIdx + 1)
-  if (prefix === 'between') {
-    const commaIdx = rest.indexOf(',')
-    return commaIdx !== -1
-      ? { op: 'between', from: rest.slice(0, commaIdx), to: rest.slice(commaIdx + 1) }
-      : { op: 'between', from: rest, to: '' }
-  }
-  return { op: prefix as NumericFilterOp, from: rest, to: '' }
-}
-
-function encodeNumericFilter(op: NumericFilterOp, from: string, to: string): string {
-  if (op === 'empty' || op === 'nempty') return `${op}:`
-  if (op === 'between') return (from || to) ? `between:${from},${to}` : ''
-  return from ? `${op}:${from}` : ''
-}
 
 function NumericFilterField({
   value,
@@ -2365,13 +2330,29 @@ function FilterValuePicker({
 
       {/* Select all */}
       {displayValues.length > 0 && (
-        <button
-          type="button"
-          className="flex w-full items-center gap-2 rounded px-1 py-0.5 text-xs text-muted-foreground hover:text-foreground"
+        <div
+          role="checkbox"
+          aria-checked={
+            displayValues.length > 0 && displayValues.every((v) => selectedSet.has(v))
+              ? true
+              : displayValues.some((v) => selectedSet.has(v))
+                ? 'mixed'
+                : false
+          }
+          tabIndex={0}
+          className="flex w-full cursor-pointer items-center gap-2 rounded px-1 py-0.5 text-xs text-muted-foreground hover:text-foreground"
           onClick={handleSelectAll}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              handleSelectAll()
+            }
+          }}
         >
           <Checkbox
-            className="size-3.5"
+            className="pointer-events-none size-3.5"
+            tabIndex={-1}
+            aria-hidden="true"
             checked={
               displayValues.length > 0 && displayValues.every((v) => selectedSet.has(v))
                 ? true
@@ -2381,7 +2362,7 @@ function FilterValuePicker({
             }
           />
           {t('filter:selectAll')}
-        </button>
+        </div>
       )}
 
       {/* Value list */}
@@ -2397,15 +2378,23 @@ function FilterValuePicker({
             </div>
           ) : (
             displayValues.map((v) => (
-              <button
+              <div
                 key={v}
-                type="button"
-                className="flex w-full items-center gap-2 rounded px-1 py-0.5 text-left text-sm hover:bg-accent"
+                role="checkbox"
+                aria-checked={selectedSet.has(v)}
+                tabIndex={0}
+                className="flex w-full cursor-pointer items-center gap-2 rounded px-1 py-0.5 text-left text-sm hover:bg-accent"
                 onClick={() => toggle(v)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    toggle(v)
+                  }
+                }}
               >
-                <Checkbox className="size-3.5" checked={selectedSet.has(v)}/>
+                <Checkbox className="pointer-events-none size-3.5" tabIndex={-1} aria-hidden="true" checked={selectedSet.has(v)}/>
                 <span className="truncate">{v}</span>
-              </button>
+              </div>
             ))
           )}
         </div>

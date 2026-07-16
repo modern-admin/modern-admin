@@ -11,6 +11,7 @@ import type {
   IAiTaskStore,
   ICacheStore,
   IConfigStore,
+  HistoryRetention,
   IHistoryStore,
   ILogStore,
   ISystemStores,
@@ -164,16 +165,28 @@ export class MemoryConfigStore implements IConfigStore {
 /**
  * In-memory revision store.
  *
- * Lifecycle: instances are stateful — every appended entry stays on
- * `entries` for the lifetime of the JS process. Hosts that wire this
- * store as the default (e.g. tests / scaffolds without a persistent
- * backend) must reuse a single `MemoryHistoryStore` across all
- * consumers (the history feature, the controller, plugin) by sharing
- * the instance via DI / module-scope singleton. Spinning up multiple
- * instances yields divergent views.
+ * Lifecycle: instances are stateful — appended entries stay on `entries`
+ * for the lifetime of the JS process, subject to the retention policy.
+ * Hosts that wire this store as the default (e.g. tests / scaffolds
+ * without a persistent backend) must reuse a single `MemoryHistoryStore`
+ * across all consumers (the history feature, the controller, plugin) by
+ * sharing the instance via DI / module-scope singleton. Spinning up
+ * multiple instances yields divergent views.
+ *
+ * Retention: pass `keepLast` / `keepDays` to bound growth. Every record
+ * stores two full snapshots per revision, so an unbounded store leaks
+ * memory over the life of a long-running process. With no retention set
+ * the store keeps everything (the historical behaviour) — appropriate
+ * only for tests and short-lived demos.
  */
 export class MemoryHistoryStore implements IHistoryStore {
   public readonly entries: HistoryEntry[] = []
+  private readonly retention: HistoryRetention
+
+  constructor(retention: HistoryRetention = {}) {
+    this.retention = retention
+  }
+
   async append(input: {
     resourceId: string
     recordId: string
@@ -193,7 +206,54 @@ export class MemoryHistoryStore implements IHistoryStore {
       createdAt: nowIso(),
     }
     this.entries.push(e)
+    this.enforce(this.retention)
     return e
+  }
+
+  async prune(retention: HistoryRetention): Promise<number> {
+    return this.enforce(retention)
+  }
+
+  /**
+   * Remove revisions that fall outside `retention`, mutating `entries` in
+   * place. `keepDays` drops rows older than the cutoff across all records;
+   * `keepLast` keeps only the newest N revisions per (resource, record).
+   * Returns the number of revisions removed.
+   */
+  private enforce(retention: HistoryRetention): number {
+    const { keepLast, keepDays } = retention
+    if (keepLast === undefined && keepDays === undefined) return 0
+
+    const doomed = new Set<string>()
+
+    if (keepDays !== undefined) {
+      const cutoff = Date.now() - keepDays * 24 * 60 * 60 * 1000
+      for (const e of this.entries) {
+        if (Date.parse(e.createdAt) < cutoff) doomed.add(e.id)
+      }
+    }
+
+    if (keepLast !== undefined) {
+      const byRecord = new Map<string, HistoryEntry[]>()
+      for (const e of this.entries) {
+        const key = `${e.resourceId} ${e.recordId}`
+        ;(byRecord.get(key) ?? byRecord.set(key, []).get(key)!).push(e)
+      }
+      for (const group of byRecord.values()) {
+        if (group.length <= keepLast) continue
+        // `group` is in insertion order (oldest first); the tail is newest.
+        // createdAt collides within a millisecond and our UUID v7 ids are
+        // not monotonic within one, so array order is the only reliable
+        // recency signal — keep the last `keepLast`, doom the rest.
+        for (const e of group.slice(0, group.length - keepLast)) doomed.add(e.id)
+      }
+    }
+
+    if (doomed.size === 0) return 0
+    const kept = this.entries.filter((e) => !doomed.has(e.id))
+    this.entries.length = 0
+    this.entries.push(...kept)
+    return doomed.size
   }
   async list(
     resourceId: string,

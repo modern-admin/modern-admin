@@ -42,10 +42,18 @@ export interface BuildAiAssistantToolsOptions {
    */
   rawQuery?: (sql: string) => Promise<unknown[]>
   /**
-   * When provided, the AI assistant can create, read, update, and delete
-   * charts on the shared global dashboard.
+   * When provided, the AI assistant can read charts on the shared global
+   * dashboard, and — when `dashboardWritable` is set — create, update, and
+   * delete them.
    */
   dashboardStore?: IDashboardStore
+  /**
+   * Gates the dashboard *write* tools (create / update / delete). The read
+   * tool is always registered when `dashboardStore` is present; the write
+   * tools appear only when the requesting admin holds a dashboard-manage
+   * role. Defaults to read-only.
+   */
+  dashboardWritable?: boolean
   /**
    * Collector for UI side-effects (navigate / refresh). Tools push into this
    * array; the service surfaces the deduped result via `output.uiActions`.
@@ -54,7 +62,7 @@ export interface BuildAiAssistantToolsOptions {
 }
 
 export interface BuiltAiAssistantTools {
-  tools: Record<string, Tool<any, unknown>>
+  tools: Record<string, Tool<any, any>>
   /** Resource ids that produced at least one tool. */
   resourceIds: string[]
   /** Tool descriptors for logging, debug UI, and system prompt hints. */
@@ -67,23 +75,7 @@ export interface BuiltAiAssistantTools {
   sqlResources: AiAssistantSqlResource[]
 }
 
-type AiTool = Tool<any, unknown>
-
-interface ListToolInput {
-  page?: number
-  perPage?: number
-  sortBy?: string
-  direction?: 'asc' | 'desc'
-  filters?: Record<string, string | number | boolean>
-}
-
-interface ShowToolInput {
-  recordId: string
-}
-
-interface SearchToolInput {
-  query: string
-}
+type AiTool = Tool<any, any>
 
 const logger = new Logger('AiAssistantTools')
 
@@ -324,6 +316,7 @@ export function buildAiAssistantTools({
   maxFieldsPerRecord = 24,
   rawQuery,
   dashboardStore,
+  dashboardWritable = false,
   uiActions,
 }: BuildAiAssistantToolsOptions): BuiltAiAssistantTools {
   const include = includeResourceIds ? new Set(includeResourceIds) : null
@@ -382,7 +375,7 @@ export function buildAiAssistantTools({
     if (actionNames.has('list')) {
       const name = claimName(resourceId, 'list')
       if (name) {
-        tools[name] = tool<ListToolInput, unknown>({
+        tools[name] = tool({
           description: `List records of resource "${resourceId}". Supports paging, sorting, and exact-match filters.`,
           inputSchema: z.object({
             page: z.number().int().positive().optional(),
@@ -435,7 +428,7 @@ export function buildAiAssistantTools({
     if (actionNames.has('show')) {
       const name = claimName(resourceId, 'show')
       if (name) {
-        tools[name] = tool<ShowToolInput, unknown>({
+        tools[name] = tool({
           description: `Show a single record by id from resource "${resourceId}".`,
           inputSchema: z.object({
             recordId: z.string().min(1),
@@ -470,7 +463,7 @@ export function buildAiAssistantTools({
     if (actionNames.has('search')) {
       const name = claimName(resourceId, 'search')
       if (name) {
-        tools[name] = tool<SearchToolInput, unknown>({
+        tools[name] = tool({
           description: `Search records in resource "${resourceId}" by free-text query.`,
           inputSchema: z.object({
             query: z.string().min(1),
@@ -510,7 +503,7 @@ export function buildAiAssistantTools({
   }
 
   if (rawQuery) {
-    tools['execute_sql'] = tool<{ query: string }, unknown>({
+    tools['execute_sql'] = tool({
       description:
         'Execute a read-only SQL SELECT query against the host database. ' +
         'Use this for aggregation (COUNT, SUM, AVG), grouping (GROUP BY), ' +
@@ -605,7 +598,7 @@ export function buildAiAssistantTools({
         ),
     })
 
-    tools['list_dashboard_charts'] = tool<Record<never, never>, unknown>({
+    tools['list_dashboard_charts'] = tool({
       description:
         'List all charts and groups currently on the shared dashboard. ' +
         'Always call this before create/update/delete to get current ids and available group ids.',
@@ -640,141 +633,147 @@ export function buildAiAssistantTools({
       .map(([id, fields]) => `  ${id}: ${fields.join(', ')}`)
       .join('\n')
 
-    tools['create_dashboard_chart'] = tool({
-      description:
+    // Write tools are gated: an admin without a dashboard-manage role can
+    // read charts but cannot mutate the shared global dashboard through the
+    // assistant. Skipping registration keeps them out of the model's tool
+    // list entirely rather than relying on a runtime refusal.
+    if (dashboardWritable) {
+      tools['create_dashboard_chart'] = tool({
+        description:
         'Create a new chart on the shared dashboard. The chart becomes visible to all admins immediately. ' +
         'Pick a clear title, match resource/dateField/metric to what the user is asking for. ' +
         'Use step="all" + visualisation="kpi" for single-number KPI widgets.\n\n' +
         'Available date fields per resource (use one of these for dateField — never guess):\n' +
         (dateFieldsHint || '  (none detected)'),
-      inputSchema: chartInputZ,
-      execute: async (input) => {
-        const now = new Date().toISOString()
-        const blob = await dashboardStore.load('')
-        const sortedGroups = [...blob.groups].sort((a, b) => a.order - b.order)
-        // Prefer the explicitly requested group; fall back to first group.
-        const resolvedGroupId =
+        inputSchema: chartInputZ,
+        execute: async (input) => {
+          const now = new Date().toISOString()
+          const blob = await dashboardStore.load('')
+          const sortedGroups = [...blob.groups].sort((a, b) => a.order - b.order)
+          // Prefer the explicitly requested group; fall back to first group.
+          const resolvedGroupId =
           (input.groupId && sortedGroups.some((g) => g.id === input.groupId))
             ? input.groupId
             : sortedGroups[0]?.id
-        // Auto-correct dateField: if the AI provided a path that isn't a
-        // known date/datetime property, silently use the first known one.
-        const knownDateFields = resourceDateFields.get(input.resource) ?? []
-        const resolvedDateField = (() => {
-          if (knownDateFields.length === 0 || knownDateFields.includes(input.dateField)) {
-            return input.dateField
-          }
-          const fallback = knownDateFields[0]!
-          logger.warn(
-            `AI chart: dateField "${input.dateField}" not found on resource ` +
+          // Auto-correct dateField: if the AI provided a path that isn't a
+          // known date/datetime property, silently use the first known one.
+          const knownDateFields = resourceDateFields.get(input.resource) ?? []
+          const resolvedDateField = (() => {
+            if (knownDateFields.length === 0 || knownDateFields.includes(input.dateField)) {
+              return input.dateField
+            }
+            const fallback = knownDateFields[0]!
+            logger.warn(
+              `AI chart: dateField "${input.dateField}" not found on resource ` +
             `"${input.resource}"; auto-using "${fallback}"`,
-          )
-          return fallback
-        })()
-        const parseResult = chartDefZ.safeParse({
-          id: uuidv7(),
-          title: input.title,
-          resource: input.resource,
-          visualisation: input.visualisation,
-          dateField: resolvedDateField,
-          step: input.step,
-          metric: input.metric,
-          ...(input.field ? { field: input.field } : {}),
-          ...(input.groupBy ? { groupBy: input.groupBy } : {}),
-          filters: input.filters ?? {},
-          quickFilters: input.quickFilters ?? [],
-          topN: 10,
-          width: input.width,
-          timeRange: { preset: input.timeRange },
-          ...(resolvedGroupId ? { groupId: resolvedGroupId } : {}),
-          createdAt: now,
-          updatedAt: now,
-        })
-        if (!parseResult.success) {
-          return { ok: false, error: parseResult.error.message, citations: [] }
-        }
-        const chart = parseResult.data
-        await dashboardStore.save('', {
-          version: 1,
-          charts: [...blob.charts, chart],
-          groups: blob.groups,
-        })
-        logger.log(`AI created dashboard chart "${chart.title}" (${chart.id})`)
-        uiActions?.push({ kind: 'refresh', target: 'dashboard' })
-        return { ok: true, id: chart.id, title: chart.title, citations: [] }
-      },
-    }) as AiTool
+            )
+            return fallback
+          })()
+          const parseResult = chartDefZ.safeParse({
+            id: uuidv7(),
+            title: input.title,
+            resource: input.resource,
+            visualisation: input.visualisation,
+            dateField: resolvedDateField,
+            step: input.step,
+            metric: input.metric,
+            ...(input.field ? { field: input.field } : {}),
+            ...(input.groupBy ? { groupBy: input.groupBy } : {}),
+            filters: input.filters ?? {},
+            quickFilters: input.quickFilters ?? [],
+            topN: 10,
+            width: input.width,
+            timeRange: { preset: input.timeRange },
+            ...(resolvedGroupId ? { groupId: resolvedGroupId } : {}),
+            createdAt: now,
+            updatedAt: now,
+          })
+          if (!parseResult.success) {
+            return { ok: false, error: parseResult.error.message, citations: [] }
+          }
+          const chart = parseResult.data
+          await dashboardStore.save('', {
+            version: 1,
+            charts: [...blob.charts, chart],
+            groups: blob.groups,
+          })
+          logger.log(`AI created dashboard chart "${chart.title}" (${chart.id})`)
+          uiActions?.push({ kind: 'refresh', target: 'dashboard' })
+          return { ok: true, id: chart.id, title: chart.title, citations: [] }
+        },
+      }) as AiTool
 
-    tools['update_dashboard_chart'] = tool({
-      description:
+      tools['update_dashboard_chart'] = tool({
+        description:
         'Update an existing dashboard chart by id. Use list_dashboard_charts first to find the id. ' +
         'Only the fields you pass are changed — omit a field to keep its current value.',
-      inputSchema: z.object({
-        id: z.string().min(1).describe('Chart id from list_dashboard_charts'),
-        patch: chartInputZ.partial().describe('Fields to update'),
-      }),
-      execute: async ({ id, patch }) => {
-        const blob = await dashboardStore.load('')
-        const idx = blob.charts.findIndex((c) => c.id === id)
-        if (idx < 0) return { ok: false, error: `Chart not found: ${id}`, citations: [] }
-        const prev = blob.charts[idx]!
-        // Validate groupId patch against existing groups.
-        const patchGroupId = patch.groupId
-          ? (blob.groups.some((g) => g.id === patch.groupId) ? patch.groupId : undefined)
-          : undefined
-        // Auto-correct dateField patch for the same reason as in create.
-        const patchDateField = (() => {
-          if (!patch.dateField) return undefined
-          const known = resourceDateFields.get(prev.resource) ?? []
-          if (known.length === 0 || known.includes(patch.dateField)) return patch.dateField
-          const fallback = known[0]!
-          logger.warn(
-            `AI chart update: dateField "${patch.dateField}" not found on ` +
+        inputSchema: z.object({
+          id: z.string().min(1).describe('Chart id from list_dashboard_charts'),
+          patch: chartInputZ.partial().describe('Fields to update'),
+        }),
+        execute: async ({ id, patch }) => {
+          const blob = await dashboardStore.load('')
+          const idx = blob.charts.findIndex((c) => c.id === id)
+          if (idx < 0) return { ok: false, error: `Chart not found: ${id}`, citations: [] }
+          const prev = blob.charts[idx]!
+          // Validate groupId patch against existing groups.
+          const patchGroupId = patch.groupId
+            ? (blob.groups.some((g) => g.id === patch.groupId) ? patch.groupId : undefined)
+            : undefined
+          // Auto-correct dateField patch for the same reason as in create.
+          const patchDateField = (() => {
+            if (!patch.dateField) return undefined
+            const known = resourceDateFields.get(prev.resource) ?? []
+            if (known.length === 0 || known.includes(patch.dateField)) return patch.dateField
+            const fallback = known[0]!
+            logger.warn(
+              `AI chart update: dateField "${patch.dateField}" not found on ` +
             `"${prev.resource}"; auto-using "${fallback}"`,
-          )
-          return fallback
-        })()
-        const merged = {
-          ...prev,
-          ...patch,
-          ...(patchDateField !== undefined ? { dateField: patchDateField } : {}),
-          ...(patchGroupId !== undefined ? { groupId: patchGroupId } : {}),
-          ...(patch.timeRange ? { timeRange: { preset: patch.timeRange } } : {}),
-          id,
-          updatedAt: new Date().toISOString(),
-        }
-        const parseResult = chartDefZ.safeParse(merged)
-        if (!parseResult.success) {
-          return { ok: false, error: parseResult.error.message, citations: [] }
-        }
-        const updated = [...blob.charts]
-        updated[idx] = parseResult.data
-        await dashboardStore.save('', { version: 1, charts: updated, groups: blob.groups })
-        logger.log(`AI updated dashboard chart "${parseResult.data.title}" (${id})`)
-        uiActions?.push({ kind: 'refresh', target: 'dashboard' })
-        return { ok: true, id, title: parseResult.data.title, citations: [] }
-      },
-    }) as AiTool
+            )
+            return fallback
+          })()
+          const merged = {
+            ...prev,
+            ...patch,
+            ...(patchDateField !== undefined ? { dateField: patchDateField } : {}),
+            ...(patchGroupId !== undefined ? { groupId: patchGroupId } : {}),
+            ...(patch.timeRange ? { timeRange: { preset: patch.timeRange } } : {}),
+            id,
+            updatedAt: new Date().toISOString(),
+          }
+          const parseResult = chartDefZ.safeParse(merged)
+          if (!parseResult.success) {
+            return { ok: false, error: parseResult.error.message, citations: [] }
+          }
+          const updated = [...blob.charts]
+          updated[idx] = parseResult.data
+          await dashboardStore.save('', { version: 1, charts: updated, groups: blob.groups })
+          logger.log(`AI updated dashboard chart "${parseResult.data.title}" (${id})`)
+          uiActions?.push({ kind: 'refresh', target: 'dashboard' })
+          return { ok: true, id, title: parseResult.data.title, citations: [] }
+        },
+      }) as AiTool
 
-    tools['delete_dashboard_chart'] = tool({
-      description: 'Remove a chart from the shared dashboard by id.',
-      inputSchema: z.object({
-        id: z.string().min(1).describe('Chart id from list_dashboard_charts'),
-      }),
-      execute: async ({ id }) => {
-        const blob = await dashboardStore.load('')
-        const chart = blob.charts.find((c) => c.id === id)
-        if (!chart) return { ok: false, error: `Chart not found: ${id}`, citations: [] }
-        await dashboardStore.save('', {
-          version: 1,
-          charts: blob.charts.filter((c) => c.id !== id),
-          groups: blob.groups,
-        })
-        logger.log(`AI deleted dashboard chart "${chart.title}" (${id})`)
-        uiActions?.push({ kind: 'refresh', target: 'dashboard' })
-        return { ok: true, id, title: chart.title, citations: [] }
-      },
-    }) as AiTool
+      tools['delete_dashboard_chart'] = tool({
+        description: 'Remove a chart from the shared dashboard by id.',
+        inputSchema: z.object({
+          id: z.string().min(1).describe('Chart id from list_dashboard_charts'),
+        }),
+        execute: async ({ id }) => {
+          const blob = await dashboardStore.load('')
+          const chart = blob.charts.find((c) => c.id === id)
+          if (!chart) return { ok: false, error: `Chart not found: ${id}`, citations: [] }
+          await dashboardStore.save('', {
+            version: 1,
+            charts: blob.charts.filter((c) => c.id !== id),
+            groups: blob.groups,
+          })
+          logger.log(`AI deleted dashboard chart "${chart.title}" (${id})`)
+          uiActions?.push({ kind: 'refresh', target: 'dashboard' })
+          return { ok: true, id, title: chart.title, citations: [] }
+        },
+      }) as AiTool
+    }
   }
 
   // ─── Navigation tool ──────────────────────────────────────────────────
@@ -799,7 +798,7 @@ export function buildAiAssistantTools({
       }),
     ])
 
-    tools['navigate_to'] = tool<{ route: z.infer<typeof navigateRouteZ> }, unknown>({
+    tools['navigate_to'] = tool({
       description:
         'Navigate the user to a different admin page. Use this when the user asks to "open", "go to", or "show me" a specific record, the audit log, or settings. ' +
         'Strictly read-only navigation: no edit / new / delete targets. ' +

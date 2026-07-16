@@ -34,13 +34,29 @@ class CapturingLogStore implements ILogStore {
 
 describe('buildBetterAuth', () => {
   beforeEach(() => {
+    // `buildBetterAuth` now requires a strong BETTER_AUTH_SECRET at startup.
+    process.env.BETTER_AUTH_SECRET = 'test-secret-0123456789abcdef0123456789abcdef'
     // Tests share the module-level `_auditLogStore` slot — reset to a
     // known state so order doesn't matter.
     setAuditLogStore(null)
   })
 
   afterEach(() => {
+    delete process.env.BETTER_AUTH_SECRET
     setAuditLogStore(null)
+  })
+
+  test('throws when BETTER_AUTH_SECRET is missing or too weak', () => {
+    delete process.env.BETTER_AUTH_SECRET
+    expect(() => buildBetterAuth({ database: makeDatabase() })).toThrow(/BETTER_AUTH_SECRET/)
+    process.env.BETTER_AUTH_SECRET = 'too-short'
+    expect(() => buildBetterAuth({ database: makeDatabase() })).toThrow(/BETTER_AUTH_SECRET/)
+  })
+
+  test('enables api-key rate limiting and top-level rate limiting', () => {
+    const { config } = buildBetterAuth({ database: makeDatabase() })
+    expect(config.rateLimit?.enabled).toBe(true)
+    expect(config.secret).toBeDefined()
   })
 
   test('always installs a session.create.after audit hook', () => {

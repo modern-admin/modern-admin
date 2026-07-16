@@ -131,6 +131,14 @@ export interface TimeSeriesResult {
    * caller's role.
    */
   sql?: string
+  /**
+   * `true` when the adapter could not aggregate the full window and the
+   * returned series reflect only a capped subset of matching rows. Adapters
+   * that push the aggregation into SQL (Drizzle) never set this; adapters
+   * that bucket in application memory (Prisma) set it when the row cap is
+   * hit so the UI can flag the chart as partial.
+   */
+  truncated?: boolean
 }
 
 /**

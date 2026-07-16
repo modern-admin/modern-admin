@@ -1,43 +1,7 @@
 import { and, arrayContains, arrayOverlaps, asc, desc, eq, gt, gte, ilike, inArray, isNotNull, isNull, like, lt, lte, ne, not, or } from 'drizzle-orm'
-import type { Filter, FilterElement, FilterOperator, FilterValue, FindOptions } from '@modern-admin/core'
+import { coerceScalar, isRangeValue, parseBetween, type Filter, type FilterElement, type FilterOperator, type FilterValue, type FindOptions } from '@modern-admin/core'
 import type { DrizzleProperty } from './property.js'
 import type { DrizzleColumn, DrizzleTable } from './types.js'
-
-const isRangeValue = (
-  value: FilterValue,
-): value is { from?: string; to?: string } =>
-  typeof value === 'object' && value !== null && !Array.isArray(value)
-
-const coerceScalar = (
-  value: FilterValue,
-  property: DrizzleProperty | null,
-): unknown => {
-  if (value == null || typeof value === 'boolean') return value
-  if (Array.isArray(value)) return value.map((v) => coerceScalar(v as FilterValue, property))
-  if (typeof value === 'number') return value
-  if (typeof value !== 'string') return value
-  if (!property) return value
-  switch (property.type()) {
-  case 'number':
-  case 'currency': {
-    const n = Number(value)
-    return Number.isFinite(n) ? n : value
-  }
-  case 'float': {
-    const n = parseFloat(value)
-    return Number.isFinite(n) ? n : value
-  }
-  case 'boolean':
-    return value === 'true' || value === '1'
-  case 'date':
-  case 'datetime': {
-    const d = new Date(value)
-    return Number.isNaN(d.getTime()) ? value : d
-  }
-  default:
-    return value
-  }
-}
 
 /** Return the case-insensitive `like` function appropriate for the dialect. */
 const ciLike = (column: DrizzleColumn) =>
@@ -194,10 +158,7 @@ const buildOperatorCondition = (
     return lt(column as never, coerced as never)
   }
   case 'between': {
-    const str = typeof value === 'string' ? value : ''
-    const comma = str.indexOf(',')
-    const fromStr = comma >= 0 ? str.slice(0, comma) : str
-    const toStr = comma >= 0 ? str.slice(comma + 1) : ''
+    const { fromStr, toStr } = parseBetween(value)
     const conds: unknown[] = []
     if (fromStr) conds.push(gte(column as never, coerceScalar(fromStr, property) as never))
     if (toStr) conds.push(lte(column as never, coerceScalar(toStr, property) as never))

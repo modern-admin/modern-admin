@@ -60,7 +60,7 @@
     "@tanstack/react-table": "^8.21.3",
     "lucide-react": "^1.14.0",
     "react-hook-form": "^7.75.0",
-    "socket.io-client": "4.8.3",
+    "socket.io-client": "^4.8.3",
     "zod": "^4.4.3"
   },
   "devDependencies": {

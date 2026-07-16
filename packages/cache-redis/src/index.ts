@@ -2,6 +2,13 @@
 // ioredis (or compatible) client. Tag invalidation is implemented via Redis
 // SETs that map a tag to the keys it covers; mutating a record drops the set
 // and all referenced keys in one round-trip.
+//
+// Invalidation runs inside a single Lua script (EVAL) so the SMEMBERS→DEL
+// pair is atomic: without it, a concurrent `set()` that SADDs a fresh key
+// into the tag set between our read and delete would leave that key cached
+// while we delete the tag set, stranding a stale entry that no later
+// invalidation could ever reach. Tag SETs also carry an expiry so abandoned
+// tags cannot accumulate forever.
 
 import { createRequire } from 'node:module'
 import type { CacheSetOptions, ICacheProvider } from '@modern-admin/core'
@@ -20,6 +27,8 @@ export interface RedisLike {
   del(...keys: string[]): Promise<unknown>
   sadd(key: string, ...values: (string | number | Buffer)[]): Promise<unknown>
   smembers(key: string): Promise<string[]>
+  expire?(key: string, seconds: number | string): Promise<unknown>
+  eval?(script: string, numKeys: number, ...args: (string | number)[]): Promise<unknown>
   publish?(channel: string, message: string | Buffer): Promise<unknown>
   duplicate?(): RedisLike
   subscribe?(channel: string): Promise<unknown>
@@ -32,11 +41,41 @@ export interface RedisCacheOptions {
   prefix?: string
   /** Default TTL in seconds when none is provided to `set()`. */
   defaultTtl?: number
+  /**
+   * TTL floor (seconds) applied to every tag SET so abandoned tags cannot
+   * grow unbounded. Refreshed on each `set()` that references the tag, and
+   * always at least as long as the covered entry's own TTL. Must exceed the
+   * longest-lived cache entry it covers, or a tag could expire while a member
+   * is still cached (leaving that member un-invalidatable). Defaults to 30
+   * days. Pass `0` to opt out and keep tag SETs persistent.
+   */
+  tagTtl?: number
   /** Optional dedicated subscriber client (ioredis requires it). */
   subscriber?: RedisLike
 }
 
 const TAG_PREFIX = 'tag:'
+
+// Default TTL floor for tag SETs — 30 days. Comfortably longer than any
+// realistic cache-entry TTL, so tags outlive their members while still
+// self-expiring once a resource stops being written.
+const DEFAULT_TAG_TTL = 60 * 60 * 24 * 30
+
+// Atomic tag invalidation. For each tag SET passed in KEYS, delete every key
+// it references and then the SET itself, all within one script so a
+// concurrent `set()` cannot interleave a fresh member between the read and
+// the delete. Returns the number of cache keys removed.
+const INVALIDATE_TAG_SCRIPT = `
+local removed = 0
+for i = 1, #KEYS do
+  local members = redis.call('SMEMBERS', KEYS[i])
+  for j = 1, #members do
+    removed = removed + redis.call('DEL', members[j])
+  end
+  redis.call('DEL', KEYS[i])
+end
+return removed
+`
 
 // Sentinel used to round-trip BigInt values through JSON without losing
 // the JS type. `BaseRecord.toJSON()` already strings BigInts for the wire,
@@ -62,11 +101,13 @@ export class RedisCacheProvider implements ICacheProvider {
   private readonly subscriber: RedisLike | undefined
   private readonly prefix: string
   private readonly defaultTtl: number | undefined
+  private readonly tagTtl: number
 
   constructor(opts: RedisCacheOptions) {
     this.client = opts.client
     this.prefix = opts.prefix ?? 'ma:'
     if (opts.defaultTtl !== undefined) this.defaultTtl = opts.defaultTtl
+    this.tagTtl = opts.tagTtl ?? DEFAULT_TAG_TTL
     this.subscriber = opts.subscriber
   }
 
@@ -95,8 +136,17 @@ export class RedisCacheProvider implements ICacheProvider {
     if (ttl != null) await this.client.set(fullKey, payload, 'EX', ttl)
     else await this.client.set(fullKey, payload)
     if (options.tags && options.tags.length) {
+      // Bound tag SETs with an expiry so abandoned tags self-clean. The floor
+      // is `tagTtl`; when the entry's own TTL is longer we extend to that so
+      // the tag never expires before a member it still covers. Every write
+      // that touches the tag refreshes this window.
+      const tagExpiry = Math.max(ttl ?? 0, this.tagTtl)
       await Promise.all(
-        options.tags.map((tag) => this.client.sadd(this.tagKey(tag), fullKey)),
+        options.tags.map(async (tag) => {
+          const tagKey = this.tagKey(tag)
+          await this.client.sadd(tagKey, fullKey)
+          if (tagExpiry > 0) await this.client.expire?.(tagKey, tagExpiry)
+        }),
       )
     }
   }
@@ -108,9 +158,18 @@ export class RedisCacheProvider implements ICacheProvider {
 
   async invalidateTag(tag: string | string[]): Promise<void> {
     const tags = Array.isArray(tag) ? tag : [tag]
+    const tagKeys = tags.map((t) => this.tagKey(t))
+    if (!tagKeys.length) return
+    if (this.client.eval) {
+      // Atomic path: SMEMBERS→DEL happen inside one script, immune to a
+      // concurrent `set()` stranding a freshly-tagged key.
+      await this.client.eval(INVALIDATE_TAG_SCRIPT, tagKeys.length, ...tagKeys)
+      return
+    }
+    // Fallback for clients without EVAL — non-atomic and racy under
+    // concurrent writes. Prefer a client that supports scripting.
     const allKeys: string[] = []
-    for (const t of tags) {
-      const tagKey = this.tagKey(t)
+    for (const tagKey of tagKeys) {
       const members = await this.client.smembers(tagKey)
       allKeys.push(...members, tagKey)
     }

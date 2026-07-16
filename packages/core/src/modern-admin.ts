@@ -1,6 +1,7 @@
 import { type BaseResource, type ParamsType, type RecordJSON } from './adapters'
 import { BUILT_IN_ACTIONS, CacheRuntime, listTag, recordTag, recordsTag, type Action, type ActionContext, type ActionRequest, type ActionResponse, type After, type Before } from './actions'
-import type { ResourceJSON } from './decorators/resource-decorator.js'
+import type { ResourceDecorator, ResourceJSON } from './decorators/resource-decorator.js'
+import type { ActionDecorator } from './decorators/action-decorator.js'
 import { ResourcesFactory, type Adapter, type GlobalPlugin, type ResourceWithOptions } from './factories/resources-factory.js'
 import { ResourceNotFoundError, ActionNotFoundError, ForbiddenError } from './errors'
 import { flatten, unflatten } from './utils/flat.js'
@@ -210,23 +211,33 @@ export class ModernAdmin {
     if (this.rolePermsCache.has(roleName)) {
       return this.rolePermsCache.get(roleName) ?? null
     }
-    let perms: RolePermissions | null = null
+    // A missing roles *resource* is a static configuration condition (the
+    // feature simply isn't wired) — cache null and let the caller's gate
+    // apply its upgrade-compat "unknown role stays open" stance.
+    let resource: BaseResource
     try {
-      const resource = this.findResource(resourceId)
-      const record = await resource.findOne(roleName)
-      // `record.params` is stored flat (`{ 'permissions.users': [...] }`)
-      // because BaseRecord runs `flatten()` on construction. Rebuild the
-      // nested object so the matrix matches the documented shape.
-      const nested = record ? (unflatten(record.params) as Record<string, unknown>) : {}
-      const raw = nested.permissions
-      if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
-        perms = raw as RolePermissions
-      }
+      resource = this.findResource(resourceId)
     } catch {
-      // Resource missing or lookup failure — treat as "no permissions
-      // configured" rather than fail-open. Caller's gate decides what
-      // that means (denies everything except wildcards from elsewhere).
-      perms = null
+      this.rolePermsCache.set(roleName, null)
+      return null
+    }
+    // A lookup *failure* (DB down, timeout) is NOT the same as "this role
+    // has no row": swallowing it into a null would fail-open (the gate
+    // skips) and, worse, pin that transient error into the cache for the
+    // whole process lifetime. Let it propagate un-cached so the caller
+    // denies (invoke() surfaces it as an error) and a later retry can
+    // succeed once the store recovers.
+    const record = await resource.findOne(roleName)
+    // `record.params` is stored flat (`{ 'permissions.users': [...] }`)
+    // because BaseRecord runs `flatten()` on construction. Rebuild the
+    // nested object so the matrix matches the documented shape. A missing
+    // row (valid role, no permissions configured) resolves to null — the
+    // deliberate "unknown role stays open" upgrade-compat case.
+    const nested = record ? (unflatten(record.params) as Record<string, unknown>) : {}
+    const raw = nested.permissions
+    let perms: RolePermissions | null = null
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+      perms = raw as RolePermissions
     }
     this.rolePermsCache.set(roleName, perms)
     return perms
@@ -347,6 +358,106 @@ export class ModernAdmin {
    * before-hooks, the handler, and after-hooks. Transports call this rather
    * than touching resources directly so they share the same hook semantics.
    */
+  /**
+   * The principal gates every `invoke()` runs before executing an action,
+   * factored out so transports that fan data out *without* going through
+   * `invoke()` — WebSocket subscriptions, realtime room joins — can enforce
+   * the exact same authorization instead of re-implementing it. Throws
+   * `ForbiddenError` on denial; returns normally when access is granted.
+   *
+   * Order matches `invoke()`:
+   *   1. api-key allowlist (when the principal carries an `apiKey` claim),
+   *   2. role matrix (when `rolesResourceId` is configured) with default-deny
+   *      for anonymous principals,
+   *   3. the action's own `isAccessible` hook.
+   */
+  private async assertActionAccess(
+    decorator: ResourceDecorator,
+    actionDecorator: ActionDecorator,
+    context: ActionContext,
+  ): Promise<void> {
+    // API-key principal gate. If the principal carries an `apiKey` claim,
+    // the requested resource×action must be in its allowlist. A wildcard
+    // entry (`'*'` action or a `'*'` resource key) opens the gate. This
+    // runs before `isAccessible` so resource-level guards can still further
+    // restrict what an api-key holder can do.
+    if (!apiKeyAllows(context.currentAdmin, decorator.id, actionDecorator.name())) {
+      throw new ForbiddenError(
+        `API key does not grant access to action "${actionDecorator.name()}" on "${decorator.id}"`,
+      )
+    }
+
+    // Role-based principal gate. When `rolesResourceId` is configured the
+    // principal's `role` is resolved against that resource's permission
+    // matrix. Same matching shape as the api-key gate (`'*'` wildcards
+    // for resource and action). Skipped entirely when no `rolesResourceId`
+    // is configured (framework-wide opt-in).
+    //
+    // Default-deny for anonymous: configuring `rolesResourceId` opts the
+    // deployment into role enforcement, so a principal with no `role`
+    // (anonymous / unauthenticated) is rejected outright instead of being
+    // waved through. This closes the transport-layer fail-open where an
+    // unauthenticated request whose `currentAdmin` was never populated would
+    // otherwise skip the gate entirely. A principal that *has* a role but
+    // whose row/matrix doesn't resolve is still open (see the "unknown role"
+    // case) — that is the separate, deliberate upgrade-compat stance.
+    if (this.options.rolesResourceId) {
+      const role = context.currentAdmin?.role
+      if (!role) {
+        throw new ForbiddenError(
+          `Anonymous access is not permitted for action ` +
+            `"${actionDecorator.name()}" on "${decorator.id}"`,
+        )
+      }
+      const perms = await this.getRolePermissions(role)
+      if (perms && !permissionsAllow(perms, decorator.id, actionDecorator.name())) {
+        throw new ForbiddenError(
+          `Role "${role}" does not grant access to action ` +
+            `"${actionDecorator.name()}" on "${decorator.id}"`,
+        )
+      }
+    }
+
+    if (!(await actionDecorator.isAccessible(context))) {
+      throw new ForbiddenError(`Action "${actionDecorator.name()}" is not accessible`)
+    }
+  }
+
+  /**
+   * Non-throwing access check reusing the exact `invoke()` gates. Returns
+   * `false` (rather than throwing) when the resource/action is unknown or the
+   * principal is denied, so callers outside the action pipeline — notably the
+   * realtime gateway gating room joins and GraphQL subscription setup — can
+   * decide access without executing anything. Non-authorization errors
+   * (e.g. a role lookup blowing up) propagate.
+   */
+  async canAccess(resourceId: string, action: string, currentAdmin?: CurrentAdmin): Promise<boolean> {
+    let resource: BaseResource
+    try {
+      resource = this.findResource(resourceId)
+    } catch {
+      return false
+    }
+    const decorator = resource.decorate()
+    const actionDecorator = decorator.getAction(action)
+    if (!actionDecorator) return false
+    const context: ActionContext = {
+      admin: this,
+      resource,
+      action: actionDecorator.toDescriptor(),
+      cache: this.cache,
+      cacheRuntime: this.cacheRuntime,
+      ...(currentAdmin !== undefined ? { currentAdmin } : {}),
+    }
+    try {
+      await this.assertActionAccess(decorator, actionDecorator, context)
+      return true
+    } catch (err) {
+      if (err instanceof ForbiddenError) return false
+      throw err
+    }
+  }
+
   async invoke<R extends ActionResponse = ActionResponse>(
     request: ActionRequest,
     currentAdmin?: CurrentAdmin,
@@ -379,40 +490,7 @@ export class ModernAdmin {
       }
     }
 
-    // API-key principal gate. If the principal carries an `apiKey` claim,
-    // the requested resource×action must be in its allowlist. A wildcard
-    // entry (`'*'` action or a `'*'` resource key) opens the gate. This
-    // runs before `isAccessible` so resource-level guards can still further
-    // restrict what an api-key holder can do.
-    if (!apiKeyAllows(context.currentAdmin, decorator.id, actionDecorator.name())) {
-      throw new ForbiddenError(
-        `API key does not grant access to action "${actionDecorator.name()}" on "${decorator.id}"`,
-      )
-    }
-
-    // Role-based principal gate. When `rolesResourceId` is configured the
-    // principal's `role` is resolved against that resource's permission
-    // matrix. Same matching shape as the api-key gate (`'*'` wildcards
-    // for resource and action). Skipped entirely when:
-    //   • no `rolesResourceId` is configured (framework-wide opt-in),
-    //   • principal carries no `role` (e.g. anonymous in dev),
-    //   • lookup fails or returns no permissions row.
-    // The "missing data → allow" stance is deliberate: it keeps existing
-    // deployments working when they upgrade and only start enforcing
-    // permissions once they configure the option AND seed roles.
-    if (this.options.rolesResourceId && context.currentAdmin?.role) {
-      const perms = await this.getRolePermissions(context.currentAdmin.role)
-      if (perms && !permissionsAllow(perms, decorator.id, actionDecorator.name())) {
-        throw new ForbiddenError(
-          `Role "${context.currentAdmin.role}" does not grant access to action ` +
-            `"${actionDecorator.name()}" on "${decorator.id}"`,
-        )
-      }
-    }
-
-    if (!(await actionDecorator.isAccessible(context))) {
-      throw new ForbiddenError(`Action "${actionDecorator.name()}" is not accessible`)
-    }
+    await this.assertActionAccess(decorator, actionDecorator, context)
 
     const action = actionDecorator.merged as unknown as Action<R>
     let req = request

@@ -13,6 +13,7 @@
     "feature"
   ],
   "type": "module",
+  "sideEffects": false,
   "license": "MIT",
   "repository": {
     "type": "git",

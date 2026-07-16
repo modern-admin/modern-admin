@@ -55,7 +55,7 @@
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
     "@types/bun": "^1.3.13",
-    "drizzle-orm": "^0.45.0",
+    "drizzle-orm": "^0.45.2",
     "typescript": "^6.0.3"
   },
   "peerDependencies": {

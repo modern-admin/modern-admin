@@ -36,6 +36,7 @@
  * }
  */
 
+import { appendBeforeHook } from '@modern-admin/core'
 import type {
   ActionRequest,
   ActionContext,
@@ -44,12 +45,6 @@ import type {
   ResourceOptions,
 } from '@modern-admin/core'
 import type { PasswordsFeatureOptions } from './types.js'
-
-/** Normalise a `before` hook value (fn | fn[] | undefined) into an array. */
-function toArray(hook: unknown): Before[] {
-  if (!hook) return []
-  return Array.isArray(hook) ? (hook as Before[]) : [hook as Before]
-}
 
 export function passwordsFeature(options: PasswordsFeatureOptions): FeatureFn {
   const encryptedPath = options.properties.encryptedPassword
@@ -84,10 +79,15 @@ export function passwordsFeature(options: PasswordsFeatureOptions): FeatureFn {
     // --- Property overrides ---
     const existingProps = resourceOptions.properties ?? {}
 
-    // Encrypted column: hidden everywhere. Hash values must never reach the UI.
+    // Encrypted column: hidden everywhere AND inaccessible. `isVisible: false`
+    // only affects rendering; core filters API/history/realtime payloads by
+    // `isAccessible` (which defaults to `true`), so without this the argon2/
+    // bcrypt hash would still ship in record JSON, history snapshots and
+    // exports to any authenticated client.
     const encryptedOverride = {
       ...(existingProps[encryptedPath] ?? {}),
       isVisible: { list: false, show: false, edit: false, filter: false },
+      isAccessible: false,
     }
 
     // Virtual form input: visible only in edit/new, rendered as a password input.
@@ -108,11 +108,11 @@ export function passwordsFeature(options: PasswordsFeatureOptions): FeatureFn {
     const actionOverrides = {
       new: {
         ...existingNew,
-        before: [...toArray(existingNew?.before), beforeHook],
+        before: appendBeforeHook(existingNew, beforeHook),
       },
       edit: {
         ...existingEdit,
-        before: [...toArray(existingEdit?.before), beforeHook],
+        before: appendBeforeHook(existingEdit, beforeHook),
       },
     } as ResourceOptions['actions']
 

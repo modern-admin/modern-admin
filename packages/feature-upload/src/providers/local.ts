@@ -10,8 +10,9 @@
  */
 
 import { mkdir, writeFile, unlink } from 'node:fs/promises'
-import { join, extname, dirname } from 'node:path'
+import { extname, dirname } from 'node:path'
 import { uuidv7 } from '@modern-admin/core'
+import { resolveWithinDir } from '../path-safety.js'
 import type { IUploadProvider, UploadedFile } from '../types.js'
 
 export interface LocalUploadOptions {
@@ -36,7 +37,9 @@ export class LocalUploadProvider implements IUploadProvider {
 
   async upload(file: UploadedFile, key?: string): Promise<string> {
     const resolvedKey = key ?? `${uuidv7()}${extname(file.originalName)}`
-    const dest = join(this.options.uploadDir, resolvedKey)
+    // Contain the key inside uploadDir — refuses traversal/absolute keys
+    // (e.g. a malicious `uploadPath` or `../../evil.sh`).
+    const dest = resolveWithinDir(this.options.uploadDir, resolvedKey)
     // Create the full directory tree (handles nested keys like 'avatars/2024/01/uuid.jpg').
     await mkdir(dirname(dest), { recursive: true })
     await writeFile(dest, file.buffer)
@@ -49,8 +52,17 @@ export class LocalUploadProvider implements IUploadProvider {
   }
 
   async delete(key: string): Promise<void> {
+    let dest: string
     try {
-      await unlink(join(this.options.uploadDir, key))
+      // Refuse to unlink anything outside uploadDir — a `type: 'file'` value
+      // is an arbitrary DB string, so `key` may be attacker-controlled
+      // (`../../../../app/src/main.ts`). Never delete outside the directory.
+      dest = resolveWithinDir(this.options.uploadDir, key)
+    } catch {
+      return
+    }
+    try {
+      await unlink(dest)
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
     }

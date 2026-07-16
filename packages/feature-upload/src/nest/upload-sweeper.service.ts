@@ -36,6 +36,15 @@ export class UploadSweeperService implements OnModuleInit, OnModuleDestroy {
   onModuleInit(): void {
     const interval = this.options.sweepIntervalMs ?? DEFAULT_SWEEP_INTERVAL_MS
     if (interval <= 0) return
+    if (!this.options.acknowledgeSingleInstance) {
+      console.warn(
+        '[modern-admin/feature-upload] The pending-upload registry and sweeper are ' +
+          'in-process (single-instance). Behind a load balancer with ≥2 replicas the ' +
+          'sweeper can delete a just-saved file (see PendingUploadsRegistry docs). ' +
+          'Run single-instance until a shared store lands, or pass ' +
+          '`acknowledgeSingleInstance: true` to silence this warning.',
+      )
+    }
     this.timer = setInterval(() => {
       void PendingUploadsRegistry.sweep()
     }, interval)

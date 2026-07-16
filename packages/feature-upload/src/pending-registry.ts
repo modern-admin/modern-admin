@@ -27,13 +27,28 @@
  * The registry is a process-level singleton (same pattern as
  * `UploadProviderRegistry`).
  *
+ * ⚠️ SINGLE-INSTANCE ONLY (until a shared store lands).
+ * ------------------------------------------------------
+ * This `Map` lives in one process's memory. Behind a load balancer with ≥2
+ * replicas it is UNSAFE and can lose data:
+ *
+ *   1. Replica A handles `POST /upload` → `track(key)` in A's map only.
+ *   2. Replica B handles the form save → `confirm(key)` is a no-op (B never
+ *      saw the pending entry).
+ *   3. A's sweeper still considers the key pending; once the TTL elapses it
+ *      DELETES the file the record now references → broken/missing upload.
+ *
+ * The provider *registry* key is deterministic (`up_<resourceId>_<prop>`), so
+ * uploads still ROUTE correctly across replicas — but the pending lifecycle
+ * above does not. Run the upload feature single-instance, OR set a large
+ * `pendingTtlMs` to widen the confirm window, until the roadmap item below
+ * replaces this with a shared store.
+ *
  * TODO(roadmap): swap the in-process `Map` for a Redis-backed store and move
  * the sweeper driver (`UploadSweeperService`) onto BullMQ. This is required
  * for multi-instance deployments where one Nest replica serves the upload
- * request and a different replica processes the form submission — without a
- * shared store the second replica would not see the pending entry, the
- * confirm hook would no-op, and the file would be swept on the originator.
- * BullMQ also gives us crash-safe scheduling and retries.
+ * request and a different replica processes the form submission. BullMQ also
+ * gives us crash-safe scheduling and retries.
  */
 
 import { UploadProviderRegistry } from './registry.js'

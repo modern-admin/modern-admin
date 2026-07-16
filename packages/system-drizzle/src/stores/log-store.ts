@@ -1,34 +1,12 @@
-import { uuidv7, type ActionLogEntry, type IQueryableLogStore } from '@modern-admin/core'
+import {
+  rowToLogEntry,
+  uuidv7,
+  type ActionLogEntry,
+  type IQueryableLogStore,
+  type LogRow,
+} from '@modern-admin/core'
 import { and, desc, eq, gte, inArray, lte, type SQL } from 'drizzle-orm'
 import type { DrizzleLike, SystemTables } from '../types.js'
-
-interface LogRow {
-  id: string
-  resourceId: string
-  action: string
-  recordId: string | null
-  recordIds: unknown
-  userId: string | null
-  payload: unknown
-  result: unknown
-  at: number
-}
-
-const rowToEntry = (row: LogRow): ActionLogEntry => ({
-  id: row.id,
-  resourceId: row.resourceId,
-  action: row.action,
-  ...(row.recordId !== null ? { recordId: row.recordId } : {}),
-  ...(Array.isArray(row.recordIds) ? { recordIds: row.recordIds as string[] } : {}),
-  ...(row.userId !== null ? { userId: row.userId } : {}),
-  ...(row.payload !== null && row.payload !== undefined
-    ? { payload: row.payload as Record<string, unknown> }
-    : {}),
-  ...(row.result !== null && row.result !== undefined
-    ? { result: row.result as Record<string, unknown> }
-    : {}),
-  at: Number(row.at),
-})
 
 export class DrizzleLogStore implements IQueryableLogStore {
   constructor(
@@ -66,6 +44,6 @@ export class DrizzleLogStore implements IQueryableLogStore {
     if (filter.offset !== undefined) q = q.offset(filter.offset)
 
     const rows = (await q) as LogRow[]
-    return rows.map(rowToEntry)
+    return rows.map(rowToLogEntry)
   }
 }

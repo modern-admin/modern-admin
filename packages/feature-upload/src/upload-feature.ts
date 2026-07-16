@@ -26,7 +26,7 @@
  * })
  */
 
-import { uuidv7, type ActionRequest, type ActionResponse, type FeatureFn, type ResourceOptions } from '@modern-admin/core'
+import { appendAfterHook, uuidv7, type ActionRequest, type ActionResponse, type FeatureFn, type ResourceOptions } from '@modern-admin/core'
 import type { UploadFeatureOptions, UploadPropertyConfig } from './types.js'
 import { UploadProviderRegistry } from './registry.js'
 import { PendingUploadsRegistry } from './pending-registry.js'
@@ -44,25 +44,6 @@ type HookFn = (
   context: unknown,
 ) => ActionResponse | Promise<ActionResponse>
 
-/** Normalise a hook value (fn | fn[] | undefined) into an array. */
-function toArray(hook: unknown): HookFn[] {
-  if (!hook) return []
-  return Array.isArray(hook) ? (hook as HookFn[]) : [hook as HookFn]
-}
-
-/**
- * Merge `after` hooks from an existing action override with new hooks,
- * producing an array that runs all of them in order.
- * If `existing` already defines `after`, the new hooks are appended.
- */
-function mergeAfterHook(
-  existing: Record<string, unknown> | undefined,
-  newHook: HookFn,
-): HookFn[] {
-  const existing_after = toArray(existing?.after)
-  return [...existing_after, newHook]
-}
-
 // ─── Value helpers ────────────────────────────────────────────────────────────
 
 /** Return non-empty file keys for the given value (handles single + array). */
@@ -77,20 +58,34 @@ function toKeys(value: unknown): string[] {
 // ─── Feature function ─────────────────────────────────────────────────────────
 
 export function uploadFeature(options: UploadFeatureOptions): FeatureFn {
-  // Register configs immediately — before the FeatureFn is called.
-  const registered = new Map<string, RegisteredProp>()
+  // Precompute per-property config plus a process-local fallback id, used only
+  // when the FeatureFn is invoked without a resource (e.g. unit tests calling
+  // it directly). In production the id is derived from `resource.id()` below.
+  const props = Object.entries(options.properties).map(([propPath, config]) => ({
+    propPath,
+    config,
+    fallbackId: `up_${uuidv7().replace(/-/g, '')}`,
+  }))
 
-  for (const [propPath, config] of Object.entries(options.properties)) {
-    const providerId = `up_${uuidv7().replace(/-/g, '')}`
-    UploadProviderRegistry.register(providerId, {
-      provider: config.provider,
-      uploadPath: config.uploadPath,
-      isArray: config.isArray ?? false,
-    })
-    registered.set(propPath, { providerId, config })
-  }
+  return (resourceOptions: ResourceOptions, resource?): ResourceOptions => {
+    // Register providers with a DETERMINISTIC id derived from the resource id
+    // + property path. Every replica behind a load balancer computes the same
+    // id, so a property served by replica A resolves on replica B's registry
+    // (a per-process UUID would 500 on the "wrong" replica). Registration
+    // happens here (at bootstrap decorate time), before any request is served.
+    const registered = new Map<string, RegisteredProp>()
+    for (const { propPath, config, fallbackId } of props) {
+      const providerId = resource ? `up_${resource.id()}_${propPath}` : fallbackId
+      UploadProviderRegistry.register(providerId, {
+        provider: config.provider,
+        uploadPath: config.uploadPath,
+        isArray: config.isArray ?? false,
+        ...(config.mimeTypes ? { mimeTypes: config.mimeTypes } : {}),
+        ...(config.maxSize != null ? { maxSize: config.maxSize } : {}),
+      })
+      registered.set(propPath, { providerId, config })
+    }
 
-  return (resourceOptions: ResourceOptions): ResourceOptions => {
     // --- Property overrides ---
     const propOverrides: ResourceOptions['properties'] = {}
     for (const [propPath, { providerId, config }] of registered) {
@@ -184,15 +179,15 @@ export function uploadFeature(options: UploadFeatureOptions): FeatureFn {
     const actionOverrides = {
       new: {
         ...existingNew,
-        after: mergeAfterHook(existingNew, newAfterHook),
+        after: appendAfterHook(existingNew, newAfterHook),
       },
       edit: {
         ...existingEdit,
-        after: mergeAfterHook(existingEdit, editAfterHook),
+        after: appendAfterHook(existingEdit, editAfterHook),
       },
       delete: {
         ...existingDelete,
-        after: mergeAfterHook(existingDelete, deleteAfterHook),
+        after: appendAfterHook(existingDelete, deleteAfterHook),
       },
     } as ResourceOptions['actions']
 

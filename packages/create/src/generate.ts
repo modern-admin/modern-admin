@@ -194,20 +194,14 @@ export * from '@modern-admin/system-drizzle/pg'
 const here = (): string => dirname(fileURLToPath(import.meta.url))
 
 const loadCanonicalPrisma = async (): Promise<string> => {
-  // Resolved relative to this CLI's installed location. In the monorepo
-  // both packages sit under packages/*; in a published install they live
-  // side-by-side under node_modules/@modern-admin/.
-  const candidates = [
-    // workspace dev install (packages/create/dist|src/.. → packages/system-prisma/prisma/…)
-    resolve(here(), '..', '..', 'system-prisma', 'prisma', 'modern-admin.prisma'),
-    // node_modules install (node_modules/@modern-admin/create/dist|src/.. → node_modules/@modern-admin/system-prisma/prisma/…)
-    //   here() = .../node_modules/@modern-admin/create/dist
-    //   ../..  = .../node_modules/@modern-admin
-    resolve(here(), '..', '..', 'system-prisma', 'prisma', 'modern-admin.prisma'),
-  ]
-  for (const path of candidates) {
-    if (await fileExists(path)) return readFile(path, 'utf8')
-  }
+  // Resolved relative to this CLI's installed location. Both the workspace
+  // dev layout (packages/create/dist|src → packages/system-prisma/…) and a
+  // published install (node_modules/@modern-admin/create/dist →
+  // node_modules/@modern-admin/system-prisma/…) put system-prisma as a
+  // sibling of the create package, so a single `../../system-prisma` hop
+  // covers both.
+  const path = resolve(here(), '..', '..', 'system-prisma', 'prisma', 'modern-admin.prisma')
+  if (await fileExists(path)) return readFile(path, 'utf8')
   throw new Error(
     'Could not locate the canonical Prisma fragment from ' +
       '@modern-admin/system-prisma. Make sure that package is installed.',

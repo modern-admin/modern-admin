@@ -59,7 +59,7 @@ export function RevisionTimeline({
             onClick={() => onSelect?.(item)}
             className={cn(
               'relative flex w-full gap-3 rounded-md border p-3 text-left transition-colors',
-              selected ? 'border-primary bg-primary/5' : 'bg-card hover:bg-muted/50',
+              selected ? 'border-primary bg-primary/5' : 'border-border bg-card hover:bg-muted/50',
             )}
           >
             <span className="mt-1 size-2.5 shrink-0 rounded-full bg-primary" />

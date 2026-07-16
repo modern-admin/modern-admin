@@ -1,22 +1,13 @@
-import { uuidv7, type ConfigEntry, type ConfigScope, type IConfigStore } from '@modern-admin/core'
+import {
+  rowToConfigEntry as rowToEntry,
+  uuidv7,
+  type ConfigEntry,
+  type ConfigRow,
+  type ConfigScope,
+  type IConfigStore,
+} from '@modern-admin/core'
 import { and, asc, eq, isNull, type SQL } from 'drizzle-orm'
 import type { DrizzleLike, SystemTables } from '../types.js'
-
-interface ConfigRow {
-  scope: string
-  scopeId: string | null
-  key: string
-  value: unknown
-  updatedAt: Date
-}
-
-const rowToEntry = (row: ConfigRow): ConfigEntry => ({
-  scope: row.scope as ConfigScope,
-  scopeId: row.scopeId,
-  key: row.key,
-  value: row.value,
-  updatedAt: row.updatedAt.toISOString(),
-})
 
 export class DrizzleConfigStore implements IConfigStore {
   constructor(

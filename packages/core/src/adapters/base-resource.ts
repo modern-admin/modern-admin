@@ -61,6 +61,47 @@ export abstract class BaseResource {
   abstract delete(id: string): Promise<void>
 
   /**
+   * Delete every record matching `filter`, returning the number of rows
+   * actually removed.
+   *
+   * The default implementation paginates `find` to collect all matching ids
+   * (so it never silently caps at an arbitrary `limit`), then issues
+   * single-row `delete`s in bounded-concurrency chunks rather than a single
+   * unbounded `Promise.all` storm. A failing delete is isolated: it neither
+   * aborts the sweep nor rejects the whole call, and the returned count
+   * reflects only rows that were successfully deleted.
+   *
+   * Adapters with a native bulk delete (Prisma `deleteMany`, Drizzle
+   * `delete().where()`) should override to collapse this into a single SQL
+   * statement.
+   */
+  async deleteMany(
+    filter: Filter,
+    options?: { pageSize?: number; concurrency?: number },
+  ): Promise<number> {
+    const pageSize = Math.max(1, options?.pageSize ?? 500)
+    const concurrency = Math.max(1, options?.concurrency ?? 10)
+    // Collect matching ids up front so deleting rows can't shift the offset
+    // window mid-sweep (which would skip or re-scan rows).
+    const ids: string[] = []
+    let offset = 0
+    for (;;) {
+      const batch = await this.find(filter, { limit: pageSize, offset })
+      if (batch.length === 0) break
+      for (const record of batch) ids.push(String(record.id()))
+      if (batch.length < pageSize) break
+      offset += pageSize
+    }
+    let deleted = 0
+    for (let i = 0; i < ids.length; i += concurrency) {
+      const chunk = ids.slice(i, i + concurrency)
+      const settled = await Promise.allSettled(chunk.map((id) => this.delete(id)))
+      for (const result of settled) if (result.status === 'fulfilled') deleted += 1
+    }
+    return deleted
+  }
+
+  /**
    * Search across many string fields with a single substring query.
    *
    * Returns up to `options.limit` records whose value in **any** of the

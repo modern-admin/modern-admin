@@ -2,7 +2,7 @@ import { describe, expect, test, beforeEach, afterEach } from 'bun:test'
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { renderTemplate, scaffold } from '../src/scaffold.js'
+import { renderTemplate, scaffold, validateProjectName } from '../src/scaffold.js'
 
 const makeTempDir = async (): Promise<string> =>
   mkdtemp(join(tmpdir(), 'modern-admin-create-'))
@@ -18,6 +18,44 @@ describe('renderTemplate', () => {
 
   test('replaces multiple occurrences', () => {
     expect(renderTemplate('{{a}}-{{a}}-{{b}}', { a: '1', b: '2' })).toBe('1-1-2')
+  })
+
+  test('json escape mode escapes quotes and backslashes', () => {
+    expect(renderTemplate('"{{name}}"', { name: 'a"b\\c' }, 'json')).toBe('"a\\"b\\\\c"')
+  })
+
+  test('json escape keeps output parseable inside a JSON string', () => {
+    const out = renderTemplate('{"name":"{{name}}"}', { name: 'evil"}, "x":"y' }, 'json')
+    expect(JSON.parse(out)).toEqual({ name: 'evil"}, "x":"y' })
+  })
+})
+
+describe('validateProjectName', () => {
+  test('accepts npm-style names', () => {
+    for (const name of ['my-app', 'demo', 'a', 'app_1', 'x.y', 'a1-b2']) {
+      expect(() => validateProjectName(name)).not.toThrow()
+    }
+  })
+
+  test('rejects empty / whitespace-only names', () => {
+    expect(() => validateProjectName('')).toThrow(/empty/i)
+    expect(() => validateProjectName('   ')).toThrow(/empty/i)
+  })
+
+  test('rejects path separators and traversal', () => {
+    for (const name of ['../../x', 'a/b', 'a\\b', '..', 'foo/../bar']) {
+      expect(() => validateProjectName(name)).toThrow(/path separators|lowercase/i)
+    }
+  })
+
+  test('rejects characters that would break JSON', () => {
+    for (const name of ['a"b', 'a\\b', 'a b', 'CAPS', '"']) {
+      expect(() => validateProjectName(name)).toThrow()
+    }
+  })
+
+  test('rejects names longer than 214 chars', () => {
+    expect(() => validateProjectName('a'.repeat(215))).toThrow(/214/)
   })
 })
 
@@ -106,6 +144,36 @@ describe('scaffold', () => {
     await scaffold({ name: 'x', templateDir, targetDir })
     expect(await readFile(join(targetDir, '.gitignore'), 'utf8')).toBe('node_modules\n')
     expect(await readFile(join(targetDir, '.npmrc'), 'utf8')).toBe('registry=https://x\n')
+  })
+
+  test('rejects unsafe project names before writing', async () => {
+    await writeFile(join(templateDir, 'a.txt'), 'hi')
+    await expect(scaffold({ name: '../../x', templateDir, targetDir })).rejects.toThrow(
+      /path separators/i,
+    )
+  })
+
+  test('json-escapes substituted values in .json files', async () => {
+    await writeFile(join(templateDir, 'config.json'), '{"greeting":"{{greeting}}"}')
+    await scaffold({
+      name: 'safe-app',
+      templateDir,
+      targetDir,
+      variables: { greeting: 'he said "hi"\\bye' },
+    })
+    const out = await readFile(join(targetDir, 'config.json'), 'utf8')
+    expect(JSON.parse(out)).toEqual({ greeting: 'he said "hi"\\bye' })
+  })
+
+  test('does not json-escape non-json files', async () => {
+    await writeFile(join(templateDir, 'note.txt'), '{{greeting}}')
+    await scaffold({
+      name: 'safe-app',
+      templateDir,
+      targetDir,
+      variables: { greeting: 'a"b\\c' },
+    })
+    expect(await readFile(join(targetDir, 'note.txt'), 'utf8')).toBe('a"b\\c')
   })
 
   test('returns list of written files', async () => {

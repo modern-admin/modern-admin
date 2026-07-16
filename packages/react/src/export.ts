@@ -34,7 +34,7 @@ export async function fetchAllRecords(
   const batchSize = opts.batchSize ?? 200
   const baseQuery: ListQuery = { ...(query ?? {}), perPage: batchSize, page: 1 }
   const all: RecordJSON[] = []
-  let total = 0
+  let total: number
   for (let page = 1; ; page++) {
     if (opts.signal?.aborted) throw new DOMException('Aborted', 'AbortError')
     const res = await client.list(resourceId, { ...baseQuery, page })

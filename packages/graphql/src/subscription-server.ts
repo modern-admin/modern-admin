@@ -22,7 +22,14 @@ import { createContext } from './schema-builder.js'
 import { GRAPHQL_OPTIONS, GRAPHQL_REALTIME_BUS } from './tokens.js'
 import type { ResolvedGraphqlOptions } from './module.js'
 
-interface ConnectionParamsWithAdmin {
+/**
+ * Per-socket `extra` graphql-ws hands to every hook. `request` is the raw HTTP
+ * upgrade request (set by the ws integration before `onConnect`); we resolve
+ * the principal from its cookies there and stash it on `currentAdmin` so the
+ * `context` factory can read it without re-resolving.
+ */
+interface ConnectionExtra {
+  request?: IncomingMessage
   currentAdmin?: CurrentAdmin
 }
 
@@ -72,9 +79,24 @@ implements OnApplicationBootstrap, OnApplicationShutdown
     this.disposer = useServer(
       {
         schema: () => this.schemaHolder.get(),
+        // Authenticate the WebSocket at upgrade time, server-side. Identity is
+        // resolved from the upgrade request's cookies via the configured
+        // IAuthProvider — never from client-supplied `connectionParams`, which
+        // a client could forge (`{ currentAdmin: { role: 'admin' } }`) to gain
+        // full CRUD. Anonymous upgrades are rejected (graphql-ws closes with
+        // 4403 Forbidden). Mirrors the REST/HTTP-GraphQL auth guard.
+        onConnect: async (ctx) => {
+          const extra = ctx.extra as unknown as ConnectionExtra
+          const currentAdmin = extra.request
+            ? await this.admin.auth.getCurrentUser(extra.request)
+            : null
+          if (!currentAdmin) return false
+          extra.currentAdmin = currentAdmin
+          return true
+        },
         context: (ctx) => {
-          const params = (ctx.connectionParams ?? {}) as ConnectionParamsWithAdmin
-          return createContext(this.admin, params.currentAdmin, this.bus ?? undefined)
+          const { currentAdmin } = ctx.extra as unknown as ConnectionExtra
+          return createContext(this.admin, currentAdmin, this.bus ?? undefined)
         },
       },
       wsServer,

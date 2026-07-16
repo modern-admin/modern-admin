@@ -50,8 +50,14 @@ export interface DrizzleUpdateBuilder {
   }
 }
 
+/** Awaitable delete query that also supports `RETURNING` for a deleted count. */
+export type DrizzleDeleteExecutable = Promise<unknown> & {
+  returning(): Promise<Array<Record<string, unknown>>>
+}
+
 export interface DrizzleDeleteBuilder {
-  where(condition: unknown): Promise<unknown>
+  where(condition: unknown): DrizzleDeleteExecutable
+  returning(): Promise<Array<Record<string, unknown>>>
 }
 
 export interface DrizzleClientLike {

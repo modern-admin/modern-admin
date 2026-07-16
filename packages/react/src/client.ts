@@ -815,6 +815,11 @@ export interface TimeSeriesResponse {
   supported: boolean
   /** Populated when `groupByLabelResource` was set — maps series key → title. */
   resolvedLabels?: Record<string, string>
+  /**
+   * `true` when the adapter could not aggregate the full window and the
+   * series reflect only a capped subset of rows — the chart is partial.
+   */
+  truncated?: boolean
 }
 
 export type HistoryOp = 'create' | 'update' | 'delete'

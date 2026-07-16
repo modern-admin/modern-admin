@@ -46,6 +46,24 @@ describe('GraphQL schema', () => {
     expect(result.data?.usersCount).toBe(2)
   })
 
+  test('one/count enforce access through invoke (no raw findOne/count bypass)', async () => {
+    // Deny the read actions; routing `usersOne`/`usersCount` through
+    // `invoke()` means the gate fires instead of leaking rows via a direct
+    // `findResource().findOne()/count()` (the IDOR the audit flagged).
+    const admin = makeAdmin()
+    ;(admin.findResource('users').decorate().getAction('show')!.merged as { isAccessible?: unknown })
+      .isAccessible = false
+    ;(admin.findResource('users').decorate().getAction('list')!.merged as { isAccessible?: unknown })
+      .isAccessible = false
+
+    const one = await run(admin, '{ usersOne(id: "1") { id name } }')
+    expect(one.errors?.[0]?.message).toContain('not accessible')
+    expect(one.data?.usersOne ?? null).toBeNull()
+
+    const count = await run(admin, '{ usersCount }')
+    expect(count.errors?.[0]?.message).toContain('not accessible')
+  })
+
   test('create mutation persists a new record', async () => {
     const admin = makeAdmin()
     const result = await run(
@@ -89,6 +107,26 @@ describe('GraphQL schema', () => {
     expect(result.data?.postsList).toEqual([
       { id: '1', title: 'Hello', authorId: '1', authorIdRef: { id: '1', name: 'Ada' } },
       { id: '2', title: 'World', authorId: '2', authorIdRef: { id: '2', name: 'Alan' } },
+    ])
+  })
+
+  test('reference expansion respects access on the referenced resource', async () => {
+    // Deny `show` on `users`: the `authorIdRef` expansion routes through
+    // `invoke('show')` on `users`, so it must resolve to null instead of
+    // leaking the referenced user (the reference-resolver IDOR). The scalar
+    // `authorId` (owned by `posts`) still comes through, and the query as a
+    // whole does not error.
+    const admin = makeAdmin()
+    ;(admin.findResource('users').decorate().getAction('show')!.merged as { isAccessible?: unknown })
+      .isAccessible = false
+    const result = await run(
+      admin,
+      '{ postsList { id authorId authorIdRef { id name } } }',
+    )
+    expect(result.errors).toBeUndefined()
+    expect(result.data?.postsList).toEqual([
+      { id: '1', authorId: '1', authorIdRef: null },
+      { id: '2', authorId: '2', authorIdRef: null },
     ])
   })
 

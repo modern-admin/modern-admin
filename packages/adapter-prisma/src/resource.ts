@@ -1,13 +1,19 @@
+import { AsyncLocalStorage } from 'node:async_hooks'
 import {
   BaseRecord,
   BaseResource,
+  buildDisplaySql,
+  isoDate,
+  stringifyKey,
+  toNumber,
+  truncateDate,
+  DEFAULT_TIME_SERIES_ROW_CAP,
   type Filter,
   type FindOptions,
   type ParamsType,
   type TimeSeriesQuery,
   type TimeSeriesResult,
   type TimeSeriesSeries,
-  type TimeSeriesStep,
   ValidationError,
 } from '@modern-admin/core'
 import { PrismaProperty } from './property.js'
@@ -23,6 +29,18 @@ import type {
 } from './types.js'
 
 const lowerFirst = (s: string): string => (s.length ? s[0]!.toLowerCase() + s.slice(1) : s)
+
+/**
+ * Ambient transaction context. Module-level (not per-resource) on purpose:
+ * inside `transaction(fn)` the callback often touches *other* resources
+ * backed by the same Prisma client (e.g. the junction resource in an m2m
+ * diff, every record in a bulk delete) — they must all see the tx client,
+ * not the base one. `base` is stored alongside `tx` so a resource bound to
+ * a *different* Prisma client never accidentally picks up a foreign
+ * transaction: cross-client atomicity is impossible, so it falls back to
+ * its own client.
+ */
+const txStorage = new AsyncLocalStorage<{ base: PrismaClientLike; tx: PrismaClientLike }>()
 
 const isPrismaResourceConfig = (raw: unknown): raw is PrismaResourceConfig =>
   typeof raw === 'object' &&
@@ -48,6 +66,7 @@ export class PrismaResource extends BaseResource {
   public readonly enums: readonly DmmfEnum[]
   public readonly clientKey: string
   public readonly dialect: PrismaDialect
+  public readonly timeSeriesRowCap: number
   private readonly _properties: PrismaProperty[]
   private readonly idField: DmmfField
   private readonly writableForeignKeys: Set<string>
@@ -63,6 +82,10 @@ export class PrismaResource extends BaseResource {
     this.enums = config.enums ?? []
     this.clientKey = config.clientKey ?? lowerFirst(config.model.name)
     this.dialect = config.dialect ?? 'pg'
+    this.timeSeriesRowCap =
+      config.timeSeriesRowCap && config.timeSeriesRowCap > 0
+        ? Math.floor(config.timeSeriesRowCap)
+        : DEFAULT_TIME_SERIES_ROW_CAP
 
     const idField = config.model.fields.find((f) => f.isId)
     if (!idField) {
@@ -102,8 +125,14 @@ export class PrismaResource extends BaseResource {
     return this._properties.find((p) => p.path() === path) ?? null
   }
 
+  /** Active client: the ambient transaction client when inside `transaction(fn)`. */
+  private db(): PrismaClientLike {
+    const store = txStorage.getStore()
+    return store && store.base === this.client ? store.tx : this.client
+  }
+
   private delegate(): PrismaModelDelegate {
-    const delegate = this.client[this.clientKey] as PrismaModelDelegate | undefined
+    const delegate = this.db()[this.clientKey] as PrismaModelDelegate | undefined
     if (!delegate) {
       throw new Error(
         `Prisma client has no delegate for model "${this.model.name}" (key "${this.clientKey}")`,
@@ -118,7 +147,16 @@ export class PrismaResource extends BaseResource {
 
   private castId(id: string | number): unknown {
     if (typeof id === 'number') return id
-    if (this.idField.type === 'Int' || this.idField.type === 'BigInt') {
+    // BigInt ids must round-trip through BigInt — Number() silently loses
+    // precision above 2^53, so the lookup would target a neighbouring id.
+    if (this.idField.type === 'BigInt') {
+      try {
+        return BigInt(id)
+      } catch {
+        return id
+      }
+    }
+    if (this.idField.type === 'Int') {
       const n = Number(id)
       return Number.isFinite(n) ? n : id
     }
@@ -299,6 +337,17 @@ export class PrismaResource extends BaseResource {
     await this.delegate().delete({ where: this.idClause(id) })
   }
 
+  override async deleteMany(filter: Filter): Promise<number> {
+    try {
+      const { count } = (await this.delegate().deleteMany({
+        where: filterToWhere(filter),
+      })) as { count: number }
+      return count
+    } catch (err) {
+      throw this.toValidationError(err)
+    }
+  }
+
   override supportsTimeSeries(): boolean {
     return true
   }
@@ -309,30 +358,36 @@ export class PrismaResource extends BaseResource {
   ): Promise<TimeSeriesResult> {
     const series = await this.runTimeSeries(filter, query)
     let previous: TimeSeriesSeries[] | undefined
+    let truncated = series.truncated
     if (query.comparePrevious) {
       const span = query.to.getTime() - query.from.getTime()
       const prevTo = new Date(query.from.getTime())
       const prevFrom = new Date(query.from.getTime() - span)
-      previous = (
-        await this.runTimeSeries(filter, { ...query, from: prevFrom, to: prevTo })
-      ).series
+      const prev = await this.runTimeSeries(filter, { ...query, from: prevFrom, to: prevTo })
+      previous = prev.series
+      truncated = truncated || prev.truncated
     }
     return {
       series: series.series,
       ...(previous ? { previous } : {}),
       sql: series.sql,
+      ...(truncated ? { truncated: true } : {}),
     }
   }
 
   /**
-   * Pull rows in the date window via `findMany` and bucket in JS. Avoids
-   * dialect-specific raw SQL for the MVP. Caller-side limit of ~10k rows
-   * is acceptable until a push-down `aggregate()` path lands.
+   * Pull rows in the date window via `findMany` and bucket in JS. Prisma's
+   * typed client cannot `DATE_TRUNC`, so bucketing stays application-side.
+   *
+   * The scan is bounded by `timeSeriesRowCap` (fetch `cap + 1`, keep `cap`)
+   * so an unexpectedly wide window can't load the whole table into memory.
+   * Rows are ordered newest-first, so when the cap is hit the most recent
+   * window is kept and `truncated` is flagged for the caller.
    */
   private async runTimeSeries(
     filter: Filter,
     query: TimeSeriesQuery,
-  ): Promise<{ series: TimeSeriesSeries[]; sql: string }> {
+  ): Promise<{ series: TimeSeriesSeries[]; sql: string; truncated: boolean }> {
     const dateField = this.model.fields.find((f) => f.name === query.dateField)
     if (!dateField) {
       throw new Error(
@@ -360,10 +415,18 @@ export class PrismaResource extends BaseResource {
     if (query.field) select[query.field] = true
     if (query.groupBy) select[query.groupBy] = true
 
-    const rows = (await this.delegate().findMany({
+    // Fetch one more than the cap so we can detect (and flag) truncation
+    // without a second COUNT round-trip. Newest-first ordering keeps the
+    // most recent window when the cap is exceeded.
+    const cap = this.timeSeriesRowCap
+    const fetched = (await this.delegate().findMany({
       where,
       select,
+      orderBy: { [query.dateField]: 'desc' },
+      take: cap + 1,
     })) as Array<Record<string, unknown>>
+    const truncated = fetched.length > cap
+    const rows = truncated ? fetched.slice(0, cap) : fetched
 
     const seriesMap = new Map<string, Map<string, { sum: number; count: number; min: number; max: number }>>()
     const fromIso = isoDate(query.from)
@@ -375,7 +438,12 @@ export class PrismaResource extends BaseResource {
       const bucketKey = query.step === 'all' ? fromIso : truncateDate(date, query.step)
       const seriesKey = query.groupBy ? stringifyKey(row[query.groupBy]) : '__total__'
 
-      const numericVal = query.metric === 'count' ? 1 : toNumber(row[query.field as string])
+      // SQL aggregates (SUM/AVG/MIN/MAX) ignore NULL rows — mirror that here
+      // so avg/min don't get dragged toward 0 by nulls, matching the
+      // SQL-side Drizzle adapter.
+      const rawVal = query.metric === 'count' ? 1 : row[query.field as string]
+      if (rawVal == null) continue
+      const numericVal = query.metric === 'count' ? 1 : toNumber(rawVal)
 
       let inner = seriesMap.get(seriesKey)
       if (!inner) {
@@ -453,13 +521,20 @@ export class PrismaResource extends BaseResource {
 
     return {
       series: seriesOut,
-      sql: buildPrismaDisplaySql(this.dialect, this.databaseName(), query, filter),
+      sql: buildDisplaySql(this.dialect, this.databaseName(), query, filter),
+      truncated,
     }
   }
 
   override async transaction<T>(fn: () => Promise<T>): Promise<T> {
+    const active = txStorage.getStore()
+    // Already inside a transaction on this client — join it (Prisma's
+    // interactive transactions don't nest).
+    if (active && active.base === this.client) return fn()
     if (typeof this.client.$transaction !== 'function') return fn()
-    return this.client.$transaction(async () => fn())
+    return this.client.$transaction((tx) =>
+      txStorage.run({ base: this.client, tx }, fn),
+    )
   }
 
   /**
@@ -548,105 +623,3 @@ const coerceFormScalar = (value: string, prismaType: string): unknown => {
   }
 }
 
-// ─── Time-series helpers ─────────────────────────────────────────────────
-
-const isoDate = (d: Date): string => d.toISOString().slice(0, 10)
-
-const truncateDate = (d: Date, step: TimeSeriesStep): string => {
-  const y = d.getUTCFullYear()
-  const m = d.getUTCMonth()
-  const day = d.getUTCDate()
-  switch (step) {
-  case 'day':
-    return isoDate(new Date(Date.UTC(y, m, day)))
-  case 'week': {
-    // ISO week: Monday-based.
-    const dow = (d.getUTCDay() + 6) % 7 // 0 = Mon
-    const monday = new Date(Date.UTC(y, m, day - dow))
-    return isoDate(monday)
-  }
-  case 'month':
-    return isoDate(new Date(Date.UTC(y, m, 1)))
-  case 'year':
-    return isoDate(new Date(Date.UTC(y, 0, 1)))
-  case 'all':
-    return isoDate(d)
-  }
-}
-
-const toNumber = (v: unknown): number => {
-  if (typeof v === 'number') return v
-  if (v == null) return 0
-  const n = Number(v)
-  return Number.isFinite(n) ? n : 0
-}
-
-const stringifyKey = (v: unknown): string => {
-  if (v == null) return '__null__'
-  if (typeof v === 'string') return v
-  return String(v)
-}
-
-const buildPrismaDisplaySql = (
-  dialect: PrismaDialect,
-  tableName: string,
-  query: TimeSeriesQuery,
-  filter: Filter,
-): string => {
-  const ident = (s: string) => (dialect === 'mysql' ? `\`${s}\`` : `"${s}"`)
-  const t = ident(tableName)
-  const dateCol = ident(query.dateField)
-  const bucket =
-    query.step === 'all'
-      ? `MIN(${dateCol})`
-      : dialect === 'pg'
-        ? `DATE_TRUNC('${query.step}', ${dateCol})`
-        : dialect === 'mysql'
-          ? `DATE_FORMAT(${dateCol}, ${mysqlFmt(query.step)})`
-          : `STRFTIME(${sqliteFmt(query.step)}, ${dateCol})`
-  const metric =
-    query.metric === 'count'
-      ? 'COUNT(*)'
-      : `${query.metric.toUpperCase()}(${ident(query.field as string)})`
-  const cols: string[] = []
-  if (query.step !== 'all') cols.push(`${bucket} AS bucket`)
-  cols.push(`${metric} AS value`)
-  if (query.groupBy) cols.push(`${ident(query.groupBy)} AS series_key`)
-  const where: string[] = [
-    `${dateCol} >= '${query.from.toISOString()}'`,
-    `${dateCol} <= '${query.to.toISOString()}'`,
-  ]
-  filter.reduce<null>((_, el) => {
-    where.push(`${ident(el.path)} = '${String(el.value)}'`)
-    return null
-  }, null)
-  const groupBy: string[] = []
-  if (query.step !== 'all') groupBy.push('bucket')
-  if (query.groupBy) groupBy.push('series_key')
-  const lines = [
-    `SELECT ${cols.join(', ')}`,
-    `FROM ${t}`,
-    `WHERE ${where.join(' AND ')}`,
-  ]
-  if (groupBy.length) lines.push(`GROUP BY ${groupBy.join(', ')}`)
-  if (query.step !== 'all') lines.push('ORDER BY bucket ASC')
-  return lines.join('\n')
-}
-
-const mysqlFmt = (step: TimeSeriesStep): string =>
-  step === 'day'
-    ? "'%Y-%m-%d'"
-    : step === 'week'
-      ? "'%x-W%v'"
-      : step === 'month'
-        ? "'%Y-%m-01'"
-        : "'%Y-01-01'"
-
-const sqliteFmt = (step: TimeSeriesStep): string =>
-  step === 'day'
-    ? "'%Y-%m-%d'"
-    : step === 'week'
-      ? "'%Y-W%W'"
-      : step === 'month'
-        ? "'%Y-%m-01'"
-        : "'%Y-01-01'"

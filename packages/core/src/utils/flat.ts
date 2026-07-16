@@ -45,8 +45,18 @@ export function unflatten(flat: FlatParams): Record<string, unknown> {
 
 type Container = Record<string, unknown> | unknown[]
 
+/**
+ * Segments that must never be used as object keys during reconstruction.
+ * Writing to any of these walks up to `Object.prototype` and lets untrusted
+ * input (e.g. query filters like `filters[__proto__][x]=…`) pollute every
+ * object in the process. We drop any path containing one of these segments.
+ */
+const FORBIDDEN_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
+
 function setPath(target: Record<string, unknown>, path: string, value: unknown): void {
   const parts = path.split('.')
+  // Reject the entire path if any segment could reach the prototype chain.
+  if (parts.some((part) => FORBIDDEN_KEYS.has(part))) return
   let cur: Container = target
   for (let i = 0; i < parts.length - 1; i += 1) {
     const part = parts[i]!

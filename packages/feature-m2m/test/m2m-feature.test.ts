@@ -376,6 +376,20 @@ describe('m2mFeature — cascade delete', () => {
     expect(ctx.postTagsTable.rows.filter((r) => r.postId === 'p2')).toHaveLength(1)
   })
 
+  it('removes junction rows for every parent on bulkDelete', async () => {
+    const ctx = buildAdmin()
+    await ctx.junction.create({ postId: 'p1', tagId: 't1' })
+    await ctx.junction.create({ postId: 'p1', tagId: 't2' })
+    await ctx.junction.create({ postId: 'p2', tagId: 't3' })
+
+    await ctx.admin.invoke({
+      method: 'post',
+      params: { resourceId: 'posts', recordIds: 'p1,p2', action: 'bulkDelete' },
+    })
+
+    expect(ctx.postTagsTable.rows).toHaveLength(0)
+  })
+
   it('skips cascade when feature configured with cascadeDelete: false', async () => {
     const tagsTable = tbl('tags', ['id', 'name'], [{ id: 't1', name: 'rust' }])
     const postsTable = tbl('posts', ['id', 'title'], [{ id: 'p1', title: 'X' }])

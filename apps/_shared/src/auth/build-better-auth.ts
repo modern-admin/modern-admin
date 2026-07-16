@@ -109,6 +109,19 @@ export const buildBetterAuth = ({
   allowlistOnly = false,
   oauthTrustedProviders,
 }: BuildBetterAuthOptions): BuiltBetterAuth => {
+  // Fail fast on a missing/weak signing secret. Better Auth otherwise
+  // auto-generates a throwaway secret in dev, which silently rotates on every
+  // restart (invalidating sessions) and offers no real entropy guarantee.
+  // Requiring an explicit ≥32-char value makes the deployment configure one
+  // deliberately (`openssl rand -hex 32`).
+  const secret = process.env.BETTER_AUTH_SECRET
+  if (!secret || secret.trim().length < 32 || secret.startsWith('replace-me')) {
+    throw new Error(
+      'BETTER_AUTH_SECRET is missing or insecure. Set it to a strong random value ' +
+        '(at least 32 chars, e.g. `openssl rand -hex 32`) before starting the server.',
+    )
+  }
+
   const resolvedModelNames = {
     user: modelNames?.user ?? 'ma_user',
     session: modelNames?.session ?? 'ma_session',
@@ -151,7 +164,10 @@ export const buildBetterAuth = ({
       // the key id onto the principal so `ModernAdmin.invoke()` can gate
       // actions.
       enableSessionForAPIKeys: true,
-      rateLimit: { enabled: false },
+      // Rate-limit verification of each key. Leaving this off let an
+      // attacker brute-force key values against the `x-api-key` path with
+      // no throttle. The plugin caps attempts per key/identifier window.
+      rateLimit: { enabled: true },
       schema: { apikey: { modelName: resolvedModelNames.apikey } },
     }) as BetterAuthPlugin,
     ...(extraPlugins as BetterAuthPlugin[]),
@@ -206,6 +222,11 @@ export const buildBetterAuth = ({
 
   const config: BetterAuthOptions = {
     database,
+    secret,
+    // Throttle auth endpoints (sign-in, api-key verify, …) so credential and
+    // key-value brute-forcing is bounded. Better Auth disables its limiter
+    // outside production by default; enable it explicitly everywhere.
+    rateLimit: { enabled: true },
     baseURL: process.env.AUTH_BASE_URL ?? `http://localhost:${process.env.API_PORT ?? defaultPort}`,
     // Origins allowed to use Better Auth endpoints. Default covers the
     // two ports the reference web app is typically served on (Vite

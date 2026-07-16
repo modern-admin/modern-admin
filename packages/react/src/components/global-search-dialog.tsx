@@ -19,7 +19,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from '@modern-admin/ui'
-import { ArrowRight, Clock, Loader2, X } from 'lucide-react'
+import { AlertTriangle, ArrowRight, Clock, Loader2, X } from 'lucide-react'
 import { useGlobalSearch } from '../hooks.js'
 import { useI18n } from '../i18n.js'
 import { useNavigate } from '../router.js'
@@ -113,7 +113,7 @@ export function GlobalSearchDialog({
     return () => window.clearTimeout(timer)
   }, [query])
 
-  const { data, isFetching } = useGlobalSearch(debounced, open)
+  const { data, isFetching, isError } = useGlobalSearch(debounced, open)
 
   // Capture the most recent successful query so it's available for the
   // "recent" list. We only persist on user-driven navigation (not every
@@ -129,7 +129,7 @@ export function GlobalSearchDialog({
 
   const groups = data?.groups ?? []
   const hasQuery = debounced.length > 0
-  const showEmpty = hasQuery && !isFetching && groups.length === 0
+  const showEmpty = hasQuery && !isFetching && !isError && groups.length === 0
 
   const handleSelect = React.useCallback(
     (resourceId: string, recordId: string): void => {
@@ -210,8 +210,17 @@ export function GlobalSearchDialog({
             ))}
           </CommandGroup>
         )}
+        {hasQuery && isError && (
+          <div
+            className="flex items-center justify-center gap-2 py-6 text-sm text-destructive"
+            role="alert"
+          >
+            <AlertTriangle className="size-4" aria-hidden="true" />
+            <span>{t('globalSearch:error')}</span>
+          </div>
+        )}
         {showEmpty && <CommandEmpty>{t('globalSearch:noResults')}</CommandEmpty>}
-        {hasQuery && isFetching && groups.length === 0 && (
+        {hasQuery && !isError && isFetching && groups.length === 0 && (
           <div
             className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground"
             role="status"

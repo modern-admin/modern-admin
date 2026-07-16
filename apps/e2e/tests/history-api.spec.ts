@@ -18,6 +18,37 @@ import { test, expect, type APIRequestContext } from '@playwright/test'
 const API = process.env.E2E_API_URL ?? 'http://localhost:3001'
 const admin = (path: string): string => `${API}/admin/api${path}`
 
+type Revision = { id: string; op: 'create' | 'update' | 'delete'; snapshot: Record<string, unknown> }
+
+async function listRevisions(request: APIRequestContext, id: string): Promise<Revision[]> {
+  const res = await request.get(admin(`/resources/customers/records/${id}/history`))
+  expect(res.ok(), await res.text().catch(() => '')).toBeTruthy()
+  const body = (await res.json()) as { revisions: Revision[] }
+  expect(Array.isArray(body.revisions)).toBe(true)
+  return body.revisions
+}
+
+/**
+ * `feature-history` persists revisions off the hot path (fire-and-forget:
+ * the mutation response returns before the append settles), so a read taken
+ * immediately after an edit is eventually-consistent. Poll until the
+ * predicate holds rather than asserting synchronously.
+ */
+async function waitForRevisions(
+  request: APIRequestContext,
+  id: string,
+  predicate: (revs: Revision[]) => boolean,
+): Promise<Revision[]> {
+  let latest: Revision[] = []
+  await expect
+    .poll(async () => {
+      latest = await listRevisions(request, id)
+      return predicate(latest)
+    }, { timeout: 10_000 })
+    .toBe(true)
+  return latest
+}
+
 async function createCustomer(request: APIRequestContext): Promise<{ id: string; name: string }> {
   const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
   const name = `History ${suffix}`
@@ -48,17 +79,15 @@ test.describe('Record history endpoint', () => {
       await editCustomer(request, customer.id, { name: `${customer.name} v2` })
       await editCustomer(request, customer.id, { name: `${customer.name} v3` })
 
-      const res = await request.get(
-        admin(`/resources/customers/records/${customer.id}/history`),
+      // historyPlugin writes `op: 'update'` for `edit` actions. Poll until
+      // both background appends have settled.
+      const revisions = await waitForRevisions(
+        request,
+        customer.id,
+        (revs) => revs.filter((r) => r.op === 'update').length >= 2,
       )
-      expect(res.ok(), await res.text().catch(() => '')).toBeTruthy()
-      const body = (await res.json()) as {
-        revisions: Array<{ id: string; op: 'create' | 'update' | 'delete'; snapshot: Record<string, unknown> }>
-      }
-      expect(Array.isArray(body.revisions)).toBe(true)
-      expect(body.revisions.length).toBeGreaterThanOrEqual(2)
-      // historyPlugin writes `op: 'update'` for `edit` actions.
-      const editRevisions = body.revisions.filter((r) => r.op === 'update')
+      expect(revisions.length).toBeGreaterThanOrEqual(2)
+      const editRevisions = revisions.filter((r) => r.op === 'update')
       expect(editRevisions.length).toBeGreaterThanOrEqual(2)
     } finally {
       await request.delete(admin(`/resources/customers/records/${customer.id}/actions/delete`))
@@ -70,11 +99,8 @@ test.describe('Record history endpoint', () => {
     try {
       await editCustomer(request, customer.id, { name: `${customer.name} once` })
 
-      const listRes = await request.get(
-        admin(`/resources/customers/records/${customer.id}/history`),
-      )
-      const list = (await listRes.json()) as { revisions: Array<{ id: string }> }
-      const revisionId = list.revisions[0]!.id
+      const list = await waitForRevisions(request, customer.id, (revs) => revs.length >= 1)
+      const revisionId = list[0]!.id
       expect(revisionId).toBeTruthy()
 
       const singleRes = await request.get(
@@ -95,14 +121,14 @@ test.describe('Record history endpoint', () => {
       const renamed = `${original} CHANGED`
       await editCustomer(request, customer.id, { name: renamed })
 
-      // Grab the most recent edit revision (the one we want to undo).
-      const listRes = await request.get(
-        admin(`/resources/customers/records/${customer.id}/history`),
+      // Grab the most recent edit revision (the one we want to undo). Poll
+      // until the background append of the update revision has settled.
+      const list = await waitForRevisions(
+        request,
+        customer.id,
+        (revs) => revs.some((r) => r.op === 'update'),
       )
-      const list = (await listRes.json()) as {
-        revisions: Array<{ id: string; op: 'create' | 'update' | 'delete' }>
-      }
-      const editRev = list.revisions.find((r) => r.op === 'update')
+      const editRev = list.find((r) => r.op === 'update')
       expect(editRev, 'expected at least one update revision').toBeDefined()
 
       // Confirm current name is the renamed value.

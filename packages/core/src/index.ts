@@ -8,15 +8,28 @@ export {
   BaseResource,
   BaseProperty,
   BaseRecord,
+  buildDisplaySql,
+  coerceScalar,
+  isoDate,
+  isRangeValue,
+  parseBetween,
+  stringifyKey,
+  sumValues,
+  toDate,
+  toNumber,
+  truncateDate,
+  DEFAULT_TIME_SERIES_ROW_CAP,
   type AggregationOp,
   type AggregationRequest,
   type AggregationResult,
   type BasePropertyAttrs,
+  type CoercibleProperty,
   type FindOptions,
   type ParamsType,
   type PropertyType,
   type RecordJSON,
   type SortDirection,
+  type SqlDialect,
   type StreamOptions,
   type TimeSeriesPoint,
   type TimeSeriesQuery,
@@ -231,3 +244,18 @@ export {
 // normalise pre-mutation snapshots to the same shape that `toJSON()`
 // emits on the response, keeping diffs symmetric.
 export { unflatten } from './utils/flat.js'
+
+// Action-hook chaining helpers. Resource features append `before`/`after`
+// hooks onto built-in actions without clobbering pre-existing ones — these
+// are the single shared implementation (formerly duplicated per feature).
+export { appendBeforeHook, appendAfterHook, toHookArray } from './utils/hooks.js'
+
+// Option-layering merge. Arrays concat by default; ordered-whitelist keys
+// (listProperties etc.) replace — pass RESOURCE_OPTIONS_ARRAY_STRATEGIES so
+// feature/plugin merges agree with the factory's user-options merge.
+export {
+  deepMerge,
+  RESOURCE_OPTIONS_ARRAY_STRATEGIES,
+  type ArrayMergeStrategy,
+  type ArrayMergeStrategies,
+} from './utils/merge-options.js'

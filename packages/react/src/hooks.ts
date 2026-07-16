@@ -3,6 +3,7 @@
 
 import * as React from 'react'
 import {
+  keepPreviousData,
   useInfiniteQuery,
   useMutation,
   useQuery,
@@ -174,6 +175,11 @@ export const useRecords = (
   return useQuery({
     queryKey: keyList(resourceId, query),
     queryFn: () => client.list(resourceId, query),
+    // Keep the previous page/sort/filter results on screen while the next
+    // query loads (and during background invalidations) instead of blanking
+    // the table to skeletons. Skeletons show only on the true first load
+    // (`isPending`), where there is no prior data to hold.
+    placeholderData: keepPreviousData,
   })
 }
 

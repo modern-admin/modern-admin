@@ -65,4 +65,36 @@ describe('flat utilities', () => {
   test('merge with undefined patch returns base', () => {
     expect(merge({ a: 1 }, undefined)).toEqual({ a: 1 })
   })
+
+  describe('prototype pollution guard', () => {
+    test('unflatten ignores __proto__ segment and does not pollute', () => {
+      const polluted = {} as Record<string, unknown>
+      const result = unflatten({ '__proto__.polluted': 'yes' })
+      expect(polluted.polluted).toBeUndefined()
+      expect(({} as Record<string, unknown>).polluted).toBeUndefined()
+      expect(Object.prototype).not.toHaveProperty('polluted')
+      // The dangerous path is dropped, leaving nothing behind.
+      expect(Object.keys(result)).not.toContain('__proto__')
+    })
+
+    test('unflatten ignores constructor.prototype chain', () => {
+      const result = unflatten({ 'constructor.prototype.polluted2': 'yes' })
+      expect(({} as Record<string, unknown>).polluted2).toBeUndefined()
+      expect(Object.prototype).not.toHaveProperty('polluted2')
+      expect(Object.keys(result)).not.toContain('constructor')
+    })
+
+    test('unflatten ignores prototype segment', () => {
+      const result = unflatten({ 'x.prototype.polluted3': 'yes' })
+      expect(({} as Record<string, unknown>).polluted3).toBeUndefined()
+      expect(Object.prototype).not.toHaveProperty('polluted3')
+      expect(result).toEqual({})
+    })
+
+    test('safe keys adjacent to dropped ones still round-trip', () => {
+      expect(unflatten({ 'a.b': 1, '__proto__.x': 2, 'a.c': 3 })).toEqual({
+        a: { b: 1, c: 3 },
+      })
+    })
+  })
 })

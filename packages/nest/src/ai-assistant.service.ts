@@ -299,6 +299,11 @@ export class AiAssistantService {
       debug,
       ...(rawQueryForRequest ? { rawQuery: rawQueryForRequest } : {}),
       ...(dashboardStore ? { dashboardStore } : {}),
+      // Only admins with a dashboard-manage role get the write tools; the
+      // read tool is always available when a dashboardStore is wired. Mirrors
+      // the DashboardController PUT gate so the assistant can't overwrite the
+      // shared global dashboard for a viewer who couldn't do it via REST.
+      dashboardWritable: this.canManageDashboard(data.currentAdmin),
       uiActions,
     })
 
@@ -598,6 +603,18 @@ export class AiAssistantService {
 
   private canManage(currentAdmin?: CurrentAdmin): boolean {
     const allowed = this.options.aiAssistant?.manageRoles ?? ['admin']
+    const role = currentAdmin?.role
+    return typeof role === 'string' ? allowed.includes(role) : false
+  }
+
+  /**
+   * Whether this admin may mutate the shared global dashboard. Uses the
+   * framework-wide `dashboardRoles` (same list the DashboardController PUT
+   * gate honours) rather than the AI-specific manageRoles, so REST and AI
+   * writes stay in lockstep. Defaults to `['admin']`.
+   */
+  private canManageDashboard(currentAdmin?: CurrentAdmin): boolean {
+    const allowed = this.options.dashboardRoles ?? ['admin']
     const role = currentAdmin?.role
     return typeof role === 'string' ? allowed.includes(role) : false
   }

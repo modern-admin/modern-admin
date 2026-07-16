@@ -183,7 +183,7 @@ describe('Express query parser auto-fix', () => {
     expect(settings['query parser']).toBe('extended')
   })
 
-  test("leaves user-installed function parser alone", async () => {
+  test('leaves user-installed function parser alone', async () => {
     const customParser = (s: string): Record<string, string> => ({ raw: s })
     const settings: Record<string, unknown> = { 'query parser': customParser }
     const expressApp = {

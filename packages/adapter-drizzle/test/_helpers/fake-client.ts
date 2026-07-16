@@ -1,6 +1,7 @@
 import type {
   DrizzleClientLike,
   DrizzleDeleteBuilder,
+  DrizzleDeleteExecutable,
   DrizzleInsertBuilder,
   DrizzleQueryBuilder,
   DrizzleSelectBuilder,
@@ -18,6 +19,7 @@ interface Canned {
   countValue?: number
   insertRow?: Record<string, unknown>
   updateRow?: Record<string, unknown>
+  deleteRows?: Record<string, unknown>[]
 }
 
 export interface FakeClient extends DrizzleClientLike {
@@ -67,7 +69,9 @@ export const createFakeClient = (canned: Canned = {}): FakeClient => {
     canned,
     select(fields?: Record<string, unknown>): DrizzleSelectBuilder {
       calls.push({ op: 'select', arg: fields })
-      const isCount = fields && 'value' in fields
+      // A bare `{ value }` select is the count() shape; time-series selects
+      // also carry `bucket` / `series_key` and must resolve to selectRows.
+      const isCount = fields && 'value' in fields && !('bucket' in fields) && !('series_key' in fields)
       return {
         from(table: DrizzleTable) {
           calls.push({ op: 'from', arg: table })
@@ -113,10 +117,22 @@ export const createFakeClient = (canned: Canned = {}): FakeClient => {
     },
     delete(table: DrizzleTable): DrizzleDeleteBuilder {
       calls.push({ op: 'delete', arg: table })
+      const executable = (): DrizzleDeleteExecutable => {
+        const p = Promise.resolve(undefined) as DrizzleDeleteExecutable
+        p.returning = async () => {
+          calls.push({ op: 'returning' })
+          return canned.deleteRows ?? []
+        }
+        return p
+      }
       return {
-        async where(condition) {
+        where(condition) {
           calls.push({ op: 'where', arg: condition })
-          return undefined
+          return executable()
+        },
+        returning() {
+          calls.push({ op: 'returning' })
+          return Promise.resolve(canned.deleteRows ?? [])
         },
       }
     },

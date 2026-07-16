@@ -20,6 +20,7 @@ import {
   Copy,
   Check,
   FolderSymlink,
+  AlertTriangle,
 } from 'lucide-react'
 import {
   Card,
@@ -435,6 +436,15 @@ export function ChartWidget({
                 {range.from} — {range.to}
               </span>
             )}
+          </div>
+        )}
+
+        {/* Truncation warning — adapter capped the scan, so the chart reflects
+            only a subset of the window. Hidden while loading / unsupported. */}
+        {!unsupported && !isError && data?.truncated && (
+          <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+            <AlertTriangle className="size-3.5 mt-0.5 shrink-0" />
+            <span>{t('dashboard:widget.truncatedWarning')}</span>
           </div>
         )}
 

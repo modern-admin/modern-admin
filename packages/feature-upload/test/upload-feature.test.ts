@@ -87,6 +87,21 @@ describe('uploadFeature() — property configuration', () => {
     expect(UploadProviderRegistry.get(id)?.provider).toBe(provider)
   })
 
+  it('derives a deterministic, resource-scoped id when a resource is supplied', () => {
+    const resource = { id: () => 'users' } as unknown as Parameters<
+      ReturnType<typeof uploadFeature>
+    >[1]
+    const feature = uploadFeature({ properties: { avatar: { provider: makeProvider() } } })
+    const first = feature(emptyOptions, resource)
+    const id = first.properties?.avatar?.custom?.uploadProviderId as string
+    // Deterministic form so every replica computes the same registry key.
+    expect(id).toBe('up_users_avatar')
+    // Re-applying (e.g. a second replica) yields the same id — resolvable.
+    const second = feature(emptyOptions, resource)
+    expect(second.properties?.avatar?.custom?.uploadProviderId).toBe(id)
+    expect(UploadProviderRegistry.get(id)).toBeDefined()
+  })
+
   it('stores urlTemplate in custom data', () => {
     const feature = uploadFeature({ properties: { avatar: { provider: makeProvider() } } })
     const result = feature(emptyOptions)

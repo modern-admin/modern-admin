@@ -30,6 +30,7 @@
  */
 
 import {
+  appendAfterHook,
   Filter,
   type ActionRequest,
   type ActionResponse,
@@ -44,7 +45,7 @@ import {
 } from '@modern-admin/core'
 import { m2mRelationZ, type M2MCustomData, type M2MItem, type M2MRelation, type M2MRelationInput } from './types.js'
 
-// ─── Hook chaining (mirrors uploadFeature / actionLoggingFeature) ────────────
+// ─── Hook chaining ───────────────────────────────────────────────────────────
 
 type HookFn = (
   response: ActionResponse,
@@ -52,20 +53,12 @@ type HookFn = (
   context: unknown,
 ) => ActionResponse | Promise<ActionResponse>
 
-const toArray = (hook: unknown): HookFn[] => {
-  if (!hook) return []
-  return Array.isArray(hook) ? (hook as HookFn[]) : [hook as HookFn]
-}
-
-const appendAfter = (
-  existing: Record<string, unknown> | undefined,
-  newHook: HookFn,
-): HookFn[] => [...toArray(existing?.after), newHook]
-
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const ctxAdmin = (context: unknown): ModernAdmin =>
   (context as { admin: ModernAdmin }).admin
+
+const JUNCTION_PAGE_SIZE = 1_000
 
 const junctionRowsForParent = async (
   junction: BaseResource,
@@ -75,9 +68,21 @@ const junctionRowsForParent = async (
   // Use Filter so adapter-specific WHERE clauses kick in (Prisma, Drizzle).
   // Post-filter the result in JS so adapters with looser semantics
   // (in-memory's substring match) still produce correct output.
+  //
+  // Paginate rather than pulling one huge page: a parent with more junction
+  // rows than any single fixed limit would otherwise be silently truncated.
   const filter = new Filter({ [localKey]: parentId }, junction)
-  const rows = await junction.find(filter, { limit: 100_000 })
-  return rows.filter((r) => String(r.params[localKey]) === String(parentId))
+  const out: BaseRecord[] = []
+  let offset = 0
+  for (;;) {
+    const batch = await junction.find(filter, { limit: JUNCTION_PAGE_SIZE, offset })
+    for (const r of batch) {
+      if (String(r.params[localKey]) === String(parentId)) out.push(r)
+    }
+    if (batch.length < JUNCTION_PAGE_SIZE) break
+    offset += JUNCTION_PAGE_SIZE
+  }
+  return out
 }
 
 const buildItem = (
@@ -355,6 +360,10 @@ const buildWriteHook = (relation: M2MRelation): HookFn =>
       return response
     }
     const parentResource = (context as { resource: BaseResource }).resource
+    // Atomicity holds when parent and junction share one DB client: the
+    // adapters propagate the tx client via AsyncLocalStorage, so junction
+    // writes inside this callback join the parent's transaction. With the
+    // junction on a different client/DB the diff is applied best-effort.
     await parentResource.transaction(() =>
       applyDiff(
         junction,
@@ -385,9 +394,12 @@ const buildDeleteHook = (relation: M2MRelation): HookFn =>
     } catch {
       return response
     }
-    const rows = await junctionRowsForParent(junction, relation.localKey, String(id))
-    await Promise.all(rows.map((r) => junction.delete(r.id())))
-    if (rows.length > 0) {
+    // Bulk-delete via the resource contract: production adapters collapse
+    // this into a single `DELETE … WHERE localKey = ?`, and the core default
+    // paginates + chunks (no unbounded concurrent-delete storm, no silent cap).
+    const filter = new Filter({ [relation.localKey]: String(id) }, junction)
+    const deleted = await junction.deleteMany(filter)
+    if (deleted > 0) {
       // Direct junction writes bypass `invoke` — drop the junction's own
       // response caches (and its dependents') explicitly.
       await admin.invalidateResourceCaches(relation.through)
@@ -437,15 +449,15 @@ export const m2mFeature = (input: M2MRelationInput): FeatureFn => {
     }
 
     const overrides: Record<string, Record<string, unknown>> = {
-      list: { ...existingActions.list, after: appendAfter(existingActions.list, readHook) },
-      show: { ...existingActions.show, after: appendAfter(existingActions.show, readHook) },
-      new: { ...existingActions.new, after: appendAfter(existingActions.new, writeHook) },
-      edit: { ...existingActions.edit, after: appendAfter(existingActions.edit, writeHook) },
+      list: { ...existingActions.list, after: appendAfterHook(existingActions.list, readHook) },
+      show: { ...existingActions.show, after: appendAfterHook(existingActions.show, readHook) },
+      new: { ...existingActions.new, after: appendAfterHook(existingActions.new, writeHook) },
+      edit: { ...existingActions.edit, after: appendAfterHook(existingActions.edit, writeHook) },
     }
     if (deleteHook) {
       overrides.delete = {
         ...existingActions.delete,
-        after: appendAfter(existingActions.delete, deleteHook),
+        after: appendAfterHook(existingActions.delete, deleteHook),
       }
     }
 

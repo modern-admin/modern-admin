@@ -45,6 +45,17 @@ export interface ModernAdminGraphqlOptions {
    * against the provided bus.
    */
   subscriptions?: GraphqlSubscriptionOptions
+  /**
+   * Hard upper bound (bytes) on a single uploaded file part in a multipart
+   * GraphQL request. Parts are buffered in memory, so this caps per-request
+   * memory and blocks OOM-style DoS. Default: 25 MiB.
+   */
+  maxFileSize?: number
+  /**
+   * Maximum number of file parts accepted in one multipart GraphQL request.
+   * Default: 10.
+   */
+  maxFiles?: number
 }
 
 @Module({})
@@ -69,6 +80,8 @@ export class ModernAdminGraphqlModule implements OnApplicationBootstrap {
       extensions: options.extensions ?? [],
       subscriptionsPath: options.subscriptions?.path ?? '/admin/graphql',
       subscriptionsEnabled: Boolean(options.subscriptions),
+      maxFileSize: options.maxFileSize ?? 25 * 1024 * 1024,
+      maxFiles: options.maxFiles ?? 10,
     }
     const providers: DynamicModule['providers'] = [
       ModernAdminGraphqlSchemaHolder,
@@ -98,4 +111,6 @@ export interface ResolvedGraphqlOptions {
   extensions: ReadonlyArray<GraphqlExtensionFactory>
   subscriptionsPath: string
   subscriptionsEnabled: boolean
+  maxFileSize: number
+  maxFiles: number
 }

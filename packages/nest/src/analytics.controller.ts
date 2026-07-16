@@ -142,6 +142,7 @@ export class AnalyticsController {
       series: result.series,
       ...(result.previous ? { previous: result.previous } : {}),
       ...(canSeeSql && result.sql ? { sql: result.sql } : {}),
+      ...(result.truncated ? { truncated: true } : {}),
       ...(resolvedLabels ? { resolvedLabels } : {}),
       supported: true,
     }

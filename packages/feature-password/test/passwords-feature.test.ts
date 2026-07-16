@@ -38,6 +38,15 @@ describe('passwordsFeature() — property configuration', () => {
     })
   })
 
+  it('marks the encrypted column inaccessible so the hash never reaches API/history/realtime', () => {
+    const feature = passwordsFeature({
+      properties: { encryptedPassword: 'password', password: 'newPassword' },
+      hash: async (p) => `h:${p}`,
+    })
+    const result = feature(opts())
+    expect(result.properties?.password?.isAccessible).toBe(false)
+  })
+
   it('exposes the virtual field as a password input visible only in edit', () => {
     const feature = passwordsFeature({
       properties: { encryptedPassword: 'password', password: 'newPassword' },

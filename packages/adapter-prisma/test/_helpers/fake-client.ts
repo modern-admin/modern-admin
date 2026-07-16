@@ -93,6 +93,17 @@ export const createDelegate = (initial: FakeRow[] = [], idField = 'id'): FakeDel
       const [removed] = rows.splice(idx, 1)
       return removed!
     },
+    async deleteMany(args) {
+      calls.push({ method: 'deleteMany', args })
+      let count = 0
+      for (let i = rows.length - 1; i >= 0; i--) {
+        if (matchesWhere(rows[i]!, args?.where)) {
+          rows.splice(i, 1)
+          count++
+        }
+      }
+      return { count }
+    },
   }
   return delegate
 }

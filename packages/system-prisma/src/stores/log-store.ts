@@ -1,34 +1,12 @@
-import { uuidv7, type ActionLogEntry, type ILogStore, type IQueryableLogStore } from '@modern-admin/core'
+import {
+  rowToLogEntry,
+  uuidv7,
+  type ActionLogEntry,
+  type ILogStore,
+  type IQueryableLogStore,
+  type LogRow,
+} from '@modern-admin/core'
 import type { PrismaDelegate } from '../types.js'
-
-interface LogRow {
-  id: string
-  resourceId: string
-  action: string
-  recordId: string | null
-  recordIds: unknown
-  userId: string | null
-  payload: unknown
-  result: unknown
-  at: bigint
-  createdAt: Date
-}
-
-const rowToEntry = (row: LogRow): ActionLogEntry => ({
-  id: row.id,
-  resourceId: row.resourceId,
-  action: row.action,
-  ...(row.recordId !== null ? { recordId: row.recordId } : {}),
-  ...(Array.isArray(row.recordIds) ? { recordIds: row.recordIds as string[] } : {}),
-  ...(row.userId !== null ? { userId: row.userId } : {}),
-  ...(row.payload !== null && row.payload !== undefined
-    ? { payload: row.payload as Record<string, unknown> }
-    : {}),
-  ...(row.result !== null && row.result !== undefined
-    ? { result: row.result as Record<string, unknown> }
-    : {}),
-  at: Number(row.at),
-})
 
 export class PrismaLogStore implements IQueryableLogStore {
   constructor(private readonly delegate: PrismaDelegate<LogRow>) {}
@@ -69,7 +47,7 @@ export class PrismaLogStore implements IQueryableLogStore {
       ...(filter.limit !== undefined ? { take: filter.limit } : {}),
       ...(filter.offset !== undefined ? { skip: filter.offset } : {}),
     })
-    return rows.map(rowToEntry)
+    return rows.map(rowToLogEntry)
   }
 }
 

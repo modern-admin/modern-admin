@@ -74,6 +74,19 @@ export interface IConfigStore {
 
 // ─── History ──────────────────────────────────────────────────────────────
 
+/**
+ * Retention policy for a revision store. Bounds are optional and combine:
+ * a revision is kept only if it satisfies every bound that is set. With no
+ * bounds set the store keeps everything (unbounded growth — fine for tests,
+ * not for long-lived processes).
+ */
+export interface HistoryRetention {
+  /** Keep at most this many of the most recent revisions per record. */
+  keepLast?: number
+  /** Drop revisions older than this many days (relative to now). */
+  keepDays?: number
+}
+
 export interface IHistoryStore {
   append(input: {
     resourceId: string
@@ -92,6 +105,12 @@ export interface IHistoryStore {
   get(resourceId: string, recordId: string, revisionId: string): Promise<HistoryEntry | null>
   /** Latest revision for a record, or null if none exist. */
   latest(resourceId: string, recordId: string): Promise<HistoryEntry | null>
+  /**
+   * Enforce a retention policy, deleting revisions that fall outside it.
+   * Returns the number of revisions removed. Optional — stores that manage
+   * retention externally (e.g. a database TTL) may leave this unimplemented.
+   */
+  prune?(retention: HistoryRetention): Promise<number>
 }
 
 // ─── AI tasks ─────────────────────────────────────────────────────────────

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type APIRequestContext } from '@playwright/test'
 
 /**
  * Cross-resource search endpoint.
@@ -60,4 +60,46 @@ test.describe('GET /admin/api/global-search', () => {
     expect(body.total).toBe(0)
     expect(body.groups).toEqual([])
   })
+
+  // Regression for the search action's step-3 ID-substring fallback
+  // (`core/src/actions/built-in/search.ts`). That scan now runs *only* when
+  // steps 1–2 (exact-id + field search) return nothing — a random UUID-tail
+  // fragment matches no text field, so this exercises exactly the fallback
+  // branch and proves it still resolves the record after the gating change.
+  test('finds a record by a random fragment of its id (step-3 id fallback)', async ({
+    request,
+  }) => {
+    const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const create = await request.post(admin('/resources/customers/actions/new'), {
+      data: {
+        name: `Search IdFallback ${suffix}`,
+        email: `search-idfallback-${suffix}@example.com`,
+        tier: 'free',
+      },
+    })
+    expect(create.ok(), await create.text().catch(() => '')).toBeTruthy()
+    const id = String((await create.json()).record.id)
+    // Last UUID group = the random tail; unique to this record and present
+    // in no text column, so only the id-substring scan can surface it.
+    const fragment = id.split('-').pop()!
+    expect(fragment.length).toBeGreaterThanOrEqual(6)
+
+    try {
+      const res = await request.get(admin(`/global-search?q=${fragment}`))
+      expect(res.ok(), await res.text().catch(() => '')).toBeTruthy()
+      const body = (await res.json()) as SearchResponse
+      const customers = body.groups.find((g) => g.resourceId === 'customers')
+      expect(
+        customers,
+        `expected customers group; got ${JSON.stringify(body.groups.map((g) => g.resourceId))}`,
+      ).toBeDefined()
+      expect(customers!.records.some((r) => String(r.recordId) === id)).toBe(true)
+    } finally {
+      await removeCustomer(request, id)
+    }
+  })
 })
+
+async function removeCustomer(request: APIRequestContext, id: string): Promise<void> {
+  await request.delete(admin(`/resources/customers/records/${id}/actions/delete`))
+}

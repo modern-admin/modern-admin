@@ -7,6 +7,7 @@
 
 export * from './schemas.js'
 export * from './ports.js'
+export * from './row-mappers.js'
 export {
   ConsoleLogStore,
   MemoryLogStore,

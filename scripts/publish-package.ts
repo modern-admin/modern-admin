@@ -33,7 +33,7 @@
  * the workflow exports `GITHUB_TOKEN` → `BUN_AUTH_TOKEN`.
  */
 
-import { readFile, writeFile, readdir, rm } from 'node:fs/promises'
+import { readFile, writeFile, readdir, rm, copyFile, access } from 'node:fs/promises'
 import { join, resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
@@ -95,6 +95,33 @@ function applyPublishOverrides(pkg: PackageJson): PackageJson {
   // would run `prepublishOnly` etc. — we already built upfront.
   delete out.scripts
   return out
+}
+
+/**
+ * Ensure the package directory carries a LICENSE file at publish time.
+ *
+ * The monorepo keeps a single root `LICENSE`; individual packages don't ship
+ * their own copy, so `bun publish` (which auto-includes `LICENSE*`) uploads
+ * tarballs with no license text. We stage the root LICENSE into the package
+ * for the duration of the publish and remove it afterwards. If the package
+ * already has its own LICENSE we leave it untouched.
+ *
+ * Returns a cleanup callback that removes the file only when we created it.
+ */
+async function stageLicense(pkgDir: string): Promise<() => Promise<void>> {
+  const dest = join(pkgDir, 'LICENSE')
+  try {
+    await access(dest)
+    return async () => {} // package ships its own LICENSE — leave it be.
+  } catch {
+    /* no LICENSE in the package — stage the root one below. */
+  }
+  const src = join(REPO_ROOT, 'LICENSE')
+  await copyFile(src, dest)
+  console.log('  → staged root LICENSE into package')
+  return async () => {
+    await rm(dest, { force: true })
+  }
 }
 
 /** Resolve `bun` reliably whether or not it's on PATH inside the spawn env. */
@@ -198,6 +225,7 @@ async function main(): Promise<void> {
 
   const transformed = applyPublishOverrides(pkg)
   await writeJson(pkgJsonPath, transformed)
+  const cleanupLicense = await stageLicense(pkgDir)
 
   try {
     await verifyPackedInternalDeps(pkgDir, transformed)
@@ -215,6 +243,7 @@ async function main(): Promise<void> {
     console.log(`  → bun ${args.join(' ')}`)
     run(args, pkgDir)
   } finally {
+    await cleanupLicense()
     await writeFile(pkgJsonPath, original, 'utf8')
     console.log(`  ↩ restored original ${pkgJsonPath}`)
   }

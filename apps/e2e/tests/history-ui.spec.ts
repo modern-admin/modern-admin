@@ -57,6 +57,24 @@ async function createCustomerWithEdit(
     { data: { name: renamedName } },
   )
   expect(patch.ok(), `rename failed: ${await patch.text()}`).toBeTruthy()
+
+  // `feature-history` appends revisions off the hot path (fire-and-forget),
+  // so the PATCH can return before the `update` revision is persisted. The
+  // RevisionsButton fetches the timeline once on open and doesn't poll, so
+  // wait here for the update revision to land — otherwise the sheet could
+  // open on a stale (create-only) timeline.
+  await expect
+    .poll(
+      async () => {
+        const res = await request.get(adminApi(`/resources/customers/records/${id}/history`))
+        if (!res.ok()) return 0
+        const revs = ((await res.json()) as { revisions: Array<{ op: string }> }).revisions
+        return revs.filter((r) => r.op === 'update').length
+      },
+      { timeout: 10_000 },
+    )
+    .toBeGreaterThanOrEqual(1)
+
   return { id, originalName, renamedName }
 }
 

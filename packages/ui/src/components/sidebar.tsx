@@ -159,17 +159,31 @@ export const SidebarProvider = React.forwardRef<HTMLDivElement, SidebarProviderP
 )
 SidebarProvider.displayName = 'SidebarProvider'
 
+export interface SidebarLabels {
+  /** Visually-hidden Sheet title on mobile. Default: 'Sidebar'. */
+  sidebarTitle?: string
+  /** Visually-hidden Sheet description on mobile. Default: 'Navigation menu'. */
+  navigationMenu?: string
+}
+
 export interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
   side?: 'left' | 'right'
   variant?: 'sidebar' | 'floating' | 'inset'
   collapsible?: 'offcanvas' | 'icon' | 'none'
+  labels?: SidebarLabels
+}
+
+const defaultSidebarLabels: Required<SidebarLabels> = {
+  sidebarTitle: 'Sidebar',
+  navigationMenu: 'Navigation menu',
 }
 
 export const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
   (
-    { side = 'left', variant = 'sidebar', collapsible = 'offcanvas', className, children, ...props },
+    { side = 'left', variant = 'sidebar', collapsible = 'offcanvas', className, children, labels, ...props },
     ref,
   ) => {
+    const l = { ...defaultSidebarLabels, ...labels }
     const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
 
     if (collapsible === 'none') {
@@ -197,8 +211,8 @@ export const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
             className="w-[var(--sidebar-width)] bg-card p-0 text-foreground [&>button]:hidden"
             style={{ '--sidebar-width': SIDEBAR_WIDTH_MOBILE } as React.CSSProperties}
           >
-            <SheetTitle className="sr-only">Sidebar</SheetTitle>
-            <SheetDescription className="sr-only">Navigation menu</SheetDescription>
+            <SheetTitle className="sr-only">{l.sidebarTitle}</SheetTitle>
+            <SheetDescription className="sr-only">{l.navigationMenu}</SheetDescription>
             <div className="flex h-full w-full flex-col">{children}</div>
           </SheetContent>
         </Sheet>
@@ -254,10 +268,15 @@ export const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
 )
 Sidebar.displayName = 'Sidebar'
 
+export interface SidebarTriggerProps extends React.ComponentPropsWithoutRef<typeof Button> {
+  /** Visually-hidden trigger label for screen readers. Default: 'Toggle sidebar'. */
+  toggleSidebarLabel?: string
+}
+
 export const SidebarTrigger = React.forwardRef<
   React.ElementRef<typeof Button>,
-  React.ComponentPropsWithoutRef<typeof Button>
->(({ className, onClick, ...props }, ref) => {
+  SidebarTriggerProps
+>(({ className, onClick, toggleSidebarLabel = 'Toggle sidebar', ...props }, ref) => {
   const { toggleSidebar } = useSidebar()
   return (
     <Button
@@ -273,26 +292,31 @@ export const SidebarTrigger = React.forwardRef<
       {...props}
     >
       <PanelLeft className="size-4" />
-      <span className="sr-only">Toggle sidebar</span>
+      <span className="sr-only">{toggleSidebarLabel}</span>
     </Button>
   )
 })
 SidebarTrigger.displayName = 'SidebarTrigger'
 
+export interface SidebarRailProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  /** aria-label / title for screen readers. Default: 'Toggle sidebar'. */
+  toggleSidebarLabel?: string
+}
+
 export const SidebarRail = React.forwardRef<
   HTMLButtonElement,
-  React.ButtonHTMLAttributes<HTMLButtonElement>
->(({ className, ...props }, ref) => {
+  SidebarRailProps
+>(({ className, toggleSidebarLabel = 'Toggle sidebar', ...props }, ref) => {
   const { toggleSidebar } = useSidebar()
   return (
     <button
       ref={ref}
       type="button"
       data-sidebar="rail"
-      aria-label="Toggle sidebar"
+      aria-label={toggleSidebarLabel}
       tabIndex={-1}
       onClick={toggleSidebar}
-      title="Toggle sidebar"
+      title={toggleSidebarLabel}
       className={cn(
         'absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] hover:after:bg-border group-data-[side=left]:-right-4 group-data-[side=right]:left-0 sm:flex',
         '[[data-side=left]_&]:cursor-w-resize [[data-side=right]_&]:cursor-e-resize',

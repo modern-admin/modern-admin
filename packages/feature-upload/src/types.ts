@@ -83,10 +83,18 @@ export interface UploadPropertyConfig {
   /**
    * Allowed MIME type patterns (same syntax as the HTML `accept` attribute).
    * Examples: `['image/*']`, `['image/jpeg', 'application/pdf']`.
-   * Enforcement is advisory on the frontend; the controller does not re-validate.
+   * Enforced both on the frontend (UX) and server-side — the upload controller
+   * / GraphQL resolver rejects a file whose declared type does not match. The
+   * server match is on the *declared* Content-Type (defense-in-depth, not
+   * content sniffing).
    */
   mimeTypes?: string[]
-  /** Maximum upload size in bytes. Advisory (frontend warning only). */
+  /**
+   * Maximum upload size in bytes. Enforced server-side per file (the multipart
+   * parser aborts an oversized stream) in addition to the frontend warning.
+   * A module-wide hard cap (`ModernAdminUploadModule.forRoot({ maxFileSize })`,
+   * default 25 MiB) always applies on top, even when this is unset.
+   */
   maxSize?: number
   /**
    * Treat the property as an array of file keys (multi-file upload).

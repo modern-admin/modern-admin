@@ -18,6 +18,11 @@
  * The module depends on `MODERN_ADMIN` and `ModernAdminAuthGuard` being
  * available in the DI tree, which is satisfied when `ModernAdminModule.forRoot`
  * is registered with `global: true` (the recommended default).
+ *
+ * ⚠️ Single-instance: the pending-upload registry + sweeper are in-process.
+ * Behind a load balancer with ≥2 replicas the sweeper can delete a just-saved
+ * file (see `PendingUploadsRegistry` docs). The sweeper warns once at startup;
+ * pass `acknowledgeSingleInstance: true` to silence it once understood.
  */
 
 import { type DynamicModule, Module } from '@nestjs/common'

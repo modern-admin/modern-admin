@@ -9,6 +9,7 @@ import {
 import type {
   Action,
   ActionRequest,
+  BulkActionResponse,
   ListActionResponse,
   RecordActionResponse,
 } from '../src/actions'
@@ -140,6 +141,44 @@ describe('ModernAdmin', () => {
     expect(received).toHaveLength(2)
     expect(received.map((e) => e.recordId).sort()).toEqual(['1', '2'])
     expect(received.every((e) => e.kind === 'deleted')).toBe(true)
+  })
+
+  test('bulkDelete routes each record through the delete hook chain', async () => {
+    const admin = buildAdmin([
+      { name: 'users', rows: [{ id: '1', name: 'Ann' }, { id: '2', name: 'Bob' }] },
+    ])
+    const deleteAction = admin.findResource('users').decorate().getAction('delete')!
+    const merged = deleteAction.merged as unknown as Action<RecordActionResponse>
+    const calls: Array<{ phase: string; recordId?: string; ctxRecordId?: string }> = []
+    merged.before = async (req, ctx) => {
+      calls.push({
+        phase: 'before',
+        ...(req.params.recordId !== undefined ? { recordId: req.params.recordId } : {}),
+        ...(ctx.record ? { ctxRecordId: String(ctx.record.id()) } : {}),
+      })
+      return req
+    }
+    merged.after = async (resp, req, ctx) => {
+      calls.push({
+        phase: 'after',
+        ...(req.params.recordId !== undefined ? { recordId: req.params.recordId } : {}),
+        ...(ctx.record ? { ctxRecordId: String(ctx.record.id()) } : {}),
+      })
+      return resp
+    }
+    const res = await admin.invoke<BulkActionResponse>({
+      params: { resourceId: 'users', action: 'bulkDelete', recordIds: '1,2' },
+      method: 'post',
+    })
+    expect(res.records).toHaveLength(2)
+    expect(calls).toEqual([
+      { phase: 'before', recordId: '1', ctxRecordId: '1' },
+      { phase: 'after', recordId: '1', ctxRecordId: '1' },
+      { phase: 'before', recordId: '2', ctxRecordId: '2' },
+      { phase: 'after', recordId: '2', ctxRecordId: '2' },
+    ])
+    expect(await admin.findResource('users').findOne('1')).toBeNull()
+    expect(await admin.findResource('users').findOne('2')).toBeNull()
   })
 
   test('toJSON exposes a UI-safe configuration snapshot', () => {
@@ -325,6 +364,22 @@ describe('ModernAdmin role permission gate', () => {
       id: 'u1',
       role: 'ghost',
     })
+    expect(res.records).toHaveLength(1)
+  })
+
+  test('denies anonymous principals (no role) when rolesResourceId is configured', async () => {
+    // Security regression: configuring rolesResourceId opts into role
+    // enforcement, so an unauthenticated caller whose principal carries no
+    // role must be rejected — not waved through. Guards against the
+    // fail-open GraphQL/transport path where currentAdmin is never populated.
+    const admin = buildWithRoles([{ id: 'editor', permissions: { users: ['list'] } }])
+    await expect(admin.invoke(listRequest('users'), { id: 'anon' })).rejects.toThrow(ForbiddenError)
+    await expect(admin.invoke(listRequest('users'))).rejects.toThrow(ForbiddenError)
+  })
+
+  test('without rolesResourceId anonymous principals are still allowed', async () => {
+    const admin = buildAdmin([{ name: 'users', rows: [{ id: '1' }] }])
+    const res = await admin.invoke<ListActionResponse>(listRequest('users'))
     expect(res.records).toHaveLength(1)
   })
 

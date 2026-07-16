@@ -19,6 +19,14 @@ export interface RegisteredUploadConfig {
   uploadPath?: (filename: string) => string
   /** True for multi-file properties — controller will accept N files per request. */
   isArray?: boolean
+  /**
+   * Allowed MIME patterns (HTML `accept` syntax). Enforced server-side by the
+   * upload controller / GraphQL resolver — a request whose file declares a
+   * non-matching type is rejected. `undefined`/empty means no restriction.
+   */
+  mimeTypes?: string[]
+  /** Maximum accepted file size in bytes. Enforced server-side (per file). */
+  maxSize?: number
 }
 
 const _registry = new Map<string, RegisteredUploadConfig>()

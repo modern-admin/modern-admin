@@ -1,6 +1,12 @@
 // Programmatic entry for @modern-admin/create. The CLI lives in src/cli.ts.
 
-export { scaffold, renderTemplate, type ScaffoldOptions } from './scaffold.js'
+export {
+  scaffold,
+  renderTemplate,
+  readOwnVersion,
+  validateProjectName,
+  type ScaffoldOptions,
+} from './scaffold.js'
 export {
   generate,
   parsePrismaModels,

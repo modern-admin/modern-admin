@@ -420,7 +420,7 @@ export function AiAssistantWidget(): React.ReactElement | null {
                       <div
                         className={message.role === 'user'
                           ? 'max-w-[85%] rounded-2xl bg-primary px-4 py-3 text-sm text-primary-foreground'
-                          : 'max-w-[85%] rounded-2xl border bg-card px-4 py-3 text-sm'}
+                          : 'max-w-[85%] rounded-2xl border border-border bg-card px-4 py-3 text-sm'}
                       >
                         {message.role === 'assistant' ? (
                           <RichtextRender
@@ -476,7 +476,7 @@ export function AiAssistantWidget(): React.ReactElement | null {
                   ))}
                   {isThinking && (
                     <div className="flex justify-start">
-                      <div className="inline-flex items-center gap-2 rounded-2xl border bg-card px-4 py-3 text-sm text-muted-foreground">
+                      <div className="inline-flex items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
                         <Loader2 className="size-4 animate-spin" />
                         {progress != null
                           ? t('aiAssistant:thinkingProgress', { progress })

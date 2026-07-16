@@ -177,6 +177,18 @@ describe('ResourcesFactory', () => {
       expect(result[0]!.decorate().name).toBe('UserSet')
     })
 
+    test('user listProperties replace plugin-set ones instead of concatenating', () => {
+      const plugin: GlobalPlugin = {
+        apply: (opts) => ({ ...opts, listProperties: ['id', 'name'] }),
+      }
+      const result = ResourcesFactory.buildResources({
+        resources: [{ resource: usersTable, options: { listProperties: ['name'] } }],
+        adapters: [adapter],
+        plugins: [plugin],
+      })
+      expect(result[0]!.decorate().options.listProperties).toEqual(['name'])
+    })
+
     test('plugin filter respects ResourceOptions.id override', () => {
       const seen: string[] = []
       const plugin: GlobalPlugin = {

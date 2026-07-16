@@ -1,64 +1,16 @@
 import {
+  rowToEvent,
+  rowToTask,
   uuidv7,
   type AiTask,
   type AiTaskEvent,
   type AiTaskInput,
   type AiTaskStatus,
   type IAiTaskStore,
+  type EventRow,
+  type TaskRow,
 } from '@modern-admin/core'
 import type { PrismaDelegate } from '../types.js'
-
-interface TaskRow {
-  id: string
-  kind: string
-  resourceId: string | null
-  recordId: string | null
-  userId: string | null
-  status: string
-  input: unknown
-  output: unknown
-  error: string | null
-  progress: number | null
-  createdAt: Date
-  updatedAt: Date
-  startedAt: Date | null
-  finishedAt: Date | null
-}
-
-interface EventRow {
-  id: string
-  taskId: string
-  type: string
-  data: unknown
-  createdAt: Date
-}
-
-const rowToTask = (row: TaskRow): AiTask => ({
-  id: row.id,
-  kind: row.kind,
-  ...(row.resourceId !== null ? { resourceId: row.resourceId } : {}),
-  ...(row.recordId !== null ? { recordId: row.recordId } : {}),
-  ...(row.userId !== null ? { userId: row.userId } : {}),
-  status: row.status as AiTaskStatus,
-  input: (row.input as Record<string, unknown>) ?? {},
-  ...(row.output !== null && row.output !== undefined
-    ? { output: row.output as Record<string, unknown> }
-    : {}),
-  ...(row.error !== null ? { error: row.error } : {}),
-  progress: row.progress,
-  createdAt: row.createdAt.toISOString(),
-  updatedAt: row.updatedAt.toISOString(),
-  ...(row.startedAt !== null ? { startedAt: row.startedAt.toISOString() } : {}),
-  ...(row.finishedAt !== null ? { finishedAt: row.finishedAt.toISOString() } : {}),
-})
-
-const rowToEvent = (row: EventRow): AiTaskEvent => ({
-  id: row.id,
-  taskId: row.taskId,
-  type: row.type,
-  data: (row.data as Record<string, unknown>) ?? {},
-  createdAt: row.createdAt.toISOString(),
-})
 
 const TERMINAL: AiTaskStatus[] = ['succeeded', 'failed', 'cancelled']
 

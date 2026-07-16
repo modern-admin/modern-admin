@@ -17,7 +17,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@better-auth/api-key": "1.6.9",
+    "@better-auth/api-key": "^1.6.23",
     "@modern-admin/auth-better-auth": "workspace:*",
     "@modern-admin/core": "workspace:*",
     "@modern-admin/feature-json-by-key": "workspace:*",
@@ -29,7 +29,7 @@
     "@nestjs/common": "^11.1.19",
     "@nestjs/core": "^11.1.19",
     "@nestjs/platform-express": "^11.1.19",
-    "better-auth": "1.6.9",
+    "better-auth": "^1.6.23",
     "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {

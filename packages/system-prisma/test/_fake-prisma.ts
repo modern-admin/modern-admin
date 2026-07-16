@@ -124,7 +124,7 @@ export function fakePrisma() {
       responseStatus: null, responseBody: null, error: null, attempt: 1, deliveredAt: null,
     })),
     maConfig: new FakeDelegate(),
-    maHistory: new FakeDelegate(() => ({ userId: null, diff: null })),
+    maHistory: new FakeDelegate(() => ({ userId: null })),
     maAiTask: new FakeDelegate(() => ({
       resourceId: null, recordId: null, userId: null, output: null,
       error: null, startedAt: null, finishedAt: null, progress: null,

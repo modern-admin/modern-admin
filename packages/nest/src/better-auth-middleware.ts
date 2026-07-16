@@ -50,6 +50,6 @@ export function createBetterAuthMiddleware(
       next()
       return
     }
-    void authHandler(req as IncomingMessage, res as unknown as ServerResponse)
+    void authHandler(req as unknown as IncomingMessage, res as unknown as ServerResponse)
   }
 }

@@ -80,6 +80,16 @@ jobs:
       - name: Typecheck
         run: bun run typecheck
 
+      # Gate versioning/publishing on lint and the unit test suite so a
+      # package can never reach npm with red tests. The e2e suite runs in
+      # ci.yml on the PR instead — it needs Docker services and would slow
+      # every release push.
+      - name: Lint
+        run: bun run lint
+
+      - name: Test
+        run: bun run test
+
       - name: Build all publishable packages
         # Build only the packages that will actually be published (packages/*).
         # Apps are private and not published, so a path filter keeps the build

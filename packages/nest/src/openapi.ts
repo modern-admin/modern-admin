@@ -201,7 +201,7 @@ async function mountScalar(
   scalarCfg: ScalarOptions,
   log: Logger,
 ): Promise<void> {
-  let apiReference: ((opts: Record<string, unknown>) => unknown) | null = null
+  let apiReference: ((opts: Record<string, unknown>) => unknown) | null
   try {
     // Optional peer — load lazily so users who do not install Scalar are
     // not penalised at module-eval time.

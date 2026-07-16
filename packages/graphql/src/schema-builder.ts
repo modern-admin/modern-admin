@@ -22,14 +22,14 @@ import {
 } from 'graphql'
 import DataLoader from 'dataloader'
 import {
-  Filter,
+  ForbiddenError,
+  RecordNotFoundError,
   type BaseProperty,
   type BaseResource,
   type CurrentAdmin,
   type IRealtimeBus,
   type ModernAdmin,
   type PropertyType,
-  type RawFilters,
 } from '@modern-admin/core'
 import { GraphQLUpload } from './scalars.js'
 import type { ExtensionContext, GraphqlExtensionFactory, GraphqlSchemaExtension } from './extensions.js'
@@ -81,7 +81,7 @@ const GraphQLDateTime = new GraphQLScalarType({
   parseLiteral: (ast) => (ast.kind === Kind.STRING ? new Date(ast.value) : null),
 })
 
-const scalarFor = (type: PropertyType) => {
+const scalarFor = (type: PropertyType): GraphQLScalarType => {
   switch (type) {
   case 'number':
     return GraphQLInt
@@ -133,10 +133,11 @@ const buildPropertyFields = (
       }
       continue
     }
-    const baseType = isId ? GraphQLID : scalarFor(p.type())
-    const resolved = p.isRequired() && !isId ? new GraphQLNonNull(baseType) : baseType
+    const baseType: GraphQLScalarType = isId ? GraphQLID : scalarFor(p.type())
+    // Ids and required (non-id) fields are non-null; everything else nullable.
+    const nonNull = isId || p.isRequired()
     fields[p.path()] = {
-      type: isId ? new GraphQLNonNull(resolved) : resolved,
+      type: nonNull ? new GraphQLNonNull(baseType) : baseType,
       resolve: (src) => (src as Record<string, unknown> | undefined)?.[p.path()] ?? null,
     }
   }
@@ -193,11 +194,33 @@ const loaderFor = (
   const id = resource.decorate().id
   let loader = ctx.loaders.get(id)
   if (!loader) {
-    loader = new DataLoader<string, unknown>(async (ids) => {
-      const records = await resource.findMany([...ids])
-      const byId = new Map(records.map((r) => [String(r.id()), r.params]))
-      return ids.map((i) => byId.get(String(i)) ?? null)
-    })
+    // Resolve each referenced record through `invoke('show')` rather than
+    // `resource.findMany()` directly, so the api-key/role gates, `isAccessible`
+    // and per-property redaction apply to reference expansions too (otherwise
+    // `xxxRef` is an IDOR that leaks records — and unredacted columns — the
+    // principal can't read). A record that's missing OR that the principal may
+    // not access resolves to `null`, so the reference simply doesn't expand.
+    // Per-request DataLoader still dedups repeated ids; we trade cross-id DB
+    // batching for correct authorization (each `show` is cache-read-through).
+    loader = new DataLoader<string, unknown>(async (ids) =>
+      Promise.all(
+        ids.map(async (i) => {
+          try {
+            const response = await ctx.admin.invoke(
+              {
+                params: { resourceId: id, recordId: String(i), action: 'show' },
+                method: 'get',
+              },
+              ctx.currentAdmin,
+            )
+            return (response as { record?: { params: unknown } }).record?.params ?? null
+          } catch (err) {
+            if (err instanceof RecordNotFoundError || err instanceof ForbiddenError) return null
+            throw err
+          }
+        }),
+      ),
+    )
     ctx.loaders.set(id, loader)
   }
   return loader
@@ -238,19 +261,6 @@ const attachReferenceResolvers = (
       astNode: undefined,
     } as unknown as (typeof fields)[string]
   }
-}
-
-const filterFromInput = (
-  input: Record<string, unknown> | undefined,
-  resource: BaseResource,
-): Filter => {
-  const raw: RawFilters = {}
-  if (input) {
-    for (const [k, v] of Object.entries(input)) {
-      if (v != null) raw[k] = String(v)
-    }
-  }
-  return new Filter(raw, resource)
 }
 
 export interface BuildGraphqlSchemaOptions {
@@ -396,8 +406,24 @@ export const buildGraphqlSchema = (
       type: objType,
       args: { id: { type: new GraphQLNonNull(GraphQLID) } },
       async resolve(_src, args, ctx) {
-        const record = await ctx.admin.findResource(id).findOne(String(args.id))
-        return record?.params ?? null
+        // Route through `invoke('show')` so the api-key/role gates,
+        // `isAccessible`, and per-property redaction all apply — never
+        // reach into `findResource().findOne()` directly (IDOR). A missing
+        // record surfaces as `null` (the field is nullable); access denials
+        // (ForbiddenError) propagate as GraphQL errors.
+        try {
+          const response = await ctx.admin.invoke(
+            {
+              params: { resourceId: id, recordId: String(args.id), action: 'show' },
+              method: 'get',
+            },
+            ctx.currentAdmin,
+          )
+          return (response as { record?: { params: unknown } }).record?.params ?? null
+        } catch (err) {
+          if (err instanceof RecordNotFoundError) return null
+          throw err
+        }
       },
     }
 
@@ -405,8 +431,22 @@ export const buildGraphqlSchema = (
       type: new GraphQLNonNull(GraphQLInt),
       args: { filter: { type: filterInput } },
       async resolve(_src, args, ctx) {
-        const r = ctx.admin.findResource(id)
-        return r.count(filterFromInput(args.filter, r))
+        // Count via `invoke('list')` (reads `meta.total`) so the same gates
+        // apply as the list query; `perPage: 1` keeps the fetched page tiny
+        // since only the total is needed.
+        const response = await ctx.admin.invoke(
+          {
+            params: { resourceId: id, action: 'list' },
+            method: 'get',
+            query: {
+              page: '1',
+              perPage: '1',
+              filters: (args.filter as Record<string, unknown> | undefined) ?? {},
+            },
+          },
+          ctx.currentAdmin,
+        )
+        return (response as { meta?: { total?: number } }).meta?.total ?? 0
       },
     }
 

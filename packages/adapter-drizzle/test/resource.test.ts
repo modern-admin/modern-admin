@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test'
+import { bigint as pgBigint, pgTable, text } from 'drizzle-orm/pg-core'
 import { Filter } from '@modern-admin/core'
 import { DrizzleResource } from '../src/resource.js'
 import { createFakeClient } from './_helpers/fake-client.js'
@@ -136,6 +137,23 @@ describe('DrizzleResource mutations', () => {
     expect(client.calls.map((c) => c.op)).toEqual(['delete', 'where'])
   })
 
+  it('deleteMany deletes by filter and returns the RETURNING count', async () => {
+    const { client, resource } = makeResource({
+      deleteRows: [{ id: '1' }, { id: '2' }],
+    })
+    const removed = await resource.deleteMany(new Filter({ email: 'foo' }, resource))
+    expect(removed).toBe(2)
+    // One DELETE … WHERE … RETURNING — not a row-by-row sweep.
+    expect(client.calls.map((c) => c.op)).toEqual(['delete', 'where', 'returning'])
+  })
+
+  it('deleteMany with an empty filter omits the where clause', async () => {
+    const { client, resource } = makeResource({ deleteRows: [] })
+    const removed = await resource.deleteMany(new Filter({}, resource))
+    expect(removed).toBe(0)
+    expect(client.calls.map((c) => c.op)).toEqual(['delete', 'returning'])
+  })
+
   it('strips unknown keys from writable params', async () => {
     const { client, resource } = makeResource({ insertRow: { id: '1' } })
     await resource.create({ id: '1', email: 'a@b.c', notAColumn: 'oops' } as never)
@@ -157,5 +175,184 @@ describe('DrizzleResource.transaction', () => {
     })
     expect(ran).toBe(true)
     expect(result).toBe('ok')
+  })
+})
+
+describe('DrizzleResource.transaction tx-client propagation', () => {
+  const withTxClient = (base: ReturnType<typeof createFakeClient>, tx: ReturnType<typeof createFakeClient>) => {
+    let txCalls = 0
+    base.transaction = async <T>(fn: (t: typeof tx) => Promise<T>): Promise<T> => {
+      txCalls += 1
+      return fn(tx)
+    }
+    return { txCalls: () => txCalls }
+  }
+
+  it('operations inside the callback route through the tx client', async () => {
+    const base = createFakeClient()
+    const tx = createFakeClient({ insertRow: { id: '1' } })
+    withTxClient(base, tx)
+    const resource = new DrizzleResource({ client: base, table: users, tableKey: 'users' })
+
+    await resource.transaction(async () => {
+      await resource.create({ id: '1', email: 'a@b.c' } as never)
+      await resource.delete('1')
+    })
+
+    const txOps = tx.calls.map((c) => c.op)
+    expect(txOps).toContain('insert')
+    expect(txOps).toContain('delete')
+    expect(base.calls).toHaveLength(0)
+  })
+
+  it('other resources on the same client join the transaction (m2m junction case)', async () => {
+    const base = createFakeClient()
+    const tx = createFakeClient({ insertRow: { id: '1' } })
+    withTxClient(base, tx)
+    const parent = new DrizzleResource({ client: base, table: users, tableKey: 'users' })
+    const junction = new DrizzleResource({ client: base, table: users, tableKey: 'users', id: 'junction' })
+
+    await parent.transaction(async () => {
+      await junction.create({ id: 'j1', email: 'x@y.z' } as never)
+    })
+
+    expect(tx.calls.map((c) => c.op)).toContain('insert')
+    expect(base.calls).toHaveLength(0)
+  })
+
+  it('a resource on a different client ignores a foreign transaction', async () => {
+    const base = createFakeClient()
+    withTxClient(base, createFakeClient())
+    const other = createFakeClient({ insertRow: { id: '1' } })
+    const resourceA = new DrizzleResource({ client: base, table: users, tableKey: 'users' })
+    const resourceB = new DrizzleResource({ client: other, table: users, tableKey: 'users' })
+
+    await resourceA.transaction(async () => {
+      await resourceB.create({ id: '1', email: 'a@b.c' } as never)
+    })
+
+    expect(other.calls.map((c) => c.op)).toContain('insert')
+  })
+
+  it('nested transaction joins the outer one instead of reopening', async () => {
+    const base = createFakeClient()
+    const tx = createFakeClient({ insertRow: { id: '1' } })
+    const counter = withTxClient(base, tx)
+    const resource = new DrizzleResource({ client: base, table: users, tableKey: 'users' })
+
+    await resource.transaction(() =>
+      resource.transaction(async () => {
+        await resource.create({ id: '1', email: 'a@b.c' } as never)
+      }),
+    )
+
+    expect(counter.txCalls()).toBe(1)
+    expect(tx.calls.map((c) => c.op)).toContain('insert')
+  })
+
+  it('the tx client is dropped after the transaction resolves', async () => {
+    const base = createFakeClient({ insertRow: { id: '2' } })
+    const tx = createFakeClient({ insertRow: { id: '1' } })
+    withTxClient(base, tx)
+    const resource = new DrizzleResource({ client: base, table: users, tableKey: 'users' })
+
+    await resource.transaction(async () => {
+      await resource.create({ id: '1', email: 'a@b.c' } as never)
+    })
+    await resource.create({ id: '2', email: 'd@e.f' } as never)
+
+    expect(tx.calls.map((c) => c.op)).toContain('insert')
+    expect(base.calls.map((c) => c.op)).toContain('insert')
+  })
+})
+
+describe('DrizzleResource id casting', () => {
+  const bigItems = pgTable('big_items', {
+    id: pgBigint('id', { mode: 'bigint' }).primaryKey(),
+    name: text('name'),
+  }) as unknown as import('../src/types.js').DrizzleTable
+
+  /** Collect drizzle Param values embedded in a SQL condition tree. */
+  const paramValues = (node: unknown, acc: unknown[] = []): unknown[] => {
+    if (node == null || typeof node !== 'object') return acc
+    if ('value' in node && 'encoder' in node) {
+      acc.push((node as { value: unknown }).value)
+      return acc
+    }
+    const chunks = (node as { queryChunks?: unknown[] }).queryChunks
+    if (Array.isArray(chunks)) for (const c of chunks) paramValues(c, acc)
+    return acc
+  }
+
+  it('BigInt ids round-trip through BigInt without precision loss above 2^53', async () => {
+    const client = createFakeClient({ selectRows: [] })
+    const resource = new DrizzleResource({ client, table: bigItems, tableKey: 'bigItems' })
+
+    await resource.findOne('9007199254740993') // 2^53 + 1 — not representable as a JS number
+
+    const where = client.calls.find((c) => c.op === 'where')!.arg
+    const params = paramValues(where)
+    expect(params).toHaveLength(1)
+    expect(typeof params[0]).toBe('bigint')
+    expect(params[0]).toBe(BigInt('9007199254740993'))
+  })
+
+  it('non-numeric ids on a bigint column pass through unchanged', async () => {
+    const client = createFakeClient({ selectRows: [] })
+    const resource = new DrizzleResource({ client, table: bigItems, tableKey: 'bigItems' })
+
+    await resource.findOne('not-a-number')
+
+    const params = paramValues(client.calls.find((c) => c.op === 'where')!.arg)
+    expect(params).toEqual(['not-a-number'])
+  })
+})
+
+describe('DrizzleResource.aggregateTimeSeries', () => {
+  const tsQuery = {
+    dateField: 'createdAt',
+    step: 'week' as const,
+    metric: 'count' as const,
+    from: new Date('2026-01-01T00:00:00Z'),
+    to: new Date('2026-01-31T00:00:00Z'),
+  }
+
+  it('maps SQL bucket values to canonical YYYY-MM-DD keys', async () => {
+    const { resource } = makeResource({
+      selectRows: [
+        { bucket: new Date('2026-01-05T00:00:00Z'), value: 3 }, // pg DATE_TRUNC → Date
+        { bucket: '2026-01-12', value: '2' }, // mysql/sqlite → date string, count as string
+      ],
+    })
+    const result = await resource.aggregateTimeSeries(new Filter({}, resource), tsQuery)
+    const total = result.series.find((s) => s.key === '__total__')!
+    expect(total.points).toEqual([
+      { date: '2026-01-05', value: 3 },
+      { date: '2026-01-12', value: 2 },
+    ])
+  })
+
+  it('skips NULL-valued buckets so all-NULL aggregates match the Prisma adapter', async () => {
+    const { resource } = makeResource({
+      selectRows: [
+        { bucket: '2026-01-05', value: 4 },
+        { bucket: '2026-01-12', value: null }, // SUM/AVG over all-NULL rows
+      ],
+    })
+    const result = await resource.aggregateTimeSeries(new Filter({}, resource), tsQuery)
+    const total = result.series.find((s) => s.key === '__total__')!
+    expect(total.points).toEqual([{ date: '2026-01-05', value: 4 }])
+  })
+
+  it('drops rows with unparseable bucket values instead of throwing', async () => {
+    const { resource } = makeResource({
+      selectRows: [
+        { bucket: '2026-W02', value: 5 }, // legacy week-label format
+        { bucket: '2026-01-12', value: 1 },
+      ],
+    })
+    const result = await resource.aggregateTimeSeries(new Filter({}, resource), tsQuery)
+    const total = result.series.find((s) => s.key === '__total__')!
+    expect(total.points).toEqual([{ date: '2026-01-12', value: 1 }])
   })
 })

@@ -2,6 +2,7 @@
   "name": "@modern-admin/web",
   "version": "0.2.1",
   "type": "module",
+  "sideEffects": false,
   "description": "Pre-built React admin SPA. Mount it into a host page or let @modern-admin/nest serve the standalone bundle.",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/web#readme",
   "keywords": [

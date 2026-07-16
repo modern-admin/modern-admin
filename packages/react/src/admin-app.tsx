@@ -164,12 +164,13 @@ function ResourceMenuItem({
 //     header burger handles that).
 function SidebarCollapseToggle(): React.ReactElement {
   const { state, toggleSidebar } = useSidebar()
+  const { t } = useI18n()
   const collapsed = state === 'collapsed'
   return (
     <button
       type="button"
       onClick={toggleSidebar}
-      aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+      aria-label={collapsed ? t('common:expandSidebar') : t('common:collapseSidebar')}
       className="absolute right-0 top-24 z-50 hidden h-5 w-5 translate-x-1/2 items-center justify-center rounded-full border border-border bg-card shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground md:flex"
     >
       <ChevronLeft
@@ -214,7 +215,10 @@ function AppSidebar({ showResourceIds }: { showResourceIds: boolean }): React.Re
   const auditActive = route.name === 'audit-log'
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar
+      collapsible="icon"
+      labels={{ sidebarTitle: t('common:sidebarTitle'), navigationMenu: t('common:sidebarNavigation') }}
+    >
       <SidebarHeader className="h-12 flex-row items-center gap-2 border-b border-border px-3 py-0 sm:h-14 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
         <Database className="size-4 shrink-0 text-primary" />
         <span className="truncate text-sm font-semibold group-data-[collapsible=icon]:hidden">

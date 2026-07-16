@@ -12,6 +12,7 @@ export interface PrismaModelDelegate {
     data: Record<string, unknown>
   }): Promise<unknown>
   delete(args: { where: Record<string, unknown> }): Promise<unknown>
+  deleteMany(args?: { where?: Record<string, unknown> }): Promise<{ count: number }>
   aggregate?(args: unknown): Promise<unknown>
   groupBy?(args: unknown): Promise<unknown[]>
 }
@@ -72,6 +73,13 @@ export interface PrismaResourceConfig {
   clientKey?: string
   /** Database dialect; only used to render display SQL. Defaults to `'pg'`. */
   dialect?: PrismaDialect
+  /**
+   * Maximum number of rows `aggregateTimeSeries` pulls into memory before it
+   * buckets them (Prisma cannot `DATE_TRUNC` via the typed client, so
+   * bucketing happens application-side). When the window contains more rows
+   * the result is flagged `truncated`. Defaults to 100_000.
+   */
+  timeSeriesRowCap?: number
 }
 
 export type PrismaDialect = 'pg' | 'mysql' | 'sqlite'

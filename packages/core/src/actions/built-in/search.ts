@@ -165,11 +165,13 @@ const handler = async (
         for (const record of fanned) add(record)
       }
 
-      // 3. ID substring fallback. When we still don't have enough results,
-      //    scan a bounded batch (≤200) and keep any whose id stringifies to
-      //    something that contains the query. Practical for UUID/cuid pickers
+      // 3. ID substring fallback. Only when steps 1–2 turned up *nothing* —
+      //    an exact-id hit or any field match means the query is being used
+      //    as a normal search, so we skip the bounded (≤200-row) scan. When
+      //    there are no matches we scan and keep records whose id stringifies
+      //    to something containing the query. Practical for UUID/cuid pickers
       //    where operators paste the trailing segment of a record id.
-      if (collected.length < RESULT_LIMIT) {
+      if (collected.length === 0) {
         const batch = await resource.find(new Filter({}, resource), {
           limit: 200,
           offset: 0,

@@ -26,6 +26,18 @@ export interface MultipartGraphqlRequest {
   operationName: string | null
 }
 
+/** Default hard cap on a single buffered upload part (bytes) — 25 MiB. */
+const DEFAULT_MAX_FILE_SIZE = 25 * 1024 * 1024
+/** Default cap on file parts in a single multipart GraphQL request. */
+const DEFAULT_MAX_FILES = 10
+
+export interface MultipartLimits {
+  /** Hard per-file byte cap. Parts exceeding it abort the request. */
+  maxFileSize?: number
+  /** Max file parts accepted in one request. */
+  maxFiles?: number
+}
+
 interface ParsedField {
   name: string
   value: string
@@ -50,14 +62,27 @@ const isMultipart = (req: IncomingMessage): boolean => {
  */
 export async function parseMultipartGraphqlRequest(
   req: IncomingMessage,
+  limits: MultipartLimits = {},
 ): Promise<MultipartGraphqlRequest | null> {
   if (!isMultipart(req)) return null
+
+  const maxFileSize = limits.maxFileSize ?? DEFAULT_MAX_FILE_SIZE
+  const maxFiles = limits.maxFiles ?? DEFAULT_MAX_FILES
 
   const { fields, files } = await new Promise<{ fields: ParsedField[]; files: ParsedFile[] }>(
     (resolve, reject) => {
       let bb: ReturnType<typeof Busboy>
       try {
-        bb = Busboy({ headers: req.headers as Record<string, string> })
+        bb = Busboy({
+          headers: req.headers as Record<string, string>,
+          limits: {
+            // Buffered in memory — bound per-file size and count so a hostile
+            // request cannot exhaust memory before the resolver runs.
+            fileSize: maxFileSize,
+            files: maxFiles,
+            fieldSize: 1024 * 1024,
+          },
+        })
       } catch (err) {
         reject(err)
         return
@@ -68,6 +93,9 @@ export async function parseMultipartGraphqlRequest(
       let finished = false
       let settled = false
       let firstError: unknown
+      const fail = (err: unknown): void => {
+        firstError = firstError ?? err
+      }
       const tryResolve = (): void => {
         if (settled || !finished || pending > 0) return
         settled = true
@@ -81,28 +109,36 @@ export async function parseMultipartGraphqlRequest(
         pending++
         const chunks: Buffer[] = []
         stream.on('data', (chunk: Buffer) => chunks.push(chunk))
+        stream.on('limit', () => {
+          fail(new Error(`file part "${name}" exceeds the maximum size of ${maxFileSize} bytes`))
+        })
         stream.on('end', () => {
-          files.push({
-            name,
-            filename: info.filename || 'upload',
-            mimeType: info.mimeType || 'application/octet-stream',
-            buffer: Buffer.concat(chunks),
-          })
+          if (!(stream as { truncated?: boolean }).truncated) {
+            files.push({
+              name,
+              filename: info.filename || 'upload',
+              mimeType: info.mimeType || 'application/octet-stream',
+              buffer: Buffer.concat(chunks),
+            })
+          }
           pending--
           tryResolve()
         })
         stream.on('error', (err) => {
-          firstError = firstError ?? err
+          fail(err)
           pending--
           tryResolve()
         })
+      })
+      bb.on('filesLimit', () => {
+        fail(new Error(`too many file parts — at most ${maxFiles} allowed`))
       })
       bb.on('finish', () => {
         finished = true
         tryResolve()
       })
       bb.on('error', (err: unknown) => {
-        firstError = firstError ?? err
+        fail(err)
         finished = true
         tryResolve()
       })

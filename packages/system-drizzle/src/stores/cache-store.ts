@@ -1,24 +1,6 @@
-import type { CacheEntry, ICacheStore } from '@modern-admin/core'
+import { rowToCacheEntry, type CacheEntry, type CacheRow, type ICacheStore } from '@modern-admin/core'
 import { eq, inArray, lt } from 'drizzle-orm'
 import type { DrizzleLike, SystemTables } from '../types.js'
-
-interface CacheRow {
-  key: string
-  value: unknown
-  tags: unknown
-  expiresAt: Date | null
-  createdAt: Date
-  updatedAt: Date
-}
-
-const rowToEntry = (row: CacheRow): CacheEntry => ({
-  key: row.key,
-  value: row.value,
-  tags: Array.isArray(row.tags) ? (row.tags as string[]) : [],
-  expiresAt: row.expiresAt ? row.expiresAt.toISOString() : null,
-  createdAt: row.createdAt.toISOString(),
-  updatedAt: row.updatedAt.toISOString(),
-})
 
 export class DrizzleCacheStore implements ICacheStore {
   constructor(
@@ -38,7 +20,7 @@ export class DrizzleCacheStore implements ICacheStore {
       await this.db.delete(this.table).where(eq(this.table.key, key))
       return null
     }
-    return rowToEntry(row)
+    return rowToCacheEntry(row)
   }
 
   async set(
@@ -71,10 +53,26 @@ export class DrizzleCacheStore implements ICacheStore {
   async invalidateTags(tags: string[]): Promise<number> {
     if (!tags.length) return 0
     const set = new Set(tags)
-    const all = (await this.db.select().from(this.table)) as CacheRow[]
-    const targetKeys = all
-      .filter((r) => Array.isArray(r.tags) && (r.tags as string[]).some((t) => set.has(t)))
-      .map((r) => r.key)
+    // Page through the table (key ordered, key+tags projection only) so a
+    // large cache never loads whole in memory at once.
+    const BATCH = 1000
+    const targetKeys: string[] = []
+    let offset = 0
+    for (;;) {
+      const rows = (await this.db
+        .select({ key: this.table.key, tags: this.table.tags })
+        .from(this.table)
+        .orderBy(this.table.key)
+        .limit(BATCH)
+        .offset(offset)) as Array<Pick<CacheRow, 'key' | 'tags'>>
+      for (const r of rows) {
+        if (Array.isArray(r.tags) && (r.tags as string[]).some((t) => set.has(t))) {
+          targetKeys.push(r.key)
+        }
+      }
+      if (rows.length < BATCH) break
+      offset += BATCH
+    }
     if (!targetKeys.length) return 0
     await this.db.delete(this.table).where(inArray(this.table.key, targetKeys))
     return targetKeys.length

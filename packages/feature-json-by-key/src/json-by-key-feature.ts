@@ -31,7 +31,7 @@
  * and `m2mFeature`.
  */
 
-import { uuidv7 } from '@modern-admin/core'
+import { appendAfterHook, appendBeforeHook, uuidv7 } from '@modern-admin/core'
 import type {
   ActionRequest,
   ActionResponse,
@@ -52,7 +52,7 @@ import type {
   JsonByKeyPropertyConfig,
 } from './types.js'
 
-// ─── Hook chaining (mirrors uploadFeature / m2mFeature) ──────────────────────
+// ─── Hook chaining ───────────────────────────────────────────────────────────
 
 type AfterHookFn = (
   response: ActionResponse,
@@ -64,21 +64,6 @@ type BeforeHookFn = (
   request: ActionRequest,
   context: unknown,
 ) => ActionRequest | Promise<ActionRequest>
-
-const toArray = <T>(hook: unknown): T[] => {
-  if (!hook) return []
-  return Array.isArray(hook) ? (hook as T[]) : [hook as T]
-}
-
-const appendBefore = (
-  existing: Record<string, unknown> | undefined,
-  newHook: BeforeHookFn,
-): BeforeHookFn[] => [...toArray<BeforeHookFn>(existing?.before), newHook]
-
-const appendAfter = (
-  existing: Record<string, unknown> | undefined,
-  newHook: AfterHookFn,
-): AfterHookFn[] => [...toArray<AfterHookFn>(existing?.after), newHook]
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -98,11 +83,20 @@ const fileKeysFromJsonObject = (obj: unknown): string[] => {
 }
 
 interface RegisteredFileChild {
-  /** Provider id in `UploadProviderRegistry`. */
-  providerId: string
   provider: IUploadProvider
+  /** Wrapped key generator (injects JSON key + property), or undefined. */
+  uploadPath?: (filename: string) => string
+  isArray: boolean
+  mimeTypes?: string[]
+  maxSize?: number
   /** URL template (or null when the provider issues per-key signed URLs). */
   urlTemplate: string | null
+  /**
+   * Process-local fallback provider id, used only when the FeatureFn runs
+   * without a resource (unit tests). In production a deterministic id derived
+   * from `resource.id()` is used instead — see the FeatureFn body.
+   */
+  fallbackId: string
 }
 
 interface PreparedVirtual {
@@ -133,8 +127,9 @@ export function jsonByKeyFeature(options: JsonByKeyFeatureOptions): FeatureFn {
   const separator = options.separator ?? '__'
   const { controlField, keys, defaultKey } = options
 
-  // 1. Eagerly register file providers so the upload controller can route
-  //    uploads even before the FeatureFn is applied (matches uploadFeature).
+  // 1. Prepare per-property virtuals + file-child metadata. Provider
+  //    registration is deferred to the FeatureFn so the registry key can be
+  //    derived from the resource id (deterministic across replicas).
   const prepared: PreparedProperty[] = []
   for (const [sourceProperty, propConfig] of Object.entries(options.properties)) {
     const isFile = propConfig.child.type === 'file'
@@ -148,7 +143,6 @@ export function jsonByKeyFeature(options: JsonByKeyFeatureOptions): FeatureFn {
       const virtualPath = `${sourceProperty}${separator}${key}`
       let fileChild: RegisteredFileChild | undefined
       if (isFile && provider) {
-        const providerId = `up_${uuidv7().replace(/-/g, '')}`
         const userPath = propConfig.child.upload?.uploadPath
         // Wrap the user-provided keyer so the JSON key + property name are
         // injected automatically — the underlying registry expects only
@@ -157,15 +151,14 @@ export function jsonByKeyFeature(options: JsonByKeyFeatureOptions): FeatureFn {
           ? (filename: string): string =>
             userPath(filename, { key, property: sourceProperty })
           : undefined
-        UploadProviderRegistry.register(providerId, {
+        fileChild = {
           provider,
           ...(wrapped ? { uploadPath: wrapped } : {}),
           isArray: propConfig.child.isArray ?? false,
-        })
-        fileChild = {
-          providerId,
-          provider,
+          ...(propConfig.child.upload?.mimeTypes ? { mimeTypes: propConfig.child.upload.mimeTypes } : {}),
+          ...(propConfig.child.upload?.maxSize != null ? { maxSize: propConfig.child.upload.maxSize } : {}),
           urlTemplate: provider.urlTemplate?.() ?? null,
+          fallbackId: `up_${uuidv7().replace(/-/g, '')}`,
         }
       }
       return fileChild ? { virtualPath, key, fileChild } : { virtualPath, key }
@@ -179,7 +172,29 @@ export function jsonByKeyFeature(options: JsonByKeyFeatureOptions): FeatureFn {
   }
 
   // 2. Build the FeatureFn that mutates ResourceOptions.
-  return (resourceOptions: ResourceOptions): ResourceOptions => {
+  return (resourceOptions: ResourceOptions, resource?): ResourceOptions => {
+    // Register file providers with a DETERMINISTIC id (resource id + source
+    // property + JSON key) so every replica resolves the same registry key.
+    // Falls back to the process-local uuid when invoked without a resource.
+    const providerIdByVirtual = new Map<string, string>()
+    for (const { sourceProperty, virtuals } of prepared) {
+      for (const virtual of virtuals) {
+        const fc = virtual.fileChild
+        if (!fc) continue
+        const providerId = resource
+          ? `up_${resource.id()}_${sourceProperty}_${virtual.key}`
+          : fc.fallbackId
+        UploadProviderRegistry.register(providerId, {
+          provider: fc.provider,
+          ...(fc.uploadPath ? { uploadPath: fc.uploadPath } : {}),
+          isArray: fc.isArray,
+          ...(fc.mimeTypes ? { mimeTypes: fc.mimeTypes } : {}),
+          ...(fc.maxSize != null ? { maxSize: fc.maxSize } : {}),
+        })
+        providerIdByVirtual.set(virtual.virtualPath, providerId)
+      }
+    }
+
     const propOverrides: Record<string, Record<string, unknown>> = {}
 
     for (const { sourceProperty, config, virtuals } of prepared) {
@@ -206,7 +221,7 @@ export function jsonByKeyFeature(options: JsonByKeyFeatureOptions): FeatureFn {
         }
         const fileCustom = virtual.fileChild
           ? {
-            uploadProviderId: virtual.fileChild.providerId,
+            uploadProviderId: providerIdByVirtual.get(virtual.virtualPath),
             uploadUrlTemplate: virtual.fileChild.urlTemplate,
             uploadMimeTypes: childMime,
             uploadMaxSize: childMaxSize,
@@ -264,17 +279,20 @@ export function jsonByKeyFeature(options: JsonByKeyFeatureOptions): FeatureFn {
     }
 
     /**
-     * Collapse virtuals back into JSON objects on the incoming payload.
-     * Removes the virtual keys so they never reach the underlying handler.
+     * Collapse virtuals back into JSON objects on the payload. Removes the
+     * virtual keys so they never reach the underlying handler. Returns a
+     * fresh request/payload rather than mutating the caller's object — the
+     * runtime threads the returned request downstream.
      */
     const writeBeforeHook: BeforeHookFn = (request) => {
       const payload = request.payload as Record<string, unknown> | undefined
       if (!payload) return request
+      const nextPayload: Record<string, unknown> = { ...payload }
       for (const { sourceProperty, virtuals } of prepared) {
         // Start from any existing object in the payload (so callers can
         // pre-populate keys we don't manage), or default to {}.
         let next: Record<string, unknown>
-        const incoming = payload[sourceProperty]
+        const incoming = nextPayload[sourceProperty]
         if (incoming && typeof incoming === 'object' && !Array.isArray(incoming)) {
           next = { ...(incoming as Record<string, unknown>) }
         } else {
@@ -282,22 +300,22 @@ export function jsonByKeyFeature(options: JsonByKeyFeatureOptions): FeatureFn {
         }
         let touched = false
         for (const { virtualPath, key } of virtuals) {
-          if (virtualPath in payload) {
-            const v = payload[virtualPath]
+          if (virtualPath in nextPayload) {
+            const v = nextPayload[virtualPath]
             if (v == null || v === '' || (Array.isArray(v) && v.length === 0)) {
               delete next[key]
             } else {
               next[key] = v
             }
-            delete payload[virtualPath]
+            delete nextPayload[virtualPath]
             touched = true
           }
         }
         // Only overwrite when we actually saw a virtual — otherwise leave
         // the source property as-is (no-op edits should not zero out JSON).
-        if (touched) payload[sourceProperty] = next
+        if (touched) nextPayload[sourceProperty] = next
       }
-      return request
+      return { ...request, payload: nextPayload }
     }
 
     /**
@@ -379,24 +397,24 @@ export function jsonByKeyFeature(options: JsonByKeyFeatureOptions): FeatureFn {
     const actionOverrides: Record<string, Record<string, unknown>> = {
       list: {
         ...existingActions.list,
-        after: appendAfter(existingActions.list, readHook),
+        after: appendAfterHook(existingActions.list, readHook),
       },
       show: {
         ...existingActions.show,
-        after: appendAfter(existingActions.show, readHook),
+        after: appendAfterHook(existingActions.show, readHook),
       },
       new: {
         ...existingActions.new,
-        before: appendBefore(existingActions.new, writeBeforeHook),
-        after: appendAfter(existingActions.new, async (resp, req, ctx) => {
+        before: appendBeforeHook(existingActions.new, writeBeforeHook),
+        after: appendAfterHook(existingActions.new, async (resp, req, ctx) => {
           const out = await Promise.resolve(readHook(resp, req, ctx))
           return newAfterHook(out, req, ctx)
         }),
       },
       edit: {
         ...existingActions.edit,
-        before: appendBefore(existingActions.edit, writeBeforeHook),
-        after: appendAfter(existingActions.edit, async (resp, req, ctx) => {
+        before: appendBeforeHook(existingActions.edit, writeBeforeHook),
+        after: appendAfterHook(existingActions.edit, async (resp, req, ctx) => {
           const out = await Promise.resolve(readHook(resp, req, ctx))
           return editAfterHook(out, req, ctx)
         }),
@@ -405,7 +423,7 @@ export function jsonByKeyFeature(options: JsonByKeyFeatureOptions): FeatureFn {
     if (hasAnyFileChild) {
       actionOverrides.delete = {
         ...existingActions.delete,
-        after: appendAfter(existingActions.delete, deleteAfterHook),
+        after: appendAfterHook(existingActions.delete, deleteAfterHook),
       }
     }
 

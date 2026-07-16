@@ -27,11 +27,22 @@ const fakeRequest = (overrides: Partial<ActionRequest> = {}): ActionRequest => (
   ...(overrides.payload !== undefined ? { payload: overrides.payload } : {}),
 })
 
+type FakeProperty = { path(): string; type(): string; options?: { isAccessible?: unknown } }
+
+const prop = (path: string, type = 'string', isAccessible?: unknown): FakeProperty => ({
+  path: () => path,
+  type: () => type,
+  ...(isAccessible !== undefined ? { options: { isAccessible } } : {}),
+})
+
 const fakeContext = (
   record?: { id?: string; params?: Record<string, unknown> },
   userId?: string,
+  properties?: FakeProperty[],
 ) => ({
-  resource: { decorate: () => ({ id: 'users' }) },
+  resource: {
+    decorate: () => ({ id: 'users', ...(properties ? { properties } : {}) }),
+  },
   ...(record ? { record } : {}),
   ...(userId !== undefined ? { currentAdmin: { id: userId } } : {}),
 })
@@ -107,6 +118,52 @@ describe('historyFeature', () => {
       fakeContext(),
     )
     expect(store.entries[0]!.snapshot).toEqual({ name: 'Alice' })
+  })
+
+  it('strips password-typed and inaccessible properties by default', async () => {
+    const store = new MemoryHistoryStore()
+    const [hook] = getAfter(historyFeature({ store })(emptyOptions).actions, 'new')
+    await hook!(
+      { record: { id: '1', params: { name: 'Alice', pw: 'secret', token: 'abc' } } },
+      fakeRequest(),
+      fakeContext(undefined, undefined, [
+        prop('name'),
+        prop('pw', 'password'),
+        prop('token', 'string', false),
+      ]),
+    )
+    expect(store.entries[0]!.snapshot).toEqual({ name: 'Alice' })
+  })
+
+  it('keeps secrets when includeSecrets is set', async () => {
+    const store = new MemoryHistoryStore()
+    const [hook] = getAfter(
+      historyFeature({ store, includeSecrets: true })(emptyOptions).actions,
+      'new',
+    )
+    await hook!(
+      { record: { id: '1', params: { name: 'Alice', pw: 'secret' } } },
+      fakeRequest(),
+      fakeContext(undefined, undefined, [prop('name'), prop('pw', 'password')]),
+    )
+    expect(store.entries[0]!.snapshot).toEqual({ name: 'Alice', pw: 'secret' })
+  })
+
+  it('enforces keepLast retention through the after-hook', async () => {
+    const store = new MemoryHistoryStore()
+    const [hook] = getAfter(
+      historyFeature({ store, keepLast: 2 })(emptyOptions).actions,
+      'new',
+    )
+    for (let i = 0; i < 5; i++) {
+      await hook!(
+        { record: { id: '1', params: { name: `n${i}` } } },
+        fakeRequest(),
+        fakeContext(),
+      )
+    }
+    expect(store.entries).toHaveLength(2)
+    expect(store.entries.map((e) => e.snapshot.name).sort()).toEqual(['n3', 'n4'])
   })
 
   it('swallows store failures', async () => {

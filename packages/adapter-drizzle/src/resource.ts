@@ -1,7 +1,14 @@
+import { AsyncLocalStorage } from 'node:async_hooks'
 import { and, asc, count as countFn, eq, gte, ilike, inArray, isNotNull, like, lte, ne, or, sql } from 'drizzle-orm'
 import {
   BaseRecord,
   BaseResource,
+  buildDisplaySql,
+  isoDate,
+  stringifyKey,
+  sumValues,
+  toDate,
+  toNumber,
   type Filter,
   type FindOptions,
   type ParamsType,
@@ -26,6 +33,18 @@ interface DrizzleResourceInit extends DrizzleResourceConfig {
   tableKey: string
   dialect: DrizzleDialect
 }
+
+/**
+ * Ambient transaction context. Module-level (not per-resource) on purpose:
+ * inside `transaction(fn)` the callback often touches *other* resources
+ * backed by the same Drizzle client (e.g. the junction resource in an m2m
+ * diff, every record in a bulk delete) — they must all see the tx client,
+ * not the base one. `base` is stored alongside `tx` so a resource bound to
+ * a *different* Drizzle client never accidentally picks up a foreign
+ * transaction: cross-client atomicity is impossible, so it falls back to
+ * its own client.
+ */
+const txStorage = new AsyncLocalStorage<{ base: DrizzleClientLike; tx: DrizzleClientLike }>()
 
 const isInit = (raw: unknown): raw is DrizzleResourceInit =>
   typeof raw === 'object' &&
@@ -95,9 +114,24 @@ export class DrizzleResource extends BaseResource {
     return this._properties.find((p) => p.path() === path) ?? null
   }
 
+  /** Active client: the ambient transaction client when inside `transaction(fn)`. */
+  private db(): DrizzleClientLike {
+    const store = txStorage.getStore()
+    return store && store.base === this.client ? store.tx : this.client
+  }
+
   private castId(id: string | number): unknown {
     if (typeof id === 'number') return id
-    if (this.idColumn.dataType === 'number' || this.idColumn.dataType === 'bigint') {
+    // BigInt ids must round-trip through BigInt — Number() silently loses
+    // precision above 2^53, so the lookup would target a neighbouring id.
+    if (this.idColumn.dataType === 'bigint') {
+      try {
+        return BigInt(id)
+      } catch {
+        return id
+      }
+    }
+    if (this.idColumn.dataType === 'number') {
       const n = Number(id)
       return Number.isFinite(n) ? n : id
     }
@@ -136,7 +170,7 @@ export class DrizzleResource extends BaseResource {
 
     // Use select + groupBy for DISTINCT — avoids requiring selectDistinct
     // on the client interface while producing the same SQL result.
-    const rows = (await this.client
+    const rows = (await this.db()
       .select({ value: column })
       .from(this.table)
       .where(where as unknown)
@@ -151,7 +185,7 @@ export class DrizzleResource extends BaseResource {
 
   override async count(filter: Filter): Promise<number> {
     const where = filterToWhere(filter, this.table)
-    let qb = this.client.select({ value: countFn() }).from(this.table)
+    let qb = this.db().select({ value: countFn() }).from(this.table)
     if (where !== undefined) qb = qb.where(where)
     const rows = (await qb) as Array<{ value: number | string }>
     const v = rows[0]?.value ?? 0
@@ -161,7 +195,7 @@ export class DrizzleResource extends BaseResource {
   override async find(filter: Filter, options: FindOptions): Promise<BaseRecord[]> {
     const where = filterToWhere(filter, this.table)
     const { limit, offset, orderBy } = findOptionsToDrizzle(options, this.table)
-    let qb = this.client.select().from(this.table)
+    let qb = this.db().select().from(this.table)
     if (where !== undefined) qb = qb.where(where)
     if (orderBy !== undefined) qb = qb.orderBy(orderBy)
     if (limit !== undefined) qb = qb.limit(limit)
@@ -193,7 +227,7 @@ export class DrizzleResource extends BaseResource {
     if (conds.length === 0) return []
     const where =
       conds.length === 1 ? conds[0] : or(...(conds as never[]))
-    const rows = (await this.client
+    const rows = (await this.db()
       .select()
       .from(this.table)
       .where(where as unknown)
@@ -202,7 +236,7 @@ export class DrizzleResource extends BaseResource {
   }
 
   override async findOne(id: string): Promise<BaseRecord | null> {
-    const rows = (await this.client
+    const rows = (await this.db()
       .select()
       .from(this.table)
       .where(eq(this.idColumn as never, this.castId(id) as never))
@@ -214,7 +248,7 @@ export class DrizzleResource extends BaseResource {
   override async findMany(ids: Array<string | number>): Promise<BaseRecord[]> {
     if (ids.length === 0) return []
     const cast = ids.map((id) => this.castId(id))
-    const rows = (await this.client
+    const rows = (await this.db()
       .select()
       .from(this.table)
       .where(inArray(this.idColumn as never, cast as never))) as ParamsType[]
@@ -222,7 +256,7 @@ export class DrizzleResource extends BaseResource {
   }
 
   override async create(params: ParamsType): Promise<ParamsType> {
-    const rows = await this.client
+    const rows = await this.db()
       .insert(this.table)
       .values(this.writableData(params))
       .returning()
@@ -230,7 +264,7 @@ export class DrizzleResource extends BaseResource {
   }
 
   override async update(id: string, params: ParamsType): Promise<ParamsType> {
-    const rows = await this.client
+    const rows = await this.db()
       .update(this.table)
       .set(this.writableData(params))
       .where(eq(this.idColumn as never, this.castId(id) as never))
@@ -239,9 +273,22 @@ export class DrizzleResource extends BaseResource {
   }
 
   override async delete(id: string): Promise<void> {
-    await this.client
+    await this.db()
       .delete(this.table)
       .where(eq(this.idColumn as never, this.castId(id) as never))
+  }
+
+  override async deleteMany(filter: Filter): Promise<number> {
+    const where = filterToWhere(filter, this.table)
+    const builder = this.db().delete(this.table)
+    // `returning()` gives an accurate, driver-agnostic deleted-row count on
+    // the dialects this adapter targets (Postgres/SQLite), mirroring the
+    // `create`/`update` paths above.
+    const rows =
+      where !== undefined
+        ? await builder.where(where).returning()
+        : await builder.returning()
+    return rows.length
   }
 
   override supportsTimeSeries(): boolean {
@@ -314,7 +361,7 @@ export class DrizzleResource extends BaseResource {
     if (query.step !== 'all') select.bucket = bucketSql
     if (groupCol) select.series_key = groupCol
 
-    let qb = this.client.select(select).from(this.table).where(where as unknown)
+    let qb = this.db().select(select).from(this.table).where(where as unknown)
     const groupKeys: unknown[] = []
     if (query.step !== 'all') groupKeys.push(bucketSql)
     if (groupCol) groupKeys.push(groupCol)
@@ -327,9 +374,20 @@ export class DrizzleResource extends BaseResource {
     const fromIso = isoDate(query.from)
     const seriesMap = new Map<string, Map<string, number>>()
     for (const row of rows) {
+      // A bucket whose rows are all NULL aggregates to a NULL value (SUM/AVG/
+      // MIN/MAX). The Prisma adapter emits no point for such buckets — skip
+      // the row so both adapters agree. COUNT(*) is never NULL.
+      if (row.value == null) continue
       const seriesKey = groupCol ? stringifyKey(row.series_key) : '__total__'
-      const bucketKey =
-        query.step === 'all' ? fromIso : isoDate(toDate(row.bucket))
+      let bucketKey: string
+      if (query.step === 'all') {
+        bucketKey = fromIso
+      } else {
+        const bucketDate = toDate(row.bucket)
+        // isoDate() throws on Invalid Date — drop the row instead of 500ing.
+        if (Number.isNaN(bucketDate.getTime())) continue
+        bucketKey = isoDate(bucketDate)
+      }
       const num = toNumber(row.value)
       let inner = seriesMap.get(seriesKey)
       if (!inner) {
@@ -373,8 +431,13 @@ export class DrizzleResource extends BaseResource {
   }
 
   override async transaction<T>(fn: () => Promise<T>): Promise<T> {
+    const active = txStorage.getStore()
+    // Already inside a transaction on this client — join it.
+    if (active && active.base === this.client) return fn()
     if (typeof this.client.transaction !== 'function') return fn()
-    return this.client.transaction(async () => fn())
+    return this.client.transaction((tx) =>
+      txStorage.run({ base: this.client, tx }, fn),
+    )
   }
 }
 
@@ -389,26 +452,24 @@ const bucketExpr = (
   if (dialect === 'pg') {
     return sql`DATE_TRUNC(${step}, ${dateCol})`
   }
+  // Week buckets must land on the ISO Monday as a plain `YYYY-MM-DD` date —
+  // the canonical bucket-key format shared with pg DATE_TRUNC and the Prisma
+  // adapter's truncateDate(). Week-label formats ('%x-W%v', '%Y-W%W') are not
+  // parseable dates and would break the bucket-key mapping below.
   if (dialect === 'mysql') {
-    const fmt =
-      step === 'day'
-        ? '%Y-%m-%d'
-        : step === 'week'
-          ? '%x-W%v'
-          : step === 'month'
-            ? '%Y-%m-01'
-            : '%Y-01-01'
+    if (step === 'week') {
+      // WEEKDAY() is 0-based on Monday.
+      return sql`DATE(DATE_SUB(${dateCol}, INTERVAL WEEKDAY(${dateCol}) DAY))`
+    }
+    const fmt = step === 'day' ? '%Y-%m-%d' : step === 'month' ? '%Y-%m-01' : '%Y-01-01'
     return sql`DATE_FORMAT(${dateCol}, ${fmt})`
   }
   // sqlite
-  const fmt =
-    step === 'day'
-      ? '%Y-%m-%d'
-      : step === 'week'
-        ? '%Y-W%W'
-        : step === 'month'
-          ? '%Y-%m-01'
-          : '%Y-01-01'
+  if (step === 'week') {
+    // %w is 0-based on Sunday; shift back to the Monday of the ISO week.
+    return sql`DATE(${dateCol}, '-' || ((CAST(STRFTIME('%w', ${dateCol}) AS INTEGER) + 6) % 7) || ' days')`
+  }
+  const fmt = step === 'day' ? '%Y-%m-%d' : step === 'month' ? '%Y-%m-01' : '%Y-01-01'
   return sql`STRFTIME(${fmt}, ${dateCol})`
 }
 
@@ -432,96 +493,3 @@ const metricExpr = (
   }
 }
 
-const isoDate = (d: Date): string => d.toISOString().slice(0, 10)
-
-const toDate = (v: unknown): Date => {
-  if (v instanceof Date) return v
-  if (typeof v === 'string' || typeof v === 'number') return new Date(v)
-  return new Date(String(v))
-}
-
-const toNumber = (v: unknown): number => {
-  if (typeof v === 'number') return v
-  if (v == null) return 0
-  const n = Number(v)
-  return Number.isFinite(n) ? n : 0
-}
-
-const stringifyKey = (v: unknown): string => {
-  if (v == null) return '__null__'
-  if (typeof v === 'string') return v
-  return String(v)
-}
-
-const sumValues = (m: Map<string, number>): number => {
-  let s = 0
-  for (const v of m.values()) s += v
-  return s
-}
-
-const buildDisplaySql = (
-  dialect: DrizzleDialect,
-  tableName: string,
-  query: TimeSeriesQuery,
-  filter: Filter,
-): string => {
-  const ident = (s: string) => (dialect === 'mysql' ? `\`${s}\`` : `"${s}"`)
-  const t = ident(tableName)
-  const dateCol = ident(query.dateField)
-  const bucket =
-    query.step === 'all'
-      ? `MIN(${dateCol})`
-      : dialect === 'pg'
-        ? `DATE_TRUNC('${query.step}', ${dateCol})`
-        : dialect === 'mysql'
-          ? `DATE_FORMAT(${dateCol}, ${mysqlFmt(query.step)})`
-          : `STRFTIME(${sqliteFmt(query.step)}, ${dateCol})`
-  const metric =
-    query.metric === 'count'
-      ? 'COUNT(*)'
-      : `${query.metric.toUpperCase()}(${ident(query.field as string)})`
-  const cols: string[] = []
-  if (query.step !== 'all') cols.push(`${bucket} AS bucket`)
-  cols.push(`${metric} AS value`)
-  if (query.groupBy) cols.push(`${ident(query.groupBy)} AS series_key`)
-
-  const where: string[] = [
-    `${dateCol} >= '${query.from.toISOString()}'`,
-    `${dateCol} <= '${query.to.toISOString()}'`,
-  ]
-  filter.reduce<null>((_, el) => {
-    where.push(`${ident(el.path)} = '${String(el.value)}'`)
-    return null
-  }, null)
-
-  const groupBy: string[] = []
-  if (query.step !== 'all') groupBy.push('bucket')
-  if (query.groupBy) groupBy.push('series_key')
-
-  const lines = [
-    `SELECT ${cols.join(', ')}`,
-    `FROM ${t}`,
-    `WHERE ${where.join(' AND ')}`,
-  ]
-  if (groupBy.length) lines.push(`GROUP BY ${groupBy.join(', ')}`)
-  if (query.step !== 'all') lines.push('ORDER BY bucket ASC')
-  return lines.join('\n')
-}
-
-const mysqlFmt = (step: TimeSeriesStep): string =>
-  step === 'day'
-    ? "'%Y-%m-%d'"
-    : step === 'week'
-      ? "'%x-W%v'"
-      : step === 'month'
-        ? "'%Y-%m-01'"
-        : "'%Y-01-01'"
-
-const sqliteFmt = (step: TimeSeriesStep): string =>
-  step === 'day'
-    ? "'%Y-%m-%d'"
-    : step === 'week'
-      ? "'%Y-W%W'"
-      : step === 'month'
-        ? "'%Y-%m-01'"
-        : "'%Y-01-01'"

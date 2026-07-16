@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { fileURLToPath } from 'node:url'
 import { dirname, join, resolve } from 'node:path'
-import { scaffold } from './scaffold.js'
+import { readOwnVersion, scaffold, validateProjectName } from './scaffold.js'
 import { generate, type Orm } from './generate.js'
 
 interface ScaffoldArgs {
@@ -99,12 +99,31 @@ const runScaffold = async (args: ScaffoldArgs): Promise<number> => {
     console.error(usage())
     return 1
   }
+  // Reject unsafe names before they are used to build a filesystem path
+  // (`../../x` escaping cwd) or substituted into generated JSON.
+  try {
+    validateProjectName(name)
+  } catch (err) {
+
+    console.error((err as Error).message)
+    return 1
+  }
   const here = dirname(fileURLToPath(import.meta.url))
   const templateDir = join(here, '..', 'template')
   const targetDir = resolve(args.target ?? `./${name}`)
 
+  // Pin the scaffolded project's @modern-admin/* deps to the CLI's own
+  // release line (see readOwnVersion) — the template carries a
+  // `{{modernAdminVersion}}` token instead of a hardcoded version.
+  const modernAdminVersion = await readOwnVersion(join(here, '..'))
+
   console.log(`Scaffolding "${name}" into ${targetDir}…`)
-  const files = await scaffold({ name, templateDir, targetDir })
+  const files = await scaffold({
+    name,
+    templateDir,
+    targetDir,
+    variables: { modernAdminVersion },
+  })
 
   console.log(`Wrote ${files.length} files. Next steps:`)
 

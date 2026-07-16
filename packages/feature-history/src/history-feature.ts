@@ -1,4 +1,6 @@
 import {
+  appendAfterHook,
+  appendBeforeHook,
   omitFields,
   unflatten,
   type ActionRequest,
@@ -6,6 +8,7 @@ import {
   type CurrentAdmin,
   type FeatureFn,
   type HistoryOp,
+  type HistoryRetention,
   type ResourceOptions,
 } from '@modern-admin/core'
 import { resolveStore } from './stores.js'
@@ -26,11 +29,18 @@ type AfterHook = (
   context: unknown,
 ) => ActionResponse | Promise<ActionResponse>
 
+interface HistoryProperty {
+  path(): string
+  type(): string
+  /** The decorator's raw options; `isAccessible: false` marks a secret. */
+  options?: { isAccessible?: unknown }
+}
+
 interface HistoryContext {
   resource: {
     decorate(): {
       id: string
-      properties: ReadonlyArray<{ path(): string; type(): string }>
+      properties: ReadonlyArray<HistoryProperty>
     }
     findOne?(id: string): Promise<{ params(): Record<string, unknown> } | null | undefined>
   }
@@ -60,28 +70,37 @@ function virtualPropertyPaths(ctx: HistoryContext): string[] {
   return out
 }
 
-const toArray = <T>(hook: unknown): T[] => {
-  if (!hook) return []
-  return Array.isArray(hook) ? (hook as T[]) : [hook as T]
+/** Paths of secret-bearing properties stripped from snapshots by default:
+ *  `password`-typed columns and statically inaccessible properties
+ *  (`isAccessible: false`). Access *functions* are per-request and can't be
+ *  soundly resolved here, so only the static `false` form is excluded. */
+function secretPropertyPaths(ctx: HistoryContext): string[] {
+  const out: string[] = []
+  const properties = ctx.resource.decorate().properties ?? []
+  for (const p of properties) {
+    if (p.type() === 'password' || p.options?.isAccessible === false) {
+      out.push(p.path())
+    }
+  }
+  return out
+}
+
+/** The full set of paths to strip from a snapshot for this request. */
+function excludedPaths(
+  ctx: HistoryContext,
+  userExcluded: string[],
+  includeSecrets: boolean,
+): Set<string> {
+  return new Set([
+    ...userExcluded,
+    ...virtualPropertyPaths(ctx),
+    ...(includeSecrets ? [] : secretPropertyPaths(ctx)),
+  ])
 }
 
 const defaultUserIdResolver = (admin: CurrentAdmin | undefined): string | undefined => {
   const id = admin?.id
   return id === undefined || id === null ? undefined : String(id)
-}
-
-function mergeBeforeHook(
-  existing: Record<string, unknown> | undefined,
-  newHook: BeforeHook,
-): BeforeHook[] {
-  return [...toArray<BeforeHook>(existing?.before), newHook]
-}
-
-function mergeAfterHook(
-  existing: Record<string, unknown> | undefined,
-  newHook: AfterHook,
-): AfterHook[] {
-  return [...toArray<AfterHook>(existing?.after), newHook]
 }
 
 const responseRecord = (response: ActionResponse): {
@@ -99,9 +118,10 @@ const responseRecord = (response: ActionResponse): {
  */
 function buildEditBeforeHook(options: HistoryFeatureOptions): BeforeHook {
   const userExcluded = options.excludeFields ?? []
+  const includeSecrets = options.includeSecrets ?? false
   return async (request, context) => {
     const ctx = context as HistoryContext
-    const excluded = new Set([...userExcluded, ...virtualPropertyPaths(ctx)])
+    const excluded = excludedPaths(ctx, userExcluded, includeSecrets)
     const recordId = ctx.record?.id ?? request.params.recordId
     if (!recordId) return request
     let snapshot: Record<string, unknown> | undefined
@@ -133,30 +153,65 @@ function buildEditBeforeHook(options: HistoryFeatureOptions): BeforeHook {
 
 function buildAfterHook(
   actionName: HistoryActionName,
-  options: Required<Pick<HistoryFeatureOptions, 'userIdResolver'>> & HistoryFeatureOptions,
+  options: Required<Pick<HistoryFeatureOptions, 'userIdResolver'>> & HistoryFeatureOptions & {
+    retention: HistoryRetention
+  },
 ): AfterHook {
-  const store = resolveStore(options.store)
+  const store = resolveStore(options.store, options.retention)
   const userExcluded = options.excludeFields ?? []
+  const includeSecrets = options.includeSecrets ?? false
+  const retention = options.retention
+  const hasRetention = retention.keepLast !== undefined || retention.keepDays !== undefined
+
+  // Drive retention for stores that support pruning (the default memory
+  // store already self-trims on append via its constructor policy; this
+  // also covers host-supplied database stores that implement `prune`).
+  const enforceRetention = async (): Promise<void> => {
+    if (!hasRetention || typeof store.prune !== 'function') return
+    try {
+      await store.prune(retention)
+    } catch (err) {
+      console.warn('[history] prune failed', err)
+    }
+  }
+
+  // Persist off the hot path: the mutation response must not wait on the
+  // history write. `append` + retention run in the background; any failure
+  // is logged, never surfaced (versioning must never break the mutation).
+  const persist = (input: Parameters<typeof store.append>[0]): void => {
+    void (async () => {
+      try {
+        await store.append(input)
+        await enforceRetention()
+      } catch (err) {
+        console.warn('[history] failed to record revision', err)
+      }
+    })()
+  }
 
   return async (response, _request, context) => {
-    const ctx = context as HistoryContext
-    const resourceId = ctx.resource.decorate().id
-    const userId = options.userIdResolver(ctx.currentAdmin)
-    const excluded = new Set([...userExcluded, ...virtualPropertyPaths(ctx)])
-
+    // The snapshot inputs are read synchronously (before returning) so the
+    // background write sees the record state as it was at hook time; the
+    // try/catch keeps even that prep from ever breaking the mutation.
     try {
+      const ctx = context as HistoryContext
+      const resourceId = ctx.resource.decorate().id
+      const userId = options.userIdResolver(ctx.currentAdmin)
+      const excluded = excludedPaths(ctx, userExcluded, includeSecrets)
+
       if (actionName === 'delete') {
         const snap = ctx.__modernAdminHistoryDeleteSnapshot
-        if (!snap) return response
-        await store.append({
-          resourceId,
-          recordId: snap.recordId,
-          op: 'delete',
-          ...(userId !== undefined ? { userId } : {}),
-          snapshot: snap.snapshot,
-          // Reverting a delete restores the pre-delete state — same as snapshot.
-          snapshotBefore: snap.snapshot,
-        })
+        if (snap) {
+          persist({
+            resourceId,
+            recordId: snap.recordId,
+            op: 'delete',
+            ...(userId !== undefined ? { userId } : {}),
+            snapshot: snap.snapshot,
+            // Reverting a delete restores the pre-delete state — same as snapshot.
+            snapshotBefore: snap.snapshot,
+          })
+        }
         return response
       }
 
@@ -171,7 +226,7 @@ function buildAfterHook(
             ?? (ctx.record?.params ? unflatten(omitFields(ctx.record.params, excluded)) : {}))
         : {}
       const op: HistoryOp = actionName === 'new' ? 'create' : 'update'
-      await store.append({
+      persist({
         resourceId,
         recordId: String(record.id),
         op,
@@ -194,9 +249,10 @@ function buildAfterHook(
 
 function buildDeleteBeforeHook(options: HistoryFeatureOptions): BeforeHook {
   const userExcluded = options.excludeFields ?? []
+  const includeSecrets = options.includeSecrets ?? false
   return (request, context) => {
     const ctx = context as HistoryContext
-    const excluded = new Set([...userExcluded, ...virtualPropertyPaths(ctx)])
+    const excluded = excludedPaths(ctx, userExcluded, includeSecrets)
     const recordId = ctx.record?.id ?? request.params.recordId
     if (recordId && ctx.record?.params) {
       // Match the nested shape used by edit snapshots (after `unflatten`)
@@ -212,10 +268,18 @@ function buildDeleteBeforeHook(options: HistoryFeatureOptions): BeforeHook {
 
 export function historyFeature(options: HistoryFeatureOptions = {}): FeatureFn {
   const actions = options.actions ?? [...DEFAULT_HISTORY_ACTIONS]
-  const store = resolveStore(options.store)
+  const retention: HistoryRetention = {
+    ...(options.keepLast !== undefined ? { keepLast: options.keepLast } : {}),
+    ...(options.keepDays !== undefined ? { keepDays: options.keepDays } : {}),
+  }
+  // Resolve once so every action shares a single store instance (and the
+  // in-memory fallback warning fires at most once). Retention bounds the
+  // default store's growth.
+  const store = resolveStore(options.store, retention)
   const resolved = {
     ...options,
     store,
+    retention,
     userIdResolver: options.userIdResolver ?? defaultUserIdResolver,
   }
 
@@ -229,12 +293,12 @@ export function historyFeature(options: HistoryFeatureOptions = {}): FeatureFn {
       const existing = existingActions?.[name]
       overrides[name] = {
         ...existing,
-        after: mergeAfterHook(existing, buildAfterHook(name, resolved)),
+        after: appendAfterHook(existing, buildAfterHook(name, resolved)),
       }
       if (name === 'delete') {
-        overrides[name]!.before = mergeBeforeHook(existing, buildDeleteBeforeHook(options))
+        overrides[name]!.before = appendBeforeHook(existing, buildDeleteBeforeHook(options))
       } else if (name === 'edit') {
-        overrides[name]!.before = mergeBeforeHook(existing, buildEditBeforeHook(options))
+        overrides[name]!.before = appendBeforeHook(existing, buildEditBeforeHook(options))
       }
     }
 

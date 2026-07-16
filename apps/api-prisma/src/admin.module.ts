@@ -99,7 +99,8 @@ const apiKeyService = buildApiKeyService(authProvider)
 
 @Module({
   imports: [
-    ModernAdminUploadModule.forRoot(),
+    // Single-instance demo — ack the in-process pending-registry constraint.
+    ModernAdminUploadModule.forRoot({ acknowledgeSingleInstance: true }),
     ModernAdminModule.forRoot({
       global: true,
       adapters: [{

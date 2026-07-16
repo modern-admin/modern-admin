@@ -28,6 +28,7 @@
 
 import { extname } from 'node:path'
 import { uuidv7 } from '@modern-admin/core'
+import { isUnsafeKey } from '../path-safety.js'
 import type { IUploadProvider, UploadedFile } from '../types.js'
 
 export interface S3UploadOptions {
@@ -120,6 +121,14 @@ export class S3UploadProvider implements IUploadProvider {
   }
 
   async upload(file: UploadedFile, key?: string): Promise<string> {
+    // Reject traversal / absolute keys before they reach the bucket. Keys
+    // legitimately contain `/` separators (prefixes), but never `..` or a
+    // leading slash.
+    if (key !== undefined && isUnsafeKey(key)) {
+      throw new Error(
+        `[modern-admin/feature-upload] refusing to upload with unsafe key "${key}"`,
+      )
+    }
     const c = await this.client()
     const ext = extname(file.originalName)
     const prefix = this.options.prefix ? `${this.options.prefix}/` : ''
@@ -163,6 +172,11 @@ export class S3UploadProvider implements IUploadProvider {
   }
 
   async getUrl(key: string): Promise<string> {
+    if (isUnsafeKey(key)) {
+      throw new Error(
+        `[modern-admin/feature-upload] refusing to build a URL for unsafe key "${key}"`,
+      )
+    }
     if (this.options.signed) {
       return this.signedUrl(key)
     }
@@ -170,6 +184,9 @@ export class S3UploadProvider implements IUploadProvider {
   }
 
   async delete(key: string): Promise<void> {
+    // A `type: 'file'` value is an arbitrary DB string — never issue a
+    // DeleteObject for a traversal/absolute key.
+    if (isUnsafeKey(key)) return
     try {
       const sdk = await import('@aws-sdk/client-s3' as string)
       const c = await this.client()

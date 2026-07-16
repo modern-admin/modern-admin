@@ -48,7 +48,7 @@ export function AuditTimeline({
   return (
     <ol className={cn('relative space-y-3', className)}>
       {items.map((item, index) => (
-        <li key={item.id ?? `${item.at}:${index}`} className="relative rounded-lg border bg-card p-4 shadow-sm">
+        <li key={item.id ?? `${item.at}:${index}`} className="relative rounded-lg border border-border bg-card p-4 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex min-w-0 items-start gap-3">
               <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
@@ -60,7 +60,7 @@ export function AuditTimeline({
                 </p>
                 <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                   <ActionChip action={item.action} />
-                  <span className="rounded-full border bg-muted px-2 py-0.5 text-xs">
+                  <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-xs">
                     {item.resourceId}
                   </span>
                   {item.recordId && (

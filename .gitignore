@@ -18,6 +18,11 @@ yarn-error.log*
 **/.nest
 *.tsbuildinfo
 
+# playwright artifacts (config lives in apps/e2e; a stray root run also writes here)
+test-results
+**/test-results
+**/playwright-report
+
 .ai
 .playwright-mcp
 

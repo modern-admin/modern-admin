@@ -961,7 +961,7 @@ function WebhookEditorDialog({
             <Label>{t('settings:webhooks.editor.events')}</Label>
             <div className="flex flex-wrap gap-2">
               {WEBHOOK_EVENTS.map((event) => (
-                <label key={event} className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
+                <label key={event} className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm">
                   <Checkbox checked={events.includes(event)} onCheckedChange={() => toggleEvent(event)} />
                   {event}
                 </label>

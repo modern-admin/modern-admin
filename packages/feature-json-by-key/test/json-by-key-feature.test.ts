@@ -358,10 +358,16 @@ describe('jsonByKeyFeature() — write hooks collapse virtuals into JSON', () =>
         previews__us: 'b.jpg',
       },
     }
-    await hook(request, {})
-    expect(request.payload).toEqual({
+    const out = (await hook(request, {})) as { payload: Record<string, unknown> }
+    expect(out.payload).toEqual({
       region: 'eu',
       previews: { eu: 'a.jpg', us: 'b.jpg' },
+    })
+    // The caller's payload object must not be mutated.
+    expect(request.payload).toEqual({
+      region: 'eu',
+      previews__eu: 'a.jpg',
+      previews__us: 'b.jpg',
     })
   })
 
@@ -379,9 +385,9 @@ describe('jsonByKeyFeature() — write hooks collapse virtuals into JSON', () =>
         previews__eu: null,
       },
     }
-    await hook(request, {})
-    expect(request.payload.previews).toEqual({ us: 'keep.jpg' })
-    expect('previews__eu' in request.payload).toBe(false)
+    const out = (await hook(request, {})) as { payload: Record<string, unknown> }
+    expect(out.payload.previews).toEqual({ us: 'keep.jpg' })
+    expect('previews__eu' in out.payload).toBe(false)
   })
 
   it('leaves source untouched when no virtuals are present in the payload', async () => {
@@ -411,8 +417,8 @@ describe('jsonByKeyFeature() — write hooks collapse virtuals into JSON', () =>
     const request: { payload: Record<string, unknown> } = {
       payload: { previews__eu: 'a.jpg' },
     }
-    await hook(request, {})
-    expect(request.payload).toEqual({ previews: { eu: 'a.jpg' } })
+    const out = (await hook(request, {})) as { payload: Record<string, unknown> }
+    expect(out.payload).toEqual({ previews: { eu: 'a.jpg' } })
   })
 })
 

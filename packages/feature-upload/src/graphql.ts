@@ -39,6 +39,8 @@ import {
 import { ForbiddenError, ResourceNotFoundError } from '@modern-admin/core'
 import { UploadProviderRegistry } from './registry.js'
 import { PendingUploadsRegistry } from './pending-registry.js'
+import { isUnsafeKey, sanitizeFilename } from './path-safety.js'
+import { mimeMatches } from './mime.js'
 import type { UploadedFileInfo } from './types.js'
 
 /** Default TTL for pending upload entries, mirrored from the controller. */
@@ -93,12 +95,26 @@ export function uploadGraphqlExtension(
               size: number
               buffer: Buffer
             }
+            // Server-side MIME / size enforcement (the multipart parser has
+            // already applied the global hard size cap; this adds the tighter
+            // per-property limits).
+            if (!mimeMatches(upload.mimeType, registered.mimeTypes)) {
+              throw new Error(`File type "${upload.mimeType}" is not allowed`)
+            }
+            if (registered.maxSize != null && upload.size > registered.maxSize) {
+              throw new Error(`File exceeds the maximum size of ${registered.maxSize} bytes`)
+            }
+            // Sanitise the client filename before it can steer key generation.
+            const originalName = sanitizeFilename(upload.filename)
             const computedKey = registered.uploadPath
-              ? registered.uploadPath(upload.filename)
+              ? registered.uploadPath(originalName)
               : undefined
+            if (computedKey !== undefined && isUnsafeKey(computedKey)) {
+              throw new Error('Computed upload key is not allowed')
+            }
             const key = await registered.provider.upload(
               {
-                originalName: upload.filename,
+                originalName,
                 mimeType: upload.mimeType,
                 size: upload.size,
                 buffer: upload.buffer,
@@ -110,7 +126,7 @@ export function uploadGraphqlExtension(
             const info: UploadedFileInfo = {
               key,
               url,
-              name: upload.filename,
+              name: originalName,
               size: upload.size,
               mimeType: upload.mimeType,
             }
@@ -137,6 +153,7 @@ export function uploadGraphqlExtension(
             // the REST controller's check — prevents leaking arbitrary
             // resource ids to authenticated clients.
             resolveProperty(ctx, resourceId, field)
+            if (isUnsafeKey(key)) return false
             return PendingUploadsRegistry.cancel(key)
           },
         },
@@ -160,8 +177,8 @@ function resolveProperty(
   try {
     resource = ctx.admin.findResource(resourceId)
   } catch (err) {
-    if (err instanceof ResourceNotFoundError) throw new Error(err.message)
-    if (err instanceof ForbiddenError) throw new Error(err.message)
+    if (err instanceof ResourceNotFoundError) throw new Error(err.message, { cause: err })
+    if (err instanceof ForbiddenError) throw new Error(err.message, { cause: err })
     throw err
   }
   const decorator = resource.decorate()

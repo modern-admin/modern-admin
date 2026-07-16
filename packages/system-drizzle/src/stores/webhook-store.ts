@@ -1,71 +1,16 @@
 import {
+  rowToDelivery,
+  rowToWebhook,
   uuidv7,
+  type DeliveryRow,
   type IWebhookStore,
   type Webhook,
   type WebhookDelivery,
-  type WebhookDeliveryStatus,
   type WebhookInput,
+  type WebhookRow,
 } from '@modern-admin/core'
 import { desc, eq } from 'drizzle-orm'
 import type { DrizzleLike, SystemTables } from '../types.js'
-
-interface WebhookRow {
-  id: string
-  name: string
-  url: string
-  events: unknown
-  resourceId: string | null
-  enabled: boolean
-  secret: string | null
-  headers: unknown
-  filters: unknown
-  payloadFields: unknown
-  createdAt: Date
-  updatedAt: Date
-}
-
-interface DeliveryRow {
-  id: string
-  webhookId: string
-  event: string
-  payload: unknown
-  status: string
-  responseStatus: number | null
-  responseBody: string | null
-  error: string | null
-  attempt: number
-  createdAt: Date
-  deliveredAt: Date | null
-}
-
-const rowToWebhook = (row: WebhookRow): Webhook => ({
-  id: row.id,
-  name: row.name,
-  url: row.url,
-  events: Array.isArray(row.events) ? (row.events as string[]) : [],
-  resourceId: row.resourceId,
-  enabled: row.enabled,
-  ...(row.secret !== null ? { secret: row.secret } : {}),
-  headers: (row.headers as Record<string, string>) ?? {},
-  filters: (row.filters as Record<string, string>) ?? {},
-  payloadFields: Array.isArray(row.payloadFields) ? (row.payloadFields as string[]) : [],
-  createdAt: row.createdAt.toISOString(),
-  updatedAt: row.updatedAt.toISOString(),
-})
-
-const rowToDelivery = (row: DeliveryRow): WebhookDelivery => ({
-  id: row.id,
-  webhookId: row.webhookId,
-  event: row.event,
-  payload: (row.payload as Record<string, unknown>) ?? {},
-  status: row.status as WebhookDeliveryStatus,
-  ...(row.responseStatus !== null ? { responseStatus: row.responseStatus } : {}),
-  ...(row.responseBody !== null ? { responseBody: row.responseBody } : {}),
-  ...(row.error !== null ? { error: row.error } : {}),
-  attempt: row.attempt,
-  createdAt: row.createdAt.toISOString(),
-  ...(row.deliveredAt !== null ? { deliveredAt: row.deliveredAt.toISOString() } : {}),
-})
 
 export class DrizzleWebhookStore implements IWebhookStore {
   constructor(

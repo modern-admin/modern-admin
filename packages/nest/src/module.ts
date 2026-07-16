@@ -133,6 +133,8 @@ export interface ModernAdminModuleOptions extends ModernAdminOptions {
   auditLogRoles?: string[]
   /** Roles allowed to manage outgoing webhooks. Defaults to `['admin']`. */
   webhookRoles?: string[]
+  /** Roles allowed to edit the shared global dashboard layout. Defaults to `['admin']`. */
+  dashboardRoles?: string[]
   /**
    * When set, the bootstrap service calls `auth.seedAdmin(rootAdmin)` on every
    * app start. The implementation must be idempotent — it skips creation when

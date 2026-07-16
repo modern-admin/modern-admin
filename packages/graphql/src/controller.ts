@@ -12,6 +12,7 @@ import {
   NotFoundException,
   Post,
   Req,
+  UseGuards,
 } from '@nestjs/common'
 import type { IncomingMessage } from 'node:http'
 import {
@@ -22,7 +23,7 @@ import {
   execute,
   type ExecutionResult,
 } from 'graphql'
-import { MODERN_ADMIN } from '@modern-admin/nest'
+import { MODERN_ADMIN, ModernAdminAuthGuard } from '@modern-admin/nest'
 import type { IRealtimeBus, ModernAdmin } from '@modern-admin/core'
 import { ModernAdminGraphqlSchemaHolder } from './schema-holder.js'
 import { createContext } from './schema-builder.js'
@@ -75,8 +76,18 @@ export class GraphqlController {
     return SANDBOX_HTML
   }
 
+  /**
+   * The data surface: executes queries/mutations against the dynamic schema.
+   * Guarded by {@link ModernAdminAuthGuard}, which resolves the configured
+   * `IAuthProvider` into `req.currentAdmin` and rejects anonymous callers with
+   * 401 — the REST transport gates its controllers the same way. Without this
+   * the endpoint was fail-open: the core api-key and role gates wave through a
+   * principal that carries no claim/role, so an unauthenticated POST here got
+   * full CRUD over every resource.
+   */
   @Post()
   @HttpCode(200)
+  @UseGuards(ModernAdminAuthGuard)
   async run(@Body() body: GraphqlRequestBody, @Req() req: AdminRequest): Promise<ExecutionResult> {
     // 1 — Pick up multipart-encoded uploads if present, otherwise fall back to
     //     the standard JSON body. Multipart wire format is the GraphQL
@@ -85,7 +96,10 @@ export class GraphqlController {
     let variables: Record<string, unknown>
     let operationName: string | null
     try {
-      const multipart = await parseMultipartGraphqlRequest(req)
+      const multipart = await parseMultipartGraphqlRequest(req, {
+        maxFileSize: this.options.maxFileSize,
+        maxFiles: this.options.maxFiles,
+      })
       if (multipart) {
         query = multipart.query
         variables = multipart.variables

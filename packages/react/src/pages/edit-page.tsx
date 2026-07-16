@@ -315,6 +315,9 @@ export function ResourceEditPage({
       const sanitized: FormValues = {}
       for (const p of editable) {
         const v = (values as FormValues)[p.path]
+        // Never persist secrets to localStorage — password fields would leave
+        // the plaintext sitting in the browser's draft store indefinitely.
+        if (p.type === 'password') continue
         // Skip non-serializable values (File objects from file inputs).
         if (v instanceof File) continue
         if (Array.isArray(v) && v.some((x) => x instanceof File)) continue
@@ -428,7 +431,7 @@ export function ResourceEditPage({
       const errors = result.record.errors as Record<string, { message?: string } | string>
       if (errors && Object.keys(errors).length > 0) {
         for (const [path, err] of Object.entries(errors)) {
-          const message = typeof err === 'string' ? err : (err?.message ?? 'Invalid value')
+          const message = typeof err === 'string' ? err : (err?.message ?? t('common:invalidValue'))
           form.setError(path, { type: 'server', message })
         }
         if (result.record.baseError) {

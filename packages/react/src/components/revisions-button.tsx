@@ -168,7 +168,7 @@ export function RevisionsButton({
             <div className="min-w-0 space-y-4">
               {selected ? (
                 <>
-                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border bg-card p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-card p-3">
                     <div>
                       <p className="text-sm font-medium">{formatDate(selected.createdAt)}</p>
                       <p className="text-xs text-muted-foreground">

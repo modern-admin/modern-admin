@@ -1,30 +1,12 @@
-import { uuidv7, type HistoryEntry, type HistoryOp, type IHistoryStore } from '@modern-admin/core'
+import {
+  rowToHistoryEntry as rowToEntry,
+  uuidv7,
+  type HistoryEntry,
+  type HistoryOp,
+  type HistoryRow,
+  type IHistoryStore,
+} from '@modern-admin/core'
 import type { PrismaDelegate } from '../types.js'
-
-interface HistoryRow {
-  id: string
-  resourceId: string
-  recordId: string
-  op: string
-  userId: string | null
-  snapshot: unknown
-  snapshotBefore: unknown
-  diff: unknown
-  createdAt: Date
-}
-
-const rowToEntry = (row: HistoryRow): HistoryEntry => ({
-  id: row.id,
-  resourceId: row.resourceId,
-  recordId: row.recordId,
-  op: row.op as HistoryOp,
-  ...(row.userId !== null ? { userId: row.userId } : {}),
-  snapshot: (row.snapshot as Record<string, unknown>) ?? {},
-  ...(row.snapshotBefore !== null && row.snapshotBefore !== undefined
-    ? { snapshotBefore: row.snapshotBefore as Record<string, unknown> }
-    : {}),
-  createdAt: row.createdAt.toISOString(),
-})
 
 export class PrismaHistoryStore implements IHistoryStore {
   constructor(private readonly delegate: PrismaDelegate<HistoryRow>) {}

@@ -47,7 +47,7 @@ export function DiffView({ fields, labels, className }: DiffViewProps): React.Re
   const l = { ...DEFAULT_LABELS, ...labels }
   if (fields.length === 0) {
     return (
-      <div className={cn('rounded-md border border-dashed p-4 text-sm text-muted-foreground', className)}>
+      <div className={cn('rounded-md border border-dashed border-border p-4 text-sm text-muted-foreground', className)}>
         {l.noChanges}
       </div>
     )
@@ -55,7 +55,7 @@ export function DiffView({ fields, labels, className }: DiffViewProps): React.Re
   return (
     <ul
       className={cn(
-        'divide-y divide-border overflow-hidden rounded-md border bg-card text-xs',
+        'divide-y divide-border overflow-hidden rounded-md border border-border bg-card text-xs',
         className,
       )}
     >

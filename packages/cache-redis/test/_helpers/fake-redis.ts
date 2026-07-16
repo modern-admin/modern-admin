@@ -64,6 +64,33 @@ export class FakeRedis {
     return Array.from(this.sets.get(key) ?? [])
   }
 
+  async expire(key: string, seconds: number | string): Promise<number> {
+    this.record('expire', [key, seconds])
+    if (this.store.has(key) || this.sets.has(key)) {
+      this.ttls.set(key, Number(seconds))
+      return 1
+    }
+    return 0
+  }
+
+  // Emulates INVALIDATE_TAG_SCRIPT: for each tag SET in KEYS, drop every
+  // member key then the SET itself, atomically from the caller's view.
+  async eval(script: string, numKeys: number, ...args: (string | number)[]): Promise<number> {
+    this.record('eval', [script, numKeys, ...args])
+    const tagKeys = args.slice(0, numKeys).map(String)
+    let removed = 0
+    for (const tagKey of tagKeys) {
+      for (const member of Array.from(this.sets.get(tagKey) ?? [])) {
+        if (this.store.delete(member)) removed += 1
+        this.sets.delete(member)
+        this.ttls.delete(member)
+      }
+      this.sets.delete(tagKey)
+      this.ttls.delete(tagKey)
+    }
+    return removed
+  }
+
   async publish(channel: string, message: string | Buffer): Promise<number> {
     const text = typeof message === 'string' ? message : message.toString()
     this.record('publish', [channel, text])

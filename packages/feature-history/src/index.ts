@@ -11,5 +11,6 @@ export type {
   HistoryFeatureOptions,
   HistoryOp,
   HistoryPluginOptions,
+  HistoryRetention,
   IHistoryStore,
 } from './types.js'
