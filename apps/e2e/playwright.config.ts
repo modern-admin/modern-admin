@@ -35,11 +35,7 @@ export default defineConfig({
       command: 'bun run --cwd ../api-prisma dev',
       url: `http://localhost:${API_PORT}/admin/api/config`,
       reuseExistingServer: !process.env.CI,
-      // CI runners are 2-vCPU; the API (cold NestJS compile via bun) and the
-      // web server (cold vite optimizeDeps) boot in parallel and contend for
-      // the same cores, so first-ready can exceed the default 60s even though
-      // a warm local boot is ~4s. Give both a wider ceiling.
-      timeout: 120_000,
+      timeout: 60_000,
       env: {
         API_PORT: String(API_PORT),
         WEB_ORIGIN: `http://localhost:${WEB_PORT}`,
@@ -55,7 +51,7 @@ export default defineConfig({
       command: 'bun run --cwd ../web dev',
       url: `http://localhost:${WEB_PORT}`,
       reuseExistingServer: !process.env.CI,
-      timeout: 120_000,
+      timeout: 60_000,
       env: {
         // `apps/web/vite.config.ts` reads `WEB_PORT` (defaults to 3000) and
         // `VITE_API_URL` is consumed by the SPA. Without `WEB_PORT` set,

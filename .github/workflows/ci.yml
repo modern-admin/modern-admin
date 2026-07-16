@@ -63,6 +63,10 @@ jobs:
       # Matches the credentials in docker-compose.yml.
       DATABASE_URL: postgresql://admin:admin@127.0.0.1:5432/modern_admin?schema=public
       REDIS_URL: redis://localhost:6379
+      # buildBetterAuth() refuses to boot without a strong secret (≥32 chars,
+      # not the `replace-me` placeholder). CI runs against an ephemeral test
+      # DB, so a fixed non-production value is fine here.
+      BETTER_AUTH_SECRET: ci-e2e-better-auth-secret-0123456789abcdef
     steps:
       - name: Checkout
         uses: actions/checkout@v4
