@@ -308,6 +308,8 @@ export {
   ChartPanel,
   KpiCard,
   TimeSeriesChart,
+  paletteFor,
+  CHART_COLOR_PRESETS,
   type ChartType,
   type ChartDataPoint,
   type ChartPanelLabels,
@@ -318,6 +320,11 @@ export {
   type TimeSeriesChartProps,
   type TimeSeriesChartSeries,
 } from './components/chart.js'
+export {
+  ColorSwatchPicker,
+  type ColorSwatchPickerLabels,
+  type ColorSwatchPickerProps,
+} from './components/color-swatch-picker.js'
 
 // History / audit log
 export {

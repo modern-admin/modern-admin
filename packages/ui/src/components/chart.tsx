@@ -1,20 +1,21 @@
 import * as React from 'react'
 import {
-  ResponsiveContainer,
-  LineChart,
-  AreaChart,
-  BarChart,
-  PieChart,
-  Line,
   Area,
+  AreaChart,
   Bar,
-  Pie,
+  BarChart,
+  CartesianGrid,
   Cell,
+  ComposedChart,
+  Legend,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
 } from 'recharts'
 import { cn } from '../lib/utils.js'
 
@@ -56,7 +57,12 @@ const TOOLTIP_STYLE: React.CSSProperties = {
 }
 
 const AXIS_STYLE = { fontSize: 11 }
-const GRID_STROKE = 'hsl(215 16% 85%)'
+// Recessive grid that stays visible in BOTH themes. `--border` can't be used
+// here: it's a bare HSL triplet (invalid as a raw `stroke`) and, wrapped, it's
+// near-black on the dark surface. `--muted-foreground` is a mid-gray in light
+// and a light-gray in dark, so a low-opacity stroke reads on either surface.
+const GRID_STROKE = 'hsl(var(--muted-foreground))'
+const GRID_OPACITY = 0.3
 
 export function ChartPanel({
   data,
@@ -103,7 +109,7 @@ export function ChartPanel({
               outerRadius="65%"
             >
               {mapped.map((_, i) => (
-                <Cell key={i} fill={PALETTE[i % PALETTE.length]!} />
+                <Cell key={i} fill={PALETTE[i % PALETTE.length]!}/>
               ))}
             </Pie>
             <Tooltip
@@ -129,7 +135,7 @@ export function ChartPanel({
     >
       <ResponsiveContainer width="100%" height="100%">
         <ChartCmp data={mapped} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
+          <CartesianGrid strokeDasharray="1 1" stroke={GRID_STROKE} strokeOpacity={GRID_OPACITY}/>
           <XAxis
             dataKey="label"
             tick={AXIS_STYLE}
@@ -137,8 +143,8 @@ export function ChartPanel({
             tickLine={false}
             axisLine={false}
           />
-          <YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false} />
-          <Tooltip contentStyle={TOOLTIP_STYLE} />
+          <YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false}/>
+          <Tooltip contentStyle={TOOLTIP_STYLE}/>
           {type === 'area' ? (
             <Area
               type="monotone"
@@ -151,7 +157,7 @@ export function ChartPanel({
               activeDot={{ r: 4 }}
             />
           ) : type === 'bar' ? (
-            <Bar dataKey={vKey} fill={color} radius={[3, 3, 0, 0] as never} maxBarSize={48} />
+            <Bar dataKey={vKey} fill={color} radius={[3, 3, 0, 0] as never} maxBarSize={48}/>
           ) : (
             <Line
               type="monotone"
@@ -278,8 +284,21 @@ export interface TimeSeriesChartSeries {
   key: string
   /** Human-readable label shown in legend / tooltip. */
   label: string
-  /** Aligned points — every series MUST share the same `date` axis (zero-filled upstream). */
-  points: ReadonlyArray<{ date: string; value: number }>
+  /**
+   * Aligned points — every series MUST share the same `date` axis
+   * (zero-filled upstream). `sourceDate` marks re-plotted points (previous-
+   * period overlay); the tooltip then shows the real date next to the label.
+   */
+  points: ReadonlyArray<{ date: string; value: number; sourceDate?: string }>
+  /** Explicit color — overrides the palette slot for this series' index. */
+  color?: string
+  /** Dashed muted overlay (previous-period style). Rendered as a line, kept out of the legend. */
+  dashed?: boolean
+  /**
+   * Key of the primary series this one follows: it hides/dims together with
+   * that series and inherits its color when `color` is not set.
+   */
+  hiddenWith?: string
 }
 
 export interface TimeSeriesChartLabels {
@@ -297,8 +316,14 @@ export interface TimeSeriesChartProps {
   tickFormatter?: (iso: string) => string
   /** ISO `YYYY-MM-DD` → tooltip header (e.g. `01 May 2024`). */
   labelFormatter?: (iso: string) => string
-  /** Tooltip / Y-axis number formatting. */
+  /** Tooltip number formatting (also Y-axis fallback). */
   valueFormatter?: (value: number) => string
+  /**
+   * Y-axis tick formatting. Falls back to `valueFormatter`, then to a
+   * compact `Intl.NumberFormat` (12.5K / 1.2M) so large values never
+   * overflow the axis gutter.
+   */
+  axisValueFormatter?: (value: number) => string
   /**
    * Forces a specific Recharts primitive. When omitted, falls back to an
    * auto heuristic: `area` for ≤2 series (single-metric look), `line`
@@ -320,11 +345,21 @@ const TS_PALETTE = [
   'hsl(286, 70%, 55%)',
 ] as const
 
-function paletteFor(n: number): string[] {
+export function paletteFor(n: number): string[] {
   if (n <= TS_PALETTE.length) return TS_PALETTE.slice(0, Math.max(n, 1)) as string[]
   const stepDeg = Math.floor(360 / n)
   return Array.from({ length: n }, (_, i) => `hsl(${stepDeg * (i + 1)}, 55%, 55%)`)
 }
+
+/** Hex twins of `TS_PALETTE` — persisted color overrides are stored as hex. */
+export const CHART_COLOR_PRESETS = [
+  '#bf4440',
+  '#c77438',
+  '#ceae2c',
+  '#40acbf',
+  '#47d17c',
+  '#b73cdd',
+] as const
 
 const TS_TOOLTIP_STYLE: React.CSSProperties = {
   background: 'hsla(220, 10%, 12%, 0.92)',
@@ -341,16 +376,31 @@ const TS_TOOLTIP_LABEL_STYLE: React.CSSProperties = {
   marginBottom: 2,
 }
 
+const compactAxisFormat = (locale?: string): ((n: number) => string) => {
+  const nf = new Intl.NumberFormat(locale, {
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  })
+  return (n) => nf.format(n)
+}
+
 /**
  * Date-axis chart used by dashboard widgets. The Recharts primitive is
  * chosen by `visualisation` (`area` | `line` | `bar`). When the caller
  * does not pass `visualisation` the component falls back to a heuristic:
- * `area` for ≤2 series (single-metric look) and `line` for more
+ * `area` for ≤2 primary series (single-metric look) and `line` for more
  * (multi-series comparison).
  *
  * Legend is clickable: click a label to toggle that series' visibility;
- * hover dims the rest. When >7 series a "show/hide all" button appears
- * under the chart.
+ * hover dims the rest. When >7 primary series a "show/hide all" button
+ * appears under the chart.
+ *
+ * `dashed` series (previous-period overlays) are always drawn as muted
+ * dashed lines, stay out of the legend, and hide/dim together with the
+ * primary series named by their `hiddenWith`.
+ *
+ * The chart adapts to its measured width: fewer X ticks and a capped
+ * height on narrow containers so mobile keeps the desktop look.
  *
  * Pure presentation — i18n-unaware. Caller supplies pre-aligned, zero-
  * filled `series` plus locale-aware tick/label/value formatters.
@@ -361,33 +411,52 @@ export function TimeSeriesChart({
   tickFormatter,
   labelFormatter,
   valueFormatter,
+  axisValueFormatter,
   visualisation,
   labels,
   className,
 }: TimeSeriesChartProps): React.ReactElement {
   const [hovered, setHovered] = React.useState<string | null>(null)
   const [hidden, setHidden] = React.useState<ReadonlySet<string>>(() => new Set())
+  const [width, setWidth] = React.useState<number | null>(null)
 
   // Merge all series into row-oriented data keyed by date. Memoized so
   // Recharts only sees a new `data` prop when series content actually changes.
   // Uses per-series Maps for O(1) lookup instead of O(N) `.find()` per date.
-  const { rows, palette, tickInterval } = React.useMemo(() => {
+  // Re-plotted points (previous-period overlay) carry their real date in a
+  // `<key>__src` column so the tooltip can show it.
+  const { rows, colorByKey, primary } = React.useMemo(() => {
     const dates = Array.from(
       new Set(series.flatMap((s) => s.points.map((p) => p.date))),
     ).sort()
-    const maps = series.map((s) => new Map(s.points.map((p) => [p.date, p.value])))
+    const maps = series.map(
+      (s) => new Map(s.points.map((p) => [p.date, p] as const)),
+    )
     const rows = dates.map((date) => {
       const row: Record<string, string | number> = { date }
       series.forEach((s, i) => {
-        row[s.key] = maps[i]!.get(date) ?? 0
+        const p = maps[i]!.get(date)
+        row[s.key] = p?.value ?? 0
+        if (p?.sourceDate) row[`${s.key}__src`] = p.sourceDate
       })
       return row
     })
-    return {
-      rows,
-      palette: paletteFor(series.length),
-      tickInterval: Math.max(0, Math.floor(dates.length / 32)),
-    }
+    // Palette slots belong to primary (non-dashed) series only; dashed
+    // overlays inherit their paired series' color unless overridden.
+    const primary = series.filter((s) => !s.dashed)
+    const palette = paletteFor(primary.length)
+    const colorByKey = new Map<string, string>()
+    primary.forEach((s, i) => colorByKey.set(s.key, s.color ?? palette[i]!))
+    series.forEach((s) => {
+      if (!s.dashed) return
+      colorByKey.set(
+        s.key,
+        s.color ??
+        (s.hiddenWith ? colorByKey.get(s.hiddenWith) : undefined) ??
+        palette[0]!,
+      )
+    })
+    return { rows, colorByKey, primary }
   }, [series])
 
   if (series.length === 0 || series.every((s) => s.points.length === 0)) {
@@ -404,18 +473,39 @@ export function TimeSeriesChart({
     )
   }
 
-  // Explicit `visualisation` wins; otherwise auto: area for ≤2 series,
-  // line for more (preserves legacy behaviour for callers that don't
-  // pass `visualisation`).
+  // Explicit `visualisation` wins; otherwise auto: area for ≤2 primary
+  // series, line for more (preserves legacy behaviour for callers that
+  // don't pass `visualisation`).
   const resolvedVis: TimeSeriesChartVisualisation =
-    visualisation ?? (series.length > 2 ? 'line' : 'area')
-  const ChartCmp =
-    resolvedVis === 'bar' ? BarChart
+    visualisation ?? (primary.length > 2 ? 'line' : 'area')
+  const hasOverlay = series.some((s) => s.dashed)
+  // Dashed overlays are always Lines, so mixing them with bars/areas needs
+  // ComposedChart; the dedicated chart types stay for the common case.
+  const ChartCmp = hasOverlay
+    ? ComposedChart
+    : resolvedVis === 'bar' ? BarChart
       : resolvedVis === 'line' ? LineChart
         : AreaChart
   // Suppress animation for large datasets — animating thousands of path
   // points is expensive and retains old state in Recharts' animation subsystem.
   const animateChart = rows.length <= 200
+
+  // Width-adaptive rendering: cap height and thin out X ticks on narrow
+  // containers (mobile) so the chart keeps the desktop aspect and stays
+  // readable instead of stretching tall with overlapping labels.
+  const narrow = width !== null && width < 480
+  const effectiveHeight = narrow ? Math.min(height, 230) : height
+  const minTickGap = width !== null && width < 440 ? 40 : 24
+  // Keep the background grid clearly readable on desktop but render it with a
+  // thinner, fainter stroke on narrow (mobile) widths so it doesn't turn into
+  // a heavy lattice on small cards.
+  const gridStrokeWidth = narrow ? 0.5 : 1
+  const gridStrokeOpacity = narrow ? 0.18 : GRID_OPACITY
+
+  const isHidden = (s: TimeSeriesChartSeries): boolean =>
+    hidden.has(s.key) || (s.hiddenWith != null && hidden.has(s.hiddenWith))
+  const isDimmed = (s: TimeSeriesChartSeries): boolean =>
+    hovered !== null && hovered !== s.key && hovered !== s.hiddenWith
 
   const toggleHidden = (key: string): void => {
     setHidden((prev) => {
@@ -426,15 +516,21 @@ export function TimeSeriesChart({
     })
   }
 
-  const allHidden = hidden.size === series.length
+  const allHidden = primary.every((s) => hidden.has(s.key))
   const handleToggleAll = (): void => {
-    setHidden(allHidden ? new Set() : new Set(series.map((s) => s.key)))
+    setHidden(allHidden ? new Set() : new Set(primary.map((s) => s.key)))
   }
 
   const formatValue = (v: number | string): string => {
     const n = typeof v === 'number' ? v : Number(v)
     if (!Number.isFinite(n)) return String(v)
     return valueFormatter ? valueFormatter(n) : new Intl.NumberFormat().format(n)
+  }
+  const formatAxisValue = (n: number): string => {
+    if (!Number.isFinite(n)) return String(n)
+    if (axisValueFormatter) return axisValueFormatter(n)
+    if (valueFormatter) return valueFormatter(n)
+    return compactAxisFormat()(n)
   }
 
   return (
@@ -444,22 +540,52 @@ export function TimeSeriesChart({
         className,
       )}
     >
-      <ResponsiveContainer width="100%" height={height}>
-        <ChartCmp data={rows} margin={{ top: 16, right: 12, left: -28, bottom: 8 }}>
-          <CartesianGrid strokeDasharray="6 6" stroke={GRID_STROKE} />
+      <ResponsiveContainer
+        width="100%"
+        height={effectiveHeight}
+        onResize={(w) => {
+          if (typeof w === 'number' && w > 0) setWidth(w)
+        }}
+      >
+        <ChartCmp data={rows} margin={{ top: 16, right: 12, left: 0, bottom: 8 }}>
+          <CartesianGrid
+            strokeDasharray="3 3"
+            stroke={GRID_STROKE}
+            strokeWidth={gridStrokeWidth}
+            strokeOpacity={gridStrokeOpacity}
+            // Draw evenly-spaced vertical lines across the plot instead of
+            // tying them to the (thinned) X-axis ticks — `preserveStartEnd`
+            // drops the near-end tick, which otherwise leaves a ragged gap on
+            // the right. Horizontal lines stay tied to the Y ticks.
+            verticalCoordinatesGenerator={(props: {
+              offset?: { left?: number; width?: number }
+            }) => {
+              const left = props.offset?.left ?? 0
+              const w = props.offset?.width ?? 0
+              if (w <= 0) return []
+              const target = narrow ? 56 : 96
+              const count = Math.max(2, Math.round(w / target))
+              const stepPx = w / count
+              return Array.from({ length: count - 1 }, (_, i) =>
+                Math.round(left + stepPx * (i + 1)),
+              )
+            }}
+          />
           <XAxis
             dataKey="date"
             tick={AXIS_STYLE}
-            interval={tickInterval}
+            interval="preserveStartEnd"
+            minTickGap={minTickGap}
             tickLine={false}
             axisLine={false}
             tickFormatter={tickFormatter}
           />
           <YAxis
+            width="auto"
             tick={AXIS_STYLE}
             tickLine={false}
             axisLine={false}
-            tickFormatter={(v) => formatValue(v as number)}
+            tickFormatter={(v) => formatAxisValue(Number(v))}
             allowDecimals={false}
           />
           <Tooltip
@@ -470,7 +596,17 @@ export function TimeSeriesChart({
             labelFormatter={(value) =>
               labelFormatter ? labelFormatter(String(value)) : String(value)
             }
-            formatter={(value, name) => [formatValue(value as number | string), name]}
+            formatter={(value, name, item) => {
+              const key = (item as { dataKey?: unknown })?.dataKey
+              const row = (item as { payload?: Record<string, unknown> })?.payload
+              const src =
+                typeof key === 'string' && row ? row[`${key}__src`] : undefined
+              const displayName =
+                typeof src === 'string'
+                  ? `${String(name)} · ${labelFormatter ? labelFormatter(src) : src}`
+                  : name
+              return [formatValue(value as number | string), displayName]
+            }}
           />
           <Legend
             layout="horizontal"
@@ -487,7 +623,28 @@ export function TimeSeriesChart({
             }}
             onMouseLeave={() => setHovered(null)}
           />
-          {series.map((s, i) => {
+          {series.map((s) => {
+            const color = colorByKey.get(s.key)
+            if (s.dashed) {
+              return (
+                <Line
+                  key={s.key}
+                  type="monotone"
+                  dataKey={s.key}
+                  name={s.label}
+                  stroke={color}
+                  strokeWidth={1.5}
+                  strokeDasharray="6 5"
+                  strokeOpacity={isDimmed(s) ? 0.15 : 0.55}
+                  dot={false}
+                  activeDot={{ r: 3 }}
+                  legendType="none"
+                  hide={isHidden(s)}
+                  isAnimationActive={animateChart}
+                  animationDuration={300}
+                />
+              )
+            }
             if (resolvedVis === 'line') {
               return (
                 <Line
@@ -495,12 +652,12 @@ export function TimeSeriesChart({
                   type="monotone"
                   dataKey={s.key}
                   name={s.label}
-                  stroke={palette[i]}
+                  stroke={color}
                   strokeWidth={2}
-                  strokeOpacity={hovered === null || hovered === s.key ? 1 : 0.2}
+                  strokeOpacity={isDimmed(s) ? 0.2 : 1}
                   dot={false}
                   activeDot={{ r: 4 }}
-                  hide={hidden.has(s.key)}
+                  hide={isHidden(s)}
                   isAnimationActive={animateChart}
                   animationDuration={300}
                 />
@@ -512,11 +669,11 @@ export function TimeSeriesChart({
                   key={s.key}
                   dataKey={s.key}
                   name={s.label}
-                  fill={palette[i]}
-                  fillOpacity={hovered === null || hovered === s.key ? 1 : 0.25}
+                  fill={color}
+                  fillOpacity={isDimmed(s) ? 0.25 : 1}
                   radius={[3, 3, 0, 0] as never}
                   maxBarSize={48}
-                  hide={hidden.has(s.key)}
+                  hide={isHidden(s)}
                   isAnimationActive={animateChart}
                   animationDuration={300}
                 />
@@ -528,13 +685,14 @@ export function TimeSeriesChart({
                 type="monotone"
                 dataKey={s.key}
                 name={s.label}
-                stroke={palette[i]}
+                stroke={color}
                 strokeWidth={2}
-                fill={palette[i]}
-                fillOpacity={0.25}
+                strokeOpacity={isDimmed(s) ? 0.2 : 1}
+                fill={color}
+                fillOpacity={isDimmed(s) ? 0.08 : 0.25}
                 dot={false}
                 activeDot={{ r: 4 }}
-                hide={hidden.has(s.key)}
+                hide={isHidden(s)}
                 isAnimationActive={animateChart}
                 animationDuration={300}
               />
@@ -542,7 +700,7 @@ export function TimeSeriesChart({
           })}
         </ChartCmp>
       </ResponsiveContainer>
-      {series.length > 7 && (
+      {primary.length > 7 && (
         <div className="mt-2 flex justify-end">
           <button
             type="button"

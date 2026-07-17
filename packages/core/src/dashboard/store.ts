@@ -40,6 +40,46 @@ export const timeRangeZ = z.discriminatedUnion('preset', [
 ])
 export type TimeRange = z.infer<typeof timeRangeZ>
 
+/**
+ * One step of the presentation-only value pipeline applied client-side
+ * before charting (so axis, tooltip and KPI values agree), e.g.
+ * `{ op: 'divide', value: 100 }` to show cents as dollars.
+ */
+export const chartTransformStepZ = z.object({
+  op: z.enum(['divide', 'multiply', 'add', 'subtract']),
+  value: z.number().finite(),
+})
+export type ChartTransformStep = z.infer<typeof chartTransformStepZ>
+
+/**
+ * Display formatting applied at render time via `Intl.NumberFormat`.
+ * Note: `percent` follows Intl semantics (0.42 → "42%"). `compact`
+ * abbreviates large values (12.5k / 1.2M).
+ */
+export const chartFormatZ = z.object({
+  style: z.enum(['number', 'currency', 'percent']).default('number'),
+  /** ISO 4217 code; render layer falls back to 'USD' when absent. */
+  currency: z.string().length(3).optional(),
+  decimals: z.number().int().min(0).max(6).optional(),
+  prefix: z.string().max(8).optional(),
+  suffix: z.string().max(8).optional(),
+  compact: z.boolean().optional(),
+})
+export type ChartFormat = z.infer<typeof chartFormatZ>
+
+/**
+ * Per-series style overrides, keyed by the stable series key
+ * (`__total__`, a groupBy value, `__other__`, …) — never by display label.
+ * Absent series fall back to the palette color for their index.
+ */
+export const seriesStyleZ = z.object({
+  color: z
+    .string()
+    .regex(/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/)
+    .optional(),
+})
+export type SeriesStyle = z.infer<typeof seriesStyleZ>
+
 export const chartDefZ = z
   .object({
     id: z.uuid(),
@@ -73,6 +113,18 @@ export const chartDefZ = z
      */
     quickFilters: z.array(z.string()).default([]),
     timeRange: timeRangeZ,
+    /** Per-series style overrides keyed by stable series key. */
+    series: z.record(z.string(), seriesStyleZ).optional(),
+    /** Presentation-only value pipeline, applied in order before charting. */
+    transform: z.array(chartTransformStepZ).max(8).default([]),
+    /** Display number format for axis / tooltip / KPI values. */
+    format: chartFormatZ.optional(),
+    /**
+     * Overlay the equal-length preceding window as a dashed series and show
+     * the period-over-period delta next to the title. Only honoured for
+     * charts without `groupBy` (top-N keys are not stable across windows).
+     */
+    comparePrevious: z.boolean().default(false),
     /**
      * Optional group membership. `undefined` means the chart is not assigned
      * to any group yet — when at least one group exists, ungrouped charts

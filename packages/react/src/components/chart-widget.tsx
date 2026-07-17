@@ -21,6 +21,9 @@ import {
   Check,
   FolderSymlink,
   AlertTriangle,
+  ArrowUp,
+  ArrowDown,
+  Palette,
 } from 'lucide-react'
 import {
   Card,
@@ -43,6 +46,7 @@ import {
   SelectTrigger,
   SelectValue,
   Skeleton,
+  paletteFor,
 } from '@modern-admin/ui'
 import { ReferenceCombobox } from '../reference.js'
 import type { PropertyJSON } from '../types.js'
@@ -59,10 +63,25 @@ import { useI18n } from '../i18n.js'
 import { resolveRange } from '../use-dashboard-charts.js'
 import {
   fillTimeSeries,
+  generateBuckets,
   makeLabelFormatter,
   makeTickFormatter,
 } from '../dashboard/time-series.js'
+import {
+  applyTransform,
+  transformSeries,
+  makeValueFormatter,
+  makeAxisFormatter,
+} from '../dashboard/value-format.js'
+import {
+  alignPreviousSeries,
+  serverPreviousRangeOf,
+  sumSeries,
+  computeDelta,
+} from '../dashboard/compare.js'
+import { ChartSeriesColorsDialog } from './chart-series-colors-dialog.js'
 import type { TimeSeriesQuery, TimeSeriesSeries } from '../client.js'
+import type { ChartTransformStep } from '@modern-admin/core'
 
 const PRESETS: TimeRangePreset[] = ['7d', '30d', '90d', '1y', 'all', 'custom']
 const STEPS: Exclude<AggregationStep, 'all'>[] = ['day', 'week', 'month', 'year']
@@ -99,6 +118,10 @@ export function ChartWidget({
   // Resolve the time-range preset to concrete from/to per render so cards
   // automatically reflect "now" as days roll over without re-saving.
   const range = React.useMemo(() => resolveRange(config.timeRange), [config.timeRange])
+
+  // Previous-period overlay is only meaningful without a breakdown: top-N is
+  // computed independently per window, so grouped series keys aren't stable.
+  const compareActive = !isKpi && config.comparePrevious === true && !config.groupBy
 
   // If the saved ChartDef pre-dates the groupByLabelResource feature (i.e.,
   // groupBy is set but groupByLabelResource is not), derive it from the
@@ -139,9 +162,9 @@ export function ChartWidget({
         ? { groupByLabelResource: effectiveLabelResource }
         : {}),
       ...(Object.keys(config.filters).length ? { filters: config.filters } : {}),
-      ...(isKpi ? { comparePrevious: true as const } : {}),
+      ...(isKpi || compareActive ? { comparePrevious: true as const } : {}),
     }),
-    [config, range, isKpi, renderStep, effectiveLabelResource],
+    [config, range, isKpi, compareActive, renderStep, effectiveLabelResource],
   )
 
   const { data, isLoading, isError, refetch, isFetching } = useTimeSeries(query)
@@ -241,11 +264,87 @@ export function ChartWidget({
     [resolvedLabels, t],
   )
 
-  const chartSeries = React.useMemo(
-    () => prepareSeries(data?.series ?? [], range, renderStep, seriesLabel),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [data?.series, range.from, range.to, renderStep, seriesLabel],
+  const valueFormatter = React.useMemo(
+    () => makeValueFormatter(config.format, locale),
+    [config.format, locale],
   )
+  const axisValueFormatter = React.useMemo(
+    () => makeAxisFormatter(config.format, locale),
+    [config.format, locale],
+  )
+
+  const chartSeries = React.useMemo(() => {
+    const primary = transformSeries(
+      prepareSeries(data?.series ?? [], range, renderStep, seriesLabel),
+      config.transform,
+    ).map((s) => {
+      const color = config.series?.[s.key]?.color
+      return color ? { ...s, color } : s
+    })
+    if (!compareActive || !data?.previous?.length) return primary
+    const prevRange = serverPreviousRangeOf(range)
+    if (!prevRange) return primary
+    const currentBuckets = generateBuckets(range.from, range.to, renderStep)
+    const overlays = transformSeries(
+      alignPreviousSeries(data.previous, prevRange, currentBuckets, renderStep),
+      config.transform,
+    ).map((s) => ({
+      key: s.key,
+      label: t('dashboard:widget.previousSeries').replace(
+        '{label}',
+        seriesLabel(s.sourceKey),
+      ),
+      points: s.points,
+      dashed: true,
+      hiddenWith: s.sourceKey,
+    }))
+    return [...primary, ...overlays]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    data?.series,
+    data?.previous,
+    range.from,
+    range.to,
+    renderStep,
+    seriesLabel,
+    compareActive,
+    config.transform,
+    config.series,
+    t,
+  ])
+
+  // Period-over-period delta on raw (pre-transform) totals.
+  const delta = React.useMemo(
+    () =>
+      compareActive && data
+        ? computeDelta(sumSeries(data.series), sumSeries(data.previous))
+        : null,
+    [compareActive, data],
+  )
+
+  const [colorsOpen, setColorsOpen] = React.useState(false)
+  // Effective colors for the dialog rows: override or palette by index
+  // among primary (non-dashed) series — matches TimeSeriesChart's slots.
+  const colorItems = React.useMemo(() => {
+    const primary = chartSeries.filter((s) => !('dashed' in s) || !s.dashed)
+    const palette = paletteFor(primary.length)
+    return primary.map((s, i) => ({
+      key: s.key,
+      label: s.label,
+      override: config.series?.[s.key]?.color,
+      auto: palette[i]!,
+    }))
+  }, [chartSeries, config.series])
+
+  const saveSeriesColors = (overrides: Record<string, string>): void => {
+    // Preserve overrides for series not currently rendered (other windows /
+    // filters may surface different groupBy values).
+    const next: Record<string, { color?: string }> = { ...config.series }
+    for (const item of colorItems) delete next[item.key]
+    for (const [key, color] of Object.entries(overrides)) next[key] = { color }
+    update({ series: next })
+    setColorsOpen(false)
+  }
 
   // Adapter cannot do time-series — friendly message, no toolbar churn.
   const unsupported = data && data.supported === false
@@ -253,8 +352,27 @@ export function ChartWidget({
   return (
     <Card className="flex flex-col">
       <CardHeader className="flex flex-row items-center justify-between gap-2 p-3 pb-2 space-y-0 sm:p-6 sm:pb-2">
-        <CardTitle className="text-sm font-medium truncate pr-2">
-          {config.title || t('chart:untitled')}
+        <CardTitle className="flex min-w-0 items-center gap-2 text-sm font-medium pr-2">
+          <span className="truncate">{config.title || t('chart:untitled')}</span>
+          {delta && (
+            <span
+              title={t('dashboard:widget.previousPeriod')}
+              className={`inline-flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-xs font-medium tabular-nums ${
+                delta.direction === 'up'
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                  : delta.direction === 'down'
+                    ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                    : 'bg-muted text-muted-foreground'
+              }`}
+            >
+              {delta.direction === 'up' ? (
+                <ArrowUp className="size-3" />
+              ) : delta.direction === 'down' ? (
+                <ArrowDown className="size-3" />
+              ) : null}
+              {Math.abs(delta.percent)}%
+            </span>
+          )}
         </CardTitle>
         <div className="flex items-center gap-1 shrink-0">
           <Button
@@ -311,6 +429,12 @@ export function ChartWidget({
                 <Pencil className="size-4 mr-2" />
                 {t('chart:editChart')}
               </DropdownMenuItem>
+              {!isKpi && (
+                <DropdownMenuItem onClick={() => setColorsOpen(true)}>
+                  <Palette className="size-4 mr-2" />
+                  {t('dashboard:widget.editColors')}
+                </DropdownMenuItem>
+              )}
               {onMove && (
                 <DropdownMenuItem onClick={onMove}>
                   <FolderSymlink className="size-4 mr-2" />
@@ -464,7 +588,12 @@ export function ChartWidget({
             {t('dashboard:widget.unsupported')}
           </div>
         ) : isKpi ? (
-          <KpiBody data={data} labels={kpiLabels(t)} />
+          <KpiBody
+            data={data}
+            transform={config.transform}
+            formatNumber={valueFormatter}
+            labels={kpiLabels(t)}
+          />
         ) : (
           <TimeSeriesChart
             series={chartSeries}
@@ -472,6 +601,8 @@ export function ChartWidget({
             visualisation={config.visualisation === 'kpi' ? undefined : config.visualisation}
             tickFormatter={makeTickFormatter(renderStep, locale)}
             labelFormatter={makeLabelFormatter(renderStep, locale)}
+            valueFormatter={valueFormatter}
+            axisValueFormatter={axisValueFormatter}
             labels={{
               noData: t('chart:noData'),
               showAll: t('dashboard:widget.showAll'),
@@ -504,6 +635,14 @@ export function ChartWidget({
           </div>
         )}
       </CardContent>
+
+      {colorsOpen && (
+        <ChartSeriesColorsDialog
+          items={colorItems}
+          onSave={saveSeriesColors}
+          onClose={() => setColorsOpen(false)}
+        />
+      )}
     </Card>
   )
 }
@@ -624,6 +763,8 @@ function prepareSeries(
 
 interface KpiBodyProps {
   data: { series: ReadonlyArray<TimeSeriesSeries>; previous?: ReadonlyArray<TimeSeriesSeries> } | undefined
+  transform: ReadonlyArray<ChartTransformStep>
+  formatNumber: (n: number) => string
   labels: {
     noData: string
     deltaUp: string
@@ -633,11 +774,21 @@ interface KpiBodyProps {
   }
 }
 
-/** KPI mode summarises the single-bucket response to one scalar. */
-function KpiBody({ data, labels }: KpiBodyProps): React.ReactElement {
-  const value = sumAll(data?.series)
-  const prev = sumAll(data?.previous)
-  return <KpiCard value={value} previousValue={prev} labels={labels} />
+/** KPI mode summarises the single-bucket response to one scalar. The value
+ *  transform applies to both windows so the delta stays consistent. */
+function KpiBody({ data, transform, formatNumber, labels }: KpiBodyProps): React.ReactElement {
+  const raw = sumAll(data?.series)
+  const rawPrev = sumAll(data?.previous)
+  const value = raw == null ? raw : applyTransform(raw, transform)
+  const prev = rawPrev == null ? rawPrev : applyTransform(rawPrev, transform)
+  return (
+    <KpiCard
+      value={value}
+      previousValue={prev}
+      formatNumber={formatNumber}
+      labels={labels}
+    />
+  )
 }
 
 function sumAll(series: ReadonlyArray<TimeSeriesSeries> | undefined): number | null {

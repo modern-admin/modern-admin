@@ -15,5 +15,8 @@
     "@modern-admin/app-api-prisma",
     "@modern-admin/app-web",
     "@modern-admin/app-e2e"
-  ]
+  ],
+  "___experimentalUnsafeOptions_WILL_CHANGE_IN_PATCH": {
+    "updateInternalDependents": "always"
+  }
 }

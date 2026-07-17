@@ -11,9 +11,13 @@ import {
   LineChart,
   AreaChart,
   Activity,
+  Plus,
+  X,
 } from 'lucide-react'
 import {
   Button,
+  CHART_COLOR_PRESETS,
+  ColorSwatchPicker,
   Dialog,
   DialogContent,
   DialogFooter,
@@ -28,6 +32,10 @@ import {
   SelectTrigger,
   SelectValue,
   Switch,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
 } from '@modern-admin/ui'
 import {
   chartDefZ,
@@ -35,10 +43,13 @@ import {
   type AggregationOpName,
   type ChartDef,
   type ChartDefInput,
+  type ChartFormat,
+  type ChartTransformStep,
   type ChartVisualisation,
   type TimeRange,
   type TimeRangePreset,
 } from '@modern-admin/core'
+import { applyTransform, makeValueFormatter } from '../dashboard/value-format.js'
 import { useI18n } from '../i18n.js'
 import { useResources } from '../hooks.js'
 import { ReferenceCombobox } from '../reference.js'
@@ -60,6 +71,8 @@ const VIS_OPTIONS: { value: ChartVisualisation; icon: React.ReactElement; labelK
 
 const NONE = '__none__'
 const METRICS: AggregationOpName[] = ['count', 'sum', 'avg', 'min', 'max']
+const TRANSFORM_OPS: ChartTransformStep['op'][] = ['divide', 'multiply', 'add', 'subtract']
+const FORMAT_STYLES: NonNullable<ChartFormat['style']>[] = ['number', 'currency', 'percent']
 // `custom` is intentionally excluded from the builder — the builder sets a
 // default interval; ad-hoc custom ranges are picked on the widget toolbar.
 const PRESETS: Exclude<TimeRangePreset, 'custom'>[] = ['7d', '30d', '90d', '1y', 'all']
@@ -98,7 +111,7 @@ export function ChartBuilderDialog({
   onSave,
   onClose,
 }: ChartBuilderDialogProps): React.ReactElement {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const resources = useResources()
 
   const [title, setTitle] = React.useState(initial?.title ?? '')
@@ -129,7 +142,27 @@ export function ChartBuilderDialog({
     initial?.quickFilters ?? [],
   )
   const [order, setOrder] = React.useState<number>(initial?.order ?? 0)
+  const [comparePrevious, setComparePrevious] = React.useState(
+    initial?.comparePrevious ?? false,
+  )
+  const [transform, setTransform] = React.useState<ChartTransformStep[]>(
+    () => initial?.transform?.map((s) => ({ ...s })) ?? [],
+  )
+  const [formatStyle, setFormatStyle] = React.useState<NonNullable<ChartFormat['style']>>(
+    initial?.format?.style ?? 'number',
+  )
+  const [currency, setCurrency] = React.useState(initial?.format?.currency ?? '')
+  const [decimals, setDecimals] = React.useState<string>(
+    initial?.format?.decimals != null ? String(initial.format.decimals) : '',
+  )
+  const [compact, setCompact] = React.useState(initial?.format?.compact ?? false)
+  const [prefix, setPrefix] = React.useState(initial?.format?.prefix ?? '')
+  const [suffix, setSuffix] = React.useState(initial?.format?.suffix ?? '')
+  const [totalColor, setTotalColor] = React.useState<string | undefined>(
+    initial?.series?.['__total__']?.color,
+  )
   const [errors, setErrors] = React.useState<Record<string, string>>({})
+  const [tab, setTab] = React.useState<'data' | 'display' | 'filters'>('data')
 
   const resource = resources.find((r) => r.id === resourceId)
   const properties = resource?.properties ?? []
@@ -163,6 +196,44 @@ export function ChartBuilderDialog({
   const isKpi = visualisation === 'kpi'
 
   const buildTimeRange = (): TimeRange => ({ preset })
+
+  // Omit `format` entirely while everything is at its default so old charts
+  // don't accumulate noise on re-save.
+  const buildFormat = (): ChartFormat | undefined => {
+    const dec = decimals === '' ? undefined : Math.max(0, Math.min(6, Math.trunc(Number(decimals))))
+    const fmt = {
+      style: formatStyle,
+      ...(formatStyle === 'currency' && currency.trim().length === 3
+        ? { currency: currency.trim().toUpperCase() }
+        : {}),
+      ...(dec != null && Number.isFinite(dec) ? { decimals: dec } : {}),
+      ...(prefix ? { prefix: prefix.slice(0, 8) } : {}),
+      ...(suffix ? { suffix: suffix.slice(0, 8) } : {}),
+      ...(compact ? { compact: true } : {}),
+    }
+    const isDefault = fmt.style === 'number' && Object.keys(fmt).length === 1
+    return isDefault ? undefined : fmt
+  }
+
+  // Preserve per-series overrides saved from the widget colors dialog; the
+  // builder itself only edits the single-series (__total__) color.
+  const buildSeries = (): Record<string, { color?: string }> | undefined => {
+    const next: Record<string, { color?: string }> = { ...initial?.series }
+    if (!isKpi && !groupBy) {
+      if (totalColor) next.__total__ = { color: totalColor }
+      else delete next.__total__
+    }
+    return Object.keys(next).length ? next : undefined
+  }
+
+  // Live preview for the transform/format sections — pure helpers, cheap.
+  const previewFormat = React.useMemo(
+    () => makeValueFormatter(buildFormat(), locale),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [formatStyle, currency, decimals, compact, prefix, suffix, locale],
+  )
+  const PREVIEW_SAMPLE = 1234
+  const previewText = `${PREVIEW_SAMPLE} → ${previewFormat(applyTransform(PREVIEW_SAMPLE, transform))}`
 
   const handleFilterChange = (path: string, value: string): void => {
     setFilters((prev) => {
@@ -211,6 +282,11 @@ export function ChartBuilderDialog({
       ...(metric !== 'count' && field ? { field } : {}),
       ...(!isKpi && groupBy ? { groupBy } : {}),
       ...(!isKpi && groupBy && groupByLabelResource ? { groupByLabelResource } : {}),
+      transform,
+      // Compare is only meaningful for time-series without a breakdown.
+      comparePrevious: !isKpi && !groupBy ? comparePrevious : false,
+      ...(buildFormat() ? { format: buildFormat() } : {}),
+      ...(buildSeries() ? { series: buildSeries() } : {}),
     }
     const result = chartDefZ.safeParse(candidate)
     if (!result.success) {
@@ -220,6 +296,9 @@ export function ChartBuilderDialog({
         if (typeof key === 'string' && !fieldErrs[key]) fieldErrs[key] = issue.message
       }
       setErrors(fieldErrs)
+      // Every schema-validated field lives on the Data tab — surface it so
+      // the inline error isn't hidden behind another tab.
+      setTab('data')
       return
     }
     setErrors({})
@@ -235,7 +314,18 @@ export function ChartBuilderDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-1">
+        <Tabs
+          value={tab}
+          onValueChange={(v) => setTab(v as 'data' | 'display' | 'filters')}
+          className="py-1"
+        >
+          <TabsList>
+            <TabsTrigger value="data">{t('dashboard:builder.tabData')}</TabsTrigger>
+            <TabsTrigger value="display">{t('dashboard:builder.tabDisplay')}</TabsTrigger>
+            <TabsTrigger value="filters">{t('dashboard:builder.tabFilters')}</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="data" className="space-y-4">
           {/* Title + order */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_8rem]">
             <div className="space-y-1.5">
@@ -436,11 +526,227 @@ export function ChartBuilderDialog({
               ))}
             </div>
           </div>
+          </TabsContent>
 
+          <TabsContent value="display" className="space-y-4">
+          {/* Previous-period compare — time-series without breakdown only. */}
+          {!isKpi && (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5">
+                  <Label htmlFor="chart-compare">
+                    {t('dashboard:builder.comparePrevious')}
+                  </Label>
+                  <InfoTooltip content={t('dashboard:builder.comparePreviousHint')} />
+                </div>
+                <Switch
+                  id="chart-compare"
+                  checked={!groupBy && comparePrevious}
+                  disabled={!!groupBy}
+                  onCheckedChange={setComparePrevious}
+                  aria-label={t('dashboard:builder.comparePrevious')}
+                />
+              </div>
+              {!!groupBy && (
+                <p className="text-xs text-muted-foreground">
+                  {t('dashboard:builder.comparePreviousDisabled')}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Value transform — ordered scalar pipeline (e.g. cents → dollars). */}
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5">
+              <Label>{t('dashboard:builder.transform')}</Label>
+              <InfoTooltip content={t('dashboard:builder.transformHint')} />
+            </div>
+            {transform.map((step, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <Select
+                  value={step.op}
+                  onValueChange={(v) =>
+                    setTransform((prev) =>
+                      prev.map((s, j) =>
+                        j === i ? { ...s, op: v as ChartTransformStep['op'] } : s,
+                      ),
+                    )
+                  }
+                >
+                  <SelectTrigger className="w-40" aria-label={t('dashboard:builder.transform')}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TRANSFORM_OPS.map((op) => (
+                      <SelectItem key={op} value={op}>
+                        {t(`dashboard:builder.op${cap(op)}`)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  type="number"
+                  className="w-28"
+                  value={Number.isFinite(step.value) ? step.value : ''}
+                  onChange={(e) =>
+                    setTransform((prev) =>
+                      prev.map((s, j) =>
+                        j === i ? { ...s, value: Number(e.target.value) } : s,
+                      ),
+                    )
+                  }
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-8"
+                  onClick={() =>
+                    setTransform((prev) => prev.filter((_, j) => j !== i))
+                  }
+                  aria-label={t('dashboard:builder.transformRemove')}
+                >
+                  <X className="size-4" />
+                </Button>
+              </div>
+            ))}
+            {transform.length < 8 && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setTransform((prev) => [...prev, { op: 'divide', value: 100 }])
+                }
+              >
+                <Plus className="size-4 mr-1" />
+                {t('dashboard:builder.transformAdd')}
+              </Button>
+            )}
+          </div>
+
+          {/* Value format */}
+          <div className="space-y-1.5">
+            <Label>{t('dashboard:builder.format')}</Label>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label
+                  htmlFor="chart-format-style"
+                  className="text-xs text-muted-foreground"
+                >
+                  {t('dashboard:builder.formatStyle')}
+                </Label>
+                <Select
+                  value={formatStyle}
+                  onValueChange={(v) => setFormatStyle(v as NonNullable<ChartFormat['style']>)}
+                >
+                  <SelectTrigger id="chart-format-style">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {FORMAT_STYLES.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {t(`dashboard:builder.format${cap(s)}`)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {formatStyle === 'currency' && (
+                <div className="space-y-1">
+                  <Label
+                    htmlFor="chart-format-currency"
+                    className="text-xs text-muted-foreground"
+                  >
+                    {t('dashboard:builder.formatCurrencyCode')}
+                  </Label>
+                  <Input
+                    id="chart-format-currency"
+                    placeholder="USD"
+                    maxLength={3}
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value.toUpperCase())}
+                  />
+                </div>
+              )}
+              <div className="space-y-1">
+                <Label
+                  htmlFor="chart-format-decimals"
+                  className="text-xs text-muted-foreground"
+                >
+                  {t('dashboard:builder.formatDecimals')}
+                </Label>
+                <Input
+                  id="chart-format-decimals"
+                  type="number"
+                  min={0}
+                  max={6}
+                  value={decimals}
+                  onChange={(e) => setDecimals(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label
+                  htmlFor="chart-format-prefix"
+                  className="text-xs text-muted-foreground"
+                >
+                  {t('dashboard:builder.formatPrefix')} / {t('dashboard:builder.formatSuffix')}
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="chart-format-prefix"
+                    maxLength={8}
+                    placeholder={t('dashboard:builder.formatPrefix')}
+                    value={prefix}
+                    onChange={(e) => setPrefix(e.target.value)}
+                  />
+                  <Input
+                    maxLength={8}
+                    placeholder={t('dashboard:builder.formatSuffix')}
+                    value={suffix}
+                    onChange={(e) => setSuffix(e.target.value)}
+                    aria-label={t('dashboard:builder.formatSuffix')}
+                  />
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-2 sm:col-span-2">
+                <Label htmlFor="chart-format-compact">
+                  {t('dashboard:builder.formatCompact')}
+                </Label>
+                <Switch
+                  id="chart-format-compact"
+                  checked={compact}
+                  onCheckedChange={setCompact}
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground tabular-nums">{previewText}</p>
+          </div>
+
+          {/* Series color — single-series charts; breakdown colors are edited
+              from the widget menu once the series are known. */}
+          {!isKpi && !groupBy && (
+            <div className="space-y-1.5">
+              <Label>{t('dashboard:builder.color')}</Label>
+              <ColorSwatchPicker
+                value={totalColor}
+                onChange={setTotalColor}
+                presets={CHART_COLOR_PRESETS}
+                labels={{
+                  custom: t('dashboard:widget.colorCustom'),
+                  pick: t('dashboard:widget.colorPick'),
+                  auto: t('dashboard:widget.colorAuto'),
+                }}
+              />
+            </div>
+          )}
+          </TabsContent>
+
+          <TabsContent value="filters" className="space-y-4">
           {/* Filters — one row per property, with a checkbox to mark the
               filter as a "quick filter" (exposed above the chart for inline
               tweaking on the dashboard). Reference fields use a combobox. */}
-          {properties.length > 0 && (
+          {properties.length > 0 ? (
             <div className="space-y-1.5">
               <Label>{t('dashboard:builder.filters')}</Label>
               <p className="text-xs text-muted-foreground">
@@ -478,8 +784,13 @@ export function ChartBuilderDialog({
                 })}
               </div>
             </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              {t('dashboard:builder.filtersEmpty')}
+            </p>
           )}
-        </div>
+          </TabsContent>
+        </Tabs>
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>{t('common:cancel')}</Button>
