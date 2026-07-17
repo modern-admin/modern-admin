@@ -88,6 +88,14 @@ export interface ResourceJSON {
    *  explicitly `false`, the whole block is hidden. Defaults to shown. */
   showRelatedResources?: boolean
   properties: PropertyJSON[]
+  /**
+   * Per-view ordered property paths — the backend's single source of truth for
+   * column/field order and visibility (honours `listProperties`/`position`).
+   * Resolved against `properties` by `visibleRecordProperties`. Optional so the
+   * SPA still renders (falling back to `properties` order filtered by
+   * `visibility`) against older API servers that don't emit it.
+   */
+  propertyOrder?: Record<View, string[]>
   actions: ActionDescriptor[]
 }
 

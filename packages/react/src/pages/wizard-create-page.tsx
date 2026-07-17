@@ -48,7 +48,7 @@ export function ResourceWizardCreatePage({
   const editable = React.useMemo<PropertyJSON[]>(
     () =>
       resource
-        ? visibleRecordProperties(resource.properties, 'edit').filter(
+        ? visibleRecordProperties(resource.properties, 'edit', resource.propertyOrder?.edit).filter(
           (p) => !p.isDisabled,
         )
         : [],

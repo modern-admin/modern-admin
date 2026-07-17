@@ -58,6 +58,31 @@ describe('relations helpers', () => {
     expect(visibleRecordProperties(properties, 'list').map((p) => p.path)).toEqual(['email'])
   })
 
+  test('applies backend propertyOrder as the authoritative column order', () => {
+    const properties = [
+      prop({ path: 'id' }),
+      prop({ path: 'name', label: 'Name' }),
+      prop({ path: 'createdAt', label: 'Created' }),
+    ]
+    // Backend order puts createdAt first and omits id (e.g. hidden via
+    // isVisible.list or excluded from listProperties).
+    expect(
+      visibleRecordProperties(properties, 'list', ['createdAt', 'name']).map((p) => p.path),
+    ).toEqual(['createdAt', 'name'])
+  })
+
+  test('propertyOrder still drops reverse to-many references and unknown paths', () => {
+    const properties = [
+      prop({ path: 'email', label: 'Email' }),
+      prop({ path: 'posts', type: 'reference', isArray: true, reference: 'posts' }),
+    ]
+    // `posts` is a to-many ref (belongs in related records) and `ghost` doesn't
+    // resolve against the (access-filtered) payload — both are skipped.
+    expect(
+      visibleRecordProperties(properties, 'list', ['posts', 'email', 'ghost']).map((p) => p.path),
+    ).toEqual(['email'])
+  })
+
   test('derives related resources from inverse foreign keys', () => {
     const users = resource({
       id: 'users',

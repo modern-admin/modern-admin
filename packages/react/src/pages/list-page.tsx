@@ -608,7 +608,9 @@ export function ResourceListPage({
   const records = useRecords(resourceId, query)
 
   const visible = React.useMemo<PropertyJSON[]>(() => {
-    const all = resource ? visibleRecordProperties(resource.properties, 'list') : []
+    const all = resource
+      ? visibleRecordProperties(resource.properties, 'list', resource.propertyOrder?.list)
+      : []
     // Drop columns pinned by lockedFilters — they're identical for every row.
     if (lockedFilters && Object.keys(lockedFilters).length > 0) {
       return all.filter((p) => !(p.path in lockedFilters))

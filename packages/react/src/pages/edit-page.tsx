@@ -151,7 +151,7 @@ export function ResourceEditPage({
   const editable = React.useMemo<PropertyJSON[]>(
     () =>
       resource
-        ? visibleRecordProperties(resource.properties, 'edit').filter((p) => !p.isDisabled)
+        ? visibleRecordProperties(resource.properties, 'edit', resource.propertyOrder?.edit).filter((p) => !p.isDisabled)
         : [],
     [resource],
   )

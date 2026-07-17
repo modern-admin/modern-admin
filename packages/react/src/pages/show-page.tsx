@@ -196,7 +196,7 @@ export function ResourceShowPage({
             {record.isError && <PageError error={record.error} t={t} />}
             {record.data && (
               <dl className="[column-fill:_balance] md:columns-2">
-                {visibleRecordProperties(resource.properties, 'show')
+                {visibleRecordProperties(resource.properties, 'show', resource.propertyOrder?.show)
                   .map((p) => (
                     <div key={p.path} className="mb-8 break-inside-avoid">
                       <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">

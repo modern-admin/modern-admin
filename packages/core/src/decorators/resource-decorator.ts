@@ -18,6 +18,9 @@ const DEFAULT_NAVIGATION_ICON = 'Database'
 
 type Navigation = NonNullable<Exclude<ResourceOptions['navigation'], null>>
 
+type View = 'list' | 'show' | 'edit' | 'filter'
+const VIEWS: readonly View[] = ['list', 'show', 'edit', 'filter']
+
 export interface ResourceJSON {
   id: string
   name: string
@@ -25,6 +28,17 @@ export interface ResourceJSON {
   relatedResources: ReadonlyArray<RelatedResource>
   showRelatedResources: boolean
   properties: PropertyJSON[]
+  /**
+   * Per-view ordered list of property paths, computed by
+   * {@link ResourceDecorator.propertiesForView}. This is the single source of
+   * truth for *which* columns/fields a view shows and *in what order* —
+   * honouring `listProperties`/`showProperties`/… (explicit whitelist + order)
+   * and `position` (sort key), neither of which the flat `properties` array
+   * encodes. The SPA resolves these paths against `properties`; anything not
+   * listed (e.g. hidden by visibility, or stripped by per-record access) is
+   * simply absent from the array.
+   */
+  propertyOrder: Record<View, string[]>
   actions: ReturnType<ActionDecorator['toDescriptor']>[]
 }
 
@@ -77,9 +91,14 @@ export class ResourceDecorator {
     const virtual: PropertyDecorator[] = []
     for (const [path, opts] of Object.entries(overrides)) {
       if (knownPaths.has(path)) continue
+      // Give synthetic fields a trailing position so the position-based sort in
+      // `propertiesForView` keeps them after the real (adapter-numbered)
+      // columns, matching their append-at-end placement. A user-supplied
+      // `position` override still wins via PropertyDecorator.position().
       const synthetic = new BaseProperty({
         path,
         type: (opts.type as PropertyType | undefined) ?? 'string',
+        position: fromResource.length + virtual.length + 1,
       })
       virtual.push(new PropertyDecorator(synthetic, opts))
     }
@@ -146,8 +165,15 @@ export class ResourceDecorator {
     )
   }
 
-  /** Properties to display in `list` view, respecting `listProperties` order. */
-  propertiesForView(view: 'list' | 'show' | 'edit' | 'filter'): PropertyDecorator[] {
+  /**
+   * Ordered, view-visible properties. When the matching option
+   * (`listProperties`/`showProperties`/`editProperties`/`filterProperties`) is
+   * set it acts as an explicit whitelist + order (AdminJS semantics); otherwise
+   * the view-visible properties are sorted by `position()`. Serialised into
+   * `ResourceJSON.propertyOrder` and consumed by the SPA — do not inline this
+   * logic elsewhere.
+   */
+  propertiesForView(view: View): PropertyDecorator[] {
     const explicit = view === 'list'
       ? this.options.listProperties
       : view === 'show'
@@ -163,6 +189,14 @@ export class ResourceDecorator {
     return this.properties
       .filter((p) => p.isVisibleIn(view))
       .sort((a, b) => a.position() - b.position())
+  }
+
+  /** Ordered visible property paths per view — the wire form of the config. */
+  private buildPropertyOrder(): Record<View, string[]> {
+    return VIEWS.reduce((acc, view) => {
+      acc[view] = this.propertiesForView(view).map((p) => p.path())
+      return acc
+    }, {} as Record<View, string[]>)
   }
 
   toJSON(): ResourceJSON
@@ -190,6 +224,7 @@ export class ResourceDecorator {
           relatedResources: this.relatedResources,
           showRelatedResources: this.showRelatedResources,
           properties,
+          propertyOrder: this.buildPropertyOrder(),
           actions: descriptors.filter((d): d is ReturnType<ActionDecorator['toDescriptor']> => d !== null),
         }
       })()
@@ -201,6 +236,7 @@ export class ResourceDecorator {
       relatedResources: this.relatedResources,
       showRelatedResources: this.showRelatedResources,
       properties: this.properties.map((p) => p.toJSON()),
+      propertyOrder: this.buildPropertyOrder(),
       actions: Array.from(this.actions.values()).map((a) => a.toDescriptor()),
     }
   }
