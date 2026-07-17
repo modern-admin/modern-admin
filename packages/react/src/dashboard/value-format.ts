@@ -16,18 +16,18 @@ export function applyTransform(
   let out = value
   for (const s of steps) {
     switch (s.op) {
-      case 'divide':
-        if (s.value !== 0) out /= s.value
-        break
-      case 'multiply':
-        out *= s.value
-        break
-      case 'add':
-        out += s.value
-        break
-      case 'subtract':
-        out -= s.value
-        break
+    case 'divide':
+      if (s.value !== 0) out /= s.value
+      break
+    case 'multiply':
+      out *= s.value
+      break
+    case 'add':
+      out += s.value
+      break
+    case 'subtract':
+      out -= s.value
+      break
     }
   }
   return out

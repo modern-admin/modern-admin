@@ -326,469 +326,469 @@ export function ChartBuilderDialog({
           </TabsList>
 
           <TabsContent value="data" className="space-y-4">
-          {/* Title + order */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_8rem]">
-            <div className="space-y-1.5">
-              <Label htmlFor="chart-title">{t('chart:title')}</Label>
-              <Input
-                id="chart-title"
-                placeholder={t('chart:titlePlaceholder')}
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-1.5">
-                <Label htmlFor="chart-order">{t('chart:order')}</Label>
-                <InfoTooltip content={t('chart:orderHint')} />
+            {/* Title + order */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_8rem]">
+              <div className="space-y-1.5">
+                <Label htmlFor="chart-title">{t('chart:title')}</Label>
+                <Input
+                  id="chart-title"
+                  placeholder={t('chart:titlePlaceholder')}
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                />
               </div>
-              <Input
-                id="chart-order"
-                type="number"
-                step={1}
-                value={order}
-                onChange={(e) => setOrder(Number.isFinite(Number(e.target.value)) ? Math.trunc(Number(e.target.value)) : 0)}
-              />
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <Label htmlFor="chart-order">{t('chart:order')}</Label>
+                  <InfoTooltip content={t('chart:orderHint')} />
+                </div>
+                <Input
+                  id="chart-order"
+                  type="number"
+                  step={1}
+                  value={order}
+                  onChange={(e) => setOrder(Number.isFinite(Number(e.target.value)) ? Math.trunc(Number(e.target.value)) : 0)}
+                />
+              </div>
             </div>
-          </div>
 
-          {/* Visualisation (incl. KPI) */}
-          <div className="space-y-1.5">
-            <Label>{t('dashboard:vis')}</Label>
-            <div className="flex flex-wrap gap-2">
-              {VIS_OPTIONS.map(({ value, icon, labelKey }) => (
-                <Button
-                  key={value}
-                  type="button"
-                  variant={visualisation === value ? 'default' : 'outline'}
-                  size="sm"
-                  className="flex-1 min-w-[5rem] gap-1.5 capitalize"
-                  onClick={() => setVisualisation(value)}
-                >
-                  {icon}
-                  <span className="hidden sm:inline">{t(labelKey)}</span>
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          {/* Resource */}
-          <div className="space-y-1.5">
-            <Label htmlFor="chart-resource">{t('chart:resource')}</Label>
-            <Select value={resourceId} onValueChange={(v) => setResourceId(v)}>
-              <SelectTrigger id="chart-resource">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {resources.map((r) => (
-                  <SelectItem key={r.id} value={r.id}>
-                    {r.name}
-                    {r.name !== r.id && (
-                      <span className="ml-1.5 text-xs text-muted-foreground">({r.id})</span>
-                    )}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.resource && (
-              <p className="text-xs text-destructive">{errors.resource}</p>
-            )}
-          </div>
-
-          {/* Date field — required, drives the X-axis bucketing */}
-          <div className="space-y-1.5">
-            <Label htmlFor="chart-datefield">{t('dashboard:builder.dateField')}</Label>
-            <Select
-              value={dateField || NONE}
-              onValueChange={(v) => setDateField(v === NONE ? '' : v)}
-            >
-              <SelectTrigger id="chart-datefield">
-                <SelectValue placeholder={t('chart:selectField')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NONE}>{t('chart:selectField')}</SelectItem>
-                {(dateProps.length > 0 ? dateProps : properties).map((p) => (
-                  <SelectItem key={p.path} value={p.path}>{p.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              {t('dashboard:builder.dateFieldHint')}
-            </p>
-            {errors.dateField && (
-              <p className="text-xs text-destructive">{errors.dateField}</p>
-            )}
-          </div>
-
-          {/* Metric + field */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {/* Visualisation (incl. KPI) */}
             <div className="space-y-1.5">
-              <Label htmlFor="chart-metric">{t('chart:metric')}</Label>
-              <Select value={metric} onValueChange={(v) => setMetric(v as AggregationOpName)}>
-                <SelectTrigger id="chart-metric">
+              <Label>{t('dashboard:vis')}</Label>
+              <div className="flex flex-wrap gap-2">
+                {VIS_OPTIONS.map(({ value, icon, labelKey }) => (
+                  <Button
+                    key={value}
+                    type="button"
+                    variant={visualisation === value ? 'default' : 'outline'}
+                    size="sm"
+                    className="flex-1 min-w-[5rem] gap-1.5 capitalize"
+                    onClick={() => setVisualisation(value)}
+                  >
+                    {icon}
+                    <span className="hidden sm:inline">{t(labelKey)}</span>
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Resource */}
+            <div className="space-y-1.5">
+              <Label htmlFor="chart-resource">{t('chart:resource')}</Label>
+              <Select value={resourceId} onValueChange={(v) => setResourceId(v)}>
+                <SelectTrigger id="chart-resource">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {METRICS.map((m) => (
-                    <SelectItem key={m} value={m}>{t(`dashboard:metric${cap(m)}`)}</SelectItem>
+                  {resources.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.name}
+                      {r.name !== r.id && (
+                        <span className="ml-1.5 text-xs text-muted-foreground">({r.id})</span>
+                      )}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {errors.resource && (
+                <p className="text-xs text-destructive">{errors.resource}</p>
+              )}
             </div>
 
-            {metric !== 'count' && (
+            {/* Date field — required, drives the X-axis bucketing */}
+            <div className="space-y-1.5">
+              <Label htmlFor="chart-datefield">{t('dashboard:builder.dateField')}</Label>
+              <Select
+                value={dateField || NONE}
+                onValueChange={(v) => setDateField(v === NONE ? '' : v)}
+              >
+                <SelectTrigger id="chart-datefield">
+                  <SelectValue placeholder={t('chart:selectField')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>{t('chart:selectField')}</SelectItem>
+                  {(dateProps.length > 0 ? dateProps : properties).map((p) => (
+                    <SelectItem key={p.path} value={p.path}>{p.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {t('dashboard:builder.dateFieldHint')}
+              </p>
+              {errors.dateField && (
+                <p className="text-xs text-destructive">{errors.dateField}</p>
+              )}
+            </div>
+
+            {/* Metric + field */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="chart-field">{t('chart:aggregateField')}</Label>
-                <Select
-                  value={field || NONE}
-                  onValueChange={(v) => setField(v === NONE ? '' : v)}
-                >
-                  <SelectTrigger id="chart-field">
-                    <SelectValue placeholder={t('chart:selectField')} />
+                <Label htmlFor="chart-metric">{t('chart:metric')}</Label>
+                <Select value={metric} onValueChange={(v) => setMetric(v as AggregationOpName)}>
+                  <SelectTrigger id="chart-metric">
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={NONE}>{t('chart:selectField')}</SelectItem>
-                    {numericProps.map((p) => (
-                      <SelectItem key={p.path} value={p.path}>{p.label}</SelectItem>
+                    {METRICS.map((m) => (
+                      <SelectItem key={m} value={m}>{t(`dashboard:metric${cap(m)}`)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.field && (
-                  <p className="text-xs text-destructive">{errors.field}</p>
+              </div>
+
+              {metric !== 'count' && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="chart-field">{t('chart:aggregateField')}</Label>
+                  <Select
+                    value={field || NONE}
+                    onValueChange={(v) => setField(v === NONE ? '' : v)}
+                  >
+                    <SelectTrigger id="chart-field">
+                      <SelectValue placeholder={t('chart:selectField')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NONE}>{t('chart:selectField')}</SelectItem>
+                      {numericProps.map((p) => (
+                        <SelectItem key={p.path} value={p.path}>{p.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.field && (
+                    <p className="text-xs text-destructive">{errors.field}</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Secondary groupBy + topN — non-KPI only */}
+            {!isKpi && (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="chart-groupby">
+                    {t('dashboard:builder.secondaryGroupBy')}
+                  </Label>
+                  <Select
+                    value={groupBy || NONE}
+                    onValueChange={(v) => {
+                      const path = v === NONE ? '' : v
+                      setGroupBy(path)
+                      setGroupByLabelResource(resolveGroupByLabelResource(path, properties))
+                    }}
+                  >
+                    <SelectTrigger id="chart-groupby">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NONE}>{t('dashboard:builder.noBreakdown')}</SelectItem>
+                      {properties
+                        .filter((p) => isGroupable(p) && p.path !== dateField)
+                        .map((p) => (
+                          <SelectItem key={p.path} value={p.path}>{p.label}</SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {groupBy && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="chart-topn">{t('dashboard:builder.topN')}</Label>
+                    <Input
+                      id="chart-topn"
+                      type="number"
+                      min={1}
+                      max={50}
+                      value={topN}
+                      onChange={(e) =>
+                        setTopN(Math.max(1, Math.min(50, Number(e.target.value) || 10)))
+                      }
+                    />
+                  </div>
                 )}
               </div>
             )}
-          </div>
 
-          {/* Secondary groupBy + topN — non-KPI only */}
-          {!isKpi && (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="chart-groupby">
-                  {t('dashboard:builder.secondaryGroupBy')}
-                </Label>
-                <Select
-                  value={groupBy || NONE}
-                  onValueChange={(v) => {
-                    const path = v === NONE ? '' : v
-                    setGroupBy(path)
-                    setGroupByLabelResource(resolveGroupByLabelResource(path, properties))
-                  }}
-                >
-                  <SelectTrigger id="chart-groupby">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={NONE}>{t('dashboard:builder.noBreakdown')}</SelectItem>
-                    {properties
-                      .filter((p) => isGroupable(p) && p.path !== dateField)
-                      .map((p) => (
-                        <SelectItem key={p.path} value={p.path}>{p.label}</SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {groupBy && (
-                <div className="space-y-1.5">
-                  <Label htmlFor="chart-topn">{t('dashboard:builder.topN')}</Label>
-                  <Input
-                    id="chart-topn"
-                    type="number"
-                    min={1}
-                    max={50}
-                    value={topN}
-                    onChange={(e) =>
-                      setTopN(Math.max(1, Math.min(50, Number(e.target.value) || 10)))
-                    }
-                  />
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Default time-range preset. Custom ranges are picked on the
+            {/* Default time-range preset. Custom ranges are picked on the
               widget toolbar — not in the builder. */}
-          <div className="space-y-1.5">
-            <Label>{t('dashboard:builder.range')}</Label>
-            <div className="flex flex-wrap gap-2">
-              {PRESETS.map((p) => (
-                <Button
-                  key={p}
-                  type="button"
-                  variant={preset === p ? 'default' : 'outline'}
-                  size="sm"
-                  className="flex-1 min-w-[4rem]"
-                  onClick={() => setPreset(p)}
-                >
-                  {t(`dashboard:range.${p}`)}
-                </Button>
-              ))}
+            <div className="space-y-1.5">
+              <Label>{t('dashboard:builder.range')}</Label>
+              <div className="flex flex-wrap gap-2">
+                {PRESETS.map((p) => (
+                  <Button
+                    key={p}
+                    type="button"
+                    variant={preset === p ? 'default' : 'outline'}
+                    size="sm"
+                    className="flex-1 min-w-[4rem]"
+                    onClick={() => setPreset(p)}
+                  >
+                    {t(`dashboard:range.${p}`)}
+                  </Button>
+                ))}
+              </div>
             </div>
-          </div>
           </TabsContent>
 
           <TabsContent value="display" className="space-y-4">
-          {/* Previous-period compare — time-series without breakdown only. */}
-          {!isKpi && (
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5">
-                  <Label htmlFor="chart-compare">
-                    {t('dashboard:builder.comparePrevious')}
-                  </Label>
-                  <InfoTooltip content={t('dashboard:builder.comparePreviousHint')} />
+            {/* Previous-period compare — time-series without breakdown only. */}
+            {!isKpi && (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <Label htmlFor="chart-compare">
+                      {t('dashboard:builder.comparePrevious')}
+                    </Label>
+                    <InfoTooltip content={t('dashboard:builder.comparePreviousHint')} />
+                  </div>
+                  <Switch
+                    id="chart-compare"
+                    checked={!groupBy && comparePrevious}
+                    disabled={!!groupBy}
+                    onCheckedChange={setComparePrevious}
+                    aria-label={t('dashboard:builder.comparePrevious')}
+                  />
                 </div>
-                <Switch
-                  id="chart-compare"
-                  checked={!groupBy && comparePrevious}
-                  disabled={!!groupBy}
-                  onCheckedChange={setComparePrevious}
-                  aria-label={t('dashboard:builder.comparePrevious')}
-                />
+                {!!groupBy && (
+                  <p className="text-xs text-muted-foreground">
+                    {t('dashboard:builder.comparePreviousDisabled')}
+                  </p>
+                )}
               </div>
-              {!!groupBy && (
-                <p className="text-xs text-muted-foreground">
-                  {t('dashboard:builder.comparePreviousDisabled')}
-                </p>
-              )}
-            </div>
-          )}
+            )}
 
-          {/* Value transform — ordered scalar pipeline (e.g. cents → dollars). */}
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-1.5">
-              <Label>{t('dashboard:builder.transform')}</Label>
-              <InfoTooltip content={t('dashboard:builder.transformHint')} />
-            </div>
-            {transform.map((step, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <Select
-                  value={step.op}
-                  onValueChange={(v) =>
-                    setTransform((prev) =>
-                      prev.map((s, j) =>
-                        j === i ? { ...s, op: v as ChartTransformStep['op'] } : s,
-                      ),
-                    )
-                  }
-                >
-                  <SelectTrigger className="w-40" aria-label={t('dashboard:builder.transform')}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TRANSFORM_OPS.map((op) => (
-                      <SelectItem key={op} value={op}>
-                        {t(`dashboard:builder.op${cap(op)}`)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  type="number"
-                  className="w-28"
-                  value={Number.isFinite(step.value) ? step.value : ''}
-                  onChange={(e) =>
-                    setTransform((prev) =>
-                      prev.map((s, j) =>
-                        j === i ? { ...s, value: Number(e.target.value) } : s,
-                      ),
-                    )
-                  }
-                />
+            {/* Value transform — ordered scalar pipeline (e.g. cents → dollars). */}
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-1.5">
+                <Label>{t('dashboard:builder.transform')}</Label>
+                <InfoTooltip content={t('dashboard:builder.transformHint')} />
+              </div>
+              {transform.map((step, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <Select
+                    value={step.op}
+                    onValueChange={(v) =>
+                      setTransform((prev) =>
+                        prev.map((s, j) =>
+                          j === i ? { ...s, op: v as ChartTransformStep['op'] } : s,
+                        ),
+                      )
+                    }
+                  >
+                    <SelectTrigger className="w-40" aria-label={t('dashboard:builder.transform')}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TRANSFORM_OPS.map((op) => (
+                        <SelectItem key={op} value={op}>
+                          {t(`dashboard:builder.op${cap(op)}`)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    type="number"
+                    className="w-28"
+                    value={Number.isFinite(step.value) ? step.value : ''}
+                    onChange={(e) =>
+                      setTransform((prev) =>
+                        prev.map((s, j) =>
+                          j === i ? { ...s, value: Number(e.target.value) } : s,
+                        ),
+                      )
+                    }
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-8"
+                    onClick={() =>
+                      setTransform((prev) => prev.filter((_, j) => j !== i))
+                    }
+                    aria-label={t('dashboard:builder.transformRemove')}
+                  >
+                    <X className="size-4" />
+                  </Button>
+                </div>
+              ))}
+              {transform.length < 8 && (
                 <Button
                   type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="size-8"
+                  variant="outline"
+                  size="sm"
                   onClick={() =>
-                    setTransform((prev) => prev.filter((_, j) => j !== i))
+                    setTransform((prev) => [...prev, { op: 'divide', value: 100 }])
                   }
-                  aria-label={t('dashboard:builder.transformRemove')}
                 >
-                  <X className="size-4" />
+                  <Plus className="size-4 mr-1" />
+                  {t('dashboard:builder.transformAdd')}
                 </Button>
-              </div>
-            ))}
-            {transform.length < 8 && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setTransform((prev) => [...prev, { op: 'divide', value: 100 }])
-                }
-              >
-                <Plus className="size-4 mr-1" />
-                {t('dashboard:builder.transformAdd')}
-              </Button>
-            )}
-          </div>
+              )}
+            </div>
 
-          {/* Value format */}
-          <div className="space-y-1.5">
-            <Label>{t('dashboard:builder.format')}</Label>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="space-y-1">
-                <Label
-                  htmlFor="chart-format-style"
-                  className="text-xs text-muted-foreground"
-                >
-                  {t('dashboard:builder.formatStyle')}
-                </Label>
-                <Select
-                  value={formatStyle}
-                  onValueChange={(v) => setFormatStyle(v as NonNullable<ChartFormat['style']>)}
-                >
-                  <SelectTrigger id="chart-format-style">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {FORMAT_STYLES.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {t(`dashboard:builder.format${cap(s)}`)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {formatStyle === 'currency' && (
+            {/* Value format */}
+            <div className="space-y-1.5">
+              <Label>{t('dashboard:builder.format')}</Label>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1">
                   <Label
-                    htmlFor="chart-format-currency"
+                    htmlFor="chart-format-style"
                     className="text-xs text-muted-foreground"
                   >
-                    {t('dashboard:builder.formatCurrencyCode')}
+                    {t('dashboard:builder.formatStyle')}
+                  </Label>
+                  <Select
+                    value={formatStyle}
+                    onValueChange={(v) => setFormatStyle(v as NonNullable<ChartFormat['style']>)}
+                  >
+                    <SelectTrigger id="chart-format-style">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {FORMAT_STYLES.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {t(`dashboard:builder.format${cap(s)}`)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {formatStyle === 'currency' && (
+                  <div className="space-y-1">
+                    <Label
+                      htmlFor="chart-format-currency"
+                      className="text-xs text-muted-foreground"
+                    >
+                      {t('dashboard:builder.formatCurrencyCode')}
+                    </Label>
+                    <Input
+                      id="chart-format-currency"
+                      placeholder="USD"
+                      maxLength={3}
+                      value={currency}
+                      onChange={(e) => setCurrency(e.target.value.toUpperCase())}
+                    />
+                  </div>
+                )}
+                <div className="space-y-1">
+                  <Label
+                    htmlFor="chart-format-decimals"
+                    className="text-xs text-muted-foreground"
+                  >
+                    {t('dashboard:builder.formatDecimals')}
                   </Label>
                   <Input
-                    id="chart-format-currency"
-                    placeholder="USD"
-                    maxLength={3}
-                    value={currency}
-                    onChange={(e) => setCurrency(e.target.value.toUpperCase())}
+                    id="chart-format-decimals"
+                    type="number"
+                    min={0}
+                    max={6}
+                    value={decimals}
+                    onChange={(e) => setDecimals(e.target.value)}
                   />
                 </div>
-              )}
-              <div className="space-y-1">
-                <Label
-                  htmlFor="chart-format-decimals"
-                  className="text-xs text-muted-foreground"
-                >
-                  {t('dashboard:builder.formatDecimals')}
-                </Label>
-                <Input
-                  id="chart-format-decimals"
-                  type="number"
-                  min={0}
-                  max={6}
-                  value={decimals}
-                  onChange={(e) => setDecimals(e.target.value)}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label
-                  htmlFor="chart-format-prefix"
-                  className="text-xs text-muted-foreground"
-                >
-                  {t('dashboard:builder.formatPrefix')} / {t('dashboard:builder.formatSuffix')}
-                </Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="chart-format-prefix"
-                    maxLength={8}
-                    placeholder={t('dashboard:builder.formatPrefix')}
-                    value={prefix}
-                    onChange={(e) => setPrefix(e.target.value)}
-                  />
-                  <Input
-                    maxLength={8}
-                    placeholder={t('dashboard:builder.formatSuffix')}
-                    value={suffix}
-                    onChange={(e) => setSuffix(e.target.value)}
-                    aria-label={t('dashboard:builder.formatSuffix')}
+                <div className="space-y-1">
+                  <Label
+                    htmlFor="chart-format-prefix"
+                    className="text-xs text-muted-foreground"
+                  >
+                    {t('dashboard:builder.formatPrefix')} / {t('dashboard:builder.formatSuffix')}
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="chart-format-prefix"
+                      maxLength={8}
+                      placeholder={t('dashboard:builder.formatPrefix')}
+                      value={prefix}
+                      onChange={(e) => setPrefix(e.target.value)}
+                    />
+                    <Input
+                      maxLength={8}
+                      placeholder={t('dashboard:builder.formatSuffix')}
+                      value={suffix}
+                      onChange={(e) => setSuffix(e.target.value)}
+                      aria-label={t('dashboard:builder.formatSuffix')}
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-2 sm:col-span-2">
+                  <Label htmlFor="chart-format-compact">
+                    {t('dashboard:builder.formatCompact')}
+                  </Label>
+                  <Switch
+                    id="chart-format-compact"
+                    checked={compact}
+                    onCheckedChange={setCompact}
                   />
                 </div>
               </div>
-              <div className="flex items-center justify-between gap-2 sm:col-span-2">
-                <Label htmlFor="chart-format-compact">
-                  {t('dashboard:builder.formatCompact')}
-                </Label>
-                <Switch
-                  id="chart-format-compact"
-                  checked={compact}
-                  onCheckedChange={setCompact}
-                />
-              </div>
+              <p className="text-xs text-muted-foreground tabular-nums">{previewText}</p>
             </div>
-            <p className="text-xs text-muted-foreground tabular-nums">{previewText}</p>
-          </div>
 
-          {/* Series color — single-series charts; breakdown colors are edited
+            {/* Series color — single-series charts; breakdown colors are edited
               from the widget menu once the series are known. */}
-          {!isKpi && !groupBy && (
-            <div className="space-y-1.5">
-              <Label>{t('dashboard:builder.color')}</Label>
-              <ColorSwatchPicker
-                value={totalColor}
-                onChange={setTotalColor}
-                presets={CHART_COLOR_PRESETS}
-                labels={{
-                  custom: t('dashboard:widget.colorCustom'),
-                  pick: t('dashboard:widget.colorPick'),
-                  auto: t('dashboard:widget.colorAuto'),
-                }}
-              />
-            </div>
-          )}
+            {!isKpi && !groupBy && (
+              <div className="space-y-1.5">
+                <Label>{t('dashboard:builder.color')}</Label>
+                <ColorSwatchPicker
+                  value={totalColor}
+                  onChange={setTotalColor}
+                  presets={CHART_COLOR_PRESETS}
+                  labels={{
+                    custom: t('dashboard:widget.colorCustom'),
+                    pick: t('dashboard:widget.colorPick'),
+                    auto: t('dashboard:widget.colorAuto'),
+                  }}
+                />
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="filters" className="space-y-4">
-          {/* Filters — one row per property, with a checkbox to mark the
+            {/* Filters — one row per property, with a checkbox to mark the
               filter as a "quick filter" (exposed above the chart for inline
               tweaking on the dashboard). Reference fields use a combobox. */}
-          {properties.length > 0 ? (
-            <div className="space-y-1.5">
-              <Label>{t('dashboard:builder.filters')}</Label>
-              <p className="text-xs text-muted-foreground">
-                {t('dashboard:builder.filtersHint')}
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
-                {properties.filter(isFilterable).map((p) => {
-                  const exposed = quickFilters.includes(p.path)
-                  return (
-                    <div key={p.path} className="space-y-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <Label
-                          htmlFor={`flt-${p.path}`}
-                          className="text-xs text-muted-foreground"
-                        >
-                          {p.label}
-                        </Label>
-                        <Switch
-                          checked={exposed}
-                          onCheckedChange={() => toggleQuickFilter(p.path)}
-                          aria-label={t('dashboard:builder.quickFilterToggle').replace(
-                            '{field}',
-                            p.label,
-                          )}
-                          title={t('dashboard:builder.quickFilterHint')}
+            {properties.length > 0 ? (
+              <div className="space-y-1.5">
+                <Label>{t('dashboard:builder.filters')}</Label>
+                <p className="text-xs text-muted-foreground">
+                  {t('dashboard:builder.filtersHint')}
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
+                  {properties.filter(isFilterable).map((p) => {
+                    const exposed = quickFilters.includes(p.path)
+                    return (
+                      <div key={p.path} className="space-y-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <Label
+                            htmlFor={`flt-${p.path}`}
+                            className="text-xs text-muted-foreground"
+                          >
+                            {p.label}
+                          </Label>
+                          <Switch
+                            checked={exposed}
+                            onCheckedChange={() => toggleQuickFilter(p.path)}
+                            aria-label={t('dashboard:builder.quickFilterToggle').replace(
+                              '{field}',
+                              p.label,
+                            )}
+                            title={t('dashboard:builder.quickFilterHint')}
+                          />
+                        </div>
+                        <FilterInput
+                          property={p}
+                          value={filters[p.path] ?? ''}
+                          onChange={(v) => handleFilterChange(p.path, v)}
                         />
                       </div>
-                      <FilterInput
-                        property={p}
-                        value={filters[p.path] ?? ''}
-                        onChange={(v) => handleFilterChange(p.path, v)}
-                      />
-                    </div>
-                  )
-                })}
+                    )
+                  })}
+                </div>
               </div>
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              {t('dashboard:builder.filtersEmpty')}
-            </p>
-          )}
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {t('dashboard:builder.filtersEmpty')}
+              </p>
+            )}
           </TabsContent>
         </Tabs>
 

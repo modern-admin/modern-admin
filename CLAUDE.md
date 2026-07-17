@@ -42,8 +42,13 @@ When touching one of those, expect to update call sites for the new API.
   `experimentalDecorators: true`, `emitDecoratorMetadata: true`,
   `useDefineForClassFields: false`.
 - **Tests**: `bun test`, files in `<pkg>/test/`.
-- **Lint/format**: project-wide config TBD; do not introduce a tool without
-  asking.
+- **Lint (mandatory)**: ESLint is configured project-wide (`bun run lint` =
+  `eslint .` per package; CI runs it and fails on errors). After **any** code
+  change, run `bun run lint` (or scope to the touched package,
+  e.g. `bun run --filter '@modern-admin/react' lint`) and fix every error
+  before finishing — use `lint --fix` for autofixable issues (indent, import
+  order, etc.). Never leave lint red. Do not add or swap a lint/format tool
+  without asking.
 
 ## Architecture rules
 
