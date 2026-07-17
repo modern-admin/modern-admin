@@ -1,5 +1,11 @@
 # @modern-admin/core
 
+## 0.3.3
+
+### Patch Changes
+
+- [`e92a998`](https://github.com/modern-admin/modern-admin/commit/e92a9983cdd14125ebb4dd0cd9f8062216d18a5c) Thanks [@SergiyIva](https://github.com/SergiyIva)! - column order fix
+
 ## 0.3.2
 
 ### Patch Changes

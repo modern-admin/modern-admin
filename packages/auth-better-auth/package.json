@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/auth-better-auth",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Better Auth provider integration for Modern Admin (cookie sessions + API keys).",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/auth-better-auth#readme",
   "keywords": [
