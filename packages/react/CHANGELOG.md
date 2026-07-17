@@ -1,5 +1,11 @@
 # @modern-admin/react
 
+## 0.3.1
+
+### Patch Changes
+
+- [`545c473`](https://github.com/modern-admin/modern-admin/commit/545c4732c1c488e903017f218b80ed4a97a5a5e8) Thanks [@SergiyIva](https://github.com/SergiyIva)! - locale time ui shows
+
 ## 0.3.0
 
 ### Minor Changes
