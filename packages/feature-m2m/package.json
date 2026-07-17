@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/feature-m2m",
-  "version": "0.3.0",
+  "version": "0.3.2",
   "description": "Many-to-many relation property type for Modern Admin.",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/feature-m2m#readme",
   "keywords": [
