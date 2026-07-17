@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/realtime",
-  "version": "0.3.0",
+  "version": "0.3.2",
   "description": "WebSocket gateway + realtime bus implementations for Modern Admin.",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/realtime#readme",
   "keywords": [

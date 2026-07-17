@@ -1,5 +1,15 @@
 # @modern-admin/web
 
+## 0.3.2
+
+### Patch Changes
+
+- Updated dependencies [[`cdc8639`](https://github.com/modern-admin/modern-admin/commit/cdc86393f211e8d10b856d9091baa910a11e739f)]:
+  - @modern-admin/react@0.3.2
+  - @modern-admin/core@0.3.2
+  - @modern-admin/i18n@0.3.2
+  - @modern-admin/ui@0.3.2
+
 ## 0.3.0
 
 ### Minor Changes
