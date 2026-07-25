@@ -1,4 +1,172 @@
-# Modern Admin — project rules for Claude
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+Modern Admin is a universal admin-panel framework (an adapter/decorator model
+in the spirit of AdminJS, on a current stack). It is a **bun workspaces
+monorepo**: `packages/*` are the published `@modern-admin/*` packages,
+`apps/*` are private reference apps plus the Playwright harness.
+
+## Commands
+
+```bash
+bun install                    # install all workspaces
+bun run docker:up              # Postgres 18 + Redis 8 (docker-compose.yml)
+bun run docker:down
+
+bun run dev:api                # NestJS reference API   → http://localhost:3001
+bun run dev:web                # Vite + React SPA       → http://localhost:3000
+
+bun run typecheck              # every workspace (tsc --noEmit)
+bun run lint                   # every workspace (eslint .)
+bun test                       # unit tests, all packages (= bun --filter '*' test)
+bun run build                  # build all publishable packages
+bun run e2e                    # Playwright suite (apps/e2e)
+```
+
+Scoping to one package — both forms work:
+
+```bash
+bun run --filter '@modern-admin/react' lint      # by package name
+bun test --cwd packages/core                     # tests of one package
+bun test packages/core/test/filter.test.ts       # a single test file
+bun test --cwd packages/core -t 'parses between' # a single test by name
+bun run e2e list-crud                            # a single e2e spec (path substring)
+```
+
+Prisma (reference app; **no migrations are checked in** — the schema is pushed):
+
+```bash
+bun run --filter @modern-admin/app-api-prisma prisma:generate   # needed before typecheck
+bun run --filter @modern-admin/app-api-prisma prisma:push
+bun run --filter @modern-admin/app-api-prisma prisma:studio
+```
+
+Background dev servers with captured logs (`scripts/dev.sh`, useful when you
+cannot attach to a live terminal):
+
+```bash
+bun run dev:start              # starts api-prisma + web, logs → .dev-logs/<svc>.log
+bun run dev:status
+bun run dev:stop
+scripts/dev.sh tail web
+```
+
+### Port gotcha
+
+`bun run dev:web` defaults to **3000** (`WEB_PORT`), but `scripts/dev.sh` and
+`apps/e2e/playwright.config.ts` use **5173** so Playwright's
+`reuseExistingServer` can attach to an already-running dev server. If you
+start the web app manually and then run e2e, start it on 5173.
+
+### CI (`.github/workflows/ci.yml`)
+
+Three jobs: **check** (install → `prisma generate` → typecheck → lint → unit
+tests; hermetic, no services), **e2e** (docker-compose Postgres/Redis,
+`prisma:push`, `build:standalone`, everything except the visual-regression
+spec), and **e2e-visual** (that spec only, inside
+`mcr.microsoft.com/playwright:v1.61.1-noble` so the checked-in
+`*-chromium-linux.png` baselines match byte-for-byte — regenerate baselines in
+that same image). The api app boots `ModernAdminStaticUiModule`, which reads
+`packages/web/dist/standalone/index.html`, so
+`bun run --filter @modern-admin/web build:standalone` must run before e2e.
+
+## Architecture
+
+```
+Frontend (Vite 8 · React 19 · shadcn/ui · TanStack Query/Router)
+        │ REST / GraphQL / WebSocket
+@modern-admin/nest        REST controllers · guards · cache interceptor · OpenAPI
+@modern-admin/graphql     schema builder · DataLoader · uploads
+@modern-admin/realtime    WS gateway · Redis pub/sub
+        │  all of them call ModernAdmin.invoke()
+@modern-admin/core        ModernAdmin · ResourcesFactory · decorators · actions
+                          Filter · ports · system stores · dashboard
+        │
+adapter-{prisma,drizzle} · system-{prisma,drizzle} · feature-* · auth-better-auth · cache-redis
+```
+
+**Layering is the load-bearing rule.** `packages/core` defines only
+abstractions (`BaseDatabase` / `BaseResource` / `BaseProperty` / `BaseRecord`,
+Zod-validated decorator options, actions, ports) and must never import an ORM,
+transport, or UI library. ORM code lives in exactly one `packages/adapter-*`
+each; transports live in `packages/nest` / `packages/graphql` and consume
+`ModernAdmin.invoke()` rather than reaching into resources directly.
+
+### The `invoke()` pipeline
+
+`packages/core/src/modern-admin.ts` is the single funnel every transport goes
+through. Read it before changing action behavior. Order:
+
+1. `findResource` → `resource.decorate()` → `getAction(name)`; unknown action
+   throws `ActionNotFoundError`.
+2. Build `ActionContext` (`admin`, `resource`, `action`, `cache`,
+   `cacheRuntime`, optional `currentAdmin`).
+3. Hydrate `context.record` (record actions) or `context.records` (bulk
+   actions) from `params.recordId` / `params.recordIds`.
+4. `assertActionAccess` — the authorization gate.
+   `canAccess(resourceId, action, currentAdmin)` is the public non-throwing
+   variant reusing the exact same gates; callers outside the pipeline (WS
+   subscriptions, room joins) must use it rather than re-implementing checks.
+5. `before` hooks (single fn or array, chained) → `action.handler` → `after`
+   hooks.
+6. `invalidateMutationCaches` — runs *after* all hooks so anything an
+   after-hook writes (m2m junction diffs, upload persistence) can't be
+   re-cached by a concurrent read. Built-ins (`new`/`edit`/`delete`/
+   `bulkDelete`) participate automatically; custom actions opt in with
+   `invalidates: true | string[]`.
+7. `filterActionResponseProperties` (drops non-accessible properties) →
+   `emitMutationEvents` (created/updated/deleted onto the realtime bus; bus
+   errors are swallowed so the action result stays authoritative).
+
+Caching is configured per resource via `ResourceOptions.cache`
+(`{ action?: { enabled, ttl }, http?: { enabled, ttl } }`). HTTP responses and
+the action cache share one `listTag` / `recordTag` split so invalidation is
+targeted. Core ships `MemoryCacheProvider` (in-process, TTL + tag index) and
+`NoopCacheProvider`; Redis lives in `@modern-admin/cache-redis` and carries
+cross-instance invalidation over pub/sub — the same channel the WebSocket
+realtime events ride.
+
+### Ports
+
+Auth, cache, cross-instance cache, component loading, realtime bus, and
+current-admin are **ports**: interfaces in `packages/core/src/ports/`, each
+with a no-op or in-memory default plus a real pluggable implementation. Same
+for the system stores (`ILogStore`, `IHistoryStore`, `IWebhookStore`,
+`IAiTaskStore`, …) — in-memory defaults in `packages/core/src/system/memory.ts`,
+real ones in `system-prisma` / `system-drizzle`. When adding a capability,
+add the port + default in core, the real implementation in its own package.
+
+### Feature plugins
+
+Two scopes, both transforming `ResourceOptions` by **chaining** hooks (never
+overwriting):
+
+- **Local `FeatureFn`** — per resource, in `ResourceWithOptions.features`:
+  `uploadFeature`, `historyFeature`, `passwordsFeature`, `m2mFeature`,
+  `jsonByKeyFeature`, `actionLoggingFeature`, `aiFillFeature`.
+- **Global `GlobalPlugin`** — process-wide, in
+  `ModernAdmin({ plugins: [...] })`: `actionLoggingPlugin`, `historyPlugin`,
+  `webhookPlugin`.
+
+### Reference apps and the source registry
+
+`apps/_shared` holds the admin config (`@AdminResource` controllers, one
+directory per resource) shared by the host apps. Because
+`@AdminResource({ source: () => … })` thunks are evaluated during
+`ResourcesFactory.buildResources`, and each adapter needs a different raw
+source shape, shared controllers reference resources by *logical id* and
+resolve through `apps/_shared/src/admin/source-registry.ts`: the host app calls
+`registerAdminSource(id, factory)` at module-load time (before Nest bootstrap)
+and controllers declare `source: () => adminSource('customers')`.
+
+### Frontend boundaries
+
+`packages/ui` is i18n-unaware shadcn/Radix primitives. `packages/react` is the
+translation boundary and holds hooks, `AdminClient`, routing, pages, the
+dashboard, and registries (component/icon/hotkey/extension). `packages/web` is
+the pre-built SPA, built twice: `--mode lib` (mountable) and
+`--mode standalone` (served by `@modern-admin/nest`'s static-ui middleware).
 
 ## Dependency policy (mandatory)
 
@@ -7,125 +175,125 @@ adding or upgrading a dependency, check the registry for the latest stable
 release and pin to it. Never pick an older version to dodge breaking changes —
 adapt the code to the new API instead.
 
-When upgrading, pay attention to the major versions currently locked:
+Majors currently locked, with the gotchas they impose:
 
-| Package                | Current major   | Notes                                               |
-| ---------------------- | --------------- | --------------------------------------------------- |
-| typescript             | 6.x             | stricter checks; use `as unknown as T` for variance |
-| @nestjs/*              | 11.x            | Node 20+; cache-manager API changed                 |
-| zod                    | 4.x             | new error API; `z.email()` instead of `.email()`    |
-| vite                   | 8.x             | Node bumped; SSR/Rolldown changes                   |
-| @vitejs/plugin-react   | 6.x             | matches Vite 8                                      |
-| tailwindcss            | 4.x             | CSS-first config (`@theme`, `@import "tailwindcss"`) — no `tailwind.config.js` |
-| @hookform/resolvers    | 5.x             | API tweaks                                          |
-| lucide-react           | 1.x             | verify icon names                                   |
-| tailwind-merge         | 3.x             |                                                     |
-| prisma / @prisma/client| 7.x             | new ESM engine, client API changes                  |
-| drizzle-orm            | 0.45.x          | driver API and schema-gen changes                   |
-| better-auth            | 1.6+            |                                                     |
-| react / react-dom      | 19.x            | use `import type { ReactElement } from 'react'` instead of `JSX.Element` |
-| @tanstack/react-query  | 5.x             |                                                     |
-| @tanstack/react-router | 1.x             | browser history via `createBrowserHistory()`; NOT TanStack Start (no SSR) |
+| Package                 | Current major | Notes                                                                          |
+| ----------------------- | ------------- | ------------------------------------------------------------------------------ |
+| typescript              | 6.x           | stricter checks; use `as unknown as T` for variance/abstract-ctor casts         |
+| eslint / typescript-eslint | 10.x / 8.x | flat config, `eslint.base.config.mjs` at the root                              |
+| @nestjs/*               | 11.x          | Node 20+; cache-manager API changed                                            |
+| zod                     | 4.x           | new error API; `z.email()` instead of `.email()`                               |
+| vite                    | 8.x           | Node bumped; SSR/Rolldown changes                                              |
+| @vitejs/plugin-react    | 6.x           | matches Vite 8                                                                 |
+| tailwindcss             | 4.x           | CSS-first config (`@theme`, `@import "tailwindcss"`) — no `tailwind.config.js`  |
+| react / react-dom       | 19.x          | `import type { ReactElement } from 'react'`, not `JSX.Element`                  |
+| @tanstack/react-query   | 5.x           |                                                                                |
+| @tanstack/react-router  | 1.x           | browser history via `createBrowserHistory()`; NOT TanStack Start (no SSR)      |
+| @hookform/resolvers     | 5.x           | API tweaks                                                                     |
+| lucide-react            | 1.x           | verify icon names                                                              |
+| tailwind-merge          | 3.x           |                                                                                |
+| prisma / @prisma/client | 7.x           | new ESM engine, client API changes                                             |
+| drizzle-orm             | 0.45.x        | driver API and schema-gen changes                                              |
+| better-auth             | 1.6+          |                                                                                |
+| graphql                 | 17.x          |                                                                                |
+| bullmq                  | 5.x           |                                                                                |
+| recharts                | 3.x           |                                                                                |
 
 When touching one of those, expect to update call sites for the new API.
 
 ## Tooling
 
-- **Package manager / runtime: bun.** Use `bun install`, `bun add`, `bun run`,
-  `bun test`. Never use npm/yarn/pnpm.
-- **Workspaces**: `apps/*` and `packages/*` registered in the root
-  `package.json`. Cross-workspace deps use `workspace:*`.
-- **TypeScript** presets live in `packages/tsconfig`. Each package extends
-  `@modern-admin/tsconfig/node.json` or `react.json`.
-- **Bun TS types**: `"types": ["bun"]` (not `bun-types`).
-- **NestJS legacy decorators** (apps/api-prisma): keep
-  `experimentalDecorators: true`, `emitDecoratorMetadata: true`,
-  `useDefineForClassFields: false`.
-- **Tests**: `bun test`, files in `<pkg>/test/`.
-- **Lint (mandatory)**: ESLint is configured project-wide (`bun run lint` =
-  `eslint .` per package; CI runs it and fails on errors). After **any** code
-  change, run `bun run lint` (or scope to the touched package,
-  e.g. `bun run --filter '@modern-admin/react' lint`) and fix every error
-  before finishing — use `lint --fix` for autofixable issues (indent, import
-  order, etc.). Never leave lint red. Do not add or swap a lint/format tool
-  without asking.
-
-## Architecture rules
-
-- Never tie `packages/core` to a specific ORM, transport, or UI lib. Core only
-  defines abstractions (BaseDatabase/BaseResource/BaseProperty/BaseRecord,
-  decorators, actions, ports).
-- Adapters (`packages/adapter-*`) implement core abstractions for one ORM each.
-- Transports (`packages/nest`) consume `ModernAdmin.invoke()` rather than
-  reaching into resources directly.
-- Auth, cache, and component loading are **ports** (interfaces in core) with
-  default no-op implementations and pluggable real ones.
-- Validation is **Zod everywhere** — DTOs, decorator options, form schemas.
-- Cross-instance cache invalidation goes through Redis pub/sub. WebSocket
-  realtime events ride the same channel.
+- **Package manager / runtime: bun** (`bun install`, `bun add`, `bun run`,
+  `bun test`). Never npm/yarn/pnpm. Cross-workspace deps use `workspace:*`.
+- **TypeScript** presets in `packages/tsconfig`; each package extends
+  `@modern-admin/tsconfig/node.json` or `react.json`. Bun types are
+  `"types": ["bun"]` (not `bun-types`).
+- **NestJS legacy decorators** (`apps/api-prisma`, `packages/nest`): keep
+  `experimentalDecorators`, `emitDecoratorMetadata`,
+  `useDefineForClassFields: false`. Related: the ESLint rule
+  `@typescript-eslint/consistent-type-imports` is **intentionally disabled** —
+  its autofix rewrites constructor param types to `import type`, which erases
+  at runtime and breaks Nest DI. Don't enable it.
+- **Lint is mandatory.** After **any** code change run `bun run lint` (or scope
+  it to the touched package) and fix every error; use `--fix` for the
+  mechanical ones. Never leave lint red. Do not add or swap a lint/format tool
+  without asking. Enforced style: 2-space indent, single quotes, **no
+  semicolons**, trailing commas in multiline, spaces inside braces.
+- **Tests** live in `<pkg>/test/` and run with `bun test`. Unit tests are
+  hermetic — Redis is faked and no Postgres is required. E2E specs live in
+  `apps/e2e/tests/` and need docker-compose services + `SEED_DEMO=1` fixtures.
+- **Agent skills** vendored under `.agents/skills/` (`graphql-schema`,
+  `graphql-operations` from apollographql, `shadcn`), pinned in
+  `skills-lock.json`. Consult them when doing GraphQL schema/operation or
+  shadcn component work.
 
 ## i18n rule (mandatory)
 
-**No hardcoded user-visible text anywhere.** Every string that appears in the
-UI must be internationalised:
+**No hardcoded user-visible text anywhere.**
 
-- All keys live in `packages/i18n/src/locales/en.ts` (source of truth) and
-  mirrored to all other locale files (`de`, `es`, `fr`, `it`, `ja`, `pl`,
-  `pt-BR`, `ru`).
-- `packages/ui` components are i18n-unaware by design (no direct `useI18n`
-  calls). They accept an optional `labels?: { ... }` prop with English
-  fallback defaults so they work standalone in tests/Storybook.
-- The `packages/react` layer is the translation boundary: it calls
-  `t('namespace:key')` and passes the result via the component's `labels`
-  prop (or named prop for single strings).
-- When adding any new UI component or new visible string to an existing one:
-  1. Add the key(s) to `en.ts` first.
-  2. Add translations to **all** other locale files in the same commit.
-  3. Add the `labels` prop (or named prop) to the UI component.
-  4. Wire `t('...')` in the `packages/react` call site.
-- Template strings use `{placeholder}` syntax and are replaced at the
-  component level: `l.uploadingFile.replace('{name}', uploadingName)`.
+- Keys live in `packages/i18n/src/locales/en.ts` (source of truth), mirrored to
+  all other locales: `de`, `es`, `fr`, `it`, `ja`, `pl`, `pt-BR`, `ru`.
+- `packages/ui` components take an optional `labels?: { … }` prop with English
+  fallback defaults so they work standalone in tests/Storybook — they never
+  call `useI18n`.
+- `packages/react` is the translation boundary: it calls `t('namespace:key')`
+  and passes results through `labels` (or a named prop for single strings).
+- Adding any new visible string: (1) add to `en.ts`, (2) translate in **all**
+  other locale files in the same commit, (3) add/extend the `labels` prop on
+  the UI component, (4) wire `t('…')` at the `packages/react` call site.
+- Templates use `{placeholder}` and are substituted at the component level:
+  `l.uploadingFile.replace('{name}', uploadingName)`.
+- `relatedResources[].label` is translatable via the `relatedResources` map in
+  `metadataTranslations` (key = resource id), resolved by
+  `localizeRelatedResources()`.
 
 ## Identifier policy (mandatory)
 
-- **UUID v7 everywhere.** All generated identifiers — primary keys, log
-  entry ids, queue job ids, file storage keys, action ids, anything
-  persisted or surfaced — MUST be UUID v7 (RFC 9562). Never use
-  `crypto.randomUUID()` (v4), `randomUUID()`, `nanoid`, or any non-v7
-  generator. Use `uuidv7()` from `@modern-admin/core` (re-exported from
-  `packages/core/src/utils/uuid.ts`).
-- Rationale: UUID v7 is time-ordered, which keeps inserts cache- and
-  index-friendly, makes "newest first" listings cheap, and yields
-  natural pagination cursors.
-- Database defaults (Prisma `@default(uuid(7))`, Drizzle `defaultRandom()`)
-  are not UUID v7 in current versions of those ORMs. Generate ids in
-  application code with `uuidv7()` and pass them explicitly on insert
-  rather than relying on engine defaults.
+- **UUID v7 everywhere** (RFC 9562) — primary keys, log entry ids, queue job
+  ids, file storage keys, action ids, anything persisted or surfaced. Use
+  `uuidv7()` from `@modern-admin/core`
+  (`packages/core/src/utils/uuid.ts`). Never `crypto.randomUUID()` (v4),
+  `nanoid`, or any non-v7 generator.
+- Rationale: v7 is time-ordered — cache- and index-friendly inserts, cheap
+  "newest first" listings, natural pagination cursors.
+- Prisma `@default(uuid(7))` and Drizzle `defaultRandom()` are **not** v7 in
+  current versions. Generate ids in application code and pass them explicitly
+  on insert rather than relying on engine defaults.
 
 ## Code style
 
-- **Shorten import paths.** When importing a package barrel (an `index.ts`
-  in a directory), drop `/index.js` from the specifier:
-  - Yes: `import { Foo } from '../errors'`
-  - No:  `import { Foo } from '../errors/index.js'`
+- **Shorten barrel imports.** Drop `/index.js` when importing a directory's
+  `index.ts`: `from '../errors'`, not `from '../errors/index.js'`. Concrete
+  files keep the extension (`'../utils/merge-options.js'`). Rewrite existing
+  long specifiers opportunistically when editing a file.
+- Validation is **Zod everywhere** — DTOs, decorator options, form schemas.
+- **Mobile-first UI**: base classes target small viewports; `sm:`/`md:`/`lg:`
+  enhance. Verify any new screen at ~375px.
+- Tailwind 4 has no config file. For cross-package class detection add explicit
+  `@source "../../<pkg>/src/**/*.{ts,tsx}";` in the consuming CSS. `border`
+  needs an explicit color — pair it with `border-border`.
+- Action buttons get a leading `lucide-react` icon when semantics map cleanly
+  (`Plus`=create, `Trash2`=delete, `Pencil`=edit, `Eye`=view).
+- Custom actions may declare `guard?: string` — a confirmation description
+  shown before the action fires. Wire it with `confirmGuard(action, dialogs)`
+  from `@modern-admin/react` at **every** invoke call-site (toolbar, bulk bar,
+  row dropdown, show page).
 
-  Bundler `moduleResolution` plus bun resolve the directory's `index.ts`.
-  Concrete file paths still carry their `.js` extension
-  (e.g. `'../utils/merge-options.js'`). When editing a file,
-  opportunistically rewrite existing `…/index.js` specifiers to the short
-  form.
+## Commits and releases
+
+- Angular **Conventional Commits**: `<type>(<scope>): <subject>` where type is
+  `feat | fix | refactor | style | perf | test | docs | chore | build | ci` and
+  scope is the affected package (`fix(adapter-prisma): …`).
+- Any change to a published package needs a **changeset**: `bun run changeset`.
+- Releases go through Changesets + `.github/workflows/release.yml`;
+  `bun run version-packages` also syncs workspace versions into the lockfile.
+  Full procedure in `RELEASING.md`.
 
 ## Workflow rules
 
-- Read files before editing them.
-- Prefer `Edit` over `Write` when modifying existing files.
-- Do not create files unless required for the task.
-- Do not create git commits unless the user asks.
-- Do not run destructive commands (`rm -rf`, force-push, hard reset, etc.)
-  without explicit instruction.
+- Read files before editing them; prefer `Edit` over `Write`.
+- Don't create files unless the task requires it.
+- Don't create git commits unless asked.
+- Don't run destructive commands (`rm -rf`, force-push, hard reset) without
+  explicit instruction.
 - Match scope: implement what was asked, don't refactor unrelated code.
-
-## Plan reference
-
-Active implementation plan: `/home/sergey/.claude/plans/fizzy-jumping-reef.md`
-(9 phases, Phase 0 and Phase 1 complete).
