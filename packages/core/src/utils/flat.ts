@@ -36,14 +36,55 @@ export function flatten(value: unknown, prefix = ''): FlatParams {
 }
 
 export function unflatten(flat: FlatParams): Record<string, unknown> {
+  const paths = Object.keys(flat).filter((key) => !hasForbiddenSegment(key))
+  const arrayPaths = collectArrayPaths(paths)
   const out: Record<string, unknown> = {}
-  for (const key of Object.keys(flat)) {
-    setPath(out, key, flat[key])
+  for (const key of paths) {
+    setPath(out, key, flat[key], arrayPaths)
   }
   return out
 }
 
 type Container = Record<string, unknown> | unknown[]
+
+const isIndex = (segment: string): boolean => /^\d+$/.test(segment)
+
+/**
+ * Paths that must be rebuilt as arrays rather than objects.
+ *
+ * A single key like `costs.6` is ambiguous — it can come from an array or from
+ * an object with a numeric key — so the decision is made per path over *all*
+ * of its children at once: an array only when every child segment is an index.
+ * `{ costs: { '6': …, '10': …, default: … } }` therefore stays an object,
+ * while `{ tags: ['a', 'b'] }` still round-trips as an array.
+ *
+ * Judging each key on its own (the previous behaviour) silently destroyed such
+ * JSON columns: `costs.6` created an array, and `costs.default` then landed in
+ * `arr[NaN]` — a non-index property that `JSON.stringify` drops on the floor.
+ *
+ * Genuinely undecidable case: an object whose keys are *all* numeric
+ * (`{ '6': …, '10': … }`) is indistinguishable from a sparse array here and
+ * comes back as an array. Callers that own such a column should normalise it
+ * themselves — the flat layer has no type information to do better.
+ */
+function collectArrayPaths(paths: string[]): Set<string> {
+  const childSegments = new Map<string, string[]>()
+  for (const path of paths) {
+    const parts = path.split('.')
+    for (let i = 1; i < parts.length; i += 1) {
+      const parent = parts.slice(0, i).join('.')
+      const siblings = childSegments.get(parent)
+      if (siblings) siblings.push(parts[i]!)
+      else childSegments.set(parent, [parts[i]!])
+    }
+  }
+
+  const arrayPaths = new Set<string>()
+  for (const [parent, segments] of childSegments) {
+    if (segments.every(isIndex)) arrayPaths.add(parent)
+  }
+  return arrayPaths
+}
 
 /**
  * Segments that must never be used as object keys during reconstruction.
@@ -53,19 +94,25 @@ type Container = Record<string, unknown> | unknown[]
  */
 const FORBIDDEN_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
 
-function setPath(target: Record<string, unknown>, path: string, value: unknown): void {
+const hasForbiddenSegment = (path: string): boolean =>
+  path.split('.').some((part) => FORBIDDEN_KEYS.has(part))
+
+function setPath(
+  target: Record<string, unknown>,
+  path: string,
+  value: unknown,
+  arrayPaths: Set<string>,
+): void {
   const parts = path.split('.')
   // Reject the entire path if any segment could reach the prototype chain.
-  if (parts.some((part) => FORBIDDEN_KEYS.has(part))) return
+  if (hasForbiddenSegment(path)) return
   let cur: Container = target
   for (let i = 0; i < parts.length - 1; i += 1) {
     const part = parts[i]!
-    const nextPart = parts[i + 1]!
-    const nextIsIndex = /^\d+$/.test(nextPart)
     const child: unknown = Array.isArray(cur) ? cur[Number(part)] : cur[part]
     let next: Container
     if (child === undefined) {
-      next = nextIsIndex ? [] : {}
+      next = arrayPaths.has(parts.slice(0, i + 1).join('.')) ? [] : {}
       if (Array.isArray(cur)) cur[Number(part)] = next
       else cur[part] = next
     } else {
@@ -74,8 +121,8 @@ function setPath(target: Record<string, unknown>, path: string, value: unknown):
     cur = next
   }
   const last = parts[parts.length - 1]!
-  if (Array.isArray(cur)) cur[Number(last)] = value
-  else cur[last] = value
+  if (Array.isArray(cur) && isIndex(last)) cur[Number(last)] = value
+  else (cur as Record<string, unknown>)[last] = value
 }
 
 export function get(

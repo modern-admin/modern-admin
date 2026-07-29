@@ -25,6 +25,29 @@ describe('flat utilities', () => {
     expect(unflatten(flatten(original))).toEqual(original)
   })
 
+  test('unflatten keeps numeric-keyed objects as objects', () => {
+    // A JSON column like Model.costs: `6`/`10` are keys, not indices. Deciding
+    // per key turned it into `['5'…'10']` and dropped `default` entirely.
+    expect(unflatten({ 'costs.6': '5', 'costs.10': '10', 'costs.default': '5' })).toEqual({
+      costs: { '6': '5', '10': '10', default: '5' },
+    })
+  })
+
+  test('unflatten still rebuilds arrays when every sibling is an index', () => {
+    expect(unflatten({ 'tags.0': 'a', 'tags.1': 'b' })).toEqual({ tags: ['a', 'b'] })
+  })
+
+  test('unflatten decides container type per path, not globally', () => {
+    expect(
+      unflatten({ 'tags.0': 'a', 'costs.0': '1', 'costs.default': '1' }),
+    ).toEqual({ tags: ['a'], costs: { '0': '1', default: '1' } })
+  })
+
+  test('unflatten round-trips arrays of objects', () => {
+    const original = { rows: [{ id: 'a' }, { id: 'b' }] }
+    expect(unflatten(flatten(original))).toEqual(original)
+  })
+
   test('get returns whole object when path is undefined', () => {
     const flat = { 'a.b': 1, 'a.c': 2 }
     expect(get(flat)).toEqual({ a: { b: 1, c: 2 } })
