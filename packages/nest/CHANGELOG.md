@@ -1,5 +1,13 @@
 # @modern-admin/nest
 
+## 0.3.5
+
+### Patch Changes
+
+- Updated dependencies [[`fecfa57`](https://github.com/modern-admin/modern-admin/commit/fecfa57a818df221ed21c4bc7ecc12f0a99dbd83), [`fecfa57`](https://github.com/modern-admin/modern-admin/commit/fecfa57a818df221ed21c4bc7ecc12f0a99dbd83)]:
+  - @modern-admin/core@0.3.5
+  - @modern-admin/telemetry@0.3.5
+
 ## 0.3.4
 
 ### Patch Changes
