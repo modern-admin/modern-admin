@@ -1,5 +1,11 @@
 # @modern-admin/core
 
+## 0.3.4
+
+### Patch Changes
+
+- [`596ad7d`](https://github.com/modern-admin/modern-admin/commit/596ad7dd27ec3da2538afcbeb342cac1e707c8e5) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Fixed sidebar animations performance and resource actions config
+
 ## 0.3.3
 
 ### Patch Changes
