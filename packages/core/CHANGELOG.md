@@ -1,5 +1,13 @@
 # @modern-admin/core
 
+## 0.3.5
+
+### Patch Changes
+
+- [`fecfa57`](https://github.com/modern-admin/modern-admin/commit/fecfa57a818df221ed21c4bc7ecc12f0a99dbd83) Thanks [@SergiyIva](https://github.com/SergiyIva)! - fixed flat array
+
+- [`fecfa57`](https://github.com/modern-admin/modern-admin/commit/fecfa57a818df221ed21c4bc7ecc12f0a99dbd83) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Fixed `unflatten()` destroying JSON objects with numeric keys. `{ '6': …, '10': …, default: … }` was rebuilt as an array (the first numeric segment decided the container type), and the remaining non-numeric keys landed in `arr[NaN]` — properties `JSON.stringify()` drops, so the values were lost on save. The container type is now decided per path over all of its children: an array only when every sibling segment is an index.
+
 ## 0.3.4
 
 ### Patch Changes
