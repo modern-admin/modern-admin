@@ -211,11 +211,23 @@ export class ResourceDecorator {
         // instead of a clickable show link when `show` is missing from the
         // referenced resource. Resource-level checks here use a context
         // without a `record`; per-record gating still re-runs at invoke time.
+        //
+        // `isVisible` is applied too, but only to resource- and bulk-scoped
+        // actions: it is a UI hint, and evaluating it here is only meaningful
+        // when the answer does not depend on a record. Record actions keep
+        // their place in this list and are narrowed per row via
+        // `RecordJSON.recordActions`, which `invoke()` resolves with the
+        // record in context. (This is what drops the internal `values` /
+        // `search` actions, both declared `isVisible: false`.)
         const entries = Array.from(this.actions.values())
         const descriptors = await Promise.all(entries.map(async (a) => {
           const descriptor = a.toDescriptor()
           const actionContext = { ...context, action: descriptor } as ActionContext
-          return (await a.isAccessible(actionContext)) ? descriptor : null
+          if (!(await a.isAccessible(actionContext))) return null
+          if (descriptor.actionType !== 'record' && !(await a.isVisible(actionContext))) {
+            return null
+          }
+          return descriptor
         }))
         return {
           id: this.id,

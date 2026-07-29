@@ -11,12 +11,14 @@
 import { describe, expect, test } from 'bun:test'
 import { firstValueFrom, of } from 'rxjs'
 import type { CallHandler, ExecutionContext } from '@nestjs/common'
+import { Reflector } from '@nestjs/core'
 import {
   MemoryCacheProvider,
   ModernAdmin,
   type CurrentAdmin,
 } from '@modern-admin/core'
 import { ModernAdminCacheInterceptor } from '../src/cache.interceptor.js'
+import { NoHttpCache } from '../src/no-http-cache.js'
 import { FakeDatabase, FakeResource, type FakeTable } from './_helpers/fake-adapter.js'
 
 const adapter = { Database: FakeDatabase, Resource: FakeResource }
@@ -41,20 +43,30 @@ const buildInterceptor = (cache: InspectableCache) => {
     adapters: [adapter as never],
     cache,
   })
-  return new ModernAdminCacheInterceptor(admin)
+  return new ModernAdminCacheInterceptor(admin, new Reflector())
 }
 
-const httpContext = (req: {
-  method: string
-  originalUrl: string
-  params: Record<string, string>
-  currentAdmin?: CurrentAdmin
-}): ExecutionContext =>
+/** Stand-in route handler. `@NoHttpCache()` writes its metadata onto the
+ *  function itself, which is exactly what `Reflector` reads back. */
+const routeHandler = (): void => {}
+class RouteController {}
+
+const httpContext = (
+  req: {
+    method: string
+    originalUrl: string
+    params: Record<string, string>
+    currentAdmin?: CurrentAdmin
+  },
+  handler: () => void = routeHandler,
+): ExecutionContext =>
   ({
     switchToHttp: () => ({
       getRequest: () => req,
       getResponse: () => ({ setHeader: () => {} }),
     }),
+    getHandler: () => handler,
+    getClass: () => RouteController,
   }) as unknown as ExecutionContext
 
 const handlerReturning = (value: unknown): CallHandler & { calls: number } => {
@@ -136,6 +148,38 @@ describe('ModernAdminCacheInterceptor — principal scoping', () => {
   })
 
   test('anonymous requests use the anon scope', async () => {
+    const cache = new InspectableCache()
+    const interceptor = buildInterceptor(cache)
+    await firstValueFrom(
+      interceptor.intercept(httpContext(listReq()), handlerReturning({ ok: true })),
+    )
+    expect(cache.keys).toEqual(['nest:GET:/admin/api/resources/users:anon'])
+  })
+
+  test('@NoHttpCache() handlers bypass the cache entirely', async () => {
+    // The custom-action GET routes wear this marker: their body is produced
+    // by user code we hold no invalidation tags for, so replaying it would
+    // be wrong even within a single principal scope.
+    const cache = new InspectableCache()
+    const interceptor = buildInterceptor(cache)
+    const primeAction = (): void => {}
+    NoHttpCache()(primeAction)
+
+    const first = handlerReturning({ templates: ['welcome'] })
+    await firstValueFrom(
+      interceptor.intercept(httpContext(listReq(), primeAction), first),
+    )
+    const second = handlerReturning({ templates: ['changed'] })
+    const body = await firstValueFrom(
+      interceptor.intercept(httpContext(listReq(), primeAction), second),
+    )
+
+    expect(cache.keys).toEqual([])
+    expect(second.calls).toBe(1)
+    expect(body).toEqual({ templates: ['changed'] })
+  })
+
+  test('unmarked handlers on the same controller still cache', async () => {
     const cache = new InspectableCache()
     const interceptor = buildInterceptor(cache)
     await firstValueFrom(

@@ -4,7 +4,9 @@
 //     into the response meta (visible from the React app's list view),
 //   • record-level @Action handlers archive/restock/duplicateSku,
 //   • a resource-level @Action `markFeaturedPalette` that mutates the
-//     first six products through the shared adapter API.
+//     first six products through the shared adapter API,
+//   • a resource-level @Action `bulkRepriceUi` that renders its own UI
+//     (`component: 'bulk-reprice'`) instead of firing on click.
 //
 // Adapter-portable: cross-resource access is done via `this.resource`
 // or `this.admin.findResource(...)` rather than reaching into adapter
@@ -173,6 +175,55 @@ export class ProductsAdminController extends AdminController<ProductRow> {
     }
     return {
       notice: { message: 'Applied featured accent colors to demo products', type: 'success' },
+    }
+  }
+
+  /**
+   * Resource-level action with a custom UI. The operator opens
+   * `/resources/products/actions/bulkRepriceUi`, the `bulk-reprice` component
+   * renders a form, and only the submit lands here as a POST.
+   *
+   * The GET branch primes that form — it hands back the current price span so
+   * the component can show what it is about to change.
+   */
+  @Action({
+    actionType: 'resource',
+    name: 'bulkRepriceUi',
+    component: 'bulk-reprice',
+    nesting: [{ name: 'Merchandising', icon: 'Palette' }],
+    custom: { icon: 'Tag', label: 'Bulk reprice' },
+    invalidates: true,
+  })
+  async bulkRepriceUi(ctx: AdminActionContext<ProductRow>): Promise<ActionResponse> {
+    const filter = new Filter({}, this.resource)
+    const records = await this.resource.find(filter, { limit: 500, offset: 0 })
+    const prices = records
+      .map((r) => Number(r.params.price))
+      .filter((n) => Number.isFinite(n))
+
+    if (ctx.request.method !== 'post') {
+      return {
+        total: records.length,
+        minPrice: prices.length ? Math.min(...prices) : 0,
+        maxPrice: prices.length ? Math.max(...prices) : 0,
+      }
+    }
+
+    const percent = Number(ctx.request.payload?.percent)
+    if (!Number.isFinite(percent) || percent === 0) {
+      return { notice: { message: 'Enter a non-zero percentage', type: 'error' } }
+    }
+    for (const record of records) {
+      const current = Number(record.params.price)
+      if (!Number.isFinite(current)) continue
+      await record.update({ price: Math.round(current * (1 + percent / 100) * 100) / 100 })
+    }
+    return {
+      updated: records.length,
+      notice: {
+        message: `Repriced ${records.length} products by ${percent}%`,
+        type: 'success',
+      },
     }
   }
 }

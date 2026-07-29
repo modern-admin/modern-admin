@@ -50,6 +50,20 @@ const keyHistoryRevision = (resourceId: string, recordId: string, revisionId: st
   ['modern-admin', resourceId, 'history', recordId, revisionId] as const
 const keyAuditLog = (query?: AuditLogQuery) =>
   ['modern-admin', 'audit-log', query ?? null] as const
+const keyActionData = (
+  resourceId: string,
+  actionName: string,
+  recordId?: string,
+  recordIds?: readonly string[],
+) =>
+  [
+    'modern-admin',
+    resourceId,
+    'action',
+    actionName,
+    recordId ?? null,
+    recordIds?.length ? recordIds.join(',') : null,
+  ] as const
 
 /**
  * Resources whose cached queries embed data of `resourceId` or aggregate
@@ -365,25 +379,72 @@ export const useLogout = (): UseMutationResult<void, Error, void> => {
 
 export const useInvokeRecordAction = (
   resourceId: string,
-): UseMutationResult<CustomActionResponse, Error, { recordId: string; actionName: string }> => {
+): UseMutationResult<
+  CustomActionResponse,
+  Error,
+  { recordId: string; actionName: string; payload?: Record<string, unknown> }
+> => {
   const client = useAdminClient()
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ recordId, actionName }) =>
-      client.invokeRecordAction(resourceId, recordId, actionName),
+    mutationFn: ({ recordId, actionName, payload }) =>
+      client.invokeRecordAction(resourceId, recordId, actionName, payload),
     onSuccess: () => {
       invalidateResourceData(qc, resourceId)
     },
   })
 }
 
+/**
+ * Priming query for a custom action's UI — issues the `GET` variant of the
+ * action route so the handler runs with `method: 'get'` and can hand the
+ * component whatever it needs to render (templates, counts, defaults).
+ *
+ * Disabled by default for actions with no `component`: a plain menu entry
+ * fires straight to `POST` and must not trigger the handler twice.
+ */
+export const useActionData = (
+  resourceId: string,
+  actionName: string,
+  options: { recordId?: string; recordIds?: readonly string[]; enabled?: boolean } = {},
+): UseQueryResult<CustomActionResponse> => {
+  const client = useAdminClient()
+  const { recordId, recordIds, enabled = true } = options
+  return useQuery({
+    queryKey: keyActionData(resourceId, actionName, recordId, recordIds),
+    queryFn: () =>
+      recordId
+        ? client.fetchRecordAction(resourceId, recordId, actionName)
+        : client.fetchResourceAction(
+          resourceId,
+          actionName,
+          // Bulk actions prime with the selection so the handler sees the
+          // same `context.records` it will get on submit. Bounded by the
+          // list page's server-capped `perPage`, so the query string stays
+          // well inside header limits.
+          recordIds?.length ? { recordIds: recordIds.join(',') } : {},
+        ),
+    enabled: enabled && Boolean(resourceId) && Boolean(actionName),
+    // The handler is user code that may have observable effects; never
+    // replay it on window focus or remount without an explicit refetch.
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    retry: false,
+  })
+}
+
 export const useInvokeBulkAction = (
   resourceId: string,
-): UseMutationResult<CustomActionResponse, Error, { actionName: string; ids: string[] }> => {
+): UseMutationResult<
+  CustomActionResponse,
+  Error,
+  { actionName: string; ids: string[]; payload?: Record<string, unknown> }
+> => {
   const client = useAdminClient()
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ actionName, ids }) => client.invokeBulkAction(resourceId, actionName, ids),
+    mutationFn: ({ actionName, ids, payload }) =>
+      client.invokeBulkAction(resourceId, actionName, ids, payload),
     onSuccess: () => {
       invalidateResourceData(qc, resourceId)
     },

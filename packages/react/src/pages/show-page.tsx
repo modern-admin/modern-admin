@@ -14,6 +14,8 @@ import {
 import { AlertCircle, Pencil, Trash2, Zap } from 'lucide-react'
 import { useDeleteRecord, useFeatures, useInvokeRecordAction, useRecord, useResource } from '../hooks.js'
 import { confirmGuard } from '../action-guard.js'
+import { showActionNotice } from '../action-notice.js'
+import { hasActionComponent, useActionLauncher } from '../action-launcher.js'
 import { parseApiError } from '../client.js'
 import { PropertyDisplay } from '../property-renderer.js'
 import { Link, useNavigate } from '../router.js'
@@ -23,7 +25,7 @@ import { PageBreadcrumbs, homeCrumb } from '../breadcrumbs.js'
 import { RelatedRecordsTabs } from '../components/related-records-tabs.js'
 import { useDialogs } from '../dialogs.js'
 import { useNotify } from '../notify.js'
-import { ActionMenu } from '../action-menu.js'
+import { ActionMenu, isActionAllowedForRecord, visibleRecordActions } from '../action-menu.js'
 import { RevisionsButton } from '../components/revisions-button.js'
 import { visibleRecordProperties } from '../relations.js'
 
@@ -70,17 +72,27 @@ export function ResourceShowPage({
   const navigate = useNavigate()
   const dialogs = useDialogs()
   const notify = useNotify()
+  const openActionComponent = useActionLauncher(resourceId)
 
-  const customRecordActions = (resource?.actions ?? []).filter(
-    (a) => a.actionType === 'record' && !['show', 'edit', 'delete'].includes(a.name),
+  // `recordActions` on the loaded record carries the server's per-record
+  // `isVisible`/`isAccessible` verdict, which `resource.actions` cannot —
+  // it is serialized without any record in context.
+  const loadedRecord = record.data?.record
+  const customRecordActions = visibleRecordActions(
+    (resource?.actions ?? []).filter(
+      (a) => a.actionType === 'record' && !['show', 'edit', 'delete'].includes(a.name),
+    ),
+    loadedRecord,
   )
+  const canEdit = isActionAllowedForRecord('edit', loadedRecord)
+  const canDelete = isActionAllowedForRecord('delete', loadedRecord)
 
   // ── Keyboard shortcuts ──
   // Ctrl/Cmd+E jumps into edit. Discoverable via the action-button tooltip.
   useHotkey(
     'mod+e',
     () => {
-      if (!record.data) return
+      if (!record.data || !canEdit) return
       navigate({ name: 'edit', resourceId, recordId })
     },
     { description: t('common:edit') },
@@ -121,54 +133,54 @@ export function ResourceShowPage({
               {features.history && (
                 <RevisionsButton resourceId={resourceId} recordId={recordId} />
               )}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  {/* `asChild` + Link-as-Button keeps the rendered DOM a
-                 *  single `<a>` so it picks up the Button's `h-8` from
-                 *  `size="sm"` instead of stacking a Link wrapper that
-                 *  collapses to its anchor default height. */}
-                  <Button variant="outline-primary" size="sm" asChild>
-                    <Link to={{ name: 'edit', resourceId, recordId }} aria-label={t('common:edit')}>
-                      <Pencil className="size-4" />
-                      <span className="hidden sm:inline">{t('common:edit')}</span>
-                    </Link>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent className="flex items-center gap-1.5">
-                  <span>{t('common:edit')}</span>
-                  <span className="inline-flex items-center gap-0.5">
-                    <Kbd>{modLabel}</Kbd>
-                    <span className="text-muted-foreground">+</span>
-                    <Kbd>E</Kbd>
-                  </span>
-                </TooltipContent>
-              </Tooltip>
-              <Button
-                variant="outline-destructive"
-                size="sm"
-                disabled={remove.isPending}
-                onClick={() => void handleDelete()}
-                aria-label={t('common:delete')}
-              >
-                <Trash2 className="size-4" />
-                <span className="hidden sm:inline">{t('common:delete')}</span>
-              </Button>
+              {canEdit && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    {/* `asChild` + Link-as-Button keeps the rendered DOM a
+                   *  single `<a>` so it picks up the Button's `h-8` from
+                   *  `size="sm"` instead of stacking a Link wrapper that
+                   *  collapses to its anchor default height. */}
+                    <Button variant="outline-primary" size="sm" asChild>
+                      <Link to={{ name: 'edit', resourceId, recordId }} aria-label={t('common:edit')}>
+                        <Pencil className="size-4" />
+                        <span className="hidden sm:inline">{t('common:edit')}</span>
+                      </Link>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent className="flex items-center gap-1.5">
+                    <span>{t('common:edit')}</span>
+                    <span className="inline-flex items-center gap-0.5">
+                      <Kbd>{modLabel}</Kbd>
+                      <span className="text-muted-foreground">+</span>
+                      <Kbd>E</Kbd>
+                    </span>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+              {canDelete && (
+                <Button
+                  variant="outline-destructive"
+                  size="sm"
+                  disabled={remove.isPending}
+                  onClick={() => void handleDelete()}
+                  aria-label={t('common:delete')}
+                >
+                  <Trash2 className="size-4" />
+                  <span className="hidden sm:inline">{t('common:delete')}</span>
+                </Button>
+              )}
               {customRecordActions.length > 0 && (
                 <ActionMenu
                   actions={customRecordActions}
                   onAction={async (action) => {
+                    if (hasActionComponent(action)) {
+                      openActionComponent(action, { recordId })
+                      return
+                    }
                     if (!await confirmGuard(action, dialogs)) return
                     void invokeRecord
                       .mutateAsync({ recordId, actionName: action.name })
-                      .then((res) => {
-                        if (res.notice) {
-                          const type = res.notice.type === 'error' ? 'error'
-                            : res.notice.type === 'warning' ? 'warning'
-                              : res.notice.type === 'info' ? 'info'
-                                : 'success'
-                          notify[type]({ message: res.notice.message })
-                        }
-                      })
+                      .then((res) => showActionNotice(notify, res.notice))
                       .catch((err: Error) =>
                         notify.error({ message: err.message }),
                       )

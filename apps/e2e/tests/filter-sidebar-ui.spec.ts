@@ -77,11 +77,23 @@ function filterField(page: Page, labelText: string) {
   )
 }
 
+/**
+ * Rows holding actual data.
+ *
+ * While the list query is in flight the table renders one `aria-busy`
+ * placeholder row per page slot — so a bare `tbody tr` count returns
+ * `perPage` (50) regardless of how many records the filter matches, and any
+ * assertion racing the fetch reads that instead of the result.
+ */
+function dataRows(page: Page) {
+  return page.locator('tbody tr:not([aria-busy="true"])')
+}
+
 async function openList(page: Page, resource: string): Promise<void> {
   await page.goto(`/resources/${resource}?perPage=50`)
   // Wait for the first row of seeded data so the toolbar (and the
   // Filters button) has mounted before any interactions.
-  await expect(page.locator('tbody tr').first()).toBeVisible({ timeout: 15_000 })
+  await expect(dataRows(page).first()).toBeVisible({ timeout: 15_000 })
 }
 
 async function openFilters(page: Page): Promise<void> {
@@ -150,7 +162,7 @@ test.describe('FilterPanel — UI sidebar interactions', () => {
       .toBe(authorId)
 
     const pageSize = Math.min(50, expectedCount)
-    await expect(page.locator('tbody tr')).toHaveCount(pageSize, { timeout: 10_000 })
+    await expect(dataRows(page)).toHaveCount(pageSize, { timeout: 10_000 })
   })
 
   test('enum filter (Tier = pro) returns only matching customers and updates the badge', async ({
@@ -191,7 +203,7 @@ test.describe('FilterPanel — UI sidebar interactions', () => {
 
     // Filtered row count matches the strict API count.
     const pageSize = Math.min(50, expectedCount)
-    await expect(page.locator('tbody tr')).toHaveCount(pageSize, { timeout: 10_000 })
+    await expect(dataRows(page)).toHaveCount(pageSize, { timeout: 10_000 })
 
     // The trigger button hosts a small badge with the active-filter
     // count ("1" once we've applied one filter).
@@ -207,10 +219,14 @@ test.describe('FilterPanel — UI sidebar interactions', () => {
     // twice for setup + teardown.
     await page.goto('/resources/customers?perPage=50&filters[tier]=pro')
     await expect.poll(() => filterParam(page, 'tier')).toBe('pro')
-    await expect(page.locator('tbody tr').first()).toBeVisible({ timeout: 15_000 })
+    await expect(dataRows(page).first()).toBeVisible({ timeout: 15_000 })
 
-    const filteredCount = await page.locator('tbody tr').count()
+    // Counting placeholder rows here would yield `perPage` (50) instead of
+    // the handful of `pro` customers, and the comparison at the end of the
+    // test — "unfiltered grew back beyond filtered" — could then never hold.
+    const filteredCount = await dataRows(page).count()
     expect(filteredCount).toBeGreaterThan(0)
+    expect(filteredCount).toBeLessThan(50)
 
     // Open the sheet and hit Clear all — the header button is only
     // rendered when `draft.length > 0`, which it is now.
@@ -228,7 +244,7 @@ test.describe('FilterPanel — UI sidebar interactions', () => {
     await expect(filterSheet(page)).toBeHidden({ timeout: 5_000 })
 
     await expect
-      .poll(async () => page.locator('tbody tr').count(), { timeout: 10_000 })
+      .poll(async () => dataRows(page).count(), { timeout: 10_000 })
       .toBeGreaterThan(filteredCount)
   })
 })

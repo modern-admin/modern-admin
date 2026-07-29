@@ -156,6 +156,16 @@ export interface RecordJSON {
   populated: Record<string, unknown>
   errors: Record<string, unknown>
   baseError: unknown | null
+  /**
+   * Record-scoped actions this row offers, with the server's `isVisible` /
+   * `isAccessible` already resolved against it. `ResourceJSON.actions` lists
+   * every record action the resource declares; this narrows it per row.
+   *
+   * Absent when the record did not come through `ModernAdmin.invoke()` (or
+   * from a server predating the field) — treat that as "no opinion" and
+   * render everything, never as "nothing is allowed".
+   */
+  recordActions?: string[]
 }
 
 export interface ListResponse {
@@ -174,6 +184,47 @@ export interface CustomActionResponse {
   notice?: { message: string; type: 'success' | 'info' | 'error' | 'warning' }
   redirectUrl?: string
   [key: string]: unknown
+}
+
+/**
+ * Props handed to a custom action component — the component named by
+ * `Action.component` and registered on the `ComponentLoader`.
+ *
+ * The component owns its own form state and calls `invoke(payload)` when the
+ * operator submits; everything else (priming GET, notice toasts, cache
+ * invalidation, dismissal) is handled by the host page/dialog.
+ */
+export interface ActionComponentProps {
+  action: ActionDescriptor
+  resource: ResourceJSON
+  resourceId: string
+  /** Record id for `actionType: 'record'` actions; absent for resource ones. */
+  recordId?: string
+  /** Loaded record for `actionType: 'record'` actions. */
+  record?: RecordJSON
+  /** Selected ids for `actionType: 'bulk'` actions. */
+  recordIds?: string[]
+  /**
+   * Selected records for `actionType: 'bulk'` actions — populated only when
+   * the priming response returned them (the handler's `context.records` is
+   * loaded for bulk GETs, so returning `{ records }` from the `get` branch
+   * is all it takes). The host does not fetch them separately.
+   */
+  records?: RecordJSON[]
+  /** Response of the priming request (handler ran with `method: 'get'`). */
+  data?: CustomActionResponse
+  /** Priming request still in flight. */
+  loading: boolean
+  /** Priming request failed. */
+  error?: Error
+  /** POST the action. Resolves with the handler's response; rejects on HTTP
+   *  error. The host already surfaces `notice` as a toast either way. */
+  invoke(payload?: Record<string, unknown>): Promise<CustomActionResponse>
+  /** An `invoke()` is in flight. */
+  submitting: boolean
+  /** Dismiss the action — navigates back in page mode, closes the dialog in
+   *  `custom.showAs: 'dialog'` mode. */
+  close(): void
 }
 
 export interface ListQuery {

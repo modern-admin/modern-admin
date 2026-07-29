@@ -132,6 +132,7 @@ export class AdminControllerScanner {
         ...(a.guard !== undefined ? { guard: a.guard } : {}),
         ...(a.component !== undefined ? { component: a.component } : {}),
         ...(a.custom !== undefined ? { custom: a.custom } : {}),
+        ...(a.invalidates !== undefined ? { invalidates: a.invalidates } : {}),
       }
       actions[a.name] = { ...(actions[a.name] ?? {}), ...action }
     }

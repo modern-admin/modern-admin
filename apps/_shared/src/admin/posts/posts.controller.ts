@@ -1,7 +1,9 @@
 // Posts — showcases:
 //   • @Before hook auto-slugifying the title before `new`/`edit`,
 //   • record-level @Action `publish` / `unpublish` that mutate the row,
-//   • bulk-level @Action `publishMany` operating on selected ids.
+//   • bulk-level @Action `publishMany` operating on selected ids,
+//   • bulk-level @Action `scheduleManyUi` that renders its own UI
+//     (`component: 'schedule-posts'`) over the same selection.
 
 import {
   Action,
@@ -149,6 +151,45 @@ export class PostsAdminController extends AdminController<PostRow> {
       records: records.map((r) => r.toJSON()),
       notice: {
         message: `${records.length} post${records.length === 1 ? '' : 's'} published`,
+        type: 'success',
+      },
+    }
+  }
+
+  /**
+   * Bulk action with a custom UI. The selection reaches the handler as
+   * `ctx.records` on both the priming `get` (so the component can list what
+   * it is about to touch) and the submitting `post`.
+   */
+  @Action({
+    actionType: 'bulk',
+    name: 'scheduleManyUi',
+    component: 'schedule-posts',
+    custom: { icon: 'CalendarClock', label: 'Schedule selected' },
+    invalidates: true,
+  })
+  async scheduleManyUi(ctx: AdminActionContext<PostRow>): Promise<BulkActionResponse> {
+    const records = ctx.records ?? []
+
+    if (ctx.request.method !== 'post') {
+      return { records: records.map((r) => r.toJSON()) }
+    }
+
+    const raw = ctx.request.payload?.publishedAt
+    const publishedAt = typeof raw === 'string' && raw ? new Date(raw) : null
+    if (!publishedAt || Number.isNaN(publishedAt.getTime())) {
+      return {
+        records: [],
+        notice: { message: 'Pick a valid date', type: 'error' },
+      }
+    }
+    for (const r of records) {
+      await r.update({ published: true, publishedAt })
+    }
+    return {
+      records: records.map((r) => r.toJSON()),
+      notice: {
+        message: `Scheduled ${records.length} post${records.length === 1 ? '' : 's'}`,
         type: 'success',
       },
     }

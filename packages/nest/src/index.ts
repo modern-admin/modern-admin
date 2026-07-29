@@ -40,6 +40,7 @@ export {
 } from './webhooks.controller.js'
 export { ModernAdminAuthGuard } from './auth.guard.js'
 export { ModernAdminCacheInterceptor } from './cache.interceptor.js'
+export { NoHttpCache, NO_HTTP_CACHE } from './no-http-cache.js'
 export { MODERN_ADMIN, MODERN_ADMIN_OPTIONS, MODERN_ADMIN_API_KEY_SERVICE } from './tokens.js'
 export {
   setupOpenApi,

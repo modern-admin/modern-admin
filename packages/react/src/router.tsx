@@ -47,6 +47,20 @@ export type Route =
   | { name: 'show'; resourceId: string; recordId: string }
   | { name: 'edit'; resourceId: string; recordId: string }
   | { name: 'new'; resourceId: string }
+  /**
+   * Custom-action page — the surface for actions declaring a `component`.
+   * Resource-scoped by default, record-scoped when `recordId` is set, and
+   * bulk-scoped when `recordIds` carries a selection (serialized as a
+   * `?recordIds=a,b,c` query param so the page survives a refresh).
+   * Mirrors AdminJS's `/resources/:id/actions/:name` URLs.
+   */
+  | {
+      name: 'action'
+      resourceId: string
+      actionName: string
+      recordId?: string
+      recordIds?: string[]
+    }
   /** Settings hub. Sub-section selected via `section` (e.g. 'api-keys'). */
   | { name: 'settings'; section?: string }
   /**
@@ -98,6 +112,18 @@ const buildListQuery = (q: ListQueryState | undefined): string => {
   return s ? `?${s}` : ''
 }
 
+/** Read a bulk action's selection back out of `?recordIds=a,b,c`. Returns
+ *  `undefined` (rather than an empty array) when absent, so the route object
+ *  stays free of a meaningless `recordIds: []`. */
+const parseRecordIds = (search: string): string[] | undefined => {
+  if (!search) return undefined
+  const params = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search)
+  const raw = params.get('recordIds')
+  if (!raw) return undefined
+  const ids = raw.split(',').filter(Boolean)
+  return ids.length > 0 ? ids : undefined
+}
+
 /** Map a TSR location (pathname + raw searchStr) to the canonical `Route`
  *  union the rest of the codebase consumes. Pure — used both at render
  *  time (via `useRoute`) and outside the React tree if ever needed. */
@@ -115,6 +141,26 @@ export const parseLocation = (pathname: string, searchStr: string): Route => {
   if (parts[0] === 'resources' && parts[1]) {
     const resourceId = decodeURIComponent(parts[1])
     if (parts[2] === 'new') return { name: 'new', resourceId }
+    // Action segments are checked before the record patterns below, so a
+    // record whose id is literally `actions` would be shadowed — the same
+    // trade-off `new` already makes.
+    if (parts[2] === 'actions' && parts[3]) {
+      const recordIds = parseRecordIds(searchStr)
+      return {
+        name: 'action',
+        resourceId,
+        actionName: decodeURIComponent(parts[3]),
+        ...(recordIds ? { recordIds } : {}),
+      }
+    }
+    if (parts[2] && parts[3] === 'actions' && parts[4]) {
+      return {
+        name: 'action',
+        resourceId,
+        recordId: decodeURIComponent(parts[2]),
+        actionName: decodeURIComponent(parts[4]),
+      }
+    }
     if (parts[2] && parts[3] === 'edit') {
       return { name: 'edit', resourceId, recordId: decodeURIComponent(parts[2]) }
     }
@@ -141,6 +187,14 @@ export const buildHref = (route: Route): string => {
     return `/resources/${encodeURIComponent(route.resourceId)}/${encodeURIComponent(route.recordId)}/edit`
   case 'new':
     return `/resources/${encodeURIComponent(route.resourceId)}/new`
+  case 'action': {
+    const base = `/resources/${encodeURIComponent(route.resourceId)}`
+    const scope = route.recordId ? `${base}/${encodeURIComponent(route.recordId)}` : base
+    const path = `${scope}/actions/${encodeURIComponent(route.actionName)}`
+    if (!route.recordIds?.length) return path
+    const params = new URLSearchParams({ recordIds: route.recordIds.join(',') })
+    return `${path}?${params.toString()}`
+  }
   case 'settings':
     return route.section ? `/settings/${encodeURIComponent(route.section)}` : '/settings'
   case 'extension':

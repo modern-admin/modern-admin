@@ -183,7 +183,17 @@ test.describe('Draft auto-save — new record form', () => {
 
     // After the API round-trip we land on the show page; the draft key must
     // have been cleared by the success path so the next /new visit is fresh.
-    await page.waitForURL(/\/resources\/customers\/[^/]+$/, { timeout: 15_000 })
+    //
+    // The wait has to exclude `/new` explicitly: a bare
+    // `/resources/customers/[^/]+$` also matches the form we are submitting
+    // *from*, so it resolved instantly and the assertion below read the
+    // draft before `onSubmit` had even called `clearDraft()`.
+    await page.waitForURL(
+      (url) =>
+        /^\/resources\/customers\/[^/]+$/.test(url.pathname) &&
+        !url.pathname.endsWith('/new'),
+      { timeout: 15_000 },
+    )
     expect(await readDraft(page)).toBeNull()
   })
 })

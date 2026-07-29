@@ -27,6 +27,7 @@ import {
 } from '@modern-admin/core'
 import { MODERN_ADMIN } from './tokens.js'
 import { ModernAdminAuthGuard } from './auth.guard.js'
+import { NoHttpCache } from './no-http-cache.js'
 import {
   bulkBodyZ,
   createBodyZ,
@@ -184,6 +185,45 @@ export class ResourceController {
   // matches `actions/list`, `actions/new`, `actions/bulkDelete`, `actions/search`
   // as specific handlers first, and only falls through to the wildcard for
   // truly custom action names.
+
+  /**
+   * Prime a custom record-scoped action's UI. The handler runs with
+   * `method: 'get'`, mirroring AdminJS — components that render a form
+   * before submitting use this to fetch their initial data, and handlers
+   * branch on `request.method !== 'post'` to skip the mutating path.
+   */
+  @Get('records/:recordId/actions/:action')
+  @NoHttpCache()
+  async fetchRecordAction(
+    @Param('resourceId') resourceId: string,
+    @Param('recordId') recordId: string,
+    @Param('action') action: string,
+    @Query() query: Record<string, unknown>,
+    @Req() req: AdminRequest,
+  ): Promise<ActionResponse> {
+    return this.run({ params: { resourceId, recordId, action }, method: 'get', query }, req)
+  }
+
+  /** Prime a custom resource- or bulk-scoped action's UI (`method: 'get'`).
+   *  For bulk actions pass a comma-separated `recordIds` query param. */
+  @Get('actions/:action')
+  @NoHttpCache()
+  async fetchResourceAction(
+    @Param('resourceId') resourceId: string,
+    @Param('action') action: string,
+    @Query() query: Record<string, unknown>,
+    @Req() req: AdminRequest,
+  ): Promise<ActionResponse> {
+    const { recordIds, ...rest } = query as { recordIds?: string; [k: string]: unknown }
+    return this.run(
+      {
+        params: { resourceId, action, ...(recordIds ? { recordIds } : {}) },
+        method: 'get',
+        query: rest,
+      },
+      req,
+    )
+  }
 
   /** Invoke a custom record-scoped action (actionType: 'record'). */
   @Post('records/:recordId/actions/:action')

@@ -321,6 +321,36 @@ export class AdminClient {
     )
   }
 
+  /**
+   * Prime a custom record-scoped action (`method: 'get'` server-side).
+   * Action components call this to fetch initial data before the operator
+   * submits; handlers branch on `request.method !== 'post'` to skip their
+   * mutating path.
+   */
+  fetchRecordAction(
+    resourceId: string,
+    recordId: string,
+    actionName: string,
+    query: Record<string, string> = {},
+  ): Promise<CustomActionResponse> {
+    const search = new URLSearchParams(query).toString()
+    return this.request<CustomActionResponse>(
+      `/admin/api/resources/${encodeURIComponent(resourceId)}/records/${encodeURIComponent(recordId)}/actions/${encodeURIComponent(actionName)}${search ? `?${search}` : ''}`,
+    )
+  }
+
+  /** Prime a custom resource-scoped action (`method: 'get'` server-side). */
+  fetchResourceAction(
+    resourceId: string,
+    actionName: string,
+    query: Record<string, string> = {},
+  ): Promise<CustomActionResponse> {
+    const search = new URLSearchParams(query).toString()
+    return this.request<CustomActionResponse>(
+      `/admin/api/resources/${encodeURIComponent(resourceId)}/actions/${encodeURIComponent(actionName)}${search ? `?${search}` : ''}`,
+    )
+  }
+
   /** Invoke a custom record-scoped action (actionType: 'record'). */
   invokeRecordAction(
     resourceId: string,
@@ -339,10 +369,13 @@ export class AdminClient {
     resourceId: string,
     actionName: string,
     recordIds: ReadonlyArray<string>,
+    payload: Record<string, unknown> = {},
   ): Promise<CustomActionResponse> {
+    // `recordIds` rides alongside the payload — the server lifts it back out
+    // into `params.recordIds` and passes the rest through as the payload.
     return this.request<CustomActionResponse>(
       `/admin/api/resources/${encodeURIComponent(resourceId)}/actions/${encodeURIComponent(actionName)}`,
-      { method: 'POST', body: JSON.stringify({ recordIds: Array.from(recordIds) }) },
+      { method: 'POST', body: JSON.stringify({ ...payload, recordIds: Array.from(recordIds) }) },
     )
   }
 

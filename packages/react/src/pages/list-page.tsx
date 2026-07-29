@@ -126,16 +126,22 @@ import {
   parseNumericFilter,
   type StringFilterOp,
 } from './filter-codecs.js'
-import { ActionMenu, ActionMenuItems } from '../action-menu.js'
+import {
+  ActionMenu,
+  ActionMenuItems,
+  isActionAllowedForRecord,
+  visibleRecordActions,
+} from '../action-menu.js'
 import { visibleRecordProperties } from '../relations.js'
 import type {
   ActionDescriptor,
-  CustomActionResponse,
   ListQuery,
   PropertyJSON,
   RecordJSON,
 } from '../types.js'
 import { confirmGuard } from '../action-guard.js'
+import { showActionNotice } from '../action-notice.js'
+import { hasActionComponent, useActionLauncher } from '../action-launcher.js'
 
 const PAGE_SIZES = [10, 20, 50, 100] as const
 
@@ -275,21 +281,6 @@ function saveColumnSizing(resourceId: string, sizing: ColumnSizingState): void {
   }
 }
 
-type NotifyApi = ReturnType<typeof useNotify>
-
-/** Map a custom-action `notice` to the matching toast, defaulting any
- *  unrecognised type to a success toast. No-op when there's no notice.
- *  Centralises the notice→toast plumbing shared by every custom-action
- *  invocation (record / bulk / resource). */
-function showNotice(notify: NotifyApi, notice: CustomActionResponse['notice']): void {
-  if (!notice) return
-  const type = notice.type === 'error' ? 'error'
-    : notice.type === 'warning' ? 'warning'
-      : notice.type === 'info' ? 'info'
-        : 'success'
-  notify[type]({ message: notice.message })
-}
-
 /** Toggles for individual chrome / toolbar pieces. All default to `true`. */
 export interface ResourceListFeatures {
   breadcrumbs?: boolean
@@ -360,6 +351,7 @@ export function ResourceListPage({
   const { t } = useI18n()
   const notify = useNotify()
   const dialogs = useDialogs()
+  const openActionComponent = useActionLauncher(resourceId)
 
   const isSelectionControlled = controlledSelectedIds !== undefined && onSelectionChange !== undefined
   const [internalRowSelection, setInternalRowSelection] = React.useState<RowSelectionState>({})
@@ -465,6 +457,22 @@ export function ResourceListPage({
   const [wrapperWidth, setWrapperWidth] = React.useState(0)
   const roRef = React.useRef<ResizeObserver | null>(null)
   const dragCleanupRef = React.useRef<(() => void) | null>(null)
+  const lastWidthRef = React.useRef(0)
+
+  // The width feeds every column's rendered pixel size, so a naive
+  // `setWrapperWidth` per observation re-renders the whole table. Anything
+  // that animates the wrapper's width — notably the sidebar's 200ms
+  // collapse/expand transition — therefore fired a full table render on every
+  // frame and blocked the main thread for ~150-240ms, visibly stalling the
+  // animation. Two guards: drop sub-pixel/no-op observations, and schedule the
+  // update as a non-urgent transition so React can abandon the intermediate
+  // renders and only commit the settled width.
+  const commitWrapperWidth = React.useCallback((raw: number) => {
+    const w = Math.round(raw)
+    if (w === lastWidthRef.current) return
+    lastWidthRef.current = w
+    React.startTransition(() => setWrapperWidth(w))
+  }, [])
   // Callback ref: re-attaches ResizeObserver and click-and-drag handlers
   // whenever the wrapper mounts. (Plain useRef + useEffect runs only once,
   // so if the wrapper is initially unmounted due to conditional rendering,
@@ -480,16 +488,13 @@ export function ResourceListPage({
     }
     if (!el) return
     const ro = new ResizeObserver((entries) => {
-      const w = entries[0]?.contentRect.width ?? 0
-      setWrapperWidth(w)
+      commitWrapperWidth(entries[0]?.contentRect.width ?? 0)
     })
     ro.observe(el)
     roRef.current = ro
-    setWrapperWidth(el.clientWidth)
+    commitWrapperWidth(el.clientWidth)
     dragCleanupRef.current = attachDragScroll(el)
-  }, [])
-
-  const [filterOpen, setFilterOpen] = React.useState(false)
+  }, [commitWrapperWidth])
 
   const updateUrlQuery = React.useCallback(
     (changes: Partial<ListQueryState>) => {
@@ -669,16 +674,22 @@ export function ResourceListPage({
 
   const makeInvokeRecordHandler = React.useCallback(
     (record: RecordJSON) => async (action: ActionDescriptor) => {
+      // Actions with their own UI collect a payload first; the guard runs
+      // inside that flow (or not at all — the component is the confirmation).
+      if (hasActionComponent(action)) {
+        openActionComponent(action, { recordId: record.id })
+        return
+      }
       if (!await confirmGuard(action, dialogs)) return
       invokeRecord.mutate(
         { recordId: record.id, actionName: action.name },
         {
-          onSuccess: (res) => showNotice(notify, res.notice),
+          onSuccess: (res) => showActionNotice(notify, res.notice),
           onError: (err) => notify.error({ message: err.message }),
         },
       )
     },
-    [dialogs, invokeRecord, notify],
+    [dialogs, invokeRecord, notify, openActionComponent],
   )
 
   const showSelectColumn = f.bulk || isSelectionControlled
@@ -770,6 +781,7 @@ export function ResourceListPage({
       cell: ({ row }) => (
         <RowActions
           t={t}
+          record={row.original}
           customActions={customRecordActions}
           onView={() =>
             navigate({ name: 'show', resourceId, recordId: row.original.id })
@@ -866,14 +878,6 @@ export function ResourceListPage({
     },
     { enabled: f.refresh, description: t('common:refresh') },
   )
-  useHotkey(
-    'f',
-    () => {
-      setFilterOpen((v) => !v)
-    },
-    { enabled: f.filters, description: t('common:filters') },
-  )
-
   const handleBulkDelete = React.useCallback(async () => {
     const ok = await dialogs.confirm({
       title: t('common:bulkDeleteConfirm', { count: selectedCount }),
@@ -922,10 +926,14 @@ export function ResourceListPage({
 
   const inner = (
     <>
-      {f.filters && (
-        <FilterPanel
-          open={filterOpen}
-          onOpenChange={setFilterOpen}
+      {/* The trigger + panel normally live together inside the toolbar (see
+          `FilterControl`), which keeps the open/close state out of this
+          component so toggling doesn't re-render the whole list body. The
+          toolbar is suppressed in the standalone empty state, so mount a
+          trigger-less instance here to keep the `F` hotkey working. */}
+      {f.filters && !hasToolbarActions && (
+        <FilterControl
+          showTrigger={false}
           properties={visible}
           filters={columnFilters}
           onChange={handleFilterChange}
@@ -958,23 +966,14 @@ export function ResourceListPage({
                 </Tooltip>
               )}
               {f.filters && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="outline" size="sm" onClick={() => setFilterOpen(true)}>
-                      <ListFilter className="size-4"/>
-                      <span className="hidden sm:inline">{t('common:filters')}</span>
-                      {columnFilters.length > 0 && (
-                        <Badge className="ml-1 h-5 rounded-full px-1.5 text-xs">
-                          {columnFilters.length}
-                        </Badge>
-                      )}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent className="flex items-center gap-1.5">
-                    <span>{t('common:filters')}</span>
-                    <Kbd>F</Kbd>
-                  </TooltipContent>
-                </Tooltip>
+                <FilterControl
+                  showTrigger
+                  properties={visible}
+                  filters={columnFilters}
+                  onChange={handleFilterChange}
+                  resourceId={resourceId}
+                  t={t}
+                />
               )}
               {f.columns && (
                 <ColumnVisibilityMenu table={table} properties={visible} t={t}/>
@@ -1005,11 +1004,15 @@ export function ResourceListPage({
                 <ActionMenu
                   actions={customResourceActions}
                   onAction={async (action) => {
+                    if (hasActionComponent(action)) {
+                      openActionComponent(action)
+                      return
+                    }
                     if (!await confirmGuard(action, dialogs)) return
                     invokeResource.mutate(
                       { actionName: action.name },
                       {
-                        onSuccess: (res) => showNotice(notify, res.notice),
+                        onSuccess: (res) => showActionNotice(notify, res.notice),
                         onError: (err) => notify.error({ message: err.message }),
                       },
                     )
@@ -1144,13 +1147,23 @@ export function ResourceListPage({
                     <ActionMenu
                       actions={customBulkActions}
                       onAction={async (action) => {
+                        if (hasActionComponent(action)) {
+                          // The component collects the payload and runs the
+                          // action itself; clearing the selection is deferred
+                          // until it actually succeeds.
+                          openActionComponent(action, {
+                            recordIds: selectedIds,
+                            onSuccess: () => setRowSelection({}),
+                          })
+                          return
+                        }
                         if (!await confirmGuard(action, dialogs)) return
                         invokeBulk.mutate(
                           { actionName: action.name, ids: selectedIds },
                           {
                             onSuccess: (res) => {
                               setRowSelection({})
-                              showNotice(notify, res.notice)
+                              showActionNotice(notify, res.notice)
                             },
                             onError: (err) => notify.error({ message: err.message }),
                           },
@@ -1338,7 +1351,15 @@ export function ResourceListPage({
                       <TableBody>
                         {showSkeletons ? (
                           Array.from({ length: pagination.pageSize }, (_, i) => (
-                            <TableRow key={`skel-${i}`} className="pointer-events-none">
+                            // `aria-busy` marks these as placeholders: one is
+                            // rendered per page slot, so anything counting
+                            // rows (assistive tech, tests) would otherwise
+                            // read a full page of data that hasn't arrived.
+                            <TableRow
+                              key={`skel-${i}`}
+                              aria-busy="true"
+                              className="pointer-events-none"
+                            >
                               {table.getVisibleLeafColumns().map((col, j) => (
                                 <TableCell
                                   key={col.id}
@@ -1582,6 +1603,7 @@ function CellContent({
 }
 
 function RowActions({
+  record,
   onView,
   onEdit,
   onDelete,
@@ -1589,6 +1611,9 @@ function RowActions({
   customActions = [],
   t,
 }: {
+  /** Drives per-row visibility via `record.recordActions` — the server's
+   *  `isVisible`/`isAccessible` verdict for this specific row. */
+  record: RecordJSON
   onView(): void
   onEdit(): void
   onDelete(): void
@@ -1596,6 +1621,10 @@ function RowActions({
   customActions?: ActionDescriptor[]
   t: (key: string, params?: Record<string, string | number>) => string
 }): React.ReactElement {
+  const rowActions = visibleRecordActions(customActions, record)
+  const canShow = isActionAllowedForRecord('show', record)
+  const canEdit = isActionAllowedForRecord('edit', record)
+  const canDelete = isActionAllowedForRecord('delete', record)
   return (
     <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
       <DropdownMenu>
@@ -1607,25 +1636,33 @@ function RowActions({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>{t('common:actions')}</DropdownMenuLabel>
-          <DropdownMenuItem onSelect={onView}>
-            <Eye className="size-4"/> {t('common:show')}
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={onEdit}>
-            <Pencil className="size-4"/> {t('common:edit')}
-          </DropdownMenuItem>
-          {customActions.length > 0 && (
+          {canShow && (
+            <DropdownMenuItem onSelect={onView}>
+              <Eye className="size-4"/> {t('common:show')}
+            </DropdownMenuItem>
+          )}
+          {canEdit && (
+            <DropdownMenuItem onSelect={onEdit}>
+              <Pencil className="size-4"/> {t('common:edit')}
+            </DropdownMenuItem>
+          )}
+          {rowActions.length > 0 && (
             <>
               <DropdownMenuSeparator/>
               <ActionMenuItems
-                actions={customActions}
+                actions={rowActions}
                 onAction={(action) => onInvokeAction?.(action)}
               />
             </>
           )}
-          <DropdownMenuSeparator/>
-          <DropdownMenuItem onSelect={onDelete} className="text-destructive focus:text-destructive">
-            <Trash2 className="size-4"/> {t('common:delete')}
-          </DropdownMenuItem>
+          {canDelete && (
+            <>
+              <DropdownMenuSeparator/>
+              <DropdownMenuItem onSelect={onDelete} className="text-destructive focus:text-destructive">
+                <Trash2 className="size-4"/> {t('common:delete')}
+              </DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
@@ -1890,6 +1927,76 @@ function NumericFilterField({
   )
 }
 
+// ─── Filter trigger + panel ──────────────────────────────────────────────────
+
+/** How many filter fields the panel mounts per frame. Sized so a chunk fits
+ *  comfortably in one frame's budget while still filling the visible part of
+ *  the panel on the first couple of frames. */
+const FILTER_FIELD_MOUNT_CHUNK = 3
+
+/** Owns the filter sheet's open state, the `F` hotkey and (optionally) the
+ *  toolbar trigger button.
+ *
+ *  The state deliberately lives here rather than in `ResourceListPage`: the
+ *  list body is a large tree (a full table plus the mobile card list), so a
+ *  toggle stored on the page re-rendered all of it *before* Radix could mount
+ *  the sheet, delaying the slide-in by 110-200ms. Keeping it in this leaf means
+ *  opening the panel only re-renders the trigger and the panel itself.
+ *
+ *  Colocating the trigger with the panel is safe because the sheet renders
+ *  through a portal, so its position in this tree doesn't affect its layout. */
+function FilterControl({
+  showTrigger,
+  properties,
+  filters,
+  onChange,
+  resourceId,
+  t,
+}: {
+  showTrigger: boolean
+  properties: PropertyJSON[]
+  filters: ColumnFiltersState
+  onChange(next: ColumnFiltersState): void
+  resourceId: string
+  t: (key: string, params?: Record<string, string | number>) => string
+}): React.ReactElement {
+  const [open, setOpen] = React.useState(false)
+  useHotkey('f', () => setOpen((v) => !v), { description: t('common:filters') })
+
+  return (
+    <>
+      {showTrigger && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+              <ListFilter className="size-4"/>
+              <span className="hidden sm:inline">{t('common:filters')}</span>
+              {filters.length > 0 && (
+                <Badge className="ml-1 h-5 rounded-full px-1.5 text-xs">
+                  {filters.length}
+                </Badge>
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent className="flex items-center gap-1.5">
+            <span>{t('common:filters')}</span>
+            <Kbd>F</Kbd>
+          </TooltipContent>
+        </Tooltip>
+      )}
+      <FilterPanel
+        open={open}
+        onOpenChange={setOpen}
+        properties={properties}
+        filters={filters}
+        onChange={onChange}
+        resourceId={resourceId}
+        t={t}
+      />
+    </>
+  )
+}
+
 // ─── Filter panel (side sheet) ───────────────────────────────────────────────
 
 function FilterPanel({
@@ -1914,6 +2021,31 @@ function FilterPanel({
     if (open) setDraft(filters)
   }, [open, filters])
   const draftMap = new Map(draft.map((f) => [f.id, f.value]))
+
+  // Every FilterField mounts a Select/Popover primitive and, for low-cardinality
+  // string fields, a full checkbox list of distinct values — ~830 DOM nodes and
+  // ~170ms of render for a typical resource. Mounting them all in one pass
+  // stalled the sheet's slide-in: first while blocking the click handler, then
+  // (once deferred) as a single un-interruptible commit mid-animation.
+  //
+  // So they mount a few per frame instead. Fields not yet mounted render as
+  // skeletons of the same shape, and the whole list is in the DOM within a
+  // handful of frames — no field is permanently withheld, which keeps
+  // find-in-page and label-based queries working.
+  const [mountedCount, setMountedCount] = React.useState(0)
+  React.useEffect(() => {
+    if (!open) {
+      setMountedCount(0)
+      return
+    }
+    if (mountedCount >= properties.length) return
+    const id = requestAnimationFrame(() => {
+      React.startTransition(() => {
+        setMountedCount((n) => Math.min(n + FILTER_FIELD_MOUNT_CHUNK, properties.length))
+      })
+    })
+    return () => cancelAnimationFrame(id)
+  }, [open, mountedCount, properties.length])
 
   const setDraftFilter = (id: string, value: unknown) => {
     const without = draft.filter((f) => f.id !== id)
@@ -1954,20 +2086,27 @@ function FilterPanel({
 
         <ScrollArea className="min-h-0 flex-1">
           <div className="space-y-5 px-4 py-4">
-            {properties.map((p) => (
-              <FilterField
-                key={p.path}
-                property={p}
-                value={draftMap.get(p.path) as string | undefined}
-                onChange={(v) => setDraftFilter(p.path, v)}
-                valueFrom={draftMap.get(p.path + '~~from') as string | undefined}
-                valueTo={draftMap.get(p.path + '~~to') as string | undefined}
-                onChangeFrom={(v) => setDraftFilter(p.path + '~~from', v)}
-                onChangeTo={(v) => setDraftFilter(p.path + '~~to', v)}
-                resourceId={resourceId}
-                t={t}
-              />
-            ))}
+            {properties.map((p, i) =>
+              i < mountedCount ? (
+                <FilterField
+                  key={p.path}
+                  property={p}
+                  value={draftMap.get(p.path) as string | undefined}
+                  onChange={(v) => setDraftFilter(p.path, v)}
+                  valueFrom={draftMap.get(p.path + '~~from') as string | undefined}
+                  valueTo={draftMap.get(p.path + '~~to') as string | undefined}
+                  onChangeFrom={(v) => setDraftFilter(p.path + '~~from', v)}
+                  onChangeTo={(v) => setDraftFilter(p.path + '~~to', v)}
+                  resourceId={resourceId}
+                  t={t}
+                />
+              ) : (
+                <div key={p.path} className="space-y-1.5">
+                  <Skeleton className="h-4 w-24"/>
+                  <Skeleton className="h-8 w-full"/>
+                </div>
+              ),
+            )}
           </div>
         </ScrollArea>
 
@@ -2631,6 +2770,7 @@ function RecordCard({
               )}
             </div>
             <RowActions
+              record={record}
               onView={onView}
               onEdit={onEdit}
               onDelete={onDelete}

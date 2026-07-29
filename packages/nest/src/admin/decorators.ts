@@ -69,6 +69,13 @@ export interface ActionMeta {
   guard?: string
   component?: string | null
   custom?: Record<string, unknown>
+  /**
+   * Declarative cache invalidation for mutating custom actions — `true`
+   * drops the owning resource's caches, an array names resources
+   * explicitly. Built-in actions invalidate on their own; leave this unset
+   * on read-only actions so their responses stay cacheable.
+   */
+  invalidates?: true | string[]
 }
 
 export interface ActionDecoratorOptions

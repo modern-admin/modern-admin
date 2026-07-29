@@ -508,6 +508,12 @@ export class ModernAdmin {
       }
     }
     await this.invalidateMutationCaches(actionDecorator.name(), action.invalidates, response, request, context)
+    // Annotate before redacting: visibility predicates are the app's own
+    // logic and routinely key on columns the viewer may not be allowed to
+    // see (`isVisible: ctx => ctx.record?.params.internalState === 'x'`).
+    // Running after the filter would feed them `undefined` and silently flip
+    // their verdict per principal.
+    response = await this.annotateRecordActions(response, context)
     response = await this.filterActionResponseProperties(response, context)
     await this.emitMutationEvents(actionDecorator.name(), response, request, context)
     return response
@@ -669,6 +675,75 @@ export class ModernAdmin {
   ): Promise<RecordJSON> {
     const allowed = await this.accessiblePropertyPaths(resource, currentAdmin)
     return filterRecordJSONByPropertyPaths(record, allowed)
+  }
+
+  /**
+   * Stamp every returned record with the record-scoped actions it actually
+   * offers, resolving `isVisible` and `isAccessible` against that record.
+   *
+   * This is where `isVisible` lives. It is a UI hint, not a security gate:
+   * `invoke()` still authorizes through `isAccessible` alone, so hiding an
+   * action never becomes the only thing standing between a principal and
+   * the handler. What it buys is correct per-row menus — "Archive" on the
+   * in-stock rows, "Restock" on the rest — which `ResourceJSON.actions`
+   * cannot express because it is serialized without any record.
+   *
+   * Runs after the handler (so cached handler output stays un-annotated and
+   * gets re-annotated per principal) and returns fresh objects rather than
+   * mutating, for the same reason.
+   */
+  private async annotateRecordActions<R extends ActionResponse>(
+    response: R,
+    context: ActionContext,
+  ): Promise<R> {
+    const recordResponse = response as R & {
+      record?: RecordJSON
+      records?: RecordJSON[]
+    }
+    if (!recordResponse.record && !recordResponse.records) return response
+
+    const resource = context.resource
+    const candidates = resource.decorate().recordActions()
+    if (candidates.length === 0) return response
+
+    // Predicates read `record.params.*`, so rebuild a BaseRecord from the
+    // serialized params rather than threading the original instances through
+    // the response shape (they're gone by now — the handler returned JSON).
+    const namesFor = async (json: RecordJSON): Promise<string[]> => {
+      const record = resource.build(json.params)
+      const checked = await Promise.all(
+        candidates.map(async (action) => {
+          const actionContext: ActionContext = {
+            ...context,
+            record,
+            action: action.toDescriptor(),
+          }
+          const [visible, accessible] = await Promise.all([
+            action.isVisible(actionContext),
+            action.isAccessible(actionContext),
+          ])
+          return visible && accessible ? action.name() : null
+        }),
+      )
+      return checked.filter((name): name is string => name !== null)
+    }
+
+    return {
+      ...response,
+      ...(recordResponse.record
+        ? { record: { ...recordResponse.record, recordActions: await namesFor(recordResponse.record) } }
+        : {}),
+      ...(recordResponse.records
+        ? {
+          records: await Promise.all(
+            recordResponse.records.map(async (record) => ({
+              ...record,
+              recordActions: await namesFor(record),
+            })),
+          ),
+        }
+        : {}),
+    }
   }
 
   private async filterActionResponseProperties<R extends ActionResponse>(

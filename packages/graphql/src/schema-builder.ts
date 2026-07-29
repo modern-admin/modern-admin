@@ -19,11 +19,15 @@ import {
   type GraphQLFieldConfig,
   type GraphQLFieldResolver,
   type GraphQLInputFieldConfig,
+  type GraphQLInputType,
 } from 'graphql'
 import DataLoader from 'dataloader'
 import {
+  BUILT_IN_ACTIONS,
   ForbiddenError,
   RecordNotFoundError,
+  type ActionDescriptor,
+  type ActionRequest,
   type BaseProperty,
   type BaseResource,
   type CurrentAdmin,
@@ -111,6 +115,65 @@ const toTypeName = (id: string): string =>
   id
     .replace(/[^A-Za-z0-9]+(.)?/g, (_, c) => (c ? c.toUpperCase() : ''))
     .replace(/^(.)/, (c) => c.toUpperCase()) || 'Resource'
+
+/** GraphQL field name for a custom action, e.g. `products` + `bulkReprice`
+ *  → `productsBulkReprice`. Non-identifier characters in the action name are
+ *  camel-cased away the same way resource ids are. */
+const toActionFieldName = (lowerResourceId: string, actionName: string): string =>
+  `${lowerResourceId}${toTypeName(actionName)}`
+
+/**
+ * Custom (non built-in) actions of a resource, keyed by GraphQL field name.
+ * Built-ins are excluded — CRUD already covers them and `list`/`new`/`search`
+ * /`values` are themselves `actionType: 'resource'`, so a naive filter by
+ * type would re-expose them.
+ */
+const customActionsOf = (
+  resource: BaseResource,
+  lower: string,
+): Array<{ fieldName: string; descriptor: ActionDescriptor }> => {
+  const decorator = resource.decorate()
+  const out: Array<{ fieldName: string; descriptor: ActionDescriptor }> = []
+  for (const name of Object.keys(decorator.options.actions ?? {})) {
+    if (name in BUILT_IN_ACTIONS) continue
+    const action = decorator.getAction(name)
+    if (!action) continue
+    out.push({ fieldName: toActionFieldName(lower, name), descriptor: action.toDescriptor() })
+  }
+  return out
+}
+
+/** Args a custom action takes, driven by its `actionType`. */
+const actionArgs = (
+  actionType: ActionDescriptor['actionType'],
+): Record<string, { type: GraphQLInputType }> => {
+  switch (actionType) {
+  case 'record':
+    return { id: { type: new GraphQLNonNull(GraphQLID) }, payload: { type: GraphQLJSON } }
+  case 'bulk':
+    return {
+      ids: { type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(GraphQLID))) },
+      payload: { type: GraphQLJSON },
+    }
+  default:
+    return { payload: { type: GraphQLJSON } }
+  }
+}
+
+/** Turn GraphQL args into the `params` half of an ActionRequest. */
+const actionParams = (
+  resourceId: string,
+  actionName: string,
+  actionType: ActionDescriptor['actionType'],
+  args: Record<string, unknown>,
+): ActionRequest['params'] => {
+  const params: ActionRequest['params'] = { resourceId, action: actionName }
+  if (actionType === 'record' && args.id != null) params.recordId = String(args.id)
+  if (actionType === 'bulk' && Array.isArray(args.ids)) {
+    params.recordIds = (args.ids as unknown[]).map(String).join(',')
+  }
+  return params
+}
 
 const buildPropertyFields = (
   properties: BaseProperty[],
@@ -498,6 +561,62 @@ export const buildGraphqlSchema = (
         )
         return true
       },
+    }
+
+    // Custom actions — one Mutation field that runs the action (`post`) and
+    // one Query field that primes it (`get`), mirroring the REST pair. The
+    // response has no declared schema (it is whatever the user's handler
+    // returns), so both are typed as JSON.
+    //
+    // Everything goes through `admin.invoke()`, so the api-key/role gates and
+    // `isAccessible` apply exactly as they do over REST. The *schema* is not
+    // per-principal, though: the field exists for everyone and a denied
+    // principal gets a ForbiddenError at resolve time — same as CRUD.
+    for (const { fieldName, descriptor } of customActionsOf(resource, lower)) {
+      const { name: actionName, actionType } = descriptor
+      const args = actionArgs(actionType)
+
+      if (mutationFields[fieldName] || queryFields[fieldName]) {
+        throw new Error(
+          `[modern-admin/graphql] custom action "${actionName}" on resource "${id}" ` +
+            `maps to field "${fieldName}", which is already taken. Rename the action.`,
+        )
+      }
+
+      mutationFields[fieldName] = {
+        type: GraphQLJSON,
+        description: `Run the custom ${actionType} action "${actionName}" on ${id}.`,
+        args,
+        async resolve(_src, resolveArgs, ctx) {
+          return ctx.admin.invoke(
+            {
+              params: actionParams(id, actionName, actionType, resolveArgs),
+              method: 'post',
+              payload: (resolveArgs.payload as Record<string, unknown> | undefined) ?? {},
+            },
+            ctx.currentAdmin,
+          )
+        },
+      }
+
+      queryFields[fieldName] = {
+        type: GraphQLJSON,
+        description:
+          `Prime the custom ${actionType} action "${actionName}" on ${id} — runs its ` +
+          'handler with `method: "get"` without submitting. Handlers that do not ' +
+          'branch on the method will execute their full body here.',
+        args,
+        async resolve(_src, resolveArgs, ctx) {
+          return ctx.admin.invoke(
+            {
+              params: actionParams(id, actionName, actionType, resolveArgs),
+              method: 'get',
+              query: (resolveArgs.payload as Record<string, unknown> | undefined) ?? {},
+            },
+            ctx.currentAdmin,
+          )
+        },
+      }
     }
 
     // <resource>Events — pushes RealtimeEvent values whenever the bus

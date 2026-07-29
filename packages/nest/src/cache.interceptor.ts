@@ -5,6 +5,7 @@ import {
   Injectable,
   type NestInterceptor,
 } from '@nestjs/common'
+import { Reflector } from '@nestjs/core'
 import type { Response } from 'express'
 import { type Observable, from, of, switchMap, tap } from 'rxjs'
 import {
@@ -17,6 +18,7 @@ import {
   resolveResourceCacheConfig,
 } from '@modern-admin/core'
 import { MODERN_ADMIN } from './tokens.js'
+import { NO_HTTP_CACHE } from './no-http-cache.js'
 
 /** Header name follows the de-facto convention used by Varnish/Cloudflare. */
 const CACHE_HEADER = 'x-cache'
@@ -67,7 +69,10 @@ const principalScope = (principal: CurrentAdmin | undefined): string => {
  */
 @Injectable()
 export class ModernAdminCacheInterceptor implements NestInterceptor {
-  constructor(@Inject(MODERN_ADMIN) private readonly admin: ModernAdmin) {}
+  constructor(
+    @Inject(MODERN_ADMIN) private readonly admin: ModernAdmin,
+    private readonly reflector: Reflector,
+  ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const http = context.switchToHttp()
@@ -83,6 +88,16 @@ export class ModernAdminCacheInterceptor implements NestInterceptor {
     }
 
     if (req.method !== 'GET') {
+      setHeader('BYPASS')
+      return next.handle()
+    }
+    // Handlers marked with `@NoHttpCache()` — notably the custom-action GET
+    // routes, whose bodies come from user handlers we hold no tags for.
+    const optedOut = this.reflector.getAllAndOverride<boolean>(NO_HTTP_CACHE, [
+      context.getHandler(),
+      context.getClass(),
+    ])
+    if (optedOut) {
       setHeader('BYPASS')
       return next.handle()
     }

@@ -29,7 +29,7 @@ import {
   RouterProvider,
 } from '@tanstack/react-router'
 import { Loader2 } from 'lucide-react'
-import { BasepathContext } from './router.js'
+import { BasepathContext, useRoute } from './router.js'
 import { getRouteExtension } from './extension-registry.js'
 import { useI18n } from './i18n.js'
 import type { WizardStep } from './components/wizard-form.js'
@@ -46,6 +46,9 @@ const ResourceShowPage = React.lazy(() => import('./pages/show-page.js').then((m
 const ResourceEditPage = React.lazy(() => import('./pages/edit-page.js').then((m) => ({ default: m.ResourceEditPage })))
 const ResourceWizardCreatePage = React.lazy(() =>
   import('./pages/wizard-create-page.js').then((m) => ({ default: m.ResourceWizardCreatePage })),
+)
+const ResourceActionPage = React.lazy(() =>
+  import('./pages/action-page.js').then((m) => ({ default: m.ResourceActionPage })),
 )
 
 // ─── Route tree ───────────────────────────────────────────────────────────────
@@ -146,6 +149,41 @@ const resourceEditRoute = createRoute({
   },
 })
 
+// Custom-action pages. Two shapes so an action can be scoped to the whole
+// resource (`actionType: 'resource'`) or to one record (`actionType:
+// 'record'`); both render the same page, which resolves the action's
+// `component` through the ComponentLoader.
+const resourceActionRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/resources/$resourceId/actions/$actionName',
+  component: function ResourceActionRouteComponent() {
+    const { resourceId, actionName } = resourceActionRoute.useParams()
+    // Bulk actions carry their selection in `?recordIds=a,b,c`. Read it back
+    // through `useRoute()` so the encoding lives in exactly one place
+    // (`parseLocation`) rather than being re-derived here.
+    const route = useRoute()
+    const recordIds = route.name === 'action' ? route.recordIds : undefined
+    return (
+      <ResourceActionPage
+        resourceId={resourceId}
+        actionName={actionName}
+        {...(recordIds ? { recordIds } : {})}
+      />
+    )
+  },
+})
+
+const recordActionRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/resources/$resourceId/$recordId/actions/$actionName',
+  component: function RecordActionRouteComponent() {
+    const { resourceId, recordId, actionName } = recordActionRoute.useParams()
+    return (
+      <ResourceActionPage resourceId={resourceId} recordId={recordId} actionName={actionName} />
+    )
+  },
+})
+
 const settingsIndexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/settings',
@@ -191,6 +229,8 @@ const routeTree = rootRoute.addChildren([
   auditLogRoute,
   extensionRoute,
   resourceNewRoute,
+  resourceActionRoute,
+  recordActionRoute,
   resourceEditRoute,
   resourceShowRoute,
   resourceListRoute,

@@ -151,4 +151,18 @@ export interface RecordJSON {
   populated: Record<string, RecordJSON | unknown>
   errors: PropertyErrors
   baseError: RecordError | null
+  /**
+   * Names of the record-scoped actions this particular record offers —
+   * `isVisible` + `isAccessible` resolved with the record in context.
+   *
+   * Record actions are per-row by nature (`isVisible: (ctx) =>
+   * ctx.record?.params.inStock === true` only means something once there is
+   * a record), so `ResourceJSON.actions` cannot answer the question and the
+   * UI has to consult this list instead.
+   *
+   * Attached by `ModernAdmin.invoke()` to every record it returns; absent
+   * on records built outside the action pipeline, which callers should read
+   * as "no opinion — show everything".
+   */
+  recordActions?: string[]
 }

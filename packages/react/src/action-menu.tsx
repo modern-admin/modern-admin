@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@modern-admin/ui'
 import { MoreHorizontal, Zap } from 'lucide-react'
-import type { ActionDescriptor, ActionGroup } from './types.js'
+import type { ActionDescriptor, ActionGroup, RecordJSON } from './types.js'
 
 interface ActionMenuGroupNode {
   key: string
@@ -34,7 +34,32 @@ export interface ActionMenuProps {
   align?: 'start' | 'center' | 'end'
 }
 
-const getActionLabel = (action: ActionDescriptor): string =>
+/**
+ * Whether a record-scoped action should be offered for a specific record.
+ *
+ * The server resolves `isVisible`/`isAccessible` per record and reports the
+ * survivors in `RecordJSON.recordActions`. A record without that field made
+ * it here outside the action pipeline (or from an older server) — that is
+ * "no opinion", so everything stays visible rather than everything vanishing.
+ */
+export const isActionAllowedForRecord = (
+  actionName: string,
+  record: Pick<RecordJSON, 'recordActions'> | undefined,
+): boolean => !record?.recordActions || record.recordActions.includes(actionName)
+
+/** Narrow a resource's record actions down to the ones this record offers. */
+export const visibleRecordActions = (
+  actions: ActionDescriptor[],
+  record: Pick<RecordJSON, 'recordActions'> | undefined,
+): ActionDescriptor[] => {
+  if (!record?.recordActions) return actions
+  const allowed = new Set(record.recordActions)
+  return actions.filter((a) => allowed.has(a.name))
+}
+
+/** Display label for an action: the (already localized) `custom.label` set
+ *  by the metadata translator, falling back to the raw action name. */
+export const getActionLabel = (action: ActionDescriptor): string =>
   typeof action.custom?.label === 'string' ? action.custom.label : action.name
 
 const buildActionMenuTree = (actions: ActionDescriptor[]): ActionMenuNode[] => {

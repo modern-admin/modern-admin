@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { Filter, ModernAdmin } from '@modern-admin/core'
+import { Filter, ModernAdmin, type ActionRequest } from '@modern-admin/core'
 import { ResourceController } from '../src/resource.controller.js'
 import { FakeDatabase, FakeResource, type FakeTable } from './_helpers/fake-adapter.js'
 
@@ -16,6 +16,115 @@ const buildController = (tables: FakeTable[]): { controller: ResourceController;
 }
 
 const req = { currentAdmin: { id: 'me', role: 'admin' } }
+
+/** Records every ActionRequest that reaches a custom handler, so the tests
+ *  can assert on the exact shape the controller built from the HTTP call. */
+const buildCustomActionController = (): {
+  controller: ResourceController
+  seen: ActionRequest[]
+} => {
+  const seen: ActionRequest[] = []
+  const admin = new ModernAdmin({
+    adapters: [adapter] as never,
+    resources: [
+      {
+        resource: { name: 'users', rows: [{ id: '1', name: 'Ann' }, { id: '2', name: 'Bob' }] },
+        options: {
+          actions: {
+            sendMassPush: {
+              name: 'sendMassPush',
+              actionType: 'resource' as const,
+              component: 'SendMassPush',
+              handler: async (request: ActionRequest) => {
+                seen.push(request)
+                return { notice: { message: 'ok', type: 'success' as const } }
+              },
+            },
+            ping: {
+              name: 'ping',
+              actionType: 'record' as const,
+              handler: async (request: ActionRequest) => {
+                seen.push(request)
+                return { pinged: true }
+              },
+            },
+            tagAll: {
+              name: 'tagAll',
+              actionType: 'bulk' as const,
+              handler: async (request: ActionRequest) => {
+                seen.push(request)
+                return { ok: true }
+              },
+            },
+          },
+        },
+      },
+    ],
+  })
+  return { controller: new ResourceController(admin), seen }
+}
+
+describe('ResourceController — custom actions', () => {
+  test('POST actions/:action runs a resource action with the body as payload', async () => {
+    const { controller, seen } = buildCustomActionController()
+    const res = await controller.invokeResourceAction(
+      'users',
+      'sendMassPush',
+      { title: 'Hi', body: 'There' },
+      req,
+    )
+    expect(res.notice?.message).toBe('ok')
+    expect(seen[0]?.method).toBe('post')
+    expect(seen[0]?.payload).toEqual({ title: 'Hi', body: 'There' })
+    expect(seen[0]?.params.recordId).toBeUndefined()
+  })
+
+  test('POST actions/:action lifts recordIds out of the body for bulk actions', async () => {
+    const { controller, seen } = buildCustomActionController()
+    await controller.invokeResourceAction('users', 'tagAll', { recordIds: ['1', '2'], tag: 'vip' }, req)
+    expect(seen[0]?.params.recordIds).toBe('1,2')
+    expect(seen[0]?.payload).toEqual({ tag: 'vip' })
+  })
+
+  test('POST records/:recordId/actions/:action forwards the record id and payload', async () => {
+    const { controller, seen } = buildCustomActionController()
+    const res = await controller.invokeRecordAction('users', '1', 'ping', { note: 'hey' }, req)
+    expect(res.pinged).toBe(true)
+    expect(seen[0]?.params.recordId).toBe('1')
+    expect(seen[0]?.payload).toEqual({ note: 'hey' })
+  })
+
+  test('GET actions/:action primes a resource action with method "get"', async () => {
+    const { controller, seen } = buildCustomActionController()
+    await controller.fetchResourceAction('users', 'sendMassPush', { preview: '1' }, req)
+    expect(seen[0]?.method).toBe('get')
+    expect(seen[0]?.query).toEqual({ preview: '1' })
+    // A priming call carries no payload — handlers branch on the method.
+    expect(seen[0]?.payload).toBeUndefined()
+  })
+
+  test('GET actions/:action lifts recordIds out of the query string', async () => {
+    const { controller, seen } = buildCustomActionController()
+    await controller.fetchResourceAction('users', 'tagAll', { recordIds: '1,2', preview: '1' }, req)
+    expect(seen[0]?.params.recordIds).toBe('1,2')
+    expect(seen[0]?.query).toEqual({ preview: '1' })
+  })
+
+  test('GET records/:recordId/actions/:action primes a record action', async () => {
+    const { controller, seen } = buildCustomActionController()
+    await controller.fetchRecordAction('users', '2', 'ping', {}, req)
+    expect(seen[0]?.method).toBe('get')
+    expect(seen[0]?.params.recordId).toBe('2')
+  })
+
+  test('the priming GET does not shadow the built-in list route', async () => {
+    // `actions/list` is declared before the catch-all, so the built-in
+    // handler must keep winning for that name.
+    const { controller } = buildController([{ name: 'users', rows: [{ id: '1' }] }])
+    const res = (await controller.list('users', {}, req)) as { meta: { total: number } }
+    expect(res.meta.total).toBe(1)
+  })
+})
 
 describe('ResourceController', () => {
   test('list returns paginated records', async () => {
@@ -70,6 +179,17 @@ describe('ResourceController', () => {
     await expect(
       controller.list('users', { page: 'not-a-number' }, req),
     ).rejects.toBeDefined()
+  })
+
+  test('unknown action maps to NotFoundException', async () => {
+    const { controller } = buildController([{ name: 'users', rows: [] }])
+    try {
+      await controller.invokeResourceAction('users', 'nope', {}, req)
+      throw new Error('expected throw')
+    } catch (err: unknown) {
+      const e = err as { status?: number }
+      expect(e.status).toBe(404)
+    }
   })
 
   test('unknown resource maps to NotFoundException', async () => {

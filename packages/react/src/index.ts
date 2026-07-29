@@ -52,6 +52,9 @@ export {
   useDeleteRecord,
   useBulkDeleteRecords,
   useInvokeResourceAction,
+  useInvokeRecordAction,
+  useInvokeBulkAction,
+  useActionData,
   useSearchRecords,
   useCurrentUser,
   useLogin,
@@ -103,6 +106,25 @@ export {
   type DialogsProviderProps,
 } from './dialogs.js'
 export { confirmGuard } from './action-guard.js'
+export { showActionNotice } from './action-notice.js'
+export {
+  hasActionComponent,
+  useActionLauncher,
+  type OpenActionComponent,
+} from './action-launcher.js'
+export {
+  ActionMenu,
+  ActionMenuItems,
+  MoreActionsMenu,
+  getActionLabel,
+  isActionAllowedForRecord,
+  visibleRecordActions,
+  type ActionMenuProps,
+} from './action-menu.js'
+export {
+  ActionComponentHost,
+  type ActionComponentHostProps,
+} from './components/action-component-host.js'
 export {
   buildValidationSchema,
   buildPropertySchema,
@@ -134,6 +156,7 @@ export {
   createSocketRealtimeSubscriber,
   type SocketRealtimeOptions,
 } from './realtime-socket.js'
+export { ResourceActionPage, type ResourceActionPageProps } from './pages/action-page.js'
 export { ResourceListPage } from './pages/list-page.js'
 export { ResourceShowPage } from './pages/show-page.js'
 export { ResourceEditPage } from './pages/edit-page.js'
@@ -169,8 +192,11 @@ export {
 export type {
   AdminConfig,
   AdminFeatures,
+  ActionComponentProps,
   ActionDescriptor,
+  ActionGroup,
   CurrentUser,
+  CustomActionResponse,
   ListQuery,
   ListResponse,
   PropertyJSON,
