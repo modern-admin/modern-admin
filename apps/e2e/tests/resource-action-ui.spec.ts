@@ -1,4 +1,5 @@
 import { expect, test, type APIRequestContext } from '@playwright/test'
+import { chooseItem, menuOf, openSubmenu } from './_menu.js'
 
 /**
  * End-to-end coverage for resource-level custom actions that render their
@@ -59,14 +60,16 @@ test.describe('Resource-action UI — products.bulkRepriceUi', () => {
     // The toolbar ActionMenu — labelled "Actions" via i18n, sitting between
     // Export and "New". Nested one level under the action's `nesting`.
     await page.getByRole('button', { name: /^actions$/i }).first().click()
-    await page.getByRole('menuitem', { name: /^merchandising$/i }).click()
+    const toolbar = menuOf(page, /^actions$/i)
+    await expect(toolbar).toBeVisible({ timeout: 5_000 })
+    const merchandising = await openSubmenu(page, toolbar, /^merchandising$/i)
 
-    // Clicking an action that declares a `component` must navigate rather
+    // Choosing an action that declares a `component` must navigate rather
     // than fire — the priming GET is the only request it may make.
     const primePromise = page.waitForResponse(
       (res) => res.url().includes(ACTION_PATH) && res.request().method() === 'GET',
     )
-    await page.getByRole('menuitem', { name: /bulk reprice/i }).click()
+    await chooseItem(merchandising, /bulk reprice/i)
 
     await expect(page).toHaveURL(/\/resources\/products\/actions\/bulkRepriceUi$/)
     const primeRes = await primePromise
@@ -118,7 +121,10 @@ test.describe('Resource-action UI — products.bulkRepriceUi', () => {
       page.getByRole('heading', { name: /posts/i }).first(),
     ).toBeVisible({ timeout: 15_000 })
 
-    const rows = page.locator('tbody tr')
+    // Skip the `aria-busy` placeholder rows the table renders while loading —
+    // they carry no checkbox, so `nth(0)` would resolve to a dead node.
+    const rows = page.locator('tbody tr:not([aria-busy="true"])')
+    await expect(rows.first()).toBeVisible({ timeout: 15_000 })
     await rows.nth(0).getByRole('checkbox', { name: /^select row$/i }).check()
     await rows.nth(1).getByRole('checkbox', { name: /^select row$/i }).check()
     await expect(page.getByText(/^2 selected$/i)).toBeVisible({ timeout: 5_000 })
@@ -129,7 +135,9 @@ test.describe('Resource-action UI — products.bulkRepriceUi', () => {
         res.request().method() === 'GET',
     )
     await page.getByRole('button', { name: /^actions$/i }).first().click()
-    await page.getByRole('menuitem', { name: /schedule selected/i }).click()
+    const bulkMenu = menuOf(page, /^actions$/i)
+    await expect(bulkMenu).toBeVisible({ timeout: 5_000 })
+    await chooseItem(bulkMenu, /schedule selected/i)
 
     await expect(page).toHaveURL(/\/resources\/posts\/actions\/scheduleManyUi\?recordIds=/)
     const primeRes = await primePromise
@@ -170,15 +178,17 @@ test.describe('Resource-action UI — products.bulkRepriceUi', () => {
     ).toBeVisible({ timeout: 15_000 })
 
     await page.getByRole('button', { name: /^actions$/i }).first().click()
-    await page.getByRole('menuitem', { name: /^merchandising$/i }).click()
-    await page.getByRole('menuitem', { name: /^colors$/i }).click()
+    const toolbar = menuOf(page, /^actions$/i)
+    await expect(toolbar).toBeVisible({ timeout: 5_000 })
+    const merchandising = await openSubmenu(page, toolbar, /^merchandising$/i)
+    const colors = await openSubmenu(page, merchandising, /^colors$/i)
 
     const postPromise = page.waitForResponse(
       (res) =>
         res.url().includes('/admin/api/resources/products/actions/markFeaturedPalette') &&
         res.request().method() === 'POST',
     )
-    await page.getByRole('menuitem', { name: /apply featured palette/i }).click()
+    await chooseItem(colors, /apply featured palette/i)
     const res = await postPromise
     expect(res.ok(), `markFeaturedPalette failed: ${await res.text()}`).toBeTruthy()
 

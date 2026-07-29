@@ -7,6 +7,7 @@ import type { MetadataLocaleTranslations } from '@modern-admin/react'
 import enJson from './locales/en.json'
 import ruJson from './locales/ru.json'
 import { adminComponents } from './admin-components.js'
+import './styles.css'
 
 // JSON imports come in as their literal type. Casting through `unknown` keeps
 // the structural compatibility check while letting us swap translation files

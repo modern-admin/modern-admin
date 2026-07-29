@@ -7,6 +7,7 @@
  * No build-time configuration — one bundle works for any deployment.
  */
 
+import '@modern-admin/react/styles.css'
 import { mount } from './mount.js'
 import { readWindowConfig } from './runtime-config.js'
 

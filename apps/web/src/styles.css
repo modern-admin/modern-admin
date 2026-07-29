@@ -1,0 +1,9 @@
+/*
+ * Tailwind root for the reference SPA — and the canonical shape for any app
+ * that mounts the admin itself instead of serving the prebuilt standalone
+ * bundle: import the framework entry point, then point the scanner at your
+ * own sources so classes used only by your custom components survive.
+ */
+@import "@modern-admin/react/styles.css";
+
+@source "./**/*.{ts,tsx}";

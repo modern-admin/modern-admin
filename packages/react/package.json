@@ -1,7 +1,7 @@
 {
   "name": "@modern-admin/react",
   "version": "0.3.5",
-  "description": "React 19 frontend layer for Modern Admin — translation boundary, routing, hooks.",
+  "description": "React 19 frontend layer for Modern Admin \u2014 translation boundary, routing, hooks.",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/react#readme",
   "keywords": [
     "modern-admin",
@@ -13,7 +13,9 @@
     "frontend"
   ],
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": [
+    "**/*.css"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -26,7 +28,8 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
-    }
+    },
+    "./styles.css": "./src/styles.css"
   },
   "files": [
     "dist",
@@ -41,11 +44,12 @@
       ".": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
-      }
+      },
+      "./styles.css": "./dist/styles.css"
     }
   },
   "scripts": {
-    "build": "bun ../../scripts/clean.ts dist .tsbuildinfo && tsc -p tsconfig.build.json",
+    "build": "bun ../../scripts/clean.ts dist .tsbuildinfo && tsc -p tsconfig.build.json && bun ../../scripts/copy.ts src/styles.css dist/styles.css",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
     "lint": "eslint ."

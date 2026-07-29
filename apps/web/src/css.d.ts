@@ -1,2 +1,2 @@
 declare module '*.css'
-declare module '@modern-admin/ui/styles.css'
+declare module '@modern-admin/react/styles.css'

@@ -7,10 +7,16 @@
    bodies (e.g. richtext fields). */
 @plugin "@tailwindcss/typography";
 
-/* Tailwind 4 only scans files inside the project that imports this CSS by
-   default. Our React components and shadcn primitives live in sibling
-   workspace packages, so we point the scanner at them explicitly. */
-@source "../../react/src/**/*.{ts,tsx}";
+/* Tailwind 4 only scans the project that imports this CSS, and never
+   node_modules — so this package points the scanner at its own primitives.
+   Two globs because this file ships from `src/` in the workspace and from
+   `dist/` in the published package; a glob matching nothing is a no-op.
+
+   Sibling packages are deliberately NOT listed here: `react` depends on
+   `ui`, so no relative path from this file reaches it once node_modules is
+   not hoisted (bun's isolated store, pnpm). Every package scans itself —
+   apps import `@modern-admin/react/styles.css`, which imports this file. */
+@source "./**/*.{ts,tsx}";
 @source "../src/**/*.{ts,tsx}";
 
 @theme {

@@ -1,4 +1,5 @@
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test'
+import { menuOf, openSubmenu } from './_menu.js'
 
 /**
  * Per-record action visibility, end to end.
@@ -32,13 +33,42 @@ async function listProducts(request: APIRequestContext): Promise<ListRecord[]> {
   return (await res.json()).records as ListRecord[]
 }
 
-/** Open a row's "…" menu and return the items of one of its submenus. */
-async function submenuItems(page: Page, row: number, submenu: string): Promise<string[]> {
-  await page.locator(`tbody tr:nth-child(${row}) button[aria-haspopup="menu"]`).click()
-  await page.getByRole('menuitem', { name: submenu, exact: true }).hover()
-  const menu = page.getByRole('menu', { name: submenu })
-  await expect(menu).toBeVisible({ timeout: 5_000 })
-  return (await menu.getByRole('menuitem').allTextContents()).map((s) => s.trim())
+/** Rows holding real data — the loading state renders one `aria-busy`
+ *  placeholder row per page slot, which would otherwise match by position. */
+function dataRows(page: Page) {
+  return page.locator('tbody tr:not([aria-busy="true"])')
+}
+
+/**
+ * Open the row-actions menu of the row showing `recordId` and read the items
+ * of its `submenu` sub-menu.
+ *
+ * Three things here are deliberate, each having produced a CI flake:
+ *
+ *   • A fresh page load per read. Dismissing a Radix menu leaves its popper
+ *     briefly intercepting pointer events, so opening a second row's menu on
+ *     the same page races that teardown.
+ *   • `openSubmenu` rather than `hover()` — see `_menu.ts` for why pointer
+ *     actions on a sub-trigger are unreliable under CI load.
+ *
+ * The row is addressed by record id, not by position, so the API's list
+ * order and the table's render order don't have to agree.
+ */
+async function submenuItems(page: Page, recordId: string, submenu: string): Promise<string[]> {
+  await page.goto('/resources/products?perPage=40')
+  await expect(dataRows(page).first()).toBeVisible({ timeout: 15_000 })
+
+  const row = dataRows(page).filter({ hasText: recordId })
+  await expect(row).toHaveCount(1, { timeout: 10_000 })
+  await row.getByRole('button', { name: /^open menu$/i }).click()
+
+  // The dropdown is labelled by its trigger, whose accessible name is
+  // "Open menu" — that scopes every lookup below to this row.
+  const rowMenu = menuOf(page, /^open menu$/i)
+  await expect(rowMenu).toBeVisible({ timeout: 5_000 })
+
+  const sub = await openSubmenu(page, rowMenu, submenu)
+  return (await sub.getByRole('menuitem').allTextContents()).map((s) => s.trim())
 }
 
 test.describe('Per-record action visibility', () => {
@@ -88,24 +118,12 @@ test.describe('Per-record action visibility', () => {
     request,
   }) => {
     const records = await listProducts(request)
-    const inStockIdx = records.findIndex((r) => r.params.inStock === true)
-    const outOfStockIdx = records.findIndex((r) => r.params.inStock !== true)
-    expect(inStockIdx).toBeGreaterThanOrEqual(0)
-    expect(outOfStockIdx).toBeGreaterThanOrEqual(0)
+    const inStock = records.find((r) => r.params.inStock === true)
+    const outOfStock = records.find((r) => r.params.inStock !== true)
+    expect(inStock, 'no in-stock product in the fixture').toBeDefined()
+    expect(outOfStock, 'no out-of-stock product in the fixture').toBeDefined()
 
-    await page.goto('/resources/products?perPage=40')
-    await expect(
-      page.getByRole('heading', { name: /products/i }).first(),
-    ).toBeVisible({ timeout: 15_000 })
-
-    // Rows render in list order, so the API indices map to table rows 1-based.
-    const inStockItems = await submenuItems(page, inStockIdx + 1, 'Inventory')
-    expect(inStockItems).toEqual(['Archive'])
-
-    await page.keyboard.press('Escape')
-    await page.keyboard.press('Escape')
-
-    const outOfStockItems = await submenuItems(page, outOfStockIdx + 1, 'Inventory')
-    expect(outOfStockItems).toEqual(['Restock'])
+    expect(await submenuItems(page, inStock!.id, 'Inventory')).toEqual(['Archive'])
+    expect(await submenuItems(page, outOfStock!.id, 'Inventory')).toEqual(['Restock'])
   })
 })

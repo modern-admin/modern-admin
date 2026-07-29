@@ -1,0 +1,25 @@
+/*
+ * Tailwind 4 entry point for apps that embed Modern Admin.
+ *
+ * Import this — not `@modern-admin/ui/styles.css` — from your own Tailwind
+ * root. It pulls in the design tokens and shadcn primitives from
+ * `@modern-admin/ui` and points the class scanner at this package's sources:
+ *
+ *   @import "@modern-admin/react/styles.css";
+ *   @source "./**";                    // your own components
+ *
+ * Why the `@source` for this package lives here and not in `@modern-admin/ui`:
+ * `react` depends on `ui`, not the other way round, so there is no relative
+ * path from the `ui` package that reaches `react` once node_modules is not
+ * hoisted (bun's isolated store, pnpm). `@import` resolves package
+ * specifiers, `@source` resolves plain paths relative to the file it sits in
+ * — so every package has to scan itself.
+ *
+ * Two globs because this file ships from `src/` in the workspace and from
+ * `dist/` in the published package. Tailwind ignores a glob that matches
+ * nothing, so the inapplicable one is a no-op rather than an error.
+ */
+@import "@modern-admin/ui/styles.css";
+
+@source "./**/*.{ts,tsx}";
+@source "../src/**/*.{ts,tsx}";

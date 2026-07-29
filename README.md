@@ -198,8 +198,11 @@ Full documentation lives at **<https://docs.modernadminpro.com/docs/getting-star
 - Workspace test sweep: `bun --filter '*' test`
   (e2e suite is opted out because it uses non-`test` script names).
 - Tailwind 4 uses CSS-first config (`@theme`, `@import "tailwindcss"`); there
-  is no `tailwind.config.js`. For cross-package class detection add explicit
-  `@source "../../<pkg>/src/**/*.{ts,tsx}";` directives in the consuming CSS.
+  is no `tailwind.config.js`. Each package scans its own sources from its own
+  `styles.css` and composes upward via `@import "@modern-admin/<pkg>/styles.css"`
+  — never `@source` across package boundaries, since that path breaks under a
+  non-hoisted node_modules layout. Apps import
+  `@modern-admin/react/styles.css` and add one `@source` for their own files.
   `border` requires an explicit color in Tailwind 4 — pair with
   `border-border`.
 - TypeScript 6 stricter checks: use `as unknown as T` for variance/abstract

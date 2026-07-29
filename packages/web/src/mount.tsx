@@ -5,15 +5,21 @@
  *   import { mount } from '@modern-admin/web'
  *   mount(document.getElementById('root')!, { apiUrl: 'https://api.example.com' })
  *
+ * This module deliberately does **not** import the stylesheet: an app that
+ * registers its own components needs to own the Tailwind root so its classes
+ * get scanned, and a second root here would compile Tailwind twice. Import it
+ * yourself, either directly or from your own CSS:
+ *
+ *   import '@modern-admin/react/styles.css'
+ *
  * For the prebuilt standalone bundle, `src/standalone.tsx` calls this for
- * you using `window.__MODERN_ADMIN__`.
+ * you using `window.__MODERN_ADMIN__` and pulls in the stylesheet.
  */
 
 import { StrictMode } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { type ComponentLoader } from '@modern-admin/react'
 import { initTheme } from '@modern-admin/ui'
-import '@modern-admin/ui/styles.css'
 import { App } from './app.js'
 import type { ModernAdminRuntimeConfig } from './runtime-config.js'
 

@@ -269,9 +269,16 @@ When touching one of those, expect to update call sites for the new API.
 - Validation is **Zod everywhere** — DTOs, decorator options, form schemas.
 - **Mobile-first UI**: base classes target small viewports; `sm:`/`md:`/`lg:`
   enhance. Verify any new screen at ~375px.
-- Tailwind 4 has no config file. For cross-package class detection add explicit
-  `@source "../../<pkg>/src/**/*.{ts,tsx}";` in the consuming CSS. `border`
-  needs an explicit color — pair it with `border-border`.
+- Tailwind 4 has no config file. **Every package scans itself**: its own
+  `styles.css` carries `@source "./**/*.{ts,tsx}"` (workspace) plus
+  `@source "../src/**/*.{ts,tsx}"` (published, where the file ships from
+  `dist/`), and composes upward with `@import "@modern-admin/<pkg>/styles.css"`.
+  Never point an `@source` at a *sibling* package — `@import` resolves package
+  specifiers, `@source` does not, so a relative hop across packages silently
+  matches zero files under a non-hoisted node_modules layout (bun's isolated
+  store, pnpm) and every class used only by that package vanishes. Apps import
+  `@modern-admin/react/styles.css`. `border` needs an explicit color — pair it
+  with `border-border`.
 - Action buttons get a leading `lucide-react` icon when semantics map cleanly
   (`Plus`=create, `Trash2`=delete, `Pencil`=edit, `Eye`=view).
 - Custom actions may declare `guard?: string` — a confirmation description

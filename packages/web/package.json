@@ -35,6 +35,10 @@
       "types": "./src/index.ts",
       "default": "./src/index.ts"
     },
+    "./vite": {
+      "types": "./src/vite.ts",
+      "default": "./src/vite.ts"
+    },
     "./standalone/*": "./dist/standalone/*",
     "./package.json": "./package.json"
   },
@@ -48,14 +52,19 @@
         "types": "./dist/lib/index.d.ts",
         "default": "./dist/lib/index.js"
       },
+      "./vite": {
+        "types": "./dist/config/vite.d.ts",
+        "default": "./dist/config/vite.js"
+      },
       "./standalone/*": "./dist/standalone/*",
       "./package.json": "./package.json"
     }
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build --mode lib && vite build --mode standalone",
+    "build": "vite build --mode lib && vite build --mode standalone && bun run build:config",
     "build:lib": "vite build --mode lib",
+    "build:config": "tsc -p tsconfig.config.json",
     "build:standalone": "vite build --mode standalone",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
@@ -63,7 +72,10 @@
   },
   "peerDependencies": {
     "react": "^19.2.6",
-    "react-dom": "^19.2.6"
+    "react-dom": "^19.2.6",
+    "@tailwindcss/vite": "^4.2.4",
+    "@vitejs/plugin-react": "^6.0.1",
+    "vite": "^8.0.10"
   },
   "dependencies": {
     "@modern-admin/core": "workspace:^",
@@ -84,5 +96,16 @@
     "typescript": "^6.0.3",
     "vite": "^8.0.10",
     "vite-plugin-dts": "^5.0.1"
+  },
+  "peerDependenciesMeta": {
+    "@tailwindcss/vite": {
+      "optional": true
+    },
+    "@vitejs/plugin-react": {
+      "optional": true
+    },
+    "vite": {
+      "optional": true
+    }
   }
 }
