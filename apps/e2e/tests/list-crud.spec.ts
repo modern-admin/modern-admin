@@ -40,6 +40,16 @@ async function deleteCustomerSilently(
   await request.delete(adminApi(`/resources/customers/records/${id}/actions/delete`))
 }
 
+/**
+ * Rows carrying real data. While a list query is in flight the table renders
+ * one `aria-busy` placeholder row per page slot; those hold Skeletons rather
+ * than cells or an "Open menu" button, so any positional lookup that catches
+ * one waits forever.
+ */
+function dataRows(page: Page) {
+  return page.locator('tbody tr:not([aria-busy="true"])')
+}
+
 async function gotoCustomers(page: Page): Promise<void> {
   await page.goto('/resources/customers')
   // The list is mounted once at least one seeded row is rendered.
@@ -59,12 +69,11 @@ test.describe('List page — CRUD interactions', () => {
 
     // Capture the first-row id before paginating so we can prove the page
     // actually changed (different rows on page 2).
-    const firstRowIdBefore = await page
-      .locator('tbody tr')
+    const firstRowIdBefore = await dataRows(page)
       .first()
       .getAttribute('data-state')
       .catch(() => null)
-    const firstRowTextBefore = await page.locator('tbody tr').first().innerText()
+    const firstRowTextBefore = await dataRows(page).first().innerText()
 
     await page2Button.click()
     await expect(page).toHaveURL(/[?&]page=2/)
@@ -74,7 +83,7 @@ test.describe('List page — CRUD interactions', () => {
     ).toHaveAttribute('aria-current', 'page')
 
     // The first row on page 2 must not match the first row on page 1.
-    const firstRowTextAfter = await page.locator('tbody tr').first().innerText()
+    const firstRowTextAfter = await dataRows(page).first().innerText()
     expect(firstRowTextAfter).not.toEqual(firstRowTextBefore)
     expect(firstRowIdBefore).not.toBeUndefined()
   })
@@ -114,7 +123,7 @@ test.describe('List page — CRUD interactions', () => {
     // `ada.lovelace1@example.com`, `ada.allen8@example.com`, …) remain.
     // We assert >0 rows and that no row's text contains an obviously
     // non-Ada-family email.
-    const rows = page.locator('tbody tr')
+    const rows = dataRows(page)
     await expect(rows.first()).toBeVisible()
     const rowTexts = await rows.allInnerTexts()
     expect(rowTexts.length).toBeGreaterThan(0)
@@ -137,7 +146,7 @@ test.describe('List page — CRUD interactions', () => {
     await gotoCustomers(page)
     // Open the row-actions menu on the first row. The trigger is the ⋯ button
     // whose `sr-only` text is "Open menu".
-    const firstRow = page.locator('tbody tr').first()
+    const firstRow = dataRows(page).first()
     await firstRow.getByRole('button', { name: 'Open menu' }).click()
     const menu = page.getByRole('menu')
     await expect(menu).toBeVisible()
@@ -157,19 +166,23 @@ test.describe('List page — CRUD interactions', () => {
     // seeded data other specs rely on.
     const fixture = await createCustomer(request)
     try {
-      // Open the list with perPage=100 so every record (including our
-      // fresh fixture and any leftovers from other runs) is on a single
-      // page. Row lookup by unique fixture name is then unambiguous and
-      // immune to pagination races.
-      await page.goto('/resources/customers?perPage=100')
-      await expect(page.getByRole('cell', { name: 'Ada Lovelace' })).toHaveCount(1, {
-        timeout: 15_000,
-      })
+      // Filter down to just this fixture by its unique email.
+      //
+      // Loading the whole table instead (`perPage=100`) was flaky twice over:
+      // every suite run leaves orphan customers behind, so the row drifted
+      // across pages; and a ~100-row table keeps re-measuring its column
+      // widths, so the row-actions button never held still long enough for
+      // Playwright's stability check and `click()` retried until the test
+      // timed out. One row settles immediately.
+      await page.goto(
+        `/resources/customers?perPage=20&filters[email]=${encodeURIComponent(fixture.email)}`,
+      )
 
       const fixtureCell = page.getByRole('cell', { name: fixture.name })
-      await expect(fixtureCell).toBeVisible({ timeout: 10_000 })
+      await expect(fixtureCell).toBeVisible({ timeout: 15_000 })
+      await expect(dataRows(page)).toHaveCount(1, { timeout: 10_000 })
 
-      const fixtureRow = page.locator('tbody tr').filter({ has: fixtureCell })
+      const fixtureRow = dataRows(page).filter({ has: fixtureCell })
       await fixtureRow.getByRole('button', { name: 'Open menu' }).click()
       await page
         .getByRole('menu')
