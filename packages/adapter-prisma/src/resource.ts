@@ -4,6 +4,7 @@ import {
   BaseResource,
   buildDisplaySql,
   isoDate,
+  parseDateValue,
   stringifyKey,
   toNumber,
   truncateDate,
@@ -190,10 +191,13 @@ export class PrismaResource extends BaseResource {
       if (field.isRequired && normalised === null) continue
       // datetime-local inputs produce "YYYY-MM-DDTHH:mm" (no seconds / no tz).
       // Prisma 7 requires a complete ISO-8601 DateTime string, so we round-trip
-      // through Date to normalise any partial string.  Invalid strings are
-      // passed through unchanged so Prisma can surface the validation error.
+      // through Date to normalise any partial string.  `parseDateValue` reads
+      // an offset-less string as UTC — plain `new Date` would resolve it in the
+      // server's timezone, shifting the stored instant by the browser/server
+      // gap on every save.  Invalid strings are passed through unchanged so
+      // Prisma can surface the validation error.
       if (field.type === 'DateTime' && typeof normalised === 'string' && normalised !== '') {
-        const d = new Date(normalised)
+        const d = parseDateValue(normalised)
         out[field.name] = Number.isNaN(d.getTime()) ? normalised : d.toISOString()
       } else if (typeof normalised === 'string') {
         // Form-encoded payloads (`application/x-www-form-urlencoded`,

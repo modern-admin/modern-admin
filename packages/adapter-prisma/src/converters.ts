@@ -11,6 +11,28 @@ import {
 import { PrismaProperty } from './property.js'
 
 /**
+ * Whether Prisma accepts substring operators (`contains`, `startsWith`,
+ * `endsWith`) on this column.
+ *
+ * The core property *type* is too narrow a signal here: a `String @id` is
+ * surfaced as `uuid` by {@link PrismaProperty.resolveType} and FK columns as
+ * `reference`, yet underneath both are plain `String` columns Prisma is happy
+ * to match against. Gating on the taxonomy dropped those clauses silently, so
+ * filtering a list by a pasted id returned the *unfiltered* list.
+ *
+ * Deliberately NOT used for `eq`/`neq`: those stay exact on non-string types.
+ * The string branch adds `mode: 'insensitive'`, which costs the btree index on
+ * the column — and equality on an id / FK is the hot path (every related-records
+ * tab issues one). Substring matching can't use that index either way.
+ */
+const acceptsSubstringOps = (property: PrismaProperty | null): boolean => {
+  if (property == null) return false
+  if (property.type() === 'string') return true
+  const field = property.field
+  return field?.kind === 'scalar' && field.type === 'String'
+}
+
+/**
  * Build the Prisma `where` clause for a single filter element.
  *
  * When an explicit `operator` is set, it takes precedence over legacy
@@ -65,6 +87,7 @@ const buildOperatorClause = (
   property: PrismaProperty | null,
 ): unknown => {
   const isString = property != null && property.type() === 'string'
+  const canSubstring = acceptsSubstringOps(property)
   const isArray = property?.isArray() ?? false
 
   // ── Scalar-list (e.g. `String[]`, `Int[]`) field semantics ──────────
@@ -110,19 +133,19 @@ const buildOperatorClause = (
   }
   case 'co': {
     // `contains`/`startsWith`/`endsWith` are only valid on string columns.
-    // Drop the clause on non-string fields instead of emitting an invalid
+    // Drop the clause on anything else instead of emitting an invalid
     // where that crashes Prisma.
-    if (!isString) return undefined
+    if (!canSubstring) return undefined
     const coerced = coerceScalar(value, property)
     return { contains: String(coerced), mode: 'insensitive' }
   }
   case 'sw': {
-    if (!isString) return undefined
+    if (!canSubstring) return undefined
     const coerced = coerceScalar(value, property)
     return { startsWith: String(coerced), mode: 'insensitive' }
   }
   case 'ew': {
-    if (!isString) return undefined
+    if (!canSubstring) return undefined
     const coerced = coerceScalar(value, property)
     return { endsWith: String(coerced), mode: 'insensitive' }
   }
@@ -220,7 +243,7 @@ export const filterToWhere = (filter: Filter): Record<string, unknown> => {
     if (operator === 'nco') {
       // `contains` is only defined on string columns; drop silently on
       // anything else so the request never 500s.
-      if (!isString) return null
+      if (!acceptsSubstringOps(property)) return null
       const coerced = coerceScalar(value, property)
       topLevel.push({ NOT: { [path]: { contains: String(coerced), mode: 'insensitive' } } })
       return null

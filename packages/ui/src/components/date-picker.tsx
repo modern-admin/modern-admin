@@ -1,9 +1,10 @@
 // Popover-driven date / datetime input. Single picker handles both modes:
 // pass `mode="datetime"` to surface an HH:MM time input below the calendar.
 //
-// Value is an ISO-ish string (`yyyy-MM-dd` for dates, `yyyy-MM-ddTHH:mm` for
-// datetime — same shape <input type="date">/<input type="datetime-local">
-// produce, so callers can stay format-stable). The trigger is a real text
+// Value is an ISO string: `yyyy-MM-dd` for dates, a full UTC instant
+// (`toISOString()`) for datetime — offset-less wall time would be re-read in
+// the server's timezone and drift. Incoming values may be in any ISO shape;
+// only what we emit is normalised. The trigger is a real text
 // input so users can also type the date manually; clicks on the trailing
 // calendar icon open the popover with the inline picker.
 
@@ -73,8 +74,14 @@ function formatForInput(date: Date | undefined, mode: DatePickerMode): string {
   return format(date, mode === 'datetime' ? DATETIME_DISPLAY_FMT : DATE_FMT)
 }
 
+// Datetime values go out as a UTC instant, never as browser-local wall time.
+// A `yyyy-MM-ddTHH:mm` string carries no offset, so whoever resolves it later
+// (`new Date(...)` on the server) reads it in *that process's* timezone — a
+// browser/server timezone gap then shifts the stored instant on every save,
+// cumulatively. `date` mode keeps the bare `yyyy-MM-dd`: a date-only string is
+// spec'd to parse as UTC midnight, and it has no instant to preserve.
 function formatForApi(date: Date, mode: DatePickerMode): string {
-  return format(date, mode === 'datetime' ? DATETIME_FMT : DATE_FMT)
+  return mode === 'datetime' ? date.toISOString() : format(date, DATE_FMT)
 }
 
 export function DatePicker({

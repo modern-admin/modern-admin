@@ -251,6 +251,11 @@ export {
 // emits on the response, keeping diffs symmetric.
 export { unflatten } from './utils/flat.js'
 
+// Timezone-stable date parsing. Adapters resolve wire strings with this
+// instead of bare `new Date(...)`, so an offset-less date-time means UTC
+// rather than "whatever `TZ` the server happens to run under".
+export { parseDateValue } from './utils/date.js'
+
 // Action-hook chaining helpers. Resource features append `before`/`after`
 // hooks onto built-in actions without clobbering pre-existing ones — these
 // are the single shared implementation (formerly duplicated per feature).

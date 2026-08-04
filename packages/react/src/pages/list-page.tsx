@@ -623,6 +623,30 @@ export function ResourceListPage({
     return all
   }, [resource, lockedFilters])
 
+  // The filter panel has its own view — `filterProperties` (whitelist + order)
+  // or, absent that, every property whose `isVisible.filter` holds. Feeding it
+  // `visible` would tie filtering to the table columns, so a property hidden
+  // from the list becomes unfilterable and one hidden from filters still shows
+  // up. Both sets are computed server-side; use the matching one.
+  const filterable = React.useMemo<PropertyJSON[]>(() => {
+    const all = resource
+      ? visibleRecordProperties(resource.properties, 'filter', resource.propertyOrder?.filter)
+      : []
+    // Locked filters are fixed for the whole view — offering them as editable
+    // filter inputs would let the user contradict the lock.
+    if (lockedFilters && Object.keys(lockedFilters).length > 0) {
+      return all.filter((p) => !(p.path in lockedFilters))
+    }
+    return all
+  }, [resource, lockedFilters])
+
+  // Header (per-column) filters answer the same question as the panel, so they
+  // follow the same view: a column that isn't filterable gets no filter icon.
+  const filterablePaths = React.useMemo(
+    () => new Set(filterable.map((p) => p.path)),
+    [filterable],
+  )
+
   const { customResourceActions, customRecordActions, customBulkActions } = React.useMemo(() => {
     const builtInActionNames = new Set([
       'list',
@@ -748,7 +772,7 @@ export function ResourceListPage({
               else column.clearSorting()
             }}
           />
-          {f.headerFilters && (
+          {f.headerFilters && filterablePaths.has(property.path) && (
             <ColumnFilterPopover
               property={property}
               getFilters={() => columnFiltersRef.current}
@@ -801,6 +825,7 @@ export function ResourceListPage({
     navigate,
     t,
     handleColumnFilterApply,
+    filterablePaths,
     f.headerFilters,
     showSelectColumn,
     disableRowNavigation,
@@ -934,7 +959,7 @@ export function ResourceListPage({
       {f.filters && !hasToolbarActions && (
         <FilterControl
           showTrigger={false}
-          properties={visible}
+          properties={filterable}
           filters={columnFilters}
           onChange={handleFilterChange}
           resourceId={resourceId}
@@ -968,7 +993,7 @@ export function ResourceListPage({
               {f.filters && (
                 <FilterControl
                   showTrigger
-                  properties={visible}
+                  properties={filterable}
                   filters={columnFilters}
                   onChange={handleFilterChange}
                   resourceId={resourceId}
@@ -2327,8 +2352,14 @@ function StringFilterField({
 
   // Default to "is one of" only for fields with few distinct values; fields with
   // more choices default to "contains" (free-text) since a long checkbox list is
-  // unwieldy.
-  const shouldDefaultToOneOf = isLowCardinality && distinctValues.length <= ONE_OF_DEFAULT_MAX
+  // unwieldy. An *empty* distinct list is not "low cardinality" — adapters
+  // return no values for non-string columns (uuid, FK ids), and switching those
+  // to a checkbox picker with nothing to check leaves the user unable to type
+  // the value they came to filter by.
+  const shouldDefaultToOneOf =
+    isLowCardinality
+    && distinctValues.length > 0
+    && distinctValues.length <= ONE_OF_DEFAULT_MAX
 
   // If few distinct values, no existing filter, and default op (co with empty
   // val): auto-switch to "is one of" mode to match Metabase behavior.
