@@ -1,5 +1,14 @@
 # @modern-admin/web
 
+## 0.4.1
+
+### Patch Changes
+
+- Updated dependencies [[`d39e559`](https://github.com/modern-admin/modern-admin/commit/d39e559e5e1cdf9fdbba9cd53f3cdf386af6baee), [`d39e559`](https://github.com/modern-admin/modern-admin/commit/d39e559e5e1cdf9fdbba9cd53f3cdf386af6baee), [`d39e559`](https://github.com/modern-admin/modern-admin/commit/d39e559e5e1cdf9fdbba9cd53f3cdf386af6baee)]:
+  - @modern-admin/react@0.4.1
+  - @modern-admin/ui@0.4.1
+  - @modern-admin/core@0.4.1
+
 ## 0.4.0
 
 ### Minor Changes
