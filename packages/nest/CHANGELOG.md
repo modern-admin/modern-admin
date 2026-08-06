@@ -1,5 +1,12 @@
 # @modern-admin/nest
 
+## 0.4.2
+
+### Patch Changes
+
+- Updated dependencies [[`21f3457`](https://github.com/modern-admin/modern-admin/commit/21f3457c8260279be5055bc1f7a76be3ea5fee46), [`21f3457`](https://github.com/modern-admin/modern-admin/commit/21f3457c8260279be5055bc1f7a76be3ea5fee46)]:
+  - @modern-admin/i18n@0.4.2
+
 ## 0.4.1
 
 ### Patch Changes
