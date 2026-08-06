@@ -20,6 +20,8 @@ export const ru: LocaleBundle = {
     'common:noMatchingRecords': 'Нет записей, соответствующих фильтрам.',
     'common:clearFilters': 'Сбросить фильтры',
     'common:confirmDelete': 'Удалить запись?',
+    'common:confirmAction': 'Подтвердите действие',
+    'common:confirm': 'Подтвердить',
     'common:perPage': 'На странице',
     'common:page': 'Страница',
     'common:of': 'из',

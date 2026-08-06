@@ -20,6 +20,8 @@ export const ja: LocaleBundle = {
     'common:noMatchingRecords': 'フィルターに一致するレコードがありません。',
     'common:clearFilters': 'フィルターをクリア',
     'common:confirmDelete': 'このレコードを削除しますか？',
+    'common:confirmAction': '操作を確認しますか？',
+    'common:confirm': '確認',
     'common:perPage': '1ページあたり',
     'common:page': 'ページ',
     'common:of': '/',

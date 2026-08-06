@@ -20,6 +20,8 @@ export const de: LocaleBundle = {
     'common:noMatchingRecords': 'Keine Einträge entsprechen Ihren Filtern.',
     'common:clearFilters': 'Filter zurücksetzen',
     'common:confirmDelete': 'Diesen Eintrag löschen?',
+    'common:confirmAction': 'Aktion bestätigen',
+    'common:confirm': 'Bestätigen',
     'common:perPage': 'Pro Seite',
     'common:page': 'Seite',
     'common:of': 'von',

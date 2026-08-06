@@ -20,6 +20,8 @@ export const ptBR: LocaleBundle = {
     'common:noMatchingRecords': 'Nenhum registro corresponde aos seus filtros.',
     'common:clearFilters': 'Limpar filtros',
     'common:confirmDelete': 'Excluir este registro?',
+    'common:confirmAction': 'Confirmar ação',
+    'common:confirm': 'Confirmar',
     'common:perPage': 'Por página',
     'common:page': 'Página',
     'common:of': 'de',
