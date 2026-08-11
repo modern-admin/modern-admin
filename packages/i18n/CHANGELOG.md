@@ -1,5 +1,13 @@
 # @modern-admin/i18n
 
+## 0.4.2
+
+### Patch Changes
+
+- [`21f3457`](https://github.com/modern-admin/modern-admin/commit/21f3457c8260279be5055bc1f7a76be3ea5fee46) Thanks [@SergiyIva](https://github.com/SergiyIva)! - modal action title
+
+- [`21f3457`](https://github.com/modern-admin/modern-admin/commit/21f3457c8260279be5055bc1f7a76be3ea5fee46) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Confirm dialogs no longer default to the delete wording. A guarded custom action now shows a neutral "Confirm action" title with a "Confirm" button; only destructive confirms keep "Delete this record?" / "Delete". Adds `common:confirmAction` and `common:confirm` to every locale.
+
 ## 0.3.4
 
 ### Patch Changes

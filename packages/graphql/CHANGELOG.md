@@ -1,5 +1,12 @@
 # @modern-admin/graphql
 
+## 0.4.2
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @modern-admin/nest@0.4.2
+
 ## 0.4.1
 
 ### Patch Changes
