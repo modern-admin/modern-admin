@@ -134,6 +134,70 @@ describe('PrismaResource', () => {
     })
     await expect(resource.create({ email: 'dup@x' })).rejects.toBeInstanceOf(ValidationError)
   })
+
+  // Prisma 7 driver adapters report constraints under `meta.driverAdapterError`
+  // and never populate `meta.target` / `meta.field_name`.
+  const driverAdapterError = (
+    code: string,
+    constraint: Record<string, unknown>,
+    modelName: string,
+  ): Error =>
+    Object.assign(new Error('Constraint failed'), {
+      code,
+      meta: { modelName, driverAdapterError: { cause: { constraint } } },
+    })
+
+  test('P2002 from a driver adapter maps constraint.fields to properties', async () => {
+    const { resource, delegate } = buildResource()
+    delegate.nextError = driverAdapterError('P2002', { fields: ['id'] }, 'User')
+    const err = (await resource.create({ id: 'dup' }).catch((e) => e)) as ValidationError
+    expect(err).toBeInstanceOf(ValidationError)
+    expect(err.propertyErrors.id).toEqual({ type: 'unique', message: 'id must be unique' })
+  })
+
+  test('P2002 from a driver adapter falls back to a record error when opaque', async () => {
+    const { resource, delegate } = buildResource()
+    delegate.nextError = driverAdapterError('P2002', { foreignKey: true }, 'User')
+    const err = (await resource.create({ id: 'dup' }).catch((e) => e)) as ValidationError
+    expect(err).toBeInstanceOf(ValidationError)
+    expect(err.propertyErrors).toEqual({})
+    expect(err.baseError?.type).toBe('unique')
+  })
+
+  test('P2003 from a driver adapter resolves the field out of the index name', async () => {
+    const delegate = createDelegate()
+    const client = createClient({ post: delegate })
+    const resource = new PrismaResource({ model: postModel, client, enums: [roleEnum] })
+    delegate.nextError = driverAdapterError('P2003', { index: 'Post_authorId_fkey' }, 'Post')
+    const err = (await resource
+      .create({ title: 'x', authorId: 'missing' })
+      .catch((e) => e)) as ValidationError
+    expect(err).toBeInstanceOf(ValidationError)
+    expect(err.propertyErrors.authorId).toEqual({
+      type: 'foreignKey',
+      message: 'related record not found',
+    })
+  })
+
+  test('P2003 on delete reports an inbound reference, not a missing relation', async () => {
+    const { resource, delegate } = buildResource([{ id: '1' }])
+    // Delete-restrict: the violated constraint lives on the referencing table.
+    delegate.nextError = driverAdapterError('P2003', { index: 'Post_authorId_fkey' }, 'User')
+    const err = (await resource.delete('1').catch((e) => e)) as ValidationError
+    expect(err).toBeInstanceOf(ValidationError)
+    expect(err.propertyErrors).toEqual({})
+    expect(err.baseError).toEqual({
+      type: 'foreignKey',
+      message: 'this record is still referenced by related records',
+    })
+  })
+
+  test('composite unique index names split into every participating field', async () => {
+    const { resource, delegate } = buildResource()
+    delegate.nextError = driverAdapterError('P2002', { index: 'User_email_age_key' }, 'User')
+    const err = (await resource.create({ email: 'a@x' }).catch((e) => e)) as ValidationError
+    expect(Object.keys(err.propertyErrors).sort()).toEqual(['age', 'email'])
+  })
 })
 
 describe('PrismaResource.transaction', () => {

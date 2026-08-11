@@ -13,6 +13,7 @@
   },
   "scripts": {
     "build": "tsc -b",
+    "test": "bun test",
     "typecheck": "tsc --noEmit",
     "lint": "eslint ."
   },

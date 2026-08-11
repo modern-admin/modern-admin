@@ -152,8 +152,11 @@ export function ReferenceCombobox({
           <ChevronsUpDown className="size-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-        <Command shouldFilter={false}>
+      <PopoverContent
+        className="flex max-h-[var(--radix-popover-content-available-height)] w-[var(--radix-popover-trigger-width)] flex-col p-0"
+        align="start"
+      >
+        <Command shouldFilter={false} className="min-h-0">
           <CommandInput
             placeholder={t('common:searchPlaceholder')}
             value={query}
@@ -339,8 +342,11 @@ export function ReferenceMultiCombobox({
             <ChevronsUpDown className="size-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-          <Command shouldFilter={false}>
+        <PopoverContent
+          className="flex max-h-[var(--radix-popover-content-available-height)] w-[var(--radix-popover-trigger-width)] flex-col p-0"
+          align="start"
+        >
+          <Command shouldFilter={false} className="min-h-0">
             <CommandInput placeholder={t('common:searchPlaceholder')} value={query} onValueChange={setQuery} />
             <CommandList>
               {search.isLoading && (

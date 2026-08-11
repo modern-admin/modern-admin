@@ -36,7 +36,7 @@ export const CommandInput = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive.Input>,
   React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input>
 >(({ className, ...props }, ref) => (
-  <div className="flex items-center border-b border-border px-3" cmdk-input-wrapper="">
+  <div className="flex shrink-0 items-center border-b border-border px-3" cmdk-input-wrapper="">
     <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
     <CommandPrimitive.Input
       ref={ref}
@@ -56,7 +56,12 @@ export const CommandList = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <CommandPrimitive.List
     ref={ref}
-    className={cn('max-h-[300px] overflow-y-auto overflow-x-hidden', className)}
+    // `min-h-0` so the list — not the search input above it — is what gives
+    // way when the popover is height-capped to the visible viewport.
+    className={cn(
+      'max-h-[300px] min-h-0 overscroll-contain overflow-y-auto overflow-x-hidden',
+      className,
+    )}
     {...props}
   />
 ))

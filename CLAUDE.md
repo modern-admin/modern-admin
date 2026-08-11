@@ -19,7 +19,8 @@ bun run dev:web                # Vite + React SPA       → http://localhost:300
 
 bun run typecheck              # every workspace (tsc --noEmit)
 bun run lint                   # every workspace (eslint .)
-bun test                       # unit tests, all packages (= bun --filter '*' test)
+bun run test                   # unit tests, per workspace (= bun --filter '*' test)
+bun test                       # unit tests, one bun runner over the whole repo
 bun run build                  # build all publishable packages
 bun run e2e                    # Playwright suite (apps/e2e)
 ```
@@ -222,6 +223,11 @@ When touching one of those, expect to update call sites for the new API.
 - **Tests** live in `<pkg>/test/` and run with `bun test`. Unit tests are
   hermetic — Redis is faked and no Postgres is required. E2E specs live in
   `apps/e2e/tests/` and need docker-compose services + `SEED_DEMO=1` fixtures.
+  Those specs are `*.spec.ts`, which matches bun's test glob but explodes under
+  bun's runner — the root `bunfig.toml` excludes them via
+  `[test] pathIgnorePatterns`, and `apps/e2e` carries a `test` script that just
+  points at `bun run e2e`. A workspace holding unit tests must declare
+  `"test": "bun test"`, otherwise `bun --filter '*' test` skips it silently.
 - **Agent skills** vendored under `.agents/skills/` (`graphql-schema`,
   `graphql-operations` from apollographql, `shadcn`), pinned in
   `skills-lock.json`. Consult them when doing GraphQL schema/operation or

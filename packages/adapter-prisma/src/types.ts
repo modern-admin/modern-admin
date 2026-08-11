@@ -28,6 +28,8 @@ export type PrismaClientLike = { [K: string]: any } & {
  */
 export interface DmmfField {
   name: string
+  /** Physical column name when the field carries `@map`. */
+  dbName?: string | null
   kind: 'scalar' | 'object' | 'enum' | 'unsupported'
   type: string
   isList: boolean

@@ -2665,7 +2665,10 @@ function ColumnFilterPopover({
           <ListFilter className="size-3.5"/>
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-72 border-border p-3" align="start">
+      <PopoverContent
+        className="max-h-[var(--radix-popover-content-available-height)] w-72 overflow-y-auto overscroll-contain border-border p-3"
+        align="start"
+      >
         <div className="space-y-3">
           <FilterField
             property={property}

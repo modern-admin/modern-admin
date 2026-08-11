@@ -214,7 +214,7 @@ export function Combobox({
           // Preventing the default keeps Radix from re-toggling internal state.
           e.preventDefault()
         }}
-        className="w-[var(--radix-popover-trigger-width)] p-1"
+        className="flex max-h-[var(--radix-popover-content-available-height)] w-[var(--radix-popover-trigger-width)] flex-col p-1"
       >
         {loading && items.length === 0 ? (
           <div className="px-2 py-2 text-sm text-muted-foreground">
@@ -225,7 +225,7 @@ export function Combobox({
             {l.noMatches.replace('{value}', value)}
           </div>
         ) : (
-          <ul role="listbox" className="max-h-60 overflow-y-auto">
+          <ul role="listbox" className="max-h-60 min-h-0 overflow-y-auto overscroll-contain">
             {items.map((s, i) => {
               const active = i === highlight
               return (

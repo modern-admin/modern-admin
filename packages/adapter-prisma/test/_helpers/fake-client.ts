@@ -88,6 +88,11 @@ export const createDelegate = (initial: FakeRow[] = [], idField = 'id'): FakeDel
     },
     async delete(args) {
       calls.push({ method: 'delete', args })
+      if (delegate.nextError) {
+        const e = delegate.nextError
+        delegate.nextError = undefined
+        throw e
+      }
       const idx = rows.findIndex((r) => matchesWhere(r, args.where))
       if (idx < 0) throw Object.assign(new Error('not found'), { code: 'P2025' })
       const [removed] = rows.splice(idx, 1)
