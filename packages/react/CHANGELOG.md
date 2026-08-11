@@ -1,5 +1,35 @@
 # @modern-admin/react
 
+## 0.4.2
+
+### Patch Changes
+
+- [`21f3457`](https://github.com/modern-admin/modern-admin/commit/21f3457c8260279be5055bc1f7a76be3ea5fee46) Thanks [@SergiyIva](https://github.com/SergiyIva)! - modal action title
+
+- [`3ad467e`](https://github.com/modern-admin/modern-admin/commit/3ad467edaf7f219843d5468f39ceb1a9a09b0383) Thanks [@SergiyIva](https://github.com/SergiyIva)! - fix(ui): keep floating layers usable on mobile
+
+  Floating content (Popover, Select, DropdownMenu incl. submenus, Tooltip) now
+  portals into the enclosing Dialog / AlertDialog / Sheet instead of
+  `document.body`. Radix wraps modal content in `react-remove-scroll`, which only
+  lets touch gestures through inside that subtree — a dropdown portaled to the
+  body rendered fine but could not be scrolled with a finger while the filter
+  sheet was open.
+
+  They also get a default `collisionPadding` that folds in the mobile browser's
+  visual-viewport insets (URL bar, on-screen keyboard), so a layer that flips
+  above its trigger no longer lands behind browser chrome, and they cap their
+  height to the available viewport space — the reference combobox and the column
+  filter popover now shrink their list instead of overflowing off-screen, keeping
+  the search field visible.
+
+- [`3ad467e`](https://github.com/modern-admin/modern-admin/commit/3ad467edaf7f219843d5468f39ceb1a9a09b0383) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Added user friendly chart's filters and selector component adoptation for mobile view
+
+- [`21f3457`](https://github.com/modern-admin/modern-admin/commit/21f3457c8260279be5055bc1f7a76be3ea5fee46) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Confirm dialogs no longer default to the delete wording. A guarded custom action now shows a neutral "Confirm action" title with a "Confirm" button; only destructive confirms keep "Delete this record?" / "Delete". Adds `common:confirmAction` and `common:confirm` to every locale.
+
+- Updated dependencies [[`21f3457`](https://github.com/modern-admin/modern-admin/commit/21f3457c8260279be5055bc1f7a76be3ea5fee46), [`3ad467e`](https://github.com/modern-admin/modern-admin/commit/3ad467edaf7f219843d5468f39ceb1a9a09b0383), [`3ad467e`](https://github.com/modern-admin/modern-admin/commit/3ad467edaf7f219843d5468f39ceb1a9a09b0383), [`21f3457`](https://github.com/modern-admin/modern-admin/commit/21f3457c8260279be5055bc1f7a76be3ea5fee46)]:
+  - @modern-admin/i18n@0.4.2
+  - @modern-admin/ui@0.4.2
+
 ## 0.4.1
 
 ### Patch Changes
