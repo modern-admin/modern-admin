@@ -1,5 +1,31 @@
 # @modern-admin/cache-redis
 
+## 0.5.0
+
+### Minor Changes
+
+- [`4251f7a`](https://github.com/modern-admin/modern-admin/commit/4251f7a6ea01ad80fbd5515a27cec2e138d2ccb5) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Harden server caching across processes and expose cache observability.
+
+  - Route all framework reads, writes, and invalidations through a fail-open
+    `CacheRuntime` with tag-generation fencing, invalidation retry/quarantine,
+    TTL jitter, metrics, and optional distributed single-flight locks.
+  - Make Redis value/tag/reverse-index writes atomic, add cross-instance tag
+    epochs, token-safe locks, exact delete/overwrite cleanup, and monotonic tag
+    TTLs.
+  - Version and canonicalize action and HTTP keys, fix bounded in-memory LRU tag
+    semantics, and actively revoke cached role permissions across replicas.
+  - Scope HTTP entries per principal, bypass dynamic access predicates, and tie
+    cached responses to role-permission invalidation.
+  - Add protected cache stats/reset/resource-invalidation endpoints and a
+    localized Cache diagnostics screen.
+
+- [`4251f7a`](https://github.com/modern-admin/modern-admin/commit/4251f7a6ea01ad80fbd5515a27cec2e138d2ccb5) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Harden server caching across processes and expose cache observability.
+
+### Patch Changes
+
+- Updated dependencies [[`4251f7a`](https://github.com/modern-admin/modern-admin/commit/4251f7a6ea01ad80fbd5515a27cec2e138d2ccb5), [`4251f7a`](https://github.com/modern-admin/modern-admin/commit/4251f7a6ea01ad80fbd5515a27cec2e138d2ccb5), [`4251f7a`](https://github.com/modern-admin/modern-admin/commit/4251f7a6ea01ad80fbd5515a27cec2e138d2ccb5)]:
+  - @modern-admin/core@0.5.0
+
 ## 0.4.1
 
 ### Patch Changes

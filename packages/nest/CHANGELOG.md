@@ -1,5 +1,54 @@
 # @modern-admin/nest
 
+## 0.5.0
+
+### Minor Changes
+
+- [`4251f7a`](https://github.com/modern-admin/modern-admin/commit/4251f7a6ea01ad80fbd5515a27cec2e138d2ccb5) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Harden server caching across processes and expose cache observability.
+
+  - Route all framework reads, writes, and invalidations through a fail-open
+    `CacheRuntime` with tag-generation fencing, invalidation retry/quarantine,
+    TTL jitter, metrics, and optional distributed single-flight locks.
+  - Make Redis value/tag/reverse-index writes atomic, add cross-instance tag
+    epochs, token-safe locks, exact delete/overwrite cleanup, and monotonic tag
+    TTLs.
+  - Version and canonicalize action and HTTP keys, fix bounded in-memory LRU tag
+    semantics, and actively revoke cached role permissions across replicas.
+  - Scope HTTP entries per principal, bypass dynamic access predicates, and tie
+    cached responses to role-permission invalidation.
+  - Add protected cache stats/reset/resource-invalidation endpoints and a
+    localized Cache diagnostics screen.
+
+- [`4251f7a`](https://github.com/modern-admin/modern-admin/commit/4251f7a6ea01ad80fbd5515a27cec2e138d2ccb5) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Harden server caching across processes and expose cache observability.
+
+- [`4251f7a`](https://github.com/modern-admin/modern-admin/commit/4251f7a6ea01ad80fbd5515a27cec2e138d2ccb5) Thanks [@SergiyIva](https://github.com/SergiyIva)! - List view refresh now bypasses the server cache
+
+  The refresh button used to only refetch the client-side query — within the
+  HTTP/action cache TTL the server replayed the very entry the user was trying
+  to get past, so "refresh" could show stale rows.
+
+  It now sends `Cache-Control: no-cache`, which the REST layer forwards as
+  `ActionRequest.refresh`. The list action reads straight from the database,
+  compares the result with what was cached, and — only when the rows actually
+  moved — invalidates the resource's server-side caches (list, records and
+  dependent resources) before storing the fresh response. Unchanged data is
+  served as-is, so a refresh no longer costs neighbouring cached scopes.
+
+  - `core`: `CacheRuntimeReadOptions` gains `refresh` / `onChanged`;
+    `ActionRequest` gains `refresh`.
+  - `nest`: the HTTP cache interceptor honours `Cache-Control: no-cache`
+    (`x-cache: REVALIDATED`) instead of serving a HIT.
+  - `react`: `AdminClient.list()` takes `{ refresh }`, and the new
+    `useRefreshRecords()` hook drives the list view's refresh button and `R`
+    hotkey.
+
+### Patch Changes
+
+- Updated dependencies [[`4251f7a`](https://github.com/modern-admin/modern-admin/commit/4251f7a6ea01ad80fbd5515a27cec2e138d2ccb5), [`4251f7a`](https://github.com/modern-admin/modern-admin/commit/4251f7a6ea01ad80fbd5515a27cec2e138d2ccb5), [`4251f7a`](https://github.com/modern-admin/modern-admin/commit/4251f7a6ea01ad80fbd5515a27cec2e138d2ccb5), [`4251f7a`](https://github.com/modern-admin/modern-admin/commit/4251f7a6ea01ad80fbd5515a27cec2e138d2ccb5)]:
+  - @modern-admin/core@0.5.0
+  - @modern-admin/i18n@0.5.0
+  - @modern-admin/telemetry@0.5.0
+
 ## 0.4.2
 
 ### Patch Changes
