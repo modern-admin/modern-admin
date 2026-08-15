@@ -28,7 +28,8 @@ interface NotifyApi {
   error(input: Input, opts?: { description?: string }): void
   info(input: Input, opts?: { description?: string }): void
   warning(input: Input, opts?: { description?: string }): void
-  /** Show loading -> success/error around a promise. Strings are i18n keys. */
+  /** Show loading -> success/error around a promise. Strings are raw text;
+   * use `{ key: 'namespace:key' }` for translation. */
   promise<T>(
     p: Promise<T>,
     messages: { loading: Input; success: Input | ((value: T) => Input); error: Input | ((err: unknown) => Input) },

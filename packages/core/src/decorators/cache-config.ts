@@ -14,11 +14,11 @@ export type CacheReadAction = 'list' | 'show' | 'search' | 'http'
 
 export interface ResolvedCacheConfig {
   enabled: boolean
-  /** TTL in seconds. Zero is allowed; means "set without expiry from the
-   *  provider's perspective" — providers that honour `defaultTtl` will
-   *  fall back to that. The built-in actions always pass an explicit
-   *  positive value (or 0 when disabled). */
+  /** TTL in seconds. Zero is allowed and means "set without expiry". The
+   *  built-in actions pass a positive value (or 0 when disabled). */
   ttl: number
+  jitterRatio: number
+  crossReplicaLock: boolean
 }
 
 /** Strategy `'tag-only'` substitutes this TTL — ~30 days. The cache is
@@ -39,7 +39,12 @@ export const DEFAULT_TTL_SECONDS: Record<CacheReadAction, number> = {
   http: 300,
 }
 
-export const DISABLED: ResolvedCacheConfig = { enabled: false, ttl: 0 }
+export const DISABLED: ResolvedCacheConfig = {
+  enabled: false,
+  ttl: 0,
+  jitterRatio: 0,
+  crossReplicaLock: false,
+}
 
 export function resolveResourceCacheConfig(
   options: ResourceOptions | undefined,
@@ -62,5 +67,10 @@ export function resolveResourceCacheConfig(
       ? TAG_ONLY_TTL_SECONDS
       : (cfg?.ttl ?? DEFAULT_TTL_SECONDS[action]))
 
-  return { enabled: true, ttl }
+  return {
+    enabled: true,
+    ttl,
+    jitterRatio: perAction?.jitterRatio ?? cfg?.jitterRatio ?? 0.1,
+    crossReplicaLock: perAction?.crossReplicaLock ?? false,
+  }
 }

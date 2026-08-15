@@ -96,6 +96,7 @@ import {
   useInvokeRecordAction,
   useInvokeResourceAction,
   useRecords,
+  useRefreshRecords,
   useResource,
 } from '../hooks.js'
 import { PropertyDisplay } from '../property-renderer.js'
@@ -611,6 +612,10 @@ export function ResourceListPage({
   ])
 
   const records = useRecords(resourceId, query)
+  // Refresh means "show me what the database holds now" — the request
+  // carries `Cache-Control: no-cache` so the server reads past its own
+  // caches and busts them when the rows turn out to have changed.
+  const refreshRecords = useRefreshRecords(resourceId, query)
 
   const visible = React.useMemo<PropertyJSON[]>(() => {
     const all = resource
@@ -899,7 +904,7 @@ export function ResourceListPage({
   useHotkey(
     'r',
     () => {
-      if (!records.isFetching) records.refetch()
+      if (!records.isFetching) void refreshRecords()
     },
     { enabled: f.refresh, description: t('common:refresh') },
   )
@@ -977,7 +982,7 @@ export function ResourceListPage({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => records.refetch()}
+                      onClick={() => void refreshRecords()}
                       disabled={records.isFetching}
                       aria-label={t('common:refresh')}
                     >

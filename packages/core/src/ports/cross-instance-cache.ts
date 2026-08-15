@@ -12,7 +12,8 @@
 // provider without pub/sub support is returned as-is by
 // `withCrossInstanceInvalidation()`.
 
-import type { CacheSetOptions, ICacheProvider } from './cache-provider.js'
+import type { CacheSetOptions, CacheTagEpochs, ICacheProvider } from './cache-provider.js'
+import { ConsoleLogger, type ILogger } from './logger.js'
 import { uuidv7 } from '../utils/uuid.js'
 
 /** Channel used for cache invalidation broadcasts. Providers may prefix it
@@ -31,7 +32,10 @@ export class CrossInstanceCacheProvider implements ICacheProvider {
   private unsubscribe: (() => void) | null = null
   private readonly ready: Promise<void>
 
-  constructor(private readonly inner: ICacheProvider) {
+  constructor(
+    private readonly inner: ICacheProvider,
+    private readonly logger: ILogger = new ConsoleLogger(),
+  ) {
     this.ready = this.startSubscription()
   }
 
@@ -48,7 +52,9 @@ export class CrossInstanceCacheProvider implements ICacheProvider {
       // A provider that advertises subscribe() but cannot establish the
       // subscription (e.g. Redis client without a subscriber connection)
       // degrades to shared-store-only invalidation instead of failing boot.
-      console.warn('[modern-admin] cache invalidation subscription failed:', err)
+      this.logger.warn('[modern-admin] cache invalidation subscription failed', {
+        error: err instanceof Error ? err.message : String(err),
+      })
     }
   }
 
@@ -80,6 +86,31 @@ export class CrossInstanceCacheProvider implements ICacheProvider {
 
   async del(key: string | string[]): Promise<void> {
     return this.inner.del(key)
+  }
+
+  async getTagEpochs(tags: string[]): Promise<CacheTagEpochs> {
+    return this.inner.getTagEpochs?.(tags) ?? Object.fromEntries(tags.map((tag) => [tag, '0']))
+  }
+
+  async setIfTagEpochsMatch<T = unknown>(
+    key: string,
+    value: T,
+    expectedTagEpochs: CacheTagEpochs,
+    options?: CacheSetOptions,
+  ): Promise<boolean> {
+    if (this.inner.setIfTagEpochsMatch) {
+      return this.inner.setIfTagEpochsMatch(key, value, expectedTagEpochs, options)
+    }
+    await this.inner.set(key, value, options)
+    return true
+  }
+
+  async acquireLock(key: string, token: string, ttlMs: number): Promise<boolean> {
+    return this.inner.acquireLock?.(key, token, ttlMs) ?? true
+  }
+
+  async releaseLock(key: string, token: string): Promise<void> {
+    await this.inner.releaseLock?.(key, token)
   }
 
   async invalidateTag(tag: string | string[]): Promise<void> {
@@ -128,8 +159,11 @@ export class CrossInstanceCacheProvider implements ICacheProvider {
  * pub/sub; return it unchanged otherwise. `ModernAdmin` applies this to
  * the configured cache automatically.
  */
-export function withCrossInstanceInvalidation(cache: ICacheProvider): ICacheProvider {
+export function withCrossInstanceInvalidation(
+  cache: ICacheProvider,
+  logger?: ILogger,
+): ICacheProvider {
   if (!cache.publish && !cache.subscribe) return cache
   if (cache instanceof CrossInstanceCacheProvider) return cache
-  return new CrossInstanceCacheProvider(cache)
+  return new CrossInstanceCacheProvider(cache, logger)
 }

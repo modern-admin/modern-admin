@@ -1,6 +1,7 @@
 import { Filter } from '../../filter/filter.js'
 import type { Action, ActionRequest, ActionContext, ListActionResponse } from '../action.js'
 import { listTag } from '../cache-runtime.js'
+import { listCacheKey } from '../cache-keys.js'
 import { resolveResourceCacheConfig } from '../../decorators/cache-config.js'
 import type { BaseRecord, BaseResource } from '../../adapters'
 import type { ModernAdmin } from '../../modern-admin.js'
@@ -78,12 +79,30 @@ const handler = async (
   const direction = querySortBy != null ? queryDirection : defaultSort?.direction
 
   const filter = new Filter(filters, resource)
-  const cacheKey = `list:${resource.id()}:${JSON.stringify({ filters, page, perPage, sortBy, direction })}`
+  const cacheKey = listCacheKey(resource.id(), {
+    filters,
+    page,
+    perPage,
+    ...(sortBy ? { sortBy } : {}),
+    ...(direction ? { direction } : {}),
+  })
   const cfg = resolveResourceCacheConfig(resource.decorate().options, 'list')
 
   return cacheRuntime.read<ListActionResponse>(
     cacheKey,
-    { enabled: cfg.enabled, ttl: cfg.ttl, tags: [listTag(resource.id())] },
+    {
+      enabled: cfg.enabled,
+      ttl: cfg.ttl,
+      jitterRatio: cfg.jitterRatio,
+      crossReplicaLock: cfg.crossReplicaLock,
+      tags: [listTag(resource.id())],
+      // A forced refresh reads past the cache. If the rows came back
+      // different from what was cached, something wrote to the table
+      // outside `invoke()` — every other cached page/filter/record of
+      // this resource (and of resources embedding it) is suspect too.
+      refresh: request.refresh === true,
+      onChanged: () => admin.invalidateResourceCaches(resource.id()),
+    },
     async () => {
       const sortOption =
         sortBy != null

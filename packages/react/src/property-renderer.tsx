@@ -15,6 +15,7 @@ import {
   DatePicker,
   JsonEditor,
   JsonView,
+  formatJsonValue,
   KeyValueEditor,
   KeyValueView,
   MediaPreview,
@@ -134,9 +135,11 @@ const normalizeHexColor = (value: unknown): string | null => {
 function CopiableDisplay({
   text,
   children,
+  variant = 'inline',
 }: {
   text: string
   children: React.ReactNode
+  variant?: 'inline' | 'overlay'
 }): React.ReactElement {
   const { t } = useI18n()
   const notify = useNotify()
@@ -157,26 +160,39 @@ function CopiableDisplay({
     }
   }
 
+  const copyButton = (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 shrink-0"
+          onClick={() => void onCopy()}
+          aria-label={copied ? t('settings:apiKeys.created.copied') : t('settings:apiKeys.created.copy')}
+        >
+          {copied ? <Check className="size-4 text-emerald-600" /> : <Copy className="size-4" />}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>
+        {copied ? t('settings:apiKeys.created.copied') : t('settings:apiKeys.created.copy')}
+      </TooltipContent>
+    </Tooltip>
+  )
+
+  if (variant === 'overlay') {
+    return (
+      <div className="relative">
+        {children}
+        <div className="absolute right-1 top-1">{copyButton}</div>
+      </div>
+    )
+  }
+
   return (
     <span className="inline-flex max-w-full items-center gap-2 align-middle">
       <span className="min-w-0">{children}</span>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 shrink-0"
-            onClick={() => void onCopy()}
-            aria-label={copied ? t('settings:apiKeys.created.copied') : t('settings:apiKeys.created.copy')}
-          >
-            {copied ? <Check className="size-4 text-emerald-600" /> : <Copy className="size-4" />}
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          {copied ? t('settings:apiKeys.created.copied') : t('settings:apiKeys.created.copy')}
-        </TooltipContent>
-      </Tooltip>
+      {copyButton}
     </span>
   )
 }
@@ -247,6 +263,13 @@ export function PropertyDisplay({ property, value, view = 'list', populated }: P
             falseLabel: t('common:no'),
           }}
         />
+      )
+    }
+    if (property.type === 'json' && view === 'show') {
+      return (
+        <CopiableDisplay text={formatJsonValue(value)} variant="overlay">
+          <JsonView value={value} className="pr-10" />
+        </CopiableDisplay>
       )
     }
     return <JsonView value={value} inline={view === 'list'} />

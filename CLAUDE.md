@@ -228,6 +228,9 @@ When touching one of those, expect to update call sites for the new API.
   `[test] pathIgnorePatterns`, and `apps/e2e` carries a `test` script that just
   points at `bun run e2e`. A workspace holding unit tests must declare
   `"test": "bun test"`, otherwise `bun --filter '*' test` skips it silently.
+- **Every new cache entry point needs an invalidation/fencing regression test.**
+  Cover the mutation or permission change that makes the value stale, including
+  an in-flight read when the entry is tagged.
 - **Agent skills** vendored under `.agents/skills/` (`graphql-schema`,
   `graphql-operations` from apollographql, `shadcn`), pinned in
   `skills-lock.json`. Consult them when doing GraphQL schema/operation or

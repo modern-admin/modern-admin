@@ -31,6 +31,7 @@ import { AuditLogController } from './audit-log.controller.js'
 import { GlobalSearchController } from './global-search.controller.js'
 import { WebhooksController } from './webhooks.controller.js'
 import { DashboardController } from './dashboard.controller.js'
+import { CacheController } from './cache.controller.js'
 import { ModernAdminAuthGuard } from './auth.guard.js'
 import { ModernAdminCacheInterceptor } from './cache.interceptor.js'
 import {
@@ -135,6 +136,8 @@ export interface ModernAdminModuleOptions extends ModernAdminOptions {
   webhookRoles?: string[]
   /** Roles allowed to edit the shared global dashboard layout. Defaults to `['admin']`. */
   dashboardRoles?: string[]
+  /** Roles allowed to inspect cache metrics and invalidate resource caches. Defaults to `['admin']`. */
+  cacheRoles?: string[]
   /**
    * When set, the bootstrap service calls `auth.seedAdmin(rootAdmin)` on every
    * app start. The implementation must be idempotent — it skips creation when
@@ -169,6 +172,7 @@ const deriveFeatures = (
   // (`ModernAdminRealtimeModule`); hosts that only publish server-side
   // can override with `features: { realtime: false }`.
   realtime: options.realtime !== undefined,
+  cache: options.cache !== undefined,
   ...(options.features ?? {}),
 })
 
@@ -230,6 +234,7 @@ export class ModernAdminModule {
         GlobalSearchController,
         WebhooksController,
         DashboardController,
+        CacheController,
       ],
       providers: [
         { provide: MODERN_ADMIN_OPTIONS, useValue: options },
@@ -325,6 +330,7 @@ export class ModernAdminModule {
         GlobalSearchController,
         WebhooksController,
         DashboardController,
+        CacheController,
       ],
       providers: [
         {

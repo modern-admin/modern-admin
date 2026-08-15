@@ -11,6 +11,7 @@ import {
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
+  Input,
   Skeleton,
   Tabs,
   TabsList,
@@ -72,6 +73,15 @@ export function HomePage(): React.ReactElement {
     () => resources.filter((r) => r.navigation !== null),
     [resources],
   )
+
+  const [resourceSearch, setResourceSearch] = React.useState('')
+  const matchingResources = React.useMemo(() => {
+    const query = resourceSearch.trim().toLocaleLowerCase()
+    if (!query) return navResources
+    return navResources.filter((resource) =>
+      [resource.name, resource.id].some((value) => value.toLocaleLowerCase().includes(query)),
+    )
+  }, [navResources, resourceSearch])
 
   const [building, setBuilding] = React.useState(false)
   const [editingId, setEditingId] = React.useState<string | null>(null)
@@ -233,8 +243,21 @@ export function HomePage(): React.ReactElement {
 
       {/* ── Resources list ────────────────────────────────────────── */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle>{t('common:resources')}</CardTitle>
+          {navResources.length > 0 && (
+            <div className="w-full sm:w-64">
+              <Input
+                type="search"
+                value={resourceSearch}
+                onChange={(event) => setResourceSearch(event.target.value)}
+                placeholder={t('home:searchResources')}
+                aria-label={t('home:searchResources')}
+                onClear={() => setResourceSearch('')}
+                clearLabel={t('common:clear')}
+              />
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           {navResources.length === 0 ? (
@@ -249,9 +272,18 @@ export function HomePage(): React.ReactElement {
                 </EmptyDescription>
               </EmptyHeader>
             </Empty>
+          ) : matchingResources.length === 0 ? (
+            <Empty className="border-0">
+              <EmptyHeader>
+                <EmptyMedia>
+                  <Database />
+                </EmptyMedia>
+                <EmptyTitle>{t('home:noMatchingResources')}</EmptyTitle>
+              </EmptyHeader>
+            </Empty>
           ) : (
             <ul className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
-              {navResources.map((r) => (
+              {matchingResources.map((r) => (
                 <li key={r.id}>
                   <Link
                     to={{ name: 'list', resourceId: r.id }}

@@ -122,6 +122,7 @@ export interface AdminFeatures {
   aiAssistant: boolean
   /** Realtime WS gateway is mounted — the SPA live-invalidates its cache. */
   realtime: boolean
+  cache: boolean
 }
 
 const ALL_FEATURES_OFF: AdminFeatures = {
@@ -131,6 +132,7 @@ const ALL_FEATURES_OFF: AdminFeatures = {
   apiKeys: false,
   aiAssistant: false,
   realtime: false,
+  cache: false,
 }
 
 /** Defensive resolver for older API servers that don't yet surface

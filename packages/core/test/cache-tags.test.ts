@@ -277,9 +277,9 @@ describe('cache tag scheme — mutation invalidation', () => {
     // Both order entries embedded the renamed user — they must be gone.
     expect(cache.entries.size).toBe(0)
     expect(cache.invalidations).toEqual([
+      'list:orders',
       'list:users',
       'record:users:1',
-      'list:orders',
       'records:orders',
     ])
   })

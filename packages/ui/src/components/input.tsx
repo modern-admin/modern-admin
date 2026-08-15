@@ -25,6 +25,9 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           'flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50',
           // Hide native number-input spinner buttons (Firefox + WebKit/Blink).
           '[appearance:textfield] [&::-webkit-outer-spin-button]:m-0 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:m-0 [&::-webkit-inner-spin-button]:appearance-none',
+          // Search fields use the component's accessible clear button instead
+          // of WebKit's native cancel control.
+          type === 'search' && '[&::-webkit-search-cancel-button]:appearance-none',
           showClear && 'pr-8',
           className,
         )}

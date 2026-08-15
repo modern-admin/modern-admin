@@ -15,8 +15,8 @@ describe('RedisCacheProvider', () => {
     const client = new FakeRedis()
     const cache = new RedisCacheProvider({ client })
     await cache.set('k', 'v')
-    const setCall = client.calls.find((c) => c.method === 'set')
-    expect(setCall?.args).toEqual(['ma:k', JSON.stringify('v')])
+    expect(client.store.get('ma:k')).toBe(JSON.stringify('v'))
+    expect(client.ttls.has('ma:k')).toBe(false)
   })
 
   test('get parses stored JSON; returns null on miss or bad JSON', async () => {
@@ -52,6 +52,23 @@ describe('RedisCacheProvider', () => {
     expect(client.sets.get('ma:tag:record:users:1')).toEqual(new Set(['ma:users:1']))
   })
 
+  test('persistent values keep their tag and reverse indexes persistent', async () => {
+    const client = new FakeRedis()
+    const cache = new RedisCacheProvider({ client })
+    await cache.set('k', 1, { tags: ['t'] })
+    expect(client.ttls.has('ma:k')).toBe(false)
+    expect(client.ttls.has('ma:tag:t')).toBe(false)
+    expect(client.ttls.has('ma:key-tags:ma:k')).toBe(false)
+  })
+
+  test('tag TTL only grows when entries use different TTLs', async () => {
+    const client = new FakeRedis()
+    const cache = new RedisCacheProvider({ client, tagTtl: 1 })
+    await cache.set('long', 1, { ttl: 20, tags: ['t'] })
+    await cache.set('short', 2, { ttl: 5, tags: ['t'] })
+    expect(client.ttls.get('ma:tag:t')).toBe(20)
+  })
+
   test('invalidateTag drops every member of every named tag plus the tag set itself', async () => {
     const client = new FakeRedis()
     const cache = new RedisCacheProvider({ client })
@@ -69,7 +86,7 @@ describe('RedisCacheProvider', () => {
     await cache.set('a', 1, { tags: ['t1'] })
     await cache.set('b', 2, { tags: ['t2'] })
     await cache.invalidateTag(['t1', 't2'])
-    expect(client.store.size).toBe(0)
+    expect(Array.from(client.store.keys()).filter((key) => !key.includes('tag-epoch:'))).toEqual([])
   })
 
   test('invalidateTag does not blow up when nothing matches', async () => {
@@ -86,6 +103,52 @@ describe('RedisCacheProvider', () => {
     await cache.set('k', 1)
     await cache.del('k')
     expect(client.store.has('ma:k')).toBe(false)
+  })
+
+  test('tagged set is one atomic script and creates a reverse index', async () => {
+    const client = new FakeRedis()
+    const cache = new RedisCacheProvider({ client })
+    await cache.set('k', 1, { tags: ['a', 'b'] })
+    const evalCalls = client.calls.filter((call) => call.method === 'eval')
+    expect(evalCalls).toHaveLength(1)
+    expect(String(evalCalls[0]?.args[0])).toContain('MA_CACHE_SET_V2')
+    expect(client.sets.get('ma:key-tags:ma:k')).toEqual(new Set(['ma:tag:a', 'ma:tag:b']))
+  })
+
+  test('overwriting a key removes memberships from old tags', async () => {
+    const client = new FakeRedis()
+    const cache = new RedisCacheProvider({ client })
+    await cache.set('k', 1, { tags: ['old'] })
+    await cache.set('k', 2, { tags: ['new'] })
+    await cache.invalidateTag('old')
+    expect(await cache.get<number>('k')).toBe(2)
+    await cache.invalidateTag('new')
+    expect(await cache.get('k')).toBeNull()
+  })
+
+  test('conditional set rejects an epoch changed by invalidation', async () => {
+    const client = new FakeRedis()
+    const cache = new RedisCacheProvider({ client })
+    const before = await cache.getTagEpochs(['list:users'])
+    await cache.invalidateTag('list:users')
+    expect(await cache.setIfTagEpochsMatch(
+      'k',
+      { stale: true },
+      before,
+      { tags: ['list:users'] },
+    )).toBe(false)
+    expect(await cache.get('k')).toBeNull()
+  })
+
+  test('distributed lock release is token protected', async () => {
+    const client = new FakeRedis()
+    const cache = new RedisCacheProvider({ client })
+    expect(await cache.acquireLock('k', 'owner', 1_000)).toBe(true)
+    expect(await cache.acquireLock('k', 'other', 1_000)).toBe(false)
+    await cache.releaseLock('k', 'other')
+    expect(await cache.acquireLock('k', 'third', 1_000)).toBe(false)
+    await cache.releaseLock('k', 'owner')
+    expect(await cache.acquireLock('k', 'third', 1_000)).toBe(true)
   })
 
   test('del accepts an array', async () => {

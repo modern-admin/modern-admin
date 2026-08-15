@@ -13,7 +13,8 @@ import { cn } from '../lib/utils.js'
 import { Button } from './button.js'
 import { Textarea } from './textarea.js'
 
-const stringify = (value: unknown): string => {
+/** Pretty-print a JSON value exactly as JsonView displays it. */
+export const formatJsonValue = (value: unknown): string => {
   if (value == null) return ''
   if (typeof value === 'string') {
     // Strings that are themselves JSON come back from some adapters.
@@ -78,13 +79,13 @@ export function JsonEditor({
   formatLabel = 'Format',
   invalidLabel = 'Invalid JSON',
 }: JsonEditorProps): React.ReactElement {
-  const [draft, setDraft] = React.useState<string>(() => stringify(value))
+  const [draft, setDraft] = React.useState<string>(() => formatJsonValue(value))
   const [error, setError] = React.useState<string | null>(null)
 
   // Resync the textarea only when the *external* value differs structurally
   // from what the user is currently typing. Without the canonical-form check,
   // every keystroke that produces valid JSON would trigger
-  //   onChange(parsed) → parent re-render → useEffect → setDraft(stringify(value))
+  //   onChange(parsed) → parent re-render → useEffect → setDraft(formatJsonValue(value))
   // and the user's in-progress text would get auto-pretty-printed on every
   // keystroke. By comparing canonical JSON, our own emissions become no-ops
   // here, while genuine external resets (record reload, form.reset()) still
@@ -93,7 +94,7 @@ export function JsonEditor({
     const parsed = tryParse(draft)
     const draftCanonical = parsed.ok ? canonical(parsed.value) : '__invalid__'
     if (draftCanonical === canonical(value)) return
-    setDraft(stringify(value))
+    setDraft(formatJsonValue(value))
     setError(null)
     // Intentionally depend only on `value`. `draft` is read via closure: we
     // only want this to fire on external changes, not when the user types.
@@ -182,7 +183,7 @@ export interface JsonViewProps {
 }
 
 export function JsonView({ value, className, inline }: JsonViewProps): React.ReactElement {
-  const text = React.useMemo(() => stringify(value), [value])
+  const text = React.useMemo(() => formatJsonValue(value), [value])
   if (inline) {
     const compact = text.replace(/\s+/g, ' ').trim()
     return (

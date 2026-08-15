@@ -234,9 +234,24 @@ export class AdminClient {
     }
   }
 
-  list(resourceId: string, query?: ListQuery): Promise<ListResponse> {
+  /**
+   * `options.refresh` turns the call into an explicit revalidation: the
+   * browser cache is skipped and `Cache-Control: no-cache` tells the API
+   * to read past *its* caches (HTTP + action layer) down to the database.
+   * If the rows come back changed, the server drops the resource's cached
+   * scopes as well. Used by the list view's refresh button; ordinary
+   * navigation omits it so the caches keep doing their job.
+   */
+  list(
+    resourceId: string,
+    query?: ListQuery,
+    options?: { refresh?: boolean },
+  ): Promise<ListResponse> {
     return this.request<ListResponse>(
       `/admin/api/resources/${encodeURIComponent(resourceId)}/actions/list${buildQuery(query)}`,
+      options?.refresh
+        ? { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } }
+        : {},
     )
   }
 
@@ -592,6 +607,21 @@ export class AdminClient {
     })
   }
 
+  cacheStats(): Promise<CacheStatsResponse> {
+    return this.request<CacheStatsResponse>('/admin/api/cache/stats')
+  }
+
+  resetCacheStats(): Promise<CacheStatsResponse> {
+    return this.request<CacheStatsResponse>('/admin/api/cache/stats/reset', { method: 'POST' })
+  }
+
+  invalidateResourceCache(resourceId: string): Promise<{ ok: true }> {
+    return this.request<{ ok: true }>('/admin/api/cache/invalidate', {
+      method: 'POST',
+      body: JSON.stringify({ resourceId }),
+    })
+  }
+
   /** List API keys belonging to the current admin. */
   listApiKeys(): Promise<{ keys: ApiKeyRecord[] }> {
     return this.request<{ keys: ApiKeyRecord[] }>('/admin/api/api-keys')
@@ -913,6 +943,31 @@ export interface AuditLogQuery {
 
 export interface AuditLogResponse {
   events: AuditLogEntry[]
+}
+
+export interface CacheStatsEntry {
+  namespace: string
+  resourceId?: string
+  hits: number
+  misses: number
+  bypasses: number
+  sets: number
+  skippedWrites: number
+  computes: number
+  computeMs: number
+  coalesced: number
+  readErrors: number
+  writeErrors: number
+  invalidations: number
+  invalidationErrors: number
+  lockWaits: number
+}
+
+export interface CacheStatsResponse {
+  instanceId: string
+  entries: CacheStatsEntry[]
+  dirtyTags: string[]
+  inFlight: number
 }
 
 /** Wire shape of an API key record exposed by `/admin/api/api-keys/*`. */

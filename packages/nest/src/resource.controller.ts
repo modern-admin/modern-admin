@@ -28,6 +28,7 @@ import {
 import { MODERN_ADMIN } from './tokens.js'
 import { ModernAdminAuthGuard } from './auth.guard.js'
 import { NoHttpCache } from './no-http-cache.js'
+import { wantsRevalidation } from './revalidate.js'
 import {
   bulkBodyZ,
   createBodyZ,
@@ -66,6 +67,10 @@ export class ResourceController {
         params: { resourceId, action: 'list' },
         method: 'get',
         query,
+        // `Cache-Control: no-cache` (the UI's refresh button) — read past
+        // the action cache and drop the resource's cached scopes if the
+        // rows moved behind our back.
+        ...(wantsRevalidation(req.headers) ? { refresh: true } : {}),
       },
       req,
     )

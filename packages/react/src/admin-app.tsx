@@ -32,6 +32,7 @@ import {
   ChevronDown,
   ChevronLeft,
   Database,
+  Gauge,
   Home,
   Loader2,
   LogOut,
@@ -213,6 +214,7 @@ function AppSidebar({ showResourceIds }: { showResourceIds: boolean }): React.Re
 
   const homeActive = route.name === 'home'
   const auditActive = route.name === 'audit-log'
+  const cacheActive = route.name === 'cache'
 
   return (
     <Sidebar
@@ -242,6 +244,16 @@ function AppSidebar({ showResourceIds }: { showResourceIds: boolean }): React.Re
                   <Link to={{ name: 'audit-log' }}>
                     <History />
                     <span>{t('audit:title')}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
+            {features.cache && (
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={cacheActive} tooltip={t('cache:title')}>
+                  <Link to={{ name: 'cache' }}>
+                    <Gauge />
+                    <span>{t('cache:title')}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

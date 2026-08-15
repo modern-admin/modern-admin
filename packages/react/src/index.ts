@@ -6,6 +6,8 @@ export {
   AdminApiError,
   type AdminClientOptions,
   type AuthUiProps,
+  type CacheStatsEntry,
+  type CacheStatsResponse,
   type AiAssistantChatEnqueueResponse,
   type AiAssistantChatMessage,
   type AiAssistantChatResponse,
@@ -46,6 +48,7 @@ export {
   useResource,
   useResources,
   useRecords,
+  useRefreshRecords,
   useRecord,
   useCreateRecord,
   useUpdateRecord,
@@ -59,6 +62,9 @@ export {
   useCurrentUser,
   useLogin,
   useLogout,
+  useCacheStats,
+  useInvalidateResourceCache,
+  useResetCacheStats,
   useAuthUiProps,
   useSocialLogin,
   invalidateResourceData,
@@ -171,6 +177,7 @@ export {
   type WizardFormProps,
 } from './components/wizard-form.js'
 export { HomePage } from './pages/home-page.js'
+export { CachePage } from './pages/cache-page.js'
 export { ExportDialog, type ExportDialogProps } from './pages/export-dialog.js'
 export {
   PageBreadcrumbs,

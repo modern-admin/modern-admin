@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { ModernAdmin } from '../src/modern-admin.js'
-import { InMemoryRealtimeBus, type RealtimeEvent } from '../src/ports'
+import { InMemoryRealtimeBus, MemoryCacheProvider, type RealtimeEvent } from '../src/ports'
 import {
   ActionNotFoundError,
   ResourceNotFoundError,
@@ -417,5 +417,30 @@ describe('ModernAdmin role permission gate', () => {
     await expect(
       admin.invoke(listRequest('users'), { id: 'u1', role: 'editor' }),
     ).rejects.toThrow(ForbiddenError)
+  })
+
+  test('role permission invalidation reaches another instance through the shared provider', async () => {
+    const cache = new MemoryCacheProvider()
+    const roles: FakeTable = {
+      name: 'roles',
+      rows: [{ id: 'editor', permissions: { users: ['list'] } }],
+    }
+    const options = {
+      databases: [[roles]],
+      adapters: [adapter],
+      rolesResourceId: 'roles',
+      cache,
+      cacheRuntime: { metricsLogIntervalMs: 0 },
+    }
+    const first = new ModernAdmin(options)
+    const second = new ModernAdmin(options)
+
+    expect(await second.getRolePermissions('editor')).toEqual({ users: ['list'] })
+    roles.rows[0]!.permissions = { users: ['show'] }
+    // The second instance still serves its cached matrix before active revoke.
+    expect(await second.getRolePermissions('editor')).toEqual({ users: ['list'] })
+
+    await first.invalidateRolePermissionsCache('editor')
+    expect(await second.getRolePermissions('editor')).toEqual({ users: ['show'] })
   })
 })

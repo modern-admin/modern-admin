@@ -65,8 +65,7 @@ const buildCache = (): ICacheProvider | undefined => {
   if (!url) return undefined
   const client = new Redis(url, { lazyConnect: true })
   client.connect().catch((err) => {
-
-    console.warn('[modern-admin/api-prisma] redis connect failed; falling back to noop cache', err)
+    console.warn('[modern-admin/api-prisma] redis cache connect failed; requests will bypass cache while Redis reconnects', err)
   })
   return new RedisCacheProvider({ client: client as unknown as RedisCacheOptions['client'] })
 }
@@ -76,13 +75,13 @@ const buildRealtime = (): IRealtimeBus => {
   if (!url) return new InMemoryRealtimeBus()
   const client = new Redis(url, { lazyConnect: true })
   client.connect().catch((err) => {
-
-    console.warn('[modern-admin/api-prisma] redis connect failed; falling back to in-memory bus', err)
+    console.warn('[modern-admin/api-prisma] redis realtime connect failed; the client will keep reconnecting', err)
   })
   return new RedisRealtimeBus({ client: client as unknown as RealtimeRedisLike })
 }
 
 const realtimeBus = buildRealtime()
+const cacheProvider = buildCache()
 
 /** System stores shared across the app — backed by Postgres via Prisma. */
 export const system = setupPrismaSystem(prisma)
@@ -153,7 +152,7 @@ const apiKeyService = buildApiKeyService(authProvider)
             })
         },
       }),
-      ...(buildCache() ? { cache: buildCache()! } : {}),
+      ...(cacheProvider ? { cache: cacheProvider } : {}),
       ...(authProvider ? { auth: authProvider as IAuthProvider } : {}),
       ...(apiKeyService ? { apiKeyService } : {}),
     }),

@@ -1,4 +1,5 @@
 export type { CurrentAdmin } from './current-admin.js'
+export { ConsoleLogger, type ILogger } from './logger.js'
 export {
   AnonymousAuthProvider,
   type IAuthProvider,
@@ -9,6 +10,7 @@ export {
   NoopCacheProvider,
   type ICacheProvider,
   type CacheSetOptions,
+  type CacheTagEpochs,
 } from './cache-provider.js'
 export {
   CACHE_INVALIDATION_CHANNEL,

@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'bun:test'
-import { Filter, ModernAdmin, type ActionRequest } from '@modern-admin/core'
+import {
+  Filter,
+  MemoryCacheProvider,
+  ModernAdmin,
+  type ActionRequest,
+} from '@modern-admin/core'
 import { ResourceController } from '../src/resource.controller.js'
 import { FakeDatabase, FakeResource, type FakeTable } from './_helpers/fake-adapter.js'
 
@@ -201,5 +206,59 @@ describe('ResourceController', () => {
       const e = err as { status?: number }
       expect(e.status).toBe(404)
     }
+  })
+})
+
+// The list view's refresh button sends `Cache-Control: no-cache`. The
+// controller turns that into `ActionRequest.refresh`, which makes the
+// action-layer cache read past its entry — and, when the rows turn out to
+// have moved, drop every cached scope of the resource.
+describe('ResourceController — list revalidation', () => {
+  const buildCached = (table: FakeTable) => {
+    const admin = new ModernAdmin({
+      databases: [[table]],
+      adapters: [adapter] as never,
+      cache: new MemoryCacheProvider(),
+    })
+    return new ResourceController(admin)
+  }
+  const rows = (res: unknown): Array<{ id: string }> =>
+    (res as { records: Array<{ id: string }> }).records
+  const refreshReq = { ...req, headers: { 'cache-control': 'no-cache' } }
+
+  test('reads past the cache and invalidates the resource when rows changed', async () => {
+    const table: FakeTable = { name: 'users', rows: [{ id: '1', name: 'Ann' }] }
+    const controller = buildCached(table)
+
+    // Two cached scopes of the same resource (distinct keys, shared tag).
+    await controller.list('users', { page: '1', perPage: '10' }, req)
+    await controller.list('users', { page: '1', perPage: '5' }, req)
+
+    // An external writer inserts a row — nothing went through `invoke()`,
+    // so both entries are now stale.
+    table.rows.push({ id: '2', name: 'Bob' })
+    expect(rows(await controller.list('users', { page: '1', perPage: '10' }, req))).toHaveLength(1)
+
+    const fresh = await controller.list('users', { page: '1', perPage: '10' }, refreshReq)
+    expect(rows(fresh)).toHaveLength(2)
+
+    // The other scope was invalidated too, so it recomputes instead of
+    // replaying its stale single-row body.
+    expect(rows(await controller.list('users', { page: '1', perPage: '5' }, req))).toHaveLength(2)
+  })
+
+  test('unchanged rows keep the neighbouring cached scopes intact', async () => {
+    const table: FakeTable = { name: 'users', rows: [{ id: '1', name: 'Ann' }] }
+    const controller = buildCached(table)
+    await controller.list('users', { page: '1', perPage: '10' }, req)
+    await controller.list('users', { page: '1', perPage: '5' }, req)
+
+    const fresh = await controller.list('users', { page: '1', perPage: '10' }, refreshReq)
+    expect(rows(fresh)).toHaveLength(1)
+
+    // Nothing moved → no invalidation: the untouched scope still answers
+    // from cache even though the table changed afterwards.
+    table.rows.push({ id: '2', name: 'Bob' })
+    expect(rows(await controller.list('users', { page: '1', perPage: '5' }, req))).toHaveLength(1)
   })
 })

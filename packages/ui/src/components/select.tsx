@@ -72,13 +72,18 @@ export const SelectScrollUpButton = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.ScrollUpButton>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.ScrollUpButton>
 >(({ className, ...props }, ref) => (
-  <SelectPrimitive.ScrollUpButton
-    ref={ref}
-    className={cn('flex cursor-default items-center justify-center py-1', className)}
-    {...props}
-  >
-    <ChevronUp className="h-4 w-4" />
-  </SelectPrimitive.ScrollUpButton>
+  // Radix mounts this button after the viewport leaves the first option.
+  // Keep its 24px slot mounted so the list does not grow and jump at that
+  // point; the inner button still appears as intended.
+  <div className="flex h-6 shrink-0">
+    <SelectPrimitive.ScrollUpButton
+      ref={ref}
+      className={cn('flex w-full cursor-default items-center justify-center py-1', className)}
+      {...props}
+    >
+      <ChevronUp className="h-4 w-4" />
+    </SelectPrimitive.ScrollUpButton>
+  </div>
 ))
 SelectScrollUpButton.displayName = SelectPrimitive.ScrollUpButton.displayName
 
@@ -86,13 +91,18 @@ export const SelectScrollDownButton = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.ScrollDownButton>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.ScrollDownButton>
 >(({ className, ...props }, ref) => (
-  <SelectPrimitive.ScrollDownButton
-    ref={ref}
-    className={cn('flex cursor-default items-center justify-center py-1', className)}
-    {...props}
-  >
-    <ChevronDown className="h-4 w-4" />
-  </SelectPrimitive.ScrollDownButton>
+  // Radix unmounts this button after the viewport reaches the last option.
+  // Keep its 24px slot mounted so the list does not shrink and jump at that
+  // point; the inner button still disappears as intended.
+  <div className="flex h-6 shrink-0">
+    <SelectPrimitive.ScrollDownButton
+      ref={ref}
+      className={cn('flex w-full cursor-default items-center justify-center py-1', className)}
+      {...props}
+    >
+      <ChevronDown className="h-4 w-4" />
+    </SelectPrimitive.ScrollDownButton>
+  </div>
 ))
 SelectScrollDownButton.displayName = SelectPrimitive.ScrollDownButton.displayName
 

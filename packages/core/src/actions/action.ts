@@ -84,6 +84,14 @@ export interface ActionRequest {
    * IP, request id. Persisted as-is by `actionLoggingPlugin` when present.
    */
   meta?: Record<string, unknown>
+  /**
+   * Forced revalidation requested by the caller (the "refresh" button in
+   * the list view, `Cache-Control: no-cache` on the REST route). Read
+   * actions that cache must bypass the cached entry, hit the source, and
+   * — when the data turns out to have moved — invalidate the resource's
+   * server-side caches. Ignored by actions that don't cache.
+   */
+  refresh?: boolean
 }
 
 export interface ActionResponse {

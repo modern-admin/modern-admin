@@ -267,6 +267,7 @@ export {
 export {
   JsonEditor,
   JsonView,
+  formatJsonValue,
   type JsonEditorProps,
   type JsonViewProps,
 } from './components/json-editor.js'

@@ -1,5 +1,6 @@
 import { RecordNotFoundError } from '../../errors'
 import { recordTag, recordsTag } from '../cache-runtime.js'
+import { recordCacheKey } from '../cache-keys.js'
 import { resolveResourceCacheConfig } from '../../decorators/cache-config.js'
 import type {
   Action,
@@ -16,7 +17,7 @@ const handler = async (
   const id = request.params.recordId
   if (!id) throw new Error('show action requires recordId')
 
-  const cacheKey = `record:${resource.id()}:${id}`
+  const cacheKey = recordCacheKey(resource.id(), id)
   const cfg = resolveResourceCacheConfig(resource.decorate().options, 'show')
 
   return cacheRuntime.read<RecordActionResponse>(
@@ -24,6 +25,8 @@ const handler = async (
     {
       enabled: cfg.enabled,
       ttl: cfg.ttl,
+      jitterRatio: cfg.jitterRatio,
+      crossReplicaLock: cfg.crossReplicaLock,
       // Show responses are scoped to a single record — mutating any
       // other record of the same resource does NOT invalidate this
       // entry (the `list:<resourceId>` tag is enough for list-side

@@ -222,10 +222,14 @@ Full documentation lives at **<https://docs.modernadminpro.com/docs/getting-star
 - `relatedResources[].label` is translatable: set `relatedResources` map in
   `metadataTranslations`; `localizeRelatedResources()` resolves the labels.
 - Cache behavior is configurable per resource via `ResourceOptions.cache`:
-  `{ action?: { enabled, ttl }, http?: { enabled, ttl } }`. Core ships
-  `MemoryCacheProvider` (TTL + tags) and `NoopCacheProvider`; Redis is in
-  `@modern-admin/cache-redis`. HTTP responses and action cache share the same
-  `listTag` / `recordTag` split for targeted invalidation.
+  `{ list/show/search/http?: { enabled, ttl, jitterRatio, crossReplicaLock } }`.
+  Core ships bounded-LRU `MemoryCacheProvider` and the default
+  `NoopCacheProvider`; Redis is in `@modern-admin/cache-redis`. HTTP entries
+  are scoped per principal, invalidated with role-permission changes, and
+  bypassed when functional action/property `isAccessible` rules make a cached
+  filtered response unsafe to replay. Action and HTTP caches share versioned
+  keys, tag-generation fencing, targeted invalidation, positive TTL jitter,
+  fail-open reads/writes, and invalidation quarantine.
 - Commit messages follow Angular Conventional Commits:
   `<type>(<scope>): <subject>` with a per-package body.
 - Releases run through **Changesets + `.github/workflows/release.yml`** —

@@ -23,8 +23,22 @@ export {
   listTag,
   recordTag,
   recordsTag,
+  rolePermissionsTag,
+  type CacheMetricCounters,
+  type CacheReadStatus,
+  type CacheRuntimeOptions,
   type CacheRuntimeReadOptions,
+  type CacheRuntimeStats,
+  type CacheStatsEntry,
 } from './cache-runtime.js'
+export {
+  CACHE_KEY_VERSION,
+  cacheKey,
+  listCacheKey,
+  recordCacheKey,
+  searchCacheKey,
+  stableCacheStringify,
+} from './cache-keys.js'
 export { BUILT_IN_ACTIONS } from './built-in'
 export {
   listAction,

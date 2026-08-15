@@ -26,6 +26,7 @@ export {
   type HistoryRevisionResponse,
 } from './history.controller.js'
 export { AuditLogController, type AuditLogResponse } from './audit-log.controller.js'
+export { CacheController, type CacheStatsResponse } from './cache.controller.js'
 export {
   GlobalSearchController,
   type GlobalSearchGroup,

@@ -130,3 +130,47 @@ describe('AdminClient — custom actions', () => {
     )
   })
 })
+
+describe('AdminClient.list', () => {
+  it('sends no cache-busting hints by default', async () => {
+    const [req] = await captureRequests((c) => c.list('users', { page: 2 }))
+    expect(req?.url).toBe('https://example.test/admin/api/resources/users/actions/list?page=2')
+    const headers = req?.init?.headers as Record<string, string> | undefined
+    expect(headers?.['Cache-Control']).toBeUndefined()
+    expect(req?.init?.cache).toBeUndefined()
+  })
+
+  it('asks every cache in the chain to revalidate when refreshing', async () => {
+    const [req] = await captureRequests((c) => c.list('users', { page: 2 }, { refresh: true }))
+    // Same URL — the refresh travels as a header so the server-side cache
+    // key stays stable and the fresh body replaces the stale entry.
+    expect(req?.url).toBe('https://example.test/admin/api/resources/users/actions/list?page=2')
+    const headers = req?.init?.headers as Record<string, string> | undefined
+    expect(headers?.['Cache-Control']).toBe('no-cache')
+    expect(req?.init?.cache).toBe('no-store')
+  })
+})
+
+describe('AdminClient cache diagnostics', () => {
+  it('reads and resets replica metrics', async () => {
+    const requests = await captureRequests(async (client) => {
+      await client.cacheStats()
+      await client.resetCacheStats()
+    })
+    expect(requests[0]?.url).toBe('https://example.test/admin/api/cache/stats')
+    expect(requests[0]?.init?.method).toBeUndefined()
+    expect(requests[1]?.url).toBe('https://example.test/admin/api/cache/stats/reset')
+    expect(requests[1]?.init?.method).toBe('POST')
+  })
+
+  it('posts the selected resource for invalidation', async () => {
+    const [request] = await captureRequests((client) =>
+      client.invalidateResourceCache('customer groups'),
+    )
+    expect(request?.url).toBe('https://example.test/admin/api/cache/invalidate')
+    expect(request?.init?.method).toBe('POST')
+    expect(JSON.parse(String(request?.init?.body))).toEqual({
+      resourceId: 'customer groups',
+    })
+  })
+})
