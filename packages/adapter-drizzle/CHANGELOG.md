@@ -1,5 +1,12 @@
 # @modern-admin/adapter-drizzle
 
+## 0.5.0
+
+### Patch Changes
+
+- Updated dependencies [[`4251f7a`](https://github.com/modern-admin/modern-admin/commit/4251f7a6ea01ad80fbd5515a27cec2e138d2ccb5), [`4251f7a`](https://github.com/modern-admin/modern-admin/commit/4251f7a6ea01ad80fbd5515a27cec2e138d2ccb5), [`4251f7a`](https://github.com/modern-admin/modern-admin/commit/4251f7a6ea01ad80fbd5515a27cec2e138d2ccb5)]:
+  - @modern-admin/core@0.5.0
+
 ## 0.4.1
 
 ### Patch Changes
