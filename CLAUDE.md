@@ -66,7 +66,7 @@ Three jobs: **check** (install → `prisma generate` → typecheck → lint → 
 tests; hermetic, no services), **e2e** (docker-compose Postgres/Redis,
 `prisma:push`, `build:standalone`, everything except the visual-regression
 spec), and **e2e-visual** (that spec only, inside
-`mcr.microsoft.com/playwright:v1.61.1-noble` so the checked-in
+`mcr.microsoft.com/playwright:v1.62.1-noble` so the checked-in
 `*-chromium-linux.png` baselines match byte-for-byte — regenerate baselines in
 that same image). The api app boots `ModernAdminStaticUiModule`, which reads
 `packages/web/dist/standalone/index.html`, so
@@ -180,7 +180,7 @@ Majors currently locked, with the gotchas they impose:
 
 | Package                 | Current major | Notes                                                                          |
 | ----------------------- | ------------- | ------------------------------------------------------------------------------ |
-| typescript              | 6.x           | stricter checks; use `as unknown as T` for variance/abstract-ctor casts         |
+| typescript              | 7.x           | native compiler; tooling uses the side-by-side TS 6 JS API                      |
 | eslint / typescript-eslint | 10.x / 8.x | flat config, `eslint.base.config.mjs` at the root                              |
 | @nestjs/*               | 11.x          | Node 20+; cache-manager API changed                                            |
 | zod                     | 4.x           | new error API; `z.email()` instead of `.email()`                               |
@@ -190,14 +190,15 @@ Majors currently locked, with the gotchas they impose:
 | react / react-dom       | 19.x          | `import type { ReactElement } from 'react'`, not `JSX.Element`                  |
 | @tanstack/react-query   | 5.x           |                                                                                |
 | @tanstack/react-router  | 1.x           | browser history via `createBrowserHistory()`; NOT TanStack Start (no SSR)      |
+| @tanstack/react-table   | 9.x           | explicit `tableFeatures`; core row model is automatic                           |
 | @hookform/resolvers     | 5.x           | API tweaks                                                                     |
 | lucide-react            | 1.x           | verify icon names                                                              |
 | tailwind-merge          | 3.x           |                                                                                |
 | prisma / @prisma/client | 7.x           | new ESM engine, client API changes                                             |
 | drizzle-orm             | 0.45.x        | driver API and schema-gen changes                                              |
-| better-auth             | 1.6+          |                                                                                |
+| better-auth             | 1.7+          | Account identity is the unique `(issuer, accountId)` pair                       |
 | graphql                 | 17.x          |                                                                                |
-| bullmq                  | 5.x           |                                                                                |
+| bullmq                  | 6.x           | queue clients are exposed through `Queue.getBackend()`                          |
 | recharts                | 3.x           |                                                                                |
 
 When touching one of those, expect to update call sites for the new API.

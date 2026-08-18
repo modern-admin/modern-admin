@@ -48,46 +48,81 @@ The admin panel is now live at **http://localhost:3001/admin**.
 
 ## First-run admin user
 
-The schema seeds zero users. Create one via a quick script — Better Auth
-hashes the password and Modern Admin reads the role:
+The schema seeds zero users. Create one via a quick script. It uses Better
+Auth's password hasher and an atomic upsert keyed by the complete Better Auth
+1.7 credential identity, so concurrent executions still produce one user and
+one credential account:
 
 ```ts
 // prisma/seed.ts
 import { PrismaPg } from '@prisma/adapter-pg'
+import { isCredentialAccountIdentity } from '@modern-admin/auth-better-auth'
 import { uuidv7 } from '@modern-admin/core'
+import { hashPassword } from 'better-auth/crypto'
 import { PrismaClient } from '../src/generated/prisma/client.js'
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
 })
-const password = await Bun.password.hash('admin12345', 'argon2id')
+const password = await hashPassword('admin12345')
 
-const user = await prisma.maUser.create({
-  data: {
-    id: uuidv7(),
-    name: 'Admin',
-    email: 'admin@example.com',
-    emailVerified: true,
-    role: 'admin',
-  },
-})
-await prisma.maAccount.create({
-  data: {
-    id: uuidv7(),
-    userId: user.id,
-    providerId: 'credential',
-    accountId: user.id,
-    password,
-  },
-})
-await prisma.maRole.upsert({
-  where: { id: 'admin' },
-  update: {},
-  create: { id: 'admin', permissions: { '*': ['*'] }, isBuiltin: true },
+await prisma.$transaction(async (tx) => {
+  await tx.maRole.upsert({
+    where: { id: 'admin' },
+    update: {},
+    create: { id: 'admin', permissions: { '*': ['*'] }, isBuiltin: true },
+  })
+  const user = await tx.maUser.upsert({
+    where: { email: 'admin@example.com' },
+    update: { role: 'admin' },
+    create: {
+      id: uuidv7(),
+      name: 'Admin',
+      email: 'admin@example.com',
+      emailVerified: true,
+      role: 'admin',
+    },
+  })
+  const account = await tx.maAccount.upsert({
+    where: {
+      issuer_accountId: {
+        issuer: 'local:credential',
+        accountId: user.id,
+      },
+    },
+    update: {},
+    create: {
+      id: uuidv7(),
+      userId: user.id,
+      providerId: 'credential',
+      issuer: 'local:credential',
+      accountId: user.id,
+      password,
+    },
+  })
+  if (!isCredentialAccountIdentity(account, user.id) || account.userId !== user.id) {
+    throw new Error('Credential identity is already linked to a different account')
+  }
 })
 ```
 
 Run with `bun run prisma/seed.ts`.
+
+## Upgrading Better Auth 1.6 to 1.7
+
+This scaffold targets Better Auth 1.7 and its `(issuer, accountId)` account
+identity contract; its schema is not compatible with the old 1.6 account
+shape. For a populated installation, stop authentication writers and run the
+transactional PostgreSQL migration shipped at
+`@modern-admin/system-prisma/prisma/migrations/better-auth-1.7-account-identities.sql`
+before deploying Better Auth 1.7.
+
+The migration inventories providers, maps credentials to `local:credential`,
+preserves Google's authoritative `https://accounts.google.com` issuer, and
+fails on unknown providers or identity collisions. Review and extend its
+explicit provider mapping for your deployment; never derive a trusted issuer
+from email, profile/display data, request input, or an unverified endpoint.
+Do not merge or delete colliding users automatically.
 
 ## Adding resources
 

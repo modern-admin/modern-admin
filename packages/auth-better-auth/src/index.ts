@@ -4,6 +4,18 @@
 
 import type { CurrentAdmin, IAuthProvider, LoginCredentials } from '@modern-admin/core'
 
+export {
+  BUILTIN_AUTHORITATIVE_ACCOUNT_ISSUERS,
+  BUILTIN_ISSUERLESS_OAUTH_PROVIDERS,
+  CREDENTIAL_ACCOUNT_IDENTITY,
+  isCredentialAccountIdentity,
+  planAccountIdentityMigration,
+  resolveAccountIssuer,
+  type AccountIdentityInput,
+  type AccountIssuerPolicy,
+  type PlannedAccountIdentity,
+} from './account-identities.js'
+
 /** Wire shape of an apikey row returned by better-auth's api-key plugin. */
 export interface ApiKeyRow {
   id: string

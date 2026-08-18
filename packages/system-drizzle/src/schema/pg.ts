@@ -72,25 +72,33 @@ export const maSession = pgTable('ma_session', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 })
 
-export const maAccount = pgTable('ma_account', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  accountId: text('account_id').notNull(),
-  providerId: text('provider_id').notNull(),
-  userId: uuid('user_id')
-    .notNull()
-    .references(() => maUser.id, { onDelete: 'cascade' }),
-  accessToken: text('access_token'),
-  refreshToken: text('refresh_token'),
-  idToken: text('id_token'),
-  accessTokenExpiresAt: timestamp('access_token_expires_at', { withTimezone: true }),
-  refreshTokenExpiresAt: timestamp('refresh_token_expires_at', { withTimezone: true }),
-  scope: text('scope'),
-  /** Hashed password for the email/password strategy. OAuth/passkey rows
-   *  leave this null — credentials are encoded in the provider tokens. */
-  password: text('password'),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-})
+export const maAccount = pgTable(
+  'ma_account',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    issuer: text('issuer').notNull(),
+    accountId: text('account_id').notNull(),
+    providerId: text('provider_id').notNull(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => maUser.id, { onDelete: 'cascade' }),
+    accessToken: text('access_token'),
+    refreshToken: text('refresh_token'),
+    idToken: text('id_token'),
+    accessTokenExpiresAt: timestamp('access_token_expires_at', { withTimezone: true }),
+    refreshTokenExpiresAt: timestamp('refresh_token_expires_at', { withTimezone: true }),
+    scope: text('scope'),
+    /** Hashed password for the email/password strategy. OAuth/passkey rows
+     *  leave this null — credentials are encoded in the provider tokens. */
+    password: text('password'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => ({
+    identityKey: unique('ma_account_issuer_account_id_uq').on(t.issuer, t.accountId),
+    userIdx: index('ma_account_user_id_idx').on(t.userId),
+  }),
+)
 
 export const maVerification = pgTable('ma_verification', {
   id: uuid('id').primaryKey().defaultRandom(),

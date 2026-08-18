@@ -16,7 +16,7 @@ import { deepMerge, RESOURCE_OPTIONS_ARRAY_STRATEGIES } from '../utils/merge-opt
  * Concrete constructor + statics contract for a database adapter class.
  *
  * Intentionally NOT `typeof BaseDatabase`: that is an *abstract*
- * constructor signature, and under TS 6.x stricter variance checks the
+ * constructor signature, and under the stricter checks carried into TS 7 the
  * concrete subclass constructors aren't assignable to it without an
  * `as unknown as` cast at every adapter registration site. We use `any`
  * in constructor input position so adapter classes with narrow ctor

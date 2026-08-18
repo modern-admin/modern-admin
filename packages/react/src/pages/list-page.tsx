@@ -7,15 +7,23 @@
 
 import * as React from 'react'
 import {
+  columnFilteringFeature,
+  columnResizingFeature,
+  columnSizingFeature,
+  type ColumnVisibilityState,
   type ColumnDef,
   type ColumnFiltersState,
   type ColumnSizingState,
   flexRender,
-  getCoreRowModel,
+  type ReactTable,
+  rowPaginationFeature,
+  rowSelectionFeature,
+  rowSortingFeature,
   type RowSelectionState,
   type SortingState,
-  useReactTable,
-  type VisibilityState,
+  tableFeatures,
+  useTable,
+  columnVisibilityFeature,
 } from '@tanstack/react-table'
 import {
   Badge,
@@ -143,6 +151,20 @@ import type {
 import { confirmGuard } from '../action-guard.js'
 import { showActionNotice } from '../action-notice.js'
 import { hasActionComponent, useActionLauncher } from '../action-launcher.js'
+
+const LIST_TABLE_FEATURES = tableFeatures({
+  columnFilteringFeature,
+  rowSortingFeature,
+  rowPaginationFeature,
+  rowSelectionFeature,
+  columnVisibilityFeature,
+  columnSizingFeature,
+  columnResizingFeature,
+})
+
+type ListTableFeatures = typeof LIST_TABLE_FEATURES
+type ListColumnDef = ColumnDef<ListTableFeatures, RecordJSON>
+type ListTable = ReactTable<ListTableFeatures, RecordJSON>
 
 const PAGE_SIZES = [10, 20, 50, 100] as const
 
@@ -435,7 +457,7 @@ export function ResourceListPage({
     [urlQuery.page, urlQuery.perPage],
   )
 
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
+  const [columnVisibility, setColumnVisibility] = React.useState<ColumnVisibilityState>({})
   const [columnSizing, setColumnSizing] = React.useState<ColumnSizingState>(() =>
     loadColumnSizing(resourceId),
   )
@@ -722,8 +744,8 @@ export function ResourceListPage({
   )
 
   const showSelectColumn = f.bulk || isSelectionControlled
-  const columns = React.useMemo<ColumnDef<RecordJSON>[]>(() => {
-    const cols: ColumnDef<RecordJSON>[] = []
+  const columns = React.useMemo<ListColumnDef[]>(() => {
+    const cols: ListColumnDef[] = []
     if (showSelectColumn) {
       cols.push({
         id: '_select',
@@ -753,7 +775,7 @@ export function ResourceListPage({
         ),
       })
     }
-    cols.push(...visible.map<ColumnDef<RecordJSON>>((property) => ({
+    cols.push(...visible.map<ListColumnDef>((property) => ({
       id: property.path,
       accessorFn: (row) => row.params[property.path],
       size: defaultColumnSize(property),
@@ -842,7 +864,8 @@ export function ResourceListPage({
   const total = records.data?.meta.total ?? 0
   const pageCount = Math.max(1, Math.ceil(total / pagination.pageSize))
 
-  const table = useReactTable({
+  const table = useTable({
+    features: LIST_TABLE_FEATURES,
     data: records.data?.records ?? [],
     columns,
     pageCount,
@@ -862,7 +885,6 @@ export function ResourceListPage({
     // avoiding a re-render storm that 'onChange' triggers on every mousemove.
     columnResizeMode: 'onEnd',
     defaultColumn: { minSize: 80, size: 200, maxSize: 800 },
-    getCoreRowModel: getCoreRowModel(),
     getRowId: (row) => row.id,
   })
 
@@ -1321,7 +1343,7 @@ export function ResourceListPage({
                 const resizingHeader = table.getHeaderGroups()
                   .flatMap((hg) => hg.headers)
                   .find((h) => h.column.getIsResizing())
-                const deltaOffset = table.getState().columnSizingInfo.deltaOffset ?? 0
+                const deltaOffset = table.state.columnResizing.deltaOffset ?? 0
                 const resizeLeft = resizingHeader
                   ? leafCols
                     .slice(
@@ -1699,12 +1721,12 @@ function RowActions({
   )
 }
 
-function ColumnVisibilityMenu<TData>({
+function ColumnVisibilityMenu({
   table,
   properties,
   t,
 }: {
-  table: ReturnType<typeof useReactTable<TData>>
+  table: ListTable
   properties: PropertyJSON[]
   t: (key: string, params?: Record<string, string | number>) => string
 }): React.ReactElement {
@@ -1755,16 +1777,16 @@ function getPageRange(pageIndex: number, pageCount: number, windowSize = 10): nu
   return Array.from({ length: end - start }, (_, i) => start + i)
 }
 
-function Paginator<TData>({
+function Paginator({
   table,
   total,
   t,
 }: {
-  table: ReturnType<typeof useReactTable<TData>>
+  table: ListTable
   total: number
   t: (key: string, params?: Record<string, string | number>) => string
 }): React.ReactElement {
-  const { pageIndex, pageSize } = table.getState().pagination
+  const { pageIndex, pageSize } = table.state.pagination
   const pageCount = table.getPageCount()
   const pages = getPageRange(pageIndex, pageCount)
   // Click-and-drag horizontal scroll on the page-buttons row, mirroring the

@@ -37,11 +37,11 @@ weaknesses:
 | UI           | shadcn/ui, Tailwind CSS 4 (CSS-first), Recharts 3 |
 | Backend      | NestJS 11+ (REST + GraphQL + WebSocket + OpenAPI) |
 | ORMs         | Prisma 7+, Drizzle 0.45+                          |
-| Auth         | Better Auth 1.6+ (cookies + API keys)             |
+| Auth         | Better Auth 1.7+ (cookies + API keys)             |
 | Cache        | Redis (backend) + TanStack Query 5 (frontend)     |
 | Queue        | BullMQ + `@nestjs/bullmq` (jobs, cron, webhooks)  |
 | Validation   | Zod 4 end-to-end                                  |
-| Language     | TypeScript 6 (strict)                             |
+| Language     | TypeScript 7 (strict)                             |
 
 > Dependency policy: this project always pins to the latest stable release of
 > each library. Code is adapted for breaking changes, not held back.
@@ -205,8 +205,9 @@ Full documentation lives at **<https://docs.modernadminpro.com/docs/getting-star
   `@modern-admin/react/styles.css` and add one `@source` for their own files.
   `border` requires an explicit color in Tailwind 4 — pair with
   `border-border`.
-- TypeScript 6 stricter checks: use `as unknown as T` for variance/abstract
-  constructor casts.
+- TypeScript 7 carries the stricter TypeScript 6 checks forward: use
+  `as unknown as T` for variance/abstract constructor casts. ESLint and DTS
+  tooling temporarily use the side-by-side TypeScript 6 JavaScript API.
 - React 19: use `import type { ReactElement } from 'react'` instead of
   `JSX.Element`.
 - Mobile-first UI: base classes target small viewports, `sm:`/`md:`/`lg:`

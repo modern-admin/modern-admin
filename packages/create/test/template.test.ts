@@ -23,6 +23,18 @@ const modernAdminDeps = (pkg: {
   )
 
 describe('scaffold template versions', () => {
+  test('ships the Better Auth 1.7 account identity schema and seed tuple', async () => {
+    const schema = await readFile(join(templateDir, 'prisma/schema.prisma'), 'utf8')
+    const readme = await readFile(join(templateDir, 'README.md'), 'utf8')
+    expect(schema).toMatch(/model MaAccount \{[\s\S]*?issuer\s+String/)
+    expect(schema).toContain('@@unique([issuer, accountId])')
+    expect(schema).toContain('@@index([userId])')
+    expect(readme).toContain("providerId: 'credential'")
+    expect(readme).toContain("issuer: 'local:credential'")
+    expect(readme).toContain('accountId: user.id')
+    expect(readme).toContain("import { hashPassword } from 'better-auth/crypto'")
+  })
+
   test('template pins every @modern-admin/* dep to the version token', async () => {
     const raw = await readFile(join(templateDir, 'package.json'), 'utf8')
     const deps = modernAdminDeps(JSON.parse(raw))

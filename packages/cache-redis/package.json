@@ -54,11 +54,11 @@
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
-    "@types/bun": "^1.3.13",
-    "ioredis": "^5.10.1",
-    "typescript": "^6.0.3"
+    "@types/bun": "^1.3.14",
+    "ioredis": "^6.0.0",
+    "typescript": "^7.0.2"
   },
   "peerDependencies": {
-    "ioredis": "^5.4.1"
+    "ioredis": "^6.0.0"
   }
 }

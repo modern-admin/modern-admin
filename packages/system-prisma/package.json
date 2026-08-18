@@ -29,7 +29,8 @@
   },
   "files": [
     "dist",
-    "src"
+    "src",
+    "prisma"
   ],
   "publishConfig": {
     "registry": "https://registry.npmjs.org",
@@ -54,11 +55,11 @@
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
-    "@types/bun": "^1.3.13",
-    "typescript": "^6.0.3"
+    "@types/bun": "^1.3.14",
+    "typescript": "^7.0.2"
   },
   "peerDependencies": {
-    "@prisma/client": ">=7"
+    "@prisma/client": "^7.9.1"
   },
   "peerDependenciesMeta": {
     "@prisma/client": {
