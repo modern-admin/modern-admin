@@ -1,5 +1,23 @@
 # @modern-admin/system-prisma
 
+## 0.6.0
+
+### Minor Changes
+
+- [`3d2a207`](https://github.com/modern-admin/modern-admin/commit/3d2a2077a466e87da55bf162dcafdb9a8b9bd652) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Require Better Auth 1.7 and adopt its account identity contract across the
+  Prisma fragment, Drizzle schema, reference app, and generated scaffold.
+  Credential accounts now use `issuer: 'local:credential'`, account identity is
+  unique by `(issuer, accountId)`, and adapter-specific PostgreSQL migrations
+  backfill populated 1.6 installations while failing closed on unknown providers
+  or collisions. Stop authentication writes before running the migration.
+
+### Patch Changes
+
+- [`a0b80a6`](https://github.com/modern-admin/modern-admin/commit/a0b80a668e02fded1f509e3867a2db46302a5fdc) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Correct schema guidance to use the published `@modern-admin/create` CLI
+  package when generating system tables.
+- Updated dependencies [[`3d2a207`](https://github.com/modern-admin/modern-admin/commit/3d2a2077a466e87da55bf162dcafdb9a8b9bd652)]:
+  - @modern-admin/core@0.6.0
+
 ## 0.5.0
 
 ### Patch Changes
