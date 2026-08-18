@@ -1,5 +1,18 @@
 # @modern-admin/ui
 
+## 0.5.0
+
+### Minor Changes
+
+- [`4251f7a`](https://github.com/modern-admin/modern-admin/commit/4251f7a6ea01ad80fbd5515a27cec2e138d2ccb5) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Harden server caching across processes and expose cache observability.
+
+### Patch Changes
+
+- [`4251f7a`](https://github.com/modern-admin/modern-admin/commit/4251f7a6ea01ad80fbd5515a27cec2e138d2ccb5) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Added localized text search for resources on the admin home page and hid the
+  native search reset control when an Input provides its own clear button. Select
+  menus now retain their height after the down-scroll indicator disappears.
+  JSON properties in the show view now offer a copy button.
+
 ## 0.4.2
 
 ### Patch Changes
