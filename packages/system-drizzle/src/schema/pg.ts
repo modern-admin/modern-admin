@@ -12,7 +12,7 @@
  *      Auth's `user/session/account/verification` and the `apikey`
  *      plugin. Better Auth is configured to remap its logical names to
  *      these `ma_*` SQL tables; declaring them here means a single CLI
- *      run (`bunx @modern-admin/create-modern-admin generate`) wires up
+ *      run (`bunx @modern-admin/create generate`) wires up
  *      everything the runtime needs.
  *   2. **Modern Admin core** (`maRole`, `maLog`, `maWebhook`, …) — the
  *      framework's own runtime tables.

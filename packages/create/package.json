@@ -1,7 +1,7 @@
 {
   "name": "@modern-admin/create",
   "version": "0.5.0",
-  "description": "Scaffolder for a standalone @modern-admin admin-panel service. Invoke via `bun create @modern-admin <name>` (or `npm create @modern-admin`).",
+  "description": "CLI for scaffolding Modern Admin services, system schemas, and host-owned custom UI bundles.",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/create#readme",
   "keywords": [
     "modern-admin",
@@ -11,6 +11,7 @@
     "cli",
     "scaffold",
     "create",
+    "custom-ui",
     "starter"
   ],
   "type": "module",
@@ -35,7 +36,8 @@
   "files": [
     "dist",
     "src",
-    "template"
+    "template",
+    "ui-template"
   ],
   "publishConfig": {
     "registry": "https://registry.npmjs.org",

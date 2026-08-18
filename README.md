@@ -78,7 +78,7 @@ modern-admin/
 │   ├── feature-json-by-key/       — declarative JSON sub-properties
 │   ├── license/                   — license-gate (jose, Ed25519/JWS) for Pro packages
 │   ├── telemetry/                 — anonymous usage telemetry
-│   ├── create/                    — `bun create @modern-admin <name>` scaffolder
+│   ├── create/                    — scaffold, schema-generation, and custom-UI CLI
 │   └── tsconfig/                  — shared TS presets
 ├── .changeset/                    — Changesets workflow
 ├── .github/workflows/release.yml  — CI publish → npm (registry.npmjs.org)
@@ -182,6 +182,13 @@ Scaffold a new project:
 
 ```bash
 bun create @modern-admin my-admin
+```
+
+Extend an existing host project:
+
+```bash
+bunx @modern-admin/create generate   # add ma_* system tables
+bunx @modern-admin/create setup-ui   # create and connect a custom UI bundle
 ```
 
 ## Documentation
