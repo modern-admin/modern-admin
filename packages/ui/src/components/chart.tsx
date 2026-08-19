@@ -325,6 +325,13 @@ export interface TimeSeriesChartProps {
    */
   axisValueFormatter?: (value: number) => string
   /**
+   * BCP-47 tag driving the default number formatting — grouping separators
+   * and the compact-notation suffixes (`12,5 тыс.` vs `12.5K`). Defaults to
+   * the runtime's locale, which in a browser is the *browser's*, not the
+   * panel's. Explicit `valueFormatter` / `axisValueFormatter` still win.
+   */
+  locale?: string
+  /**
    * Forces a specific Recharts primitive. When omitted, falls back to an
    * auto heuristic: `area` for ≤2 series (single-metric look), `line`
    * for more (multi-series comparison).
@@ -412,6 +419,7 @@ export function TimeSeriesChart({
   labelFormatter,
   valueFormatter,
   axisValueFormatter,
+  locale,
   visualisation,
   labels,
   className,
@@ -524,13 +532,13 @@ export function TimeSeriesChart({
   const formatValue = (v: number | string): string => {
     const n = typeof v === 'number' ? v : Number(v)
     if (!Number.isFinite(n)) return String(v)
-    return valueFormatter ? valueFormatter(n) : new Intl.NumberFormat().format(n)
+    return valueFormatter ? valueFormatter(n) : new Intl.NumberFormat(locale).format(n)
   }
   const formatAxisValue = (n: number): string => {
     if (!Number.isFinite(n)) return String(n)
     if (axisValueFormatter) return axisValueFormatter(n)
     if (valueFormatter) return valueFormatter(n)
-    return compactAxisFormat()(n)
+    return compactAxisFormat(locale)(n)
   }
 
   return (

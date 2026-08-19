@@ -24,10 +24,20 @@ export const DialogOverlay = React.forwardRef<
 ))
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 
+export interface DialogContentProps
+  extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
+  /**
+   * Visually-hidden label for the built-in close button. Default: 'Close'.
+   * Follows the same convention as `SidebarTrigger.toggleSidebarLabel` — this
+   * package is i18n-unaware, so translated strings arrive as props.
+   */
+  closeLabel?: string
+}
+
 export const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => {
+  DialogContentProps
+>(({ className, children, closeLabel = 'Close', ...props }, ref) => {
   // Nested popovers/selects portal into this node rather than `document.body`
   // so `react-remove-scroll` (which Radix wraps modal content in) lets touch
   // gestures scroll them on mobile. See lib/floating-layer.tsx.
@@ -47,7 +57,7 @@ export const DialogContent = React.forwardRef<
         <LayerContainerProvider container={content}>{children}</LayerContainerProvider>
         <DialogPrimitive.Close className="absolute right-4 top-4 cursor-pointer rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
           <X className="h-4 w-4" />
-          <span className="sr-only">Close</span>
+          <span className="sr-only">{closeLabel}</span>
         </DialogPrimitive.Close>
       </DialogPrimitive.Content>
     </DialogPortal>

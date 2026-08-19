@@ -81,6 +81,20 @@ export interface AdminAppConfigOptions {
   devConfig?: ModernAdminRuntimeConfig
   /** Directory the standalone build writes to. Rarely worth changing. */
   outDir?: string
+  /**
+   * Production source maps. Defaults to `false`.
+   *
+   * `true` emits `.map` files next to every chunk. The static-UI middleware
+   * serves them publicly with `immutable` caching, so anything in them —
+   * including the full source of proprietary components in a custom bundle —
+   * is readable by anyone who can reach the panel. They also dominate the
+   * tarball: the stock standalone build is ~17MB, of which ~13MB is maps.
+   *
+   * `'hidden'` writes the maps but omits the `//# sourceMappingURL` comment,
+   * which is the right setting for uploading them to an error tracker
+   * without exposing them to browsers.
+   */
+  sourcemap?: boolean | 'hidden'
   /** Extra plugins, appended after the built-in ones. */
   plugins?: PluginOption[]
 }
@@ -205,6 +219,7 @@ export function defineAdminAppConfig(
     apiProxyPath = ['/admin/api', '/socket.io'],
     devConfig,
     outDir = STANDALONE_OUT_DIR,
+    sourcemap = false,
     plugins: extraPlugins = [],
   } = options
   return ({ command }) => {
@@ -219,7 +234,7 @@ export function defineAdminAppConfig(
         build: {
           outDir,
           emptyOutDir: true,
-          sourcemap: true,
+          sourcemap,
         },
       }
     }

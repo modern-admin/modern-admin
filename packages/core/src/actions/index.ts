@@ -48,4 +48,7 @@ export {
   deleteAction,
   bulkDeleteAction,
   searchAction,
+  // `values` is in BUILT_IN_ACTIONS like the rest; leaving it out of the
+  // barrels made it the one built-in a plugin could not wrap.
+  valuesAction,
 } from './built-in'

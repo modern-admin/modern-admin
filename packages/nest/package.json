@@ -76,13 +76,17 @@
   },
   "peerDependencies": {
     "@scalar/nestjs-api-reference": "^1.2.14",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "@types/express": "^5.0.0"
   },
   "peerDependenciesMeta": {
     "@scalar/nestjs-api-reference": {
       "optional": true
     },
     "express": {
+      "optional": true
+    },
+    "@types/express": {
       "optional": true
     }
   }

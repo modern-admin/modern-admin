@@ -4,7 +4,7 @@ import {
   type Type,
   type Provider,
 } from '@nestjs/common'
-import { APP_INTERCEPTOR, DiscoveryModule } from '@nestjs/core'
+import { DiscoveryModule } from '@nestjs/core'
 import { QueueModule } from '@modern-admin/queue'
 import {
   ModernAdmin,
@@ -32,7 +32,7 @@ import { GlobalSearchController } from './global-search.controller.js'
 import { WebhooksController } from './webhooks.controller.js'
 import { DashboardController } from './dashboard.controller.js'
 import { CacheController } from './cache.controller.js'
-import { ModernAdminAuthGuard } from './auth.guard.js'
+import { ModernAdminAuthGuard, ModernAdminConfigGuard } from './auth.guard.js'
 import { ModernAdminCacheInterceptor } from './cache.interceptor.js'
 import {
   AdminControllerScanner,
@@ -41,8 +41,29 @@ import {
 import type { AdminController } from './admin'
 
 export interface ModernAdminModuleOptions extends ModernAdminOptions {
-  /** When true, registers the auth guard globally for the admin routes. */
+  /**
+   * Marks the dynamic module as a NestJS **global module** (`DynamicModule.global`),
+   * so `MODERN_ADMIN`, `MODERN_ADMIN_OPTIONS`, and the guard/interceptor can be
+   * resolved from feature modules without importing `ModernAdminModule` there.
+   *
+   * This is DI scope only. It registers **no** guard: every admin controller
+   * already carries a class-level `@UseGuards(ModernAdminAuthGuard)`, and
+   * `APP_GUARD` is never used by this package. (Earlier versions of this JSDoc
+   * claimed it "registers the auth guard globally for the admin routes" — it
+   * never did.)
+   */
   global?: boolean
+  /**
+   * Allow `GET /admin/api/config` to answer requests without a session.
+   * Defaults to `false`.
+   *
+   * The payload is filtered either way — an anonymous request is built with a
+   * `null` principal, so `isAccessible` / `isVisible` still run — but it does
+   * disclose your resource ids, property paths, and enum values to anyone who
+   * can reach the panel. Turn it on only when the SPA must render something
+   * before login.
+   */
+  publicConfig?: boolean
   /** Store backing global/user/resource settings. Required for AI assistant settings persistence. */
   configStore?: IConfigStore
   /** Store backing long-running AI task metadata and event streaming. */
@@ -207,55 +228,91 @@ const deriveFeatures = (
  *    in a synthetic feature module. Use it when you prefer to keep the
  *    registration colocated with the import.
  */
+/**
+ * The controller list, shared by `forRoot` and `forRootAsync`.
+ *
+ * `aiEnabled` is the only axis: Nest resolves `controllers` when the module
+ * is *defined*, long before an async factory has run, so it cannot be derived
+ * from resolved options. Both entry points therefore take it as an explicit,
+ * synchronous flag.
+ */
+const buildControllers = (aiEnabled: boolean): NonNullable<DynamicModule['controllers']> => [
+  ResourceController,
+  ConfigController,
+  AuthController,
+  ApiKeysController,
+  ...(aiEnabled ? [AiAssistantController] : []),
+  AnalyticsController,
+  HistoryController,
+  AuditLogController,
+  GlobalSearchController,
+  WebhooksController,
+  DashboardController,
+  CacheController,
+]
+
+/** The AI subsystem's imports — a BullMQ queue, so only when AI is on. */
+const buildImports = (aiEnabled: boolean): NonNullable<DynamicModule['imports']> => [
+  DiscoveryModule,
+  ...(aiEnabled ? [QueueModule.register({ queues: [AI_ASSISTANT_QUEUE] })] : []),
+]
+
+/**
+ * Providers shared by both entry points. `optionsProviders` differs (a value
+ * vs. a factory); everything downstream of the resolved options is identical,
+ * which is what keeps `forRootAsync` feature-equivalent to `forRoot`.
+ */
+const buildProviders = (
+  aiEnabled: boolean,
+  optionsProviders: Provider[],
+): Provider[] => [
+  ...optionsProviders,
+  // Resolved from the options rather than registered conditionally: the
+  // service may only be known after an async factory runs, and a missing
+  // provider would make `ApiKeysController` 501 while `deriveFeatures`
+  // still advertised `apiKeys: true` to the SPA.
+  {
+    provide: MODERN_ADMIN_API_KEY_SERVICE,
+    useFactory: (resolved: ModernAdminModuleOptions) => resolved.apiKeyService ?? null,
+    inject: [MODERN_ADMIN_OPTIONS],
+  },
+  ...(aiEnabled ? [AiAssistantService, AiAssistantProcessor] : []),
+  AdminControllerScanner,
+  ModernAdminBootstrapService,
+  ModernAdminAuthGuard,
+  ModernAdminConfigGuard,
+  // Bound per-controller via `@UseInterceptors` on the two controllers with
+  // a `:resourceId` route param, not as an APP_INTERCEPTOR: a global binding
+  // stamped `x-cache: BYPASS` on every response in the host app and pulled
+  // any unrelated host route with a `:resourceId` param into admin caching.
+  ModernAdminCacheInterceptor,
+]
+
+const MODULE_EXPORTS = [
+  MODERN_ADMIN,
+  MODERN_ADMIN_OPTIONS,
+  MODERN_ADMIN_API_KEY_SERVICE,
+  AdminControllerScanner,
+  ModernAdminAuthGuard,
+  ModernAdminConfigGuard,
+  ModernAdminCacheInterceptor,
+]
+
 @Module({})
 export class ModernAdminModule {
   static forRoot(options: ModernAdminModuleOptions): DynamicModule {
     const aiEnabled = options.aiAssistant !== undefined
     const admin = new ModernAdmin({ ...options, features: deriveFeatures(options) })
-    const apiKeyProviders: Provider[] = options.apiKeyService
-      ? [{ provide: MODERN_ADMIN_API_KEY_SERVICE, useValue: options.apiKeyService }]
-      : []
     return {
       module: ModernAdminModule,
       global: options.global ?? false,
-      imports: [
-        DiscoveryModule,
-        ...(aiEnabled ? [QueueModule.register({ queues: [AI_ASSISTANT_QUEUE] })] : []),
-      ],
-      controllers: [
-        ResourceController,
-        ConfigController,
-        AuthController,
-        ApiKeysController,
-        ...(aiEnabled ? [AiAssistantController] : []),
-        AnalyticsController,
-        HistoryController,
-        AuditLogController,
-        GlobalSearchController,
-        WebhooksController,
-        DashboardController,
-        CacheController,
-      ],
-      providers: [
+      imports: buildImports(aiEnabled),
+      controllers: buildControllers(aiEnabled),
+      providers: buildProviders(aiEnabled, [
         { provide: MODERN_ADMIN_OPTIONS, useValue: options },
         { provide: MODERN_ADMIN, useValue: admin },
-        ...apiKeyProviders,
-        ...(aiEnabled ? [AiAssistantService, AiAssistantProcessor] : []),
-        AdminControllerScanner,
-        ModernAdminBootstrapService,
-        ModernAdminAuthGuard,
-        ModernAdminCacheInterceptor,
-        // Apply the cache interceptor to every route. It's GET-only and
-        // resource-scoped — non-admin paths and unknown resources bypass.
-        { provide: APP_INTERCEPTOR, useExisting: ModernAdminCacheInterceptor },
-      ],
-      exports: [
-        MODERN_ADMIN,
-        MODERN_ADMIN_OPTIONS,
-        AdminControllerScanner,
-        ModernAdminAuthGuard,
-        ModernAdminCacheInterceptor,
-      ],
+      ]),
+      exports: MODULE_EXPORTS,
     }
   }
 
@@ -307,32 +364,33 @@ export class ModernAdminModule {
 
   /**
    * Async variant: build the underlying ModernAdmin instance from a factory.
+   *
+   * Feature-equivalent to `forRoot`, with one thing the async shape cannot
+   * infer: `aiAssistant`. Nest freezes `controllers` and `imports` when the
+   * module is defined, so whether to mount the AI controller and register its
+   * BullMQ queue has to be declared here, synchronously. It defaults to
+   * `false` — previously the async path mounted the AI controller and required
+   * a root `BullModule.forRoot()` even for hosts that never configured AI.
    */
   static forRootAsync(opts: {
     imports?: DynamicModule['imports']
     inject?: unknown[]
     useFactory: (...args: unknown[]) => ModernAdminModuleOptions | Promise<ModernAdminModuleOptions>
     global?: boolean
+    /**
+     * Mount the AI assistant controller + queue. Must match whether your
+     * factory returns an `aiAssistant` block; when it does not, leave this
+     * off. Requires a root `BullModule.forRoot()` in the host app.
+     */
+    aiAssistant?: boolean
   }): DynamicModule {
+    const aiEnabled = opts.aiAssistant ?? false
     return {
       module: ModernAdminModule,
       global: opts.global ?? false,
-      imports: [DiscoveryModule, QueueModule.register({ queues: [AI_ASSISTANT_QUEUE] }), ...(opts.imports ?? [])],
-      controllers: [
-        ResourceController,
-        ConfigController,
-        AuthController,
-        ApiKeysController,
-        AiAssistantController,
-        AnalyticsController,
-        HistoryController,
-        AuditLogController,
-        GlobalSearchController,
-        WebhooksController,
-        DashboardController,
-        CacheController,
-      ],
-      providers: [
+      imports: [...buildImports(aiEnabled), ...(opts.imports ?? [])],
+      controllers: buildControllers(aiEnabled),
+      providers: buildProviders(aiEnabled, [
         {
           provide: MODERN_ADMIN_OPTIONS,
           useFactory: opts.useFactory,
@@ -340,25 +398,41 @@ export class ModernAdminModule {
         },
         {
           provide: MODERN_ADMIN,
-          useFactory: (resolved: ModernAdminModuleOptions) =>
-            new ModernAdmin({ ...resolved, features: deriveFeatures(resolved) }),
+          useFactory: (resolved: ModernAdminModuleOptions) => {
+            assertAiAssistantAgreement(aiEnabled, resolved)
+            return new ModernAdmin({ ...resolved, features: deriveFeatures(resolved) })
+          },
           inject: [MODERN_ADMIN_OPTIONS],
         },
-        AiAssistantService,
-        AiAssistantProcessor,
-        AdminControllerScanner,
-        ModernAdminBootstrapService,
-        ModernAdminAuthGuard,
-        ModernAdminCacheInterceptor,
-        { provide: APP_INTERCEPTOR, useExisting: ModernAdminCacheInterceptor },
-      ],
-      exports: [
-        MODERN_ADMIN,
-        MODERN_ADMIN_OPTIONS,
-        AdminControllerScanner,
-        ModernAdminAuthGuard,
-        ModernAdminCacheInterceptor,
-      ],
+      ]),
+      exports: MODULE_EXPORTS,
     }
   }
+}
+
+/**
+ * `forRootAsync` decides whether to mount the AI controller synchronously,
+ * while `deriveFeatures` reads the async-resolved options — so the two can
+ * disagree, and a disagreement is invisible until a user clicks something.
+ *
+ * `flag=false, options set` renders the assistant in the SPA and 404s every
+ * call to it; `flag=true, options absent` mounts a controller with no
+ * configuration behind it. Both were possible silently, so fail at boot with
+ * the one-line fix instead.
+ */
+function assertAiAssistantAgreement(
+  aiEnabled: boolean,
+  resolved: ModernAdminModuleOptions,
+): void {
+  const configured = resolved.aiAssistant !== undefined
+  if (aiEnabled === configured) return
+  throw new Error(
+    configured
+      ? '[modern-admin] ModernAdminModule.forRootAsync: your factory returned an `aiAssistant` block, ' +
+        'but the AI controller and its queue are not mounted. Nest resolves `controllers`/`imports` ' +
+        'before the factory runs, so it cannot be inferred — add `aiAssistant: true` alongside ' +
+        '`useFactory` (and make sure a root `BullModule.forRoot()` is present).'
+      : '[modern-admin] ModernAdminModule.forRootAsync was called with `aiAssistant: true`, but the ' +
+        'factory returned no `aiAssistant` options. Either return an `aiAssistant` block or drop the flag.',
+  )
 }

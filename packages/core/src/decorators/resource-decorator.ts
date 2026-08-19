@@ -99,6 +99,13 @@ export class ResourceDecorator {
         path,
         type: (opts.type as PropertyType | undefined) ?? 'string',
         position: fromResource.length + virtual.length + 1,
+        // No column backs a virtual field, so it can never be sorted on.
+        // `BaseProperty` defaults `isSortable` to true, which had the list
+        // page render a sortable header for e.g. the password input — and
+        // the ORM 500 on the resulting `orderBy`. An explicit
+        // `properties: { password: { isSortable: true } }` still wins, via
+        // `PropertyDecorator.isSortable()`.
+        isSortable: false,
       })
       virtual.push(new PropertyDecorator(synthetic, opts))
     }

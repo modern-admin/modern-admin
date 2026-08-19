@@ -1,4 +1,5 @@
 import { Filter } from '../../filter/filter.js'
+import { ValidationError } from '../../errors/validation-error.js'
 import type { Action, ActionRequest, ActionContext, ListActionResponse } from '../action.js'
 import { listTag } from '../cache-runtime.js'
 import { listCacheKey } from '../cache-keys.js'
@@ -7,6 +8,15 @@ import type { BaseRecord, BaseResource } from '../../adapters'
 import type { ModernAdmin } from '../../modern-admin.js'
 
 const DEFAULT_PER_PAGE = 20
+
+/**
+ * `Number('x')` is NaN, and `Math.max(1, NaN)` is NaN — which would reach the
+ * adapter as an offset. Anything non-numeric falls back to the default.
+ */
+const positiveInt = (value: unknown, fallback: number): number => {
+  const parsed = Number(value ?? fallback)
+  return Number.isFinite(parsed) ? Math.max(1, Math.trunc(parsed)) : fallback
+}
 
 /**
  * Batch-populate scalar reference properties so the client doesn't fire one
@@ -64,9 +74,12 @@ const handler = async (
 ): Promise<ListActionResponse> => {
   const { resource, cacheRuntime, admin } = context
   const query = request.query ?? {}
-  const page = Math.max(1, Number(query.page ?? 1))
-  const perPage = Math.max(1, Math.min(200, Number(query.perPage ?? DEFAULT_PER_PAGE)))
-  const querySortBy = query.sortBy as string | undefined
+  const page = positiveInt(query.page, 1)
+  const perPage = Math.min(200, positiveInt(query.perPage, DEFAULT_PER_PAGE))
+  // `''` reaches here from `?sortBy=` — the Nest DTO types it `z.string()`,
+  // which accepts the empty string. Treat it as "not specified" so a cleared
+  // sort falls back to the resource default instead of failing validation.
+  const querySortBy = (query.sortBy as string | undefined) || undefined
   const queryDirection = (query.direction as 'asc' | 'desc' | undefined) ?? undefined
   const filters = (query.filters as Record<string, unknown> | undefined) ?? {}
 
@@ -74,7 +87,31 @@ const handler = async (
   // default declared via `ResourceOptions.sort`. Treating it as an effective
   // sort (rather than only forwarding query params) means UI navigation,
   // direct API calls, and cache keys all see the same canonical order.
-  const defaultSort = resource.decorate().options.sort
+  const decorator = resource.decorate()
+
+  // `isSortable` was a UI hint only: `sortBy` went from the query string
+  // straight into the adapter's `orderBy`, so `?sortBy=passwordHash` (or the
+  // name of a relation) reached the ORM and came back as a 500 naming an
+  // internal field. Enforce the declared constraint at the one place every
+  // transport funnels through. The resource-level default is host-configured
+  // and deliberately not subject to this check.
+  if (querySortBy != null) {
+    // Same predicate the wire payload exposes as `PropertyJSON.isSortable`,
+    // so the guard can never reject a column whose header the SPA renders as
+    // sortable. Virtual, form-only properties declare `isSortable: false` at
+    // construction for exactly this reason.
+    const sortable = decorator.properties.filter((p) => p.isSortable()).map((p) => p.path())
+    if (!sortable.includes(querySortBy)) {
+      throw new ValidationError({
+        sortBy: {
+          type: 'invalid',
+          message: `Cannot sort by "${querySortBy}". Sortable properties: ${sortable.join(', ') || '(none)'}.`,
+        },
+      })
+    }
+  }
+
+  const defaultSort = decorator.options.sort
   const sortBy = querySortBy ?? defaultSort?.sortBy
   const direction = querySortBy != null ? queryDirection : defaultSort?.direction
 
@@ -86,7 +123,7 @@ const handler = async (
     ...(sortBy ? { sortBy } : {}),
     ...(direction ? { direction } : {}),
   })
-  const cfg = resolveResourceCacheConfig(resource.decorate().options, 'list')
+  const cfg = resolveResourceCacheConfig(decorator.options, 'list')
 
   return cacheRuntime.read<ListActionResponse>(
     cacheKey,

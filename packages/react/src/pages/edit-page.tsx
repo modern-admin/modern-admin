@@ -14,12 +14,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  Field,
-  FieldError,
-  FieldLabel,
   Form,
-  FormField,
-  InfoTooltip,
   Kbd,
   Tooltip,
   TooltipContent,
@@ -29,7 +24,7 @@ import {
 import { AlertCircle, Eye, Plus, Save, Sparkles, Trash2, X } from 'lucide-react'
 import { useCreateRecord, useDeleteRecord, useFeatures, useRecord, useResource, useUpdateRecord } from '../hooks.js'
 import { parseApiError } from '../client.js'
-import { PropertyEditor } from '../property-renderer.js'
+import { RecordFormField } from '../components/record-form-field.js'
 import { Link, useNavigate } from '../router.js'
 import { useI18n } from '../i18n.js'
 import { useNotify } from '../notify.js'
@@ -605,38 +600,11 @@ export function ResourceEditPage({
                   control={form.control}
                   property={property}
                 >
-                  <FormField
+                  <RecordFormField
                     control={form.control}
-                    name={property.path}
-                    render={({ field, fieldState }) => (
-                      <Field
-                        data-invalid={fieldState.error ? true : undefined}
-                        className="mb-8 break-inside-avoid"
-                      >
-                        <FieldLabel htmlFor={field.name}>
-                          {property.label}
-                          {property.description ? (
-                            <InfoTooltip
-                              content={property.description}
-                              ariaLabel={property.description}
-                            />
-                          ) : null}
-                          {property.isRequired && (
-                            <span className="ml-1 text-destructive">*</span>
-                          )}
-                        </FieldLabel>
-                        <PropertyEditor
-                          property={property}
-                          value={field.value}
-                          onChange={field.onChange}
-                          disabled={form.formState.isSubmitting}
-                          resourceId={resourceId}
-                        />
-                        {fieldState.error?.message && (
-                          <FieldError>{fieldState.error.message}</FieldError>
-                        )}
-                      </Field>
-                    )}
+                    property={property}
+                    disabled={form.formState.isSubmitting}
+                    resourceId={resourceId}
                   />
                 </ConditionalField>
               ))}

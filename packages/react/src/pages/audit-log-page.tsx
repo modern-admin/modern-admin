@@ -16,6 +16,7 @@ import {
   SelectValue,
   Skeleton,
   cn,
+  dateFnsLocale,
 } from '@modern-admin/ui'
 import { ChevronDown, ChevronUp, ExternalLink, FilePlus, FileText, Key, KeyRound, Loader2, LogIn, Pencil, Trash2 } from 'lucide-react'
 import { useInfiniteAuditLog, useRecord, useRecordHistory, useResource, useResources } from '../hooks.js'
@@ -266,6 +267,7 @@ export function AuditLogPage(): React.ReactElement {
               resetFilters({ from: from || undefined, to: to || undefined })
             }
             className="sm:col-span-2 md:col-span-4"
+            locale={dateFnsLocale(locale)}
             labels={{
               placeholder: t('audit:dateRangePlaceholder'),
               apply: t('common:apply'),

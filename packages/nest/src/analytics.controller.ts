@@ -104,7 +104,6 @@ export class AnalyticsController {
       ...(parsed.topN !== undefined ? { topN: parsed.topN } : {}),
       from: new Date(parsed.from),
       to: new Date(parsed.to),
-      ...(parsed.filters ? { filters: parsed.filters } : {}),
       ...(parsed.comparePrevious ? { comparePrevious: true } : {}),
     }
 

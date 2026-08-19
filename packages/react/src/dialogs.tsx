@@ -231,6 +231,7 @@ export function DialogsProvider({ children }: DialogsProviderProps): React.React
             }}
           >
             <DialogContent
+              closeLabel={t('common:close')}
               className={entry.className}
               onInteractOutside={(e) => {
                 if (entry.modal) e.preventDefault()

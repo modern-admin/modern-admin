@@ -23,8 +23,25 @@ export interface ModernAdminOptions {
   adapters?: Adapter[]
   rootPath?: string
   branding?: {
+    /**
+     * Product name. Surfaced through `/admin/api/config` and rendered in the
+     * sidebar header, the loading splash, and the login screen — unless the
+     * client overrides it via `AdminAppProps.brand.title`.
+     */
     companyName?: string
+    /**
+     * @deprecated Never had a reader in any package — it was serialised into
+     *   the wire payload and dropped. Set the logo client-side with
+     *   `AdminAppProps.brand.logoUrl` (the standalone bundle reads
+     *   `window.__MODERN_ADMIN__.brand.logoUrl`). Ignored; will be removed.
+     */
     logo?: string
+    /**
+     * @deprecated Never had a reader in any package. Theming is done by
+     *   overriding the `:root` / `.dark` design tokens — see
+     *   `ModernAdminStaticUiOptions.themeCss` in `@modern-admin/nest`.
+     *   Ignored; will be removed.
+     */
     theme?: string
   }
   auth?: IAuthProvider
@@ -203,6 +220,7 @@ export class ModernAdmin {
       resources: options.resources ?? [],
       adapters: options.adapters ?? [],
       plugins: options.plugins ?? [],
+      logger: this.logger,
     })
   }
 
@@ -340,7 +358,13 @@ export class ModernAdmin {
     const plugins = args.plugins ?? this.options.plugins ?? []
     if (databases.length === 0 && resources.length === 0) return []
 
-    const built = ResourcesFactory.buildResources({ databases, resources, adapters, plugins })
+    const built = ResourcesFactory.buildResources({
+      databases,
+      resources,
+      adapters,
+      plugins,
+      logger: this.logger,
+    })
     const existing = new Set(this.resources.map((r) => r.decorate().id))
     const added: BaseResource[] = []
     for (const r of built) {
@@ -610,18 +634,34 @@ export class ModernAdmin {
     }
   }
 
-  /** Public config snapshot — what UI/transports expose to the browser. */
+  /**
+   * Public config snapshot — what UI/transports expose to the browser.
+   *
+   * Three call shapes, and the difference is a security boundary:
+   *
+   * - `toJSON()` — synchronous and **unfiltered**. Every property and every
+   *   action descriptor, including ones declared `isVisible: false` or gated
+   *   behind `isAccessible`. Only for trusted, server-side callers (tooling,
+   *   introspection). Never serve this to an HTTP client.
+   * - `toJSON(currentAdmin)` — filtered against that principal.
+   * - `toJSON(null)` — filtered against *no* principal. This is what an
+   *   anonymous HTTP request must get: `isAccessible` / `isVisible` run with
+   *   `currentAdmin` absent, so a logged-out caller can never see more than
+   *   a logged-in one.
+   */
   toJSON(): ModernAdminJSON
-  toJSON(currentAdmin: CurrentAdmin): Promise<ModernAdminJSON>
-  toJSON(currentAdmin?: CurrentAdmin): ModernAdminJSON | Promise<ModernAdminJSON> {
-    if (currentAdmin) {
+  toJSON(currentAdmin: CurrentAdmin | null): Promise<ModernAdminJSON>
+  toJSON(currentAdmin?: CurrentAdmin | null): ModernAdminJSON | Promise<ModernAdminJSON> {
+    if (currentAdmin !== undefined) {
       return Promise.all(
         this.resources.map((r) =>
           r.decorate().toJSON({
             admin: this,
             resource: r,
             cache: this.cache,
-            currentAdmin,
+            // `PropertyContextBase.currentAdmin` is optional; omitting it is
+            // how an access check sees "anonymous".
+            ...(currentAdmin ? { currentAdmin } : {}),
           }),
         ),
       ).then((resources) => ({

@@ -179,7 +179,7 @@ export function SettingsPage({ section }: { section?: string }): React.ReactElem
 // ─── API Keys section ─────────────────────────────────────────────────────────
 
 function ApiKeysSection(): React.ReactElement {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const client = useAdminClient()
   const qc = useQueryClient()
   const notify = useNotify()
@@ -276,7 +276,7 @@ function ApiKeysSection(): React.ReactElement {
                         <span>{k.name ?? k.id}</span>
                         {k.lastRequest && (
                           <span className="text-xs text-muted-foreground">
-                            {t('settings:apiKeys.lastUsed', { date: formatDate(k.lastRequest) })}
+                            {t('settings:apiKeys.lastUsed', { date: formatDate(k.lastRequest, locale) })}
                           </span>
                         )}
                       </div>
@@ -288,7 +288,7 @@ function ApiKeysSection(): React.ReactElement {
                       <PermissionsSummary permissions={k.permissions} />
                     </TableCell>
                     <TableCell className="hidden md:table-cell text-xs">
-                      {k.expiresAt ? formatDate(k.expiresAt) : t('settings:apiKeys.expiresNever')}
+                      {k.expiresAt ? formatDate(k.expiresAt, locale) : t('settings:apiKeys.expiresNever')}
                     </TableCell>
                     <TableCell>
                       <Switch
@@ -605,7 +605,7 @@ function ApiKeyEditorDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent closeLabel={t('common:close')} className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>
             {isEdit ? t('settings:apiKeys.editor.titleEdit') : t('settings:apiKeys.editor.titleCreate')}
@@ -676,7 +676,7 @@ function ApiKeyEditorDialog({
 const WEBHOOK_EVENTS = ['record.created', 'record.updated', 'record.deleted', '*']
 
 function WebhooksSection(): React.ReactElement {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const client = useAdminClient()
   const qc = useQueryClient()
   const notify = useNotify()
@@ -825,7 +825,7 @@ function WebhooksSection(): React.ReactElement {
                       <TableCell className="max-w-sm truncate">
                         {delivery.responseStatus ?? delivery.error ?? delivery.responseBody ?? '—'}
                       </TableCell>
-                      <TableCell>{formatDate(delivery.createdAt)}</TableCell>
+                      <TableCell>{formatDate(delivery.createdAt, locale)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -904,7 +904,7 @@ function WebhookEditorDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent closeLabel={t('common:close')} className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>{webhook ? t('settings:webhooks.editor.titleEdit') : t('settings:webhooks.editor.titleCreate')}</DialogTitle>
           <DialogDescription>{t('settings:webhooks.editor.description')}</DialogDescription>
@@ -1085,7 +1085,7 @@ function CreatedSecretDialog({
 
   return (
     <Dialog open={!!secret} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-lg">
+      <DialogContent closeLabel={t('common:close')} className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <SettingsIcon className="size-5" />
@@ -1134,9 +1134,14 @@ function CreatedSecretDialog({
   )
 }
 
-const formatDate = (input: string | Date): string => {
+/**
+ * Locale-aware date+time. `toLocaleString()` with no argument follows the
+ * *browser's* locale, not the panel's — a Russian UI rendered API-key and
+ * webhook timestamps in whatever the OS happened to be set to.
+ */
+const formatDate = (input: string | Date, locale?: string): string => {
   try {
-    return new Date(input).toLocaleString()
+    return new Date(input).toLocaleString(locale)
   } catch {
     return String(input)
   }

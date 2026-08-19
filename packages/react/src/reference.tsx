@@ -98,6 +98,10 @@ export function ReferenceCombobox({
   disabled,
   placeholder,
   className,
+  triggerId,
+  describedBy,
+  invalid,
+  required,
 }: {
   referenceResourceId: string
   value: string | number | null | undefined
@@ -106,6 +110,17 @@ export function ReferenceCombobox({
   placeholder?: string
   /** Extra classes applied to the trigger button (e.g. height override). */
   className?: string
+  /**
+   * `id` of the trigger button. The trigger is the widget's labelable
+   * element, so a record form's `<label for=…>` points here.
+   */
+  triggerId?: string
+  /** Forwarded to the trigger as `aria-describedby`. */
+  describedBy?: string
+  /** Marks the trigger `aria-invalid`. */
+  invalid?: boolean
+  /** Marks the trigger `aria-required`. */
+  required?: boolean
 }): React.ReactElement {
   const [open, setOpen] = React.useState(false)
   const [query, setQuery] = React.useState('')
@@ -137,9 +152,13 @@ export function ReferenceCombobox({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
+          id={triggerId}
           variant="outline"
           role="combobox"
           aria-expanded={open}
+          aria-describedby={describedBy}
+          aria-invalid={invalid || undefined}
+          aria-required={required || undefined}
           disabled={disabled}
           className={cn('w-full justify-between font-normal', className)}
         >

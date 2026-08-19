@@ -44,6 +44,14 @@ export interface JsonEditorProps {
   formatLabel?: string
   /** Translated prefix for parse-error messages. */
   invalidLabel?: string
+  /** `id` of the textarea, so a `<label for=…>` can point at it. */
+  id?: string
+  /** Forwarded to the textarea as `aria-describedby`. */
+  describedBy?: string
+  /** Marks the textarea `aria-invalid` (a parse error does so on its own). */
+  invalid?: boolean
+  /** Marks the textarea `aria-required`. */
+  required?: boolean
 }
 
 // Canonical (key-stable, no whitespace) JSON serialization used to decide
@@ -78,6 +86,10 @@ export function JsonEditor({
   className,
   formatLabel = 'Format',
   invalidLabel = 'Invalid JSON',
+  id,
+  describedBy,
+  invalid,
+  required,
 }: JsonEditorProps): React.ReactElement {
   const [draft, setDraft] = React.useState<string>(() => formatJsonValue(value))
   const [error, setError] = React.useState<string | null>(null)
@@ -138,6 +150,7 @@ export function JsonEditor({
     <div className={cn('space-y-2', className)}>
       <div className="relative">
         <Textarea
+          id={id}
           value={draft}
           onChange={(e) => handleChange(e.target.value)}
           onBlur={onBlur}
@@ -145,6 +158,9 @@ export function JsonEditor({
           rows={rows}
           spellCheck={false}
           placeholder={placeholder}
+          aria-describedby={describedBy}
+          aria-invalid={invalid || error !== null || undefined}
+          aria-required={required || undefined}
           className={cn(
             'pr-20 font-mono text-xs leading-relaxed',
             error && 'border-destructive focus-visible:ring-destructive/40',

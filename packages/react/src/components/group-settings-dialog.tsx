@@ -46,7 +46,7 @@ export function GroupSettingsDialog({
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
-      <DialogContent className="w-full max-w-md">
+      <DialogContent closeLabel={t('common:close')} className="w-full max-w-md">
         <DialogHeader>
           <DialogTitle>
             {initial ? t('chart:editGroup') : t('chart:newGroup')}

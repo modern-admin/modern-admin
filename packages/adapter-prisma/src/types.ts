@@ -73,7 +73,12 @@ export interface PrismaResourceConfig {
   enums?: readonly DmmfEnum[]
   /** Override the delegate key — defaults to `lowercaseFirst(model.name)`. */
   clientKey?: string
-  /** Database dialect; only used to render display SQL. Defaults to `'pg'`. */
+  /**
+   * Database dialect. Defaults to `'pg'`. Drives the display SQL returned
+   * with time-series results, and gates Prisma's `mode: 'insensitive'` —
+   * which only PostgreSQL and MongoDB accept, so on `'mysql'` / `'sqlite'`
+   * string filters fall back to the database's own collation.
+   */
   dialect?: PrismaDialect
   /**
    * Maximum number of rows `aggregateTimeSeries` pulls into memory before it
@@ -90,8 +95,10 @@ export interface PrismaDatabaseConfig {
   client: PrismaClientLike
   dmmf: DmmfDocument
   /**
-   * Database dialect. Used only to render the display SQL returned with
-   * time-series results. Defaults to `'pg'` when omitted.
+   * Database dialect, propagated to every resource this database creates.
+   * Drives the display SQL for time-series results and whether string
+   * filters may request Prisma's PostgreSQL-only `mode: 'insensitive'`.
+   * Defaults to `'pg'` when omitted.
    */
   dialect?: PrismaDialect
 }

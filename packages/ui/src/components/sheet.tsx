@@ -51,12 +51,18 @@ export interface SheetContentProps
   /** Set to true to suppress the built-in absolute close button (e.g. when
    *  the consumer renders its own close control inside the header). */
   hideCloseButton?: boolean
+  /**
+   * Visually-hidden label for the built-in close button. Default: 'Close'.
+   * Follows the same convention as `SidebarTrigger.toggleSidebarLabel` — this
+   * package is i18n-unaware, so translated strings arrive as props.
+   */
+  closeLabel?: string
 }
 
 export const SheetContent = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Content>,
   SheetContentProps
->(({ side = 'right', className, children, hideCloseButton, ...props }, ref) => {
+>(({ side = 'right', className, children, hideCloseButton, closeLabel = 'Close', ...props }, ref) => {
   // Nested popovers/selects portal into this node rather than `document.body`
   // so `react-remove-scroll` (which Radix wraps modal content in) lets touch
   // gestures scroll them on mobile. See lib/floating-layer.tsx.
@@ -74,7 +80,7 @@ export const SheetContent = React.forwardRef<
         {!hideCloseButton && (
           <SheetPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
             <X className="size-4" />
-            <span className="sr-only">Close</span>
+            <span className="sr-only">{closeLabel}</span>
           </SheetPrimitive.Close>
         )}
       </SheetPrimitive.Content>

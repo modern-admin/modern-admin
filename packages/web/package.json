@@ -23,6 +23,7 @@
   },
   "files": [
     "dist",
+    "!dist/**/*.map",
     "src",
     "index.html",
     "vite.config.ts",

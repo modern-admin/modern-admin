@@ -115,7 +115,13 @@ export function Combobox({
   labels,
 }: ComboboxProps): React.ReactElement {
   const l = { ...defaultLabels, ...labels }
+  const inputRef = React.useRef<HTMLInputElement>(null)
   const [focused, setFocused] = React.useState(false)
+  // Set only by the toggle button collapsing an open panel. Kept separate
+  // from `focused` because the button preserves DOM focus on the input: if
+  // collapsing wrote `focused = false`, no later focus event would fire to
+  // undo it and the panel could never reopen.
+  const [collapsed, setCollapsed] = React.useState(false)
   const [highlight, setHighlight] = React.useState(0)
 
   const items = React.useMemo(() => {
@@ -133,15 +139,25 @@ export function Combobox({
   // (either matching items or a loading spinner). Empty + non-loading =
   // no panel, so the component degrades to a plain input.
   const open =
-    !disabled && focused && (items.length > 0 || Boolean(loading))
+    !disabled && focused && !collapsed && (items.length > 0 || Boolean(loading))
 
   const commit = (s: { value: string; label: string }): void => {
     onChange(s.value)
-    setFocused(false)
+    setCollapsed(true)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
-    if (!open) return
+    if (!open) {
+      // ArrowDown is the standard "show me the list" gesture for a combobox,
+      // and it has to work after the panel was collapsed — the input still
+      // holds DOM focus at that point, so no focus event will clear
+      // `collapsed` on its own.
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        setCollapsed(false)
+      }
+      return
+    }
     if (e.key === 'ArrowDown') {
       e.preventDefault()
       setHighlight((h) => Math.min(h + 1, items.length - 1))
@@ -155,7 +171,9 @@ export function Combobox({
         commit(picked)
       }
     } else if (e.key === 'Escape') {
-      setFocused(false)
+      // Same reasoning as the toggle button: the input keeps DOM focus, so
+      // collapse the panel rather than lying about focus state.
+      setCollapsed(true)
     }
   }
 
@@ -164,6 +182,7 @@ export function Combobox({
       <PopoverAnchor asChild>
         <div className={cn('relative', className)}>
           <Input
+            ref={inputRef}
             id={id}
             type="text"
             value={value}
@@ -174,7 +193,14 @@ export function Combobox({
             aria-expanded={open}
             autoComplete="off"
             className="pr-8"
-            onFocus={() => setFocused(true)}
+            onFocus={() => {
+              setFocused(true)
+              setCollapsed(false)
+            }}
+            // Same reason as ArrowDown above: clicking an input that is
+            // already focused fires no focus event, so without this a
+            // collapsed panel could only be reopened by typing.
+            onClick={() => setCollapsed(false)}
             onBlur={() => {
               // Defer so a click on a suggestion (which fires after blur)
               // can still commit before we close the panel.
@@ -183,22 +209,52 @@ export function Combobox({
                 onBlur?.()
               }, 120)
             }}
-            onChange={(e) => onChange(e.target.value)}
+            onChange={(e) => {
+              // Typing is an unambiguous request to see suggestions again.
+              setCollapsed(false)
+              onChange(e.target.value)
+            }}
             onKeyDown={handleKeyDown}
           />
-          {/* Trailing affordance: spinner while loading, otherwise a chevron
-              hint that suggestions exist. Pure decoration — focusing the
-              input is what opens the panel. */}
-          <span
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-muted-foreground"
-          >
-            {loading ? (
+          {/* Trailing affordance: a spinner while loading, otherwise a real
+              toggle button. Focusing the input still opens the panel; the
+              button is what makes the suggestions reachable by pointer (and
+              is what `labels.toggleSuggestions` names — it used to be a
+              decorative `aria-hidden` span, so that label had nothing to
+              attach to). */}
+          {loading ? (
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-muted-foreground"
+            >
               <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <ChevronDown className="size-4 opacity-50" />
-            )}
-          </span>
+            </span>
+          ) : (
+            <button
+              type="button"
+              // Out of the tab order: the input is the widget's focusable
+              // element, and Tab must not stop twice on one field.
+              tabIndex={-1}
+              disabled={disabled}
+              aria-label={l.toggleSuggestions}
+              aria-expanded={open}
+              // Keep focus on the input — losing it would fire the deferred
+              // blur handler and close the panel we just opened.
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                if (open) {
+                  setCollapsed(true)
+                  return
+                }
+                setCollapsed(false)
+                inputRef.current?.focus()
+                setFocused(true)
+              }}
+              className="absolute inset-y-0 right-0 flex w-8 cursor-pointer items-center justify-center text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <ChevronDown className="size-4 opacity-50" aria-hidden="true" />
+            </button>
+          )}
         </div>
       </PopoverAnchor>
       <PopoverContent

@@ -160,7 +160,7 @@ export function GlobalSearchDialog({
   }, [])
 
   return (
-    <CommandDialog open={open} onOpenChange={onOpenChange}>
+    <CommandDialog open={open} onOpenChange={onOpenChange} closeLabel={t('common:close')}>
       {/* Visually-hidden title + description keep Radix Dialog accessibility
           warnings quiet and provide a label for screen readers. */}
       <DialogTitle className="sr-only">{t('globalSearch:title')}</DialogTitle>

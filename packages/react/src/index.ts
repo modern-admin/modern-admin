@@ -19,6 +19,8 @@ export {
   type UploadProgress,
   type UploadFileOptions,
   type UploadFilesOptions,
+  type UploadErrorCode,
+  type UploadErrorMessages,
 } from './client.js'
 export { ComponentLoader, type ComponentEntry } from './component-loader.js'
 export {
@@ -73,9 +75,14 @@ export {
 export {
   PropertyDisplay,
   PropertyEditor,
+  isGroupPropertyEditor,
   type PropertyDisplayProps,
   type PropertyEditorProps,
 } from './property-renderer.js'
+export {
+  RecordFormField,
+  type RecordFormFieldProps,
+} from './components/record-form-field.js'
 export {
   ReferenceLink,
   ReferenceLinkList,
@@ -93,6 +100,7 @@ export {
   type MetadataLocaleTranslations,
   type MetadataTranslations,
 } from './i18n.js'
+export { useDocumentTitle } from './use-document-title.js'
 export { useHotkey, type HotkeyOptions } from './use-hotkey.js'
 export {
   HotkeyRegistryProvider,
@@ -197,6 +205,7 @@ export {
   type SerializeOptions,
 } from './export.js'
 export type {
+  AdminBrand,
   AdminConfig,
   AdminFeatures,
   ActionComponentProps,

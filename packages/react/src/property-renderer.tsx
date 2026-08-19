@@ -29,6 +29,7 @@ import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
+  dateFnsLocale,
 } from '@modern-admin/ui'
 import { Check, Copy } from 'lucide-react'
 import { uuidv7 } from '@modern-admin/core'
@@ -393,6 +394,11 @@ export function PropertyDisplay({ property, value, view = 'list', populated }: P
       download: t('common:download'),
       openInNewTab: t('common:openInNewTab'),
       title: property.label || t('common:preview'),
+      // Declared by MediaPreview but never supplied here, so both fell back
+      // to their English defaults in all nine locales.
+      cannotPreview: t('common:cannotPreview'),
+      downloadError: t('common:downloadFailed'),
+      close: t('common:close'),
     }
     return (
       <MediaPreview
@@ -419,6 +425,9 @@ export function PropertyDisplay({ property, value, view = 'list', populated }: P
           download: t('common:download'),
           openInNewTab: t('common:openInNewTab'),
           title: filename,
+          cannotPreview: t('common:cannotPreview'),
+          downloadError: t('common:downloadFailed'),
+          close: t('common:close'),
         }
         return (
           <MediaPreview
@@ -571,6 +580,14 @@ function FilePropertyEditor({
 
     await client.uploadFiles(resourceId, property.path, accepted, {
       concurrency: 3,
+      // The client is i18n-unaware by design; its four self-raised failures
+      // arrive here as English fallbacks unless we hand it translations.
+      messages: {
+        emptyResponse: t('common:uploadEmptyResponse'),
+        invalidResponse: t('common:uploadInvalidResponse'),
+        network: t('common:uploadNetworkError'),
+        aborted: t('common:uploadAborted'),
+      },
       onItemStart: (i) => {
         setPending((prev) =>
           prev.map((p) => (p.id === ids[i] ? { ...p, status: 'uploading' } : p)),
@@ -921,6 +938,10 @@ function KeyValueEditorWithSuggestions({
           // KeyValueEditor's combobox label inherits the field label; this
           // is the empty-state message inside the dropdown.
           noMatches: t('keyValue:noMatches'),
+          // Names the chevron toggle for screen readers. Without it the
+          // control's only accessible name is Combobox's English default,
+          // in all nine locales.
+          toggleSuggestions: t('common:toggleSuggestions'),
         },
       }}
     />
@@ -929,30 +950,86 @@ function KeyValueEditorWithSuggestions({
 
 // ─── Generic property editor ──────────────────────────────────────────────────
 
+/**
+ * Whether this property's editor is a composite widget (several controls, or
+ * a contenteditable surface) rather than one labelable form control.
+ *
+ * Form screens use it to pick the right label association: `htmlFor` for a
+ * single control, `role="group"` + `aria-labelledby` for the rest. A `<label
+ * for>` pointing at a `<div>` names nothing, which is how every field on the
+ * record editor ended up without an accessible name.
+ */
+export function isGroupPropertyEditor(property: PropertyJSON): boolean {
+  // Host-registered editors and type extensions render arbitrary markup. They
+  // are handed `id` and are documented to forward it, but nothing enforces
+  // that, and a `<label for>` aimed at an element that never appears names
+  // nothing. Labelling them as a group works either way.
+  if (property.components?.edit) return true
+  if (getPropertyExtension(property.type)) return true
+  if (property.type === 'm2m') return true
+  if (property.reference && property.isArray) return true
+  if (property.type === 'richtext' || property.type === 'markdown') return true
+  if (property.type === 'file') return true
+  if (property.keyValueFields?.length) {
+    return property.type === 'json' || property.type === 'mixed' || property.type === 'key-value'
+  }
+  return false
+}
+
 export function PropertyEditor({
   property,
   value,
   onChange,
   disabled,
   resourceId,
+  id,
+  describedBy,
+  invalid,
+  required,
 }: PropertyEditorProps): React.ReactElement {
   const { components } = useAdminContext()
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  // Spread onto every editor that renders a single labelable control, so the
+  // `<label for=…>` above it resolves and the error text is announced with it.
+  const a11y = {
+    id,
+    'aria-describedby': describedBy,
+    'aria-invalid': invalid || undefined,
+    'aria-required': required || undefined,
+  }
+  // Composite editors can't take `id` on a labelable element; the form labels
+  // them through `aria-labelledby` instead and this only carries the
+  // description across.
+  const groupA11y = { 'aria-describedby': describedBy }
   const componentName = property.components?.edit
   if (componentName && components?.has(componentName)) {
     const Custom = components.get(componentName)!
-    return <Custom property={property} value={value} onChange={onChange} disabled={disabled} />
-  }
-  const stringValue = value == null ? '' : String(value)
-  if (property.type === 'm2m') {
     return (
-      <M2MPropertyEditor
+      <Custom
         property={property}
         value={value}
         onChange={onChange}
         disabled={disabled}
         resourceId={resourceId}
+        id={id}
+        describedBy={describedBy}
+        invalid={invalid}
+        required={required}
       />
+    )
+  }
+  const stringValue = value == null ? '' : String(value)
+  if (property.type === 'm2m') {
+    return (
+      <div role="group" {...groupA11y}>
+        <M2MPropertyEditor
+          property={property}
+          value={value}
+          onChange={onChange}
+          disabled={disabled}
+          resourceId={resourceId}
+        />
+      </div>
     )
   }
   if (property.reference) {
@@ -966,12 +1043,14 @@ export function PropertyEditor({
       const ArrayPicker =
         pickerKind === 'dialog' ? ReferenceMultiTableDialog : ReferenceMultiCombobox
       return (
-        <ArrayPicker
-          referenceResourceId={property.reference}
-          value={arr}
-          onChange={(next) => onChange(next)}
-          disabled={disabled}
-        />
+        <div role="group" {...groupA11y}>
+          <ArrayPicker
+            referenceResourceId={property.reference}
+            value={arr}
+            onChange={(next) => onChange(next)}
+            disabled={disabled}
+          />
+        </div>
       )
     }
     return (
@@ -980,6 +1059,10 @@ export function PropertyEditor({
         value={value as string | number | null | undefined}
         onChange={(next) => onChange(next)}
         disabled={disabled}
+        triggerId={id}
+        describedBy={describedBy}
+        invalid={invalid}
+        required={required}
       />
     )
   }
@@ -990,7 +1073,7 @@ export function PropertyEditor({
         onValueChange={(v) => onChange(v === '_empty_' ? '' : v)}
         disabled={disabled}
       >
-        <SelectTrigger>
+        <SelectTrigger {...a11y}>
           <SelectValue placeholder="—" />
         </SelectTrigger>
         <SelectContent>
@@ -1011,6 +1094,7 @@ export function PropertyEditor({
         checked={Boolean(value)}
         onCheckedChange={(v) => onChange(Boolean(v))}
         disabled={disabled}
+        {...a11y}
       />
     )
   case 'json':
@@ -1018,12 +1102,14 @@ export function PropertyEditor({
   case 'key-value':
     if (property.keyValueFields?.length) {
       return (
-        <KeyValueEditorWithSuggestions
-          fields={property.keyValueFields}
-          value={value}
-          onChange={(next) => onChange(next)}
-          disabled={disabled}
-        />
+        <div role="group" {...groupA11y}>
+          <KeyValueEditorWithSuggestions
+            fields={property.keyValueFields}
+            value={value}
+            onChange={(next) => onChange(next)}
+            disabled={disabled}
+          />
+        </div>
       )
     }
     return (
@@ -1033,6 +1119,10 @@ export function PropertyEditor({
         disabled={disabled}
         formatLabel={t('common:format')}
         invalidLabel={t('common:invalidJson')}
+        id={id}
+        describedBy={describedBy}
+        invalid={invalid}
+        required={required}
       />
     )
   case 'number':
@@ -1047,6 +1137,7 @@ export function PropertyEditor({
         value={stringValue}
         onChange={(e) => onChange(e.target.value === '' ? null : Number(e.target.value))}
         disabled={disabled}
+        {...a11y}
       />
     )
   case 'date':
@@ -1059,6 +1150,11 @@ export function PropertyEditor({
         ariaLabel={property.label}
         openCalendarLabel={t('common:openCalendar')}
         timeLabel={t('common:time')}
+        locale={dateFnsLocale(locale)}
+        id={id}
+        describedBy={describedBy}
+        invalid={invalid}
+        required={required}
       />
     )
   case 'datetime':
@@ -1072,6 +1168,11 @@ export function PropertyEditor({
         ariaLabel={property.label}
         openCalendarLabel={t('common:openCalendar')}
         timeLabel={t('common:time')}
+        locale={dateFnsLocale(locale)}
+        id={id}
+        describedBy={describedBy}
+        invalid={invalid}
+        required={required}
       />
     )
   case 'richtext':
@@ -1081,7 +1182,8 @@ export function PropertyEditor({
         onChange={(v) => onChange(v)}
         format="html"
         disabled={disabled}
-        ariaLabelledBy={property.label}
+        ariaLabel={property.label}
+        ariaDescribedBy={describedBy}
         labels={{
           bold: t('richtext:bold'),
           italic: t('richtext:italic'),
@@ -1111,7 +1213,8 @@ export function PropertyEditor({
         onChange={(v) => onChange(v)}
         format="markdown"
         disabled={disabled}
-        ariaLabelledBy={property.label}
+        ariaLabel={property.label}
+        ariaDescribedBy={describedBy}
         labels={{
           bold: t('richtext:bold'),
           italic: t('richtext:italic'),
@@ -1141,6 +1244,7 @@ export function PropertyEditor({
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
         rows={5}
+        {...a11y}
       />
     )
   case 'password':
@@ -1153,17 +1257,20 @@ export function PropertyEditor({
           show: t('common:showPassword'),
           hide: t('common:hidePassword'),
         }}
+        {...a11y}
       />
     )
   case 'file':
     return (
-      <FilePropertyEditor
-        property={property}
-        value={value}
-        onChange={onChange}
-        disabled={disabled}
-        resourceId={resourceId}
-      />
+      <div role="group" {...groupA11y}>
+        <FilePropertyEditor
+          property={property}
+          value={value}
+          onChange={onChange}
+          disabled={disabled}
+          resourceId={resourceId}
+        />
+      </div>
     )
   case 'previewMedia':
     return (
@@ -1174,6 +1281,7 @@ export function PropertyEditor({
         value={stringValue}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
+        {...a11y}
       />
     )
   case 'color':
@@ -1185,24 +1293,42 @@ export function PropertyEditor({
           value={normalizeHexColor(value) ?? '#000000'}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
+          {...a11y}
         />
         <Input
           value={stringValue}
           placeholder="#000000"
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
+          aria-label={property.label}
+          aria-describedby={describedBy}
         />
       </div>
     )
   default: {
     // Check the extension registry for a custom type before falling back to a plain text input.
     const ext = getPropertyExtension(property.type)
-    if (ext) return <ext.editor property={property} value={value} onChange={onChange} disabled={disabled} resourceId={resourceId} />
+    if (ext) {
+      return (
+        <ext.editor
+          property={property}
+          value={value}
+          onChange={onChange}
+          disabled={disabled}
+          resourceId={resourceId}
+          id={id}
+          describedBy={describedBy}
+          invalid={invalid}
+          required={required}
+        />
+      )
+    }
     return (
       <Input
         value={stringValue}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
+        {...a11y}
       />
     )
   }

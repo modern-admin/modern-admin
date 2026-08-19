@@ -47,6 +47,7 @@ import {
   SelectValue,
   Skeleton,
   paletteFor,
+  dateFnsLocale,
 } from '@modern-admin/ui'
 import { ReferenceCombobox } from '../reference.js'
 import type { PropertyJSON } from '../types.js'
@@ -494,6 +495,7 @@ export function ChartWidget({
                   onChange={setDraftFrom}
                   ariaLabel={t('common:from')}
                   openCalendarLabel={t('common:openCalendar')}
+                  locale={dateFnsLocale(locale)}
                   className="w-[130px]"
                   inputClassName="h-8 text-xs"
                 />
@@ -503,6 +505,7 @@ export function ChartWidget({
                   onChange={setDraftTo}
                   ariaLabel={t('common:to')}
                   openCalendarLabel={t('common:openCalendar')}
+                  locale={dateFnsLocale(locale)}
                   className="w-[130px]"
                   inputClassName="h-8 text-xs"
                 />
@@ -565,6 +568,7 @@ export function ChartWidget({
             labelFormatter={makeLabelFormatter(renderStep, locale)}
             valueFormatter={valueFormatter}
             axisValueFormatter={axisValueFormatter}
+            locale={locale}
             labels={{
               noData: t('chart:noData'),
               showAll: t('dashboard:widget.showAll'),

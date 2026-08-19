@@ -99,7 +99,7 @@ export function AiFillDialog({
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) handleClose() }}>
-      <DialogContent className="w-full max-w-md">
+      <DialogContent closeLabel={t('common:close')} className="w-full max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="size-4" />

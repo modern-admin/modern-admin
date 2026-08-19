@@ -9,7 +9,7 @@
 // calendar icon open the popover with the inline picker.
 
 import * as React from 'react'
-import { format, isValid, parse, parseISO } from 'date-fns'
+import { format, isValid, parse, parseISO, type Locale } from 'date-fns'
 import { Calendar as CalendarIcon } from 'lucide-react'
 import { cn } from '../lib/utils.js'
 import { Button } from './button.js'
@@ -35,6 +35,20 @@ export interface DatePickerProps {
   openCalendarLabel?: string
   /** Label for the time input shown in datetime mode. Default: "Time". */
   timeLabel?: string
+  /**
+   * date-fns locale for the popover calendar — month names, weekday headers,
+   * and react-day-picker's own ARIA labels. Without it the calendar renders
+   * in `en-US` regardless of the surrounding UI language.
+   */
+  locale?: Locale
+  /** `id` of the trigger input, so a `<label for=…>` can point at it. */
+  id?: string
+  /** Forwarded to the trigger input as `aria-describedby`. */
+  describedBy?: string
+  /** Marks the trigger input `aria-invalid`. */
+  invalid?: boolean
+  /** Marks the trigger input `aria-required`. */
+  required?: boolean
 }
 
 const DATE_FMT = 'yyyy-MM-dd'
@@ -95,6 +109,11 @@ export function DatePicker({
   ariaLabel,
   openCalendarLabel = 'Open calendar',
   timeLabel = 'Time',
+  locale,
+  id,
+  describedBy,
+  invalid,
+  required,
 }: DatePickerProps): React.ReactElement {
   const [open, setOpen] = React.useState(false)
   const date = parseValue(value)
@@ -177,12 +196,16 @@ export function DatePicker({
         <Input
           type="text"
           inputMode="numeric"
+          id={id}
           value={draft}
           onChange={handleInputChange}
           onBlur={handleInputBlur}
           placeholder={inputPlaceholder}
           disabled={disabled}
           aria-label={ariaLabel}
+          aria-describedby={describedBy}
+          aria-invalid={invalid || undefined}
+          aria-required={required || undefined}
           className={cn(inputClassName, 'pr-10')}
         />
         <PopoverTrigger asChild>
@@ -203,6 +226,7 @@ export function DatePicker({
           mode="single"
           selected={date}
           defaultMonth={date}
+          locale={locale}
           onSelect={(d) => {
             commitDate(d)
             if (mode === 'date') setOpen(false)
