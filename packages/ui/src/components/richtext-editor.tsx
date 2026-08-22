@@ -82,7 +82,15 @@ export interface RichtextEditorProps {
   className?: string
   /** Called when the editor blurs. Useful for RHF onBlur. */
   onBlur?(): void
+  /**
+   * `id` of the element that labels the editing surface. Must be a real
+   * element id — passing a label *string* here names nothing.
+   */
   ariaLabelledBy?: string
+  /** Accessible name for the editing surface, when there is no label element. */
+  ariaLabel?: string
+  /** `id` of the element describing the surface (e.g. a validation message). */
+  ariaDescribedBy?: string
   /** Translated toolbar labels. All optional — English strings are the defaults. */
   labels?: RichtextEditorLabels
 }
@@ -149,6 +157,8 @@ export function RichtextEditor({
   className,
   onBlur,
   ariaLabelledBy,
+  ariaLabel,
+  ariaDescribedBy,
   labels,
 }: RichtextEditorProps): React.ReactElement {
   const l = {
@@ -235,7 +245,11 @@ export function RichtextEditor({
           class: cn(
             proseContentClass,
           ),
-          'aria-labelledby': ariaLabelledBy ?? '',
+          // Empty strings would be emitted as real (dangling) attributes, so
+          // only set what the caller actually supplied.
+          ...(ariaLabelledBy ? { 'aria-labelledby': ariaLabelledBy } : {}),
+          ...(ariaLabel ? { 'aria-label': ariaLabel } : {}),
+          ...(ariaDescribedBy ? { 'aria-describedby': ariaDescribedBy } : {}),
         },
       },
       onUpdate: ({ editor: ed }) => {
@@ -247,7 +261,7 @@ export function RichtextEditor({
       // Tiptap 3 ships with default content sync; no need for autofocus etc.
       immediatelyRender: false,
     },
-    [disabled, ariaLabelledBy],
+    [disabled, ariaLabelledBy, ariaLabel, ariaDescribedBy],
   )
 
   // Keep editor in sync when external `value` changes (e.g. form reset).

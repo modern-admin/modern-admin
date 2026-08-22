@@ -99,6 +99,13 @@ export class ResourceDecorator {
         path,
         type: (opts.type as PropertyType | undefined) ?? 'string',
         position: fromResource.length + virtual.length + 1,
+        // No column backs a virtual field, so it can never be sorted on.
+        // `BaseProperty` defaults `isSortable` to true, which had the list
+        // page render a sortable header for e.g. the password input — and
+        // the ORM 500 on the resulting `orderBy`. An explicit
+        // `properties: { password: { isSortable: true } }` still wins, via
+        // `PropertyDecorator.isSortable()`.
+        isSortable: false,
       })
       virtual.push(new PropertyDecorator(synthetic, opts))
     }
@@ -191,10 +198,17 @@ export class ResourceDecorator {
       .sort((a, b) => a.position() - b.position())
   }
 
-  /** Ordered visible property paths per view — the wire form of the config. */
-  private buildPropertyOrder(): Record<View, string[]> {
+  /**
+   * Ordered visible property paths per view — the wire form of the config.
+   * When serialising for a principal, `allowedPaths` prevents an inaccessible
+   * property's name leaking through this secondary index after its descriptor
+   * has already been removed from `properties`.
+   */
+  private buildPropertyOrder(allowedPaths?: ReadonlySet<string>): Record<View, string[]> {
     return VIEWS.reduce((acc, view) => {
-      acc[view] = this.propertiesForView(view).map((p) => p.path())
+      acc[view] = this.propertiesForView(view)
+        .map((p) => p.path())
+        .filter((path) => allowedPaths?.has(path) ?? true)
       return acc
     }, {} as Record<View, string[]>)
   }
@@ -236,7 +250,7 @@ export class ResourceDecorator {
           relatedResources: this.relatedResources,
           showRelatedResources: this.showRelatedResources,
           properties,
-          propertyOrder: this.buildPropertyOrder(),
+          propertyOrder: this.buildPropertyOrder(new Set(properties.map((p) => p.path))),
           actions: descriptors.filter((d): d is ReturnType<ActionDecorator['toDescriptor']> => d !== null),
         }
       })()

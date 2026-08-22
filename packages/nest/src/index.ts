@@ -39,7 +39,7 @@ export {
   type WebhookResponse,
   type WebhooksListResponse,
 } from './webhooks.controller.js'
-export { ModernAdminAuthGuard } from './auth.guard.js'
+export { ModernAdminAuthGuard, ModernAdminConfigGuard } from './auth.guard.js'
 export { ModernAdminCacheInterceptor } from './cache.interceptor.js'
 export { NoHttpCache, NO_HTTP_CACHE } from './no-http-cache.js'
 export { MODERN_ADMIN, MODERN_ADMIN_OPTIONS, MODERN_ADMIN_API_KEY_SERVICE } from './tokens.js'
@@ -101,10 +101,16 @@ export { createBetterAuthMiddleware } from './better-auth-middleware.js'
 
 // Standalone static-UI middleware — serves the prebuilt @modern-admin/web SPA
 // under a configurable mount path (default `/admin`).
-export { ModernAdminStaticUiModule } from './static-ui.module.js'
+export {
+  ModernAdminStaticUiModule,
+  type ModernAdminStaticUiAsyncOptions,
+} from './static-ui.module.js'
 export {
   ModernAdminStaticUiMiddleware,
   MODERN_ADMIN_STATIC_UI_OPTIONS,
+  type AdminHttpRequest,
+  type ModernAdminHeadHtmlFactory,
+  type ModernAdminRuntimeConfigFactory,
   type ModernAdminStaticUiOptions,
   type ModernAdminUiRuntimeConfig,
 } from './static-ui.middleware.js'

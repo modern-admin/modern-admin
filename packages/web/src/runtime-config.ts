@@ -31,8 +31,18 @@ export interface ModernAdminRuntimeConfig {
   headers?: Record<string, string>
   /** Helper line shown on the login screen — e.g. demo credentials. */
   loginHint?: string
-  /** Initial UI locale code. Falls back to the persisted choice / 'en'. */
+  /**
+   * Locale the UI starts in when the visitor has no persisted choice, or
+   * when their persisted choice is not in `locales`. A previous, still-valid
+   * choice wins — use `forceLocale` to override that too.
+   */
   defaultLocale?: string
+  /**
+   * Pin the UI to one locale: the persisted choice is ignored and the header
+   * switcher collapses. Unlike `locales: ['ru']`, the other bundles stay
+   * loaded and keep serving `fallbackLocale` for any missing key.
+   */
+  forceLocale?: string
   /** Locale used when a translation is missing. Defaults to 'en'. */
   fallbackLocale?: string
   /**
@@ -46,7 +56,23 @@ export interface ModernAdminRuntimeConfig {
   locales?: string[]
   /** Optional per-resource / per-property metadata translations. */
   metadataTranslations?: MetadataTranslations
-  /** Branding overrides (title, logo). */
+  /**
+   * Overrides for the framework's own UI strings, merged over the built-in
+   * dictionaries per locale. This is the supported way to rename the product,
+   * reword a built-in label, or ship a translation fix without a release:
+   *
+   * ```json
+   * { "ru": { "common:appName": "Acme", "auth:tagline": "…" } }
+   * ```
+   *
+   * Keys use the flat `namespace:key` form of the bundled locales.
+   * `metadataTranslations` is the separate, resource-metadata equivalent.
+   */
+  translations?: Record<string, Record<string, string>>
+  /**
+   * Branding overrides applied to the sidebar header, the loading splash,
+   * and both marks on the login screen.
+   */
   brand?: ModernAdminBrand
   /** Persist the demo session credentials in localStorage. */
   persistDemoSession?: boolean

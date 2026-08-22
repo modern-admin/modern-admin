@@ -40,8 +40,10 @@ export function App({ config, components }: AppProps): ReactElement {
     <I18nProvider
       locales={enabledLocales}
       defaultLocale={config.defaultLocale}
+      forceLocale={config.forceLocale}
       fallbackLocale={config.fallbackLocale}
       metadataTranslations={config.metadataTranslations}
+      translations={config.translations}
     >
       <ModernAdminProvider
         components={components}
@@ -57,6 +59,7 @@ export function App({ config, components }: AppProps): ReactElement {
           loginHint={config.loginHint}
           basePath={config.basePath}
           showSidebarResourceIds={config.showSidebarResourceIds}
+          brand={config.brand}
         />
       </ModernAdminProvider>
     </I18nProvider>

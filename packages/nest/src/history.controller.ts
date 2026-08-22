@@ -13,6 +13,7 @@ import {
   Query,
   Req,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common'
 import { ApiCookieAuth, ApiTags } from '@nestjs/swagger'
 import {
@@ -28,6 +29,7 @@ import {
 } from '@modern-admin/core'
 import { z } from 'zod'
 import { ModernAdminAuthGuard } from './auth.guard.js'
+import { ModernAdminCacheInterceptor } from './cache.interceptor.js'
 import type { ModernAdminModuleOptions } from './module.js'
 import { MODERN_ADMIN, MODERN_ADMIN_OPTIONS } from './tokens.js'
 
@@ -56,6 +58,7 @@ export interface HistoryRevisionResponse {
 @ApiCookieAuth('session')
 @Controller('admin/api/resources/:resourceId/records/:recordId/history')
 @UseGuards(ModernAdminAuthGuard)
+@UseInterceptors(ModernAdminCacheInterceptor)
 export class HistoryController {
   constructor(
     @Inject(MODERN_ADMIN) private readonly admin: ModernAdmin,

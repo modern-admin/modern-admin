@@ -48,10 +48,11 @@ import { useRealtimeInvalidation } from './realtime.js'
 import { createSocketRealtimeSubscriber } from './realtime-socket.js'
 import { useAdminConfig, useCurrentUser, useFeatures, useLogout, useResources } from './hooks.js'
 import { LoginPage } from './pages/login-page.js'
-import type { CurrentUser } from './types.js'
+import type { AdminBrand, CurrentUser } from './types.js'
 import { Link, useRoute, useNavigate } from './router.js'
 import { AdminRouterProvider } from './admin-router.js'
 import { useI18n } from './i18n.js'
+import { useDocumentTitle } from './use-document-title.js'
 import { LanguageSwitcher, ThemeToggle } from './header-controls.js'
 import { NotifyToaster } from './notify.js'
 import { DialogsProvider } from './dialogs.js'
@@ -184,13 +185,47 @@ function SidebarCollapseToggle(): React.ReactElement {
 
 // ─── Sidebar ─────────────────────────────────────────────────────────────────
 
-function AppSidebar({ showResourceIds }: { showResourceIds: boolean }): React.ReactElement {
+/**
+ * Resolves the displayed product name. Host `brand.title` wins, then the
+ * server's `branding.companyName`, then the `common:appName` translation —
+ * which hosts can override wholesale via `I18nProvider.translations`.
+ */
+function useBrandName(brand: AdminBrand | undefined): string {
+  const { t } = useI18n()
+  const { data: config } = useAdminConfig()
+  return brand?.title ?? config?.branding?.companyName ?? t('common:appName')
+}
+
+/**
+ * The product mark: the host's logo when one is configured, otherwise the
+ * built-in database glyph. Decorative in both cases — the name is always
+ * rendered as text next to it.
+ */
+function BrandLogo({
+  brand,
+  className,
+}: {
+  brand: AdminBrand | undefined
+  className: string
+}): React.ReactElement {
+  if (brand?.logoUrl) {
+    return <img src={brand.logoUrl} alt="" aria-hidden="true" className={cn(className, 'object-contain')} />
+  }
+  return <Database className={className} aria-hidden="true" />
+}
+
+function AppSidebar({
+  showResourceIds,
+  brand,
+}: {
+  showResourceIds: boolean
+  brand?: AdminBrand
+}): React.ReactElement {
   const resources = useResources()
   const features = useFeatures()
   const { t } = useI18n()
   const route = useRoute()
-  const { data: config } = useAdminConfig()
-  const appName = config?.branding?.companyName ?? t('common:appName')
+  const appName = useBrandName(brand)
   const { groups, ungrouped } = React.useMemo(() => buildNavGroups(resources), [resources])
   const { isMobile, setOpenMobile, state } = useSidebar()
 
@@ -222,7 +257,7 @@ function AppSidebar({ showResourceIds }: { showResourceIds: boolean }): React.Re
       labels={{ sidebarTitle: t('common:sidebarTitle'), navigationMenu: t('common:sidebarNavigation') }}
     >
       <SidebarHeader className="h-12 flex-row items-center gap-2 border-b border-border px-3 py-0 sm:h-14 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
-        <Database className="size-4 shrink-0 text-primary" />
+        <BrandLogo brand={brand} className="size-4 shrink-0 text-primary" />
         <span className="truncate text-sm font-semibold group-data-[collapsible=icon]:hidden">
           {appName}
         </span>
@@ -527,10 +562,17 @@ export interface AdminAppProps {
    * (chart builder, etc.) always render both — they are not affected.
    */
   showSidebarResourceIds?: boolean
+  /**
+   * Client-side branding: product name and logo, applied to the sidebar
+   * header, the loading splash, and both marks on the login screen. The
+   * standalone bundle forwards `window.__MODERN_ADMIN__.brand`.
+   */
+  brand?: AdminBrand
 }
 
-function FullscreenSpinner(): React.ReactElement {
+function FullscreenSpinner({ brand }: { brand?: AdminBrand } = {}): React.ReactElement {
   const { t } = useI18n()
+  const appName = useBrandName(brand)
   return (
     <div
       role="status"
@@ -540,10 +582,10 @@ function FullscreenSpinner(): React.ReactElement {
     >
       <div className="flex items-center gap-3">
         <span className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 ring-1 ring-primary/20">
-          <Database className="size-6 text-primary" />
+          <BrandLogo brand={brand} className="size-6 text-primary" />
         </span>
         <span className="text-xl font-semibold tracking-tight">
-          {t('common:appName')}
+          {appName}
         </span>
       </div>
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -575,17 +617,20 @@ function RealtimeCacheBridge(): null {
 function ShellLayout({
   children,
   showSidebarResourceIds,
+  brand,
 }: {
   children: React.ReactNode
   showSidebarResourceIds: boolean
+  brand?: AdminBrand
 }): React.ReactElement {
   const { user } = useCurrentUser()
   const features = useFeatures()
+  useDocumentTitle(useBrandName(brand))
   return (
     <HotkeyRegistryProvider>
       <DialogsProvider>
         <SidebarProvider>
-          <AppSidebar showResourceIds={showSidebarResourceIds} />
+          <AppSidebar showResourceIds={showSidebarResourceIds} brand={brand} />
           {/* `h-svh` on SidebarInset is the key to the scroll layout: it
               constrains the inset to exactly the viewport height, which lets
               the inner `<main overflow-auto>` (flex-1) actually scroll
@@ -628,6 +673,7 @@ export function AdminApp({
   loginHint,
   basePath,
   showSidebarResourceIds,
+  brand,
 }: AdminAppProps = {}): React.ReactElement {
   const { user, isLoading, isAuthenticated } = useCurrentUser()
   // Kick off the bootstrap config fetch in parallel with the session check.
@@ -636,16 +682,25 @@ export function AdminApp({
   // out is harmless — `useLogin` invalidates the config query on success.
   useAdminConfig()
   const showIds = showSidebarResourceIds ?? false
-  // Capture the option in a stable layout component so the router doesn't
-  // remount the whole shell whenever the prop reference changes.
+  // Capture the options in a stable layout component so the router doesn't
+  // remount the whole shell whenever a prop reference changes.
+  const brandTitle = brand?.title
+  const brandLogoUrl = brand?.logoUrl
   const Layout = React.useMemo(
     () =>
       function ConfiguredShellLayout({ children }: { children: React.ReactNode }): React.ReactElement {
-        return <ShellLayout showSidebarResourceIds={showIds}>{children}</ShellLayout>
+        return (
+          <ShellLayout
+            showSidebarResourceIds={showIds}
+            brand={{ title: brandTitle, logoUrl: brandLogoUrl }}
+          >
+            {children}
+          </ShellLayout>
+        )
       },
-    [showIds],
+    [showIds, brandTitle, brandLogoUrl],
   )
-  if (isLoading) return <FullscreenSpinner />
-  if (!isAuthenticated || !user) return <LoginPage hint={loginHint} />
+  if (isLoading) return <FullscreenSpinner brand={brand} />
+  if (!isAuthenticated || !user) return <LoginPage hint={loginHint} brand={brand} />
   return <AdminRouterProvider ShellLayout={Layout} basepath={basePath ?? ''} />
 }

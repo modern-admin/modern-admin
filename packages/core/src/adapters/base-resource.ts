@@ -162,11 +162,20 @@ export abstract class BaseResource {
   /**
    * Cursor-based streaming. Default impl falls back to offset pagination via
    * `find`, which adapters should override for true cursor semantics.
+   *
+   * `options.cursor` has no meaning without that override — resuming would
+   * silently restart from the first page, quietly duplicating every row an
+   * export or migration had already processed. Reject it instead.
    */
   async *streamFind(
     filter: Filter,
     options: StreamOptions = {},
   ): AsyncIterable<BaseRecord> {
+    if (options.cursor != null) {
+      throw new NotImplementedError(
+        `${this.constructor.name}#streamFind does not support "cursor" — it paginates by offset. Override streamFind to implement cursor semantics.`,
+      )
+    }
     const pageSize = options.pageSize ?? 100
     let offset = 0
     while (true) {

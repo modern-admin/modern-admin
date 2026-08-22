@@ -126,6 +126,15 @@ export class PrismaResource extends BaseResource {
     return this.model.name
   }
 
+  /**
+   * Prisma's `mode: 'insensitive'` is PostgreSQL/MongoDB-only; MySQL and
+   * SQLite reject it. Spread this into string clauses so the configured
+   * `dialect` is actually honoured instead of producing an invalid query.
+   */
+  private insensitive(): { mode?: 'insensitive' } {
+    return this.dialect === 'pg' ? { mode: 'insensitive' } : {}
+  }
+
   override databaseName(): string {
     return this.model.dbName ?? this.model.name
   }
@@ -246,7 +255,7 @@ export class PrismaResource extends BaseResource {
     const isNullable = !modelField.isRequired
     const conditions: Record<string, unknown>[] = []
     if (isNullable) conditions.push({ [field]: { not: null } })
-    if (options?.search) conditions.push({ [field]: { contains: options.search, mode: 'insensitive' } })
+    if (options?.search) conditions.push({ [field]: { contains: options.search, ...this.insensitive() } })
     const where: Record<string, unknown> =
       conditions.length === 0 ? {}
         : conditions.length === 1 ? conditions[0]!
@@ -267,7 +276,7 @@ export class PrismaResource extends BaseResource {
 
   override async count(filter: Filter): Promise<number> {
     try {
-      return await this.delegate().count({ where: filterToWhere(filter) })
+      return await this.delegate().count({ where: filterToWhere(filter, this.dialect) })
     } catch (err) {
       throw this.toValidationError(err)
     }
@@ -276,7 +285,7 @@ export class PrismaResource extends BaseResource {
   override async find(filter: Filter, options: FindOptions): Promise<BaseRecord[]> {
     try {
       const rows = (await this.delegate().findMany({
-        where: filterToWhere(filter),
+        where: filterToWhere(filter, this.dialect),
         ...findOptionsToPrisma(options),
       })) as ParamsType[]
       return rows.map((row) => new BaseRecord(row, this))
@@ -303,7 +312,7 @@ export class PrismaResource extends BaseResource {
     const stringFields = fields.filter((f) => stringFieldNames.has(f))
     if (stringFields.length === 0) return []
     const contains = (field: string): Record<string, unknown> => ({
-      [field]: { contains: query, mode: 'insensitive' },
+      [field]: { contains: query, ...this.insensitive() },
     })
     const where =
       stringFields.length === 1
@@ -367,7 +376,7 @@ export class PrismaResource extends BaseResource {
   override async deleteMany(filter: Filter): Promise<number> {
     try {
       const { count } = (await this.delegate().deleteMany({
-        where: filterToWhere(filter),
+        where: filterToWhere(filter, this.dialect),
       })) as { count: number }
       return count
     } catch (err) {
@@ -433,7 +442,7 @@ export class PrismaResource extends BaseResource {
       if (!f) throw new Error(`aggregateTimeSeries: groupBy "${query.groupBy}" not found`)
     }
 
-    const baseWhere = filterToWhere(filter)
+    const baseWhere = filterToWhere(filter, this.dialect)
     const where: Record<string, unknown> = {
       ...baseWhere,
       [query.dateField]: { gte: query.from, lte: query.to },

@@ -2,7 +2,7 @@
 // Better Auth. We treat the Better Auth instance as opaque (`auth.api.*`) so
 // upgrades within Better Auth don't ripple through this adapter's surface.
 
-import type { CurrentAdmin, IAuthProvider, LoginCredentials } from '@modern-admin/core'
+import { ConsoleLogger, type CurrentAdmin, type IAuthProvider, type ILogger, type LoginCredentials } from '@modern-admin/core'
 
 export {
   BUILTIN_AUTHORITATIVE_ACCOUNT_ISSUERS,
@@ -75,6 +75,7 @@ interface BetterAuthApi extends Partial<ApiKeyAdminApi> {
 
   signInEmail?(args: { body: { email: string; password: string } }): Promise<unknown>
 
+
   signOut?(args: { headers: Headers }): Promise<unknown>
 
   /** Optional, present when the @better-auth/api-key plugin is mounted. */
@@ -113,6 +114,24 @@ export interface BetterAuthInstance {
   options?: { socialProviders?: Record<string, unknown>; emailAndPassword?: { enabled?: boolean } }
 }
 
+/**
+ * What a direct `api.signInEmail()` call resolves to at runtime. Typed
+ * separately because the endpoint is declared `Promise<unknown>` above — see
+ * the note on {@link BetterAuthInstance}.
+ */
+type SignInEmailResult =
+  | {
+    user?: {
+      id?: string
+      email?: string
+      name?: string
+      image?: string | null
+      [key: string]: unknown
+    }
+  }
+  | null
+  | undefined
+
 interface RequestLike {
   headers: Headers | Record<string, string | string[] | undefined>
 }
@@ -128,6 +147,47 @@ const toHeaders = (input: RequestLike['headers']): Headers => {
   return headers
 }
 
+/**
+ * Better Auth error codes that mean "this email is already registered".
+ * Matched on `code` (its stable API) rather than on the message text.
+ */
+const USER_EXISTS_CODES = new Set([
+  'USER_ALREADY_EXISTS',
+  'USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL',
+  'EMAIL_ALREADY_EXISTS',
+])
+
+/**
+ * Raw unique-violation wording, per engine, for the fallback below:
+ * Postgres `duplicate key value violates unique constraint "..."`,
+ * MySQL `Duplicate entry '...' for key '...'`,
+ * SQLite `UNIQUE constraint failed: user.email`.
+ */
+const DUPLICATE_MESSAGE = /already exists|duplicate (?:key|entry)|unique constraint/i
+
+/**
+ * Whether `err` is Better Auth's "user already exists" rejection.
+ *
+ * Prefers `err.body.code` / `err.code` — `APIError` carries both. The
+ * message check is a last-resort fallback for versions or drivers that
+ * surface a raw unique-constraint violation with no code at all; it names the
+ * three engines' actual wording *and* requires the violation to concern the
+ * email being seeded. Everything it does not match is reported as a real
+ * failure rather than swallowed.
+ */
+const isUserAlreadyExistsError = (err: unknown, email: string): boolean => {
+  if (typeof err !== 'object' || err === null) return false
+  const candidate = err as { code?: unknown; body?: { code?: unknown }; message?: unknown }
+  const code = candidate.body?.code ?? candidate.code
+  if (typeof code === 'string' && USER_EXISTS_CODES.has(code)) return true
+  const message = typeof candidate.message === 'string' ? candidate.message : ''
+  if (!DUPLICATE_MESSAGE.test(message)) return false
+  // A unique violation on some *other* column — a `username`, say — is not
+  // "the admin is already there", and treating it as such would skip account
+  // creation entirely. Require the message to be about the email.
+  return /\bemail\b/i.test(message) || message.includes(email)
+}
+
 const resolveSessionUserId = async (
   api: BetterAuthApi,
   headers: Headers | undefined,
@@ -141,10 +201,32 @@ const resolveSessionUserId = async (
 export interface BetterAuthProviderOptions {
   /** A configured `betterAuth({...})` instance. */
   auth: BetterAuthInstance
+  /**
+   * Where this provider's diagnostics go. Defaults to the console.
+   *
+   * Pass the same `ILogger` you gave `ModernAdminOptions.logger` so seeding
+   * output lands in the host's log pipeline like everything else — writing
+   * straight to `console` made it unroutable and unsilenceable.
+   */
+  logger?: ILogger
+  /**
+   * Headers carrying an existing admin session, used by `seedAdmin` to look
+   * up an already-created root account so its role can be reconciled on
+   * boot. Better Auth's `listUsers` and `setRole` are session-guarded
+   * and there is no session during bootstrap, so without this the role is
+   * only ever set on the boot that *creates* the account.
+   *
+   * Most deployments do not need it: set `admin.defaultRole` in Better Auth
+   * and let the create path handle it.
+   */
+  seedAdminHeaders?: Headers | (() => Headers | Promise<Headers>)
 }
 
 export class BetterAuthProvider implements IAuthProvider {
+  private readonly log: ILogger
+
   constructor(private readonly options: BetterAuthProviderOptions) {
+    this.log = options.logger ?? new ConsoleLogger()
   }
 
   /** Internal accessor — narrows the widened `api` field back to BetterAuthApi. */
@@ -160,18 +242,39 @@ export class BetterAuthProvider implements IAuthProvider {
     }
   }
 
+  /**
+   * `IAuthProvider.login` contract: the principal on success, `null` on
+   * failure. Previously this returned `null` on success too, which is
+   * indistinguishable from bad credentials for any caller that trusts the
+   * port; the principal now comes from `signInEmail`'s own response body.
+   *
+   * Scope, deliberately: this verifies credentials, it does not establish a
+   * browser session. A direct `auth.api.signInEmail({ body })` call has no
+   * HTTP response to write `Set-Cookie` to — the SPA never goes through here,
+   * it posts to Better Auth's own handler (mounted via
+   * `createBetterAuthMiddleware`), which does set the cookie. Server-side
+   * callers that want a session must plumb the response themselves.
+   */
   async login(credentials: LoginCredentials): Promise<CurrentAdmin | null> {
     const api = this.api
     if (!api.signInEmail || !credentials.email || !credentials.password) return null
+    let result: SignInEmailResult
     try {
-      await api.signInEmail({
+      result = (await api.signInEmail({
         body: { email: credentials.email, password: credentials.password },
-      })
+      })) as SignInEmailResult
     } catch {
       return null
     }
-    // Session cookie is now installed; the next request will resolve it.
-    return null
+    const user = result?.user
+    if (!user?.id) return null
+    return {
+      id: user.id,
+      ...(user.email != null ? { email: user.email } : {}),
+      ...(user.name != null ? { name: user.name } : {}),
+      ...(user.image != null ? { avatarUrl: user.image } : {}),
+      ...(typeof user.role === 'string' ? { role: user.role } : {}),
+    }
   }
 
   async getCurrentUser(requestContext: unknown): Promise<CurrentAdmin | null> {
@@ -222,11 +325,28 @@ export class BetterAuthProvider implements IAuthProvider {
   }
 
   /**
-   * Create a root admin on first boot using Better Auth's `signUpEmail` endpoint.
-   * Idempotent — silently skips when the user already exists. The admin plugin's
-   * `defaultRole` configuration is responsible for assigning the admin role on
-   * sign-up. When `role` is explicitly provided and Better Auth's admin plugin
-   * is mounted with `adminSetRole`, the role is updated after creation.
+   * Create the root admin on first boot via Better Auth's `signUpEmail`, and
+   * reconcile its role on every boot.
+   *
+   * Idempotent. Three behaviours worth calling out, all of which used to be
+   * wrong:
+   *
+   * - **The role is reconciled for existing accounts too — when it can be.**
+   *   The "already exists" branch used to `return` before `setRole` ran,
+   *   so changing `rootAdmin.role` in config had no effect after the first
+   *   boot ever. Reconciling needs the existing user's id, and the only
+   *   public way to get it is the admin plugin's `listUsers`, which is
+   *   session-guarded — at boot there is no session, so this generally
+   *   succeeds only when the host passes `seedAdminHeaders`. Without them the
+   *   provider says so in the log instead of failing silently.
+   * - **Existence is detected by Better Auth's error `code`**, not by
+   *   regex-matching the message. A message regex is not a contract: against
+   *   a `^1.6.0` peer range one reworded string turns "already present" into
+   *   "seed failed", and every non-matching error — a wrong `DATABASE_URL`, a
+   *   rejected password policy — used to be swallowed into a warning that
+   *   read exactly like success.
+   * - **Logs say the role that was actually requested**, not a hardcoded
+   *   "root admin", and go through the configured {@link ILogger}.
    */
   async seedAdmin(opts: {
     email: string
@@ -238,9 +358,13 @@ export class BetterAuthProvider implements IAuthProvider {
       signUpEmail?: (args: {
         body: { email: string; password: string; name: string }
       }) => Promise<{ user?: { id?: string } } | null>
-      adminSetRole?: (args: {
+      setRole?: (args: {
         body: { userId: string; role: string }
+        headers?: Headers
       }) => Promise<unknown>
+      listUsers?: (args: {
+        query: { filterField?: string; filterValue?: string; limit?: number }
+      }) => Promise<{ users?: Array<{ id?: string }> } | null>
     }
 
     if (typeof api.signUpEmail !== 'function') return
@@ -249,32 +373,100 @@ export class BetterAuthProvider implements IAuthProvider {
     let userId: string | undefined
 
     try {
-      const result = await api.signUpEmail({ body: { email: opts.email, password: opts.password, name } })
+      const result = await api.signUpEmail({
+        body: { email: opts.email, password: opts.password, name },
+      })
       userId = result?.user?.id
-
-      console.log(`[modern-admin] seeded root admin: ${opts.email}`)
+      // Says only what has happened. The role comes from Better Auth's
+      // `admin.defaultRole` at this point; `opts.role` is applied below, and
+      // is logged there — after `setRole` actually returns.
+      this.log.info(`[modern-admin] created admin ${opts.email}`)
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
-      if (/exists|duplicate|UNIQUE/i.test(message)) {
-
-        console.log(`[modern-admin] root admin already present: ${opts.email}`)
+      if (!isUserAlreadyExistsError(err, opts.email)) {
+        // Not "already there" — surface it. A silent warn here is how a bad
+        // DATABASE_URL looked identical to a successful boot.
+        this.log.error(`[modern-admin] admin seed failed for ${opts.email}`, {
+          error: err instanceof Error ? err.message : String(err),
+        })
         return
       }
-
-      console.warn(`[modern-admin] root admin seed failed:`, message)
-      return
+      this.log.info(`[modern-admin] admin ${opts.email} already present`)
+      if (opts.role) userId = await this.findExistingUserId(api, opts.email)
     }
 
-    // Optionally set an explicit role when the admin plugin supports it
-    // and a role other than the defaultRole was requested.
-    if (userId && opts.role && typeof api.adminSetRole === 'function') {
-      try {
-        await api.adminSetRole({ body: { userId, role: opts.role } })
-      } catch {
-        // Role assignment is best-effort — sign-up succeeded; log and continue.
+    // Reconcile the role on every boot, for freshly created *and* existing
+    // accounts, so config stays the source of truth.
+    if (!opts.role || !userId) return
+    if (typeof api.setRole !== 'function') {
+      this.log.warn(
+        `[modern-admin] role '${opts.role}' requested for ${opts.email}, but this Better Auth ` +
+        'instance has no admin plugin (`setRole` is absent) — the account keeps its default role.',
+      )
+      return
+    }
+    try {
+      await api.setRole({
+        body: { userId, role: opts.role },
+        ...(await this.seedHeaders()),
+      })
+      this.log.info(`[modern-admin] admin ${opts.email} set to role '${opts.role}'`)
+    } catch (err) {
+      // Best-effort: the account exists either way.
+      this.log.warn(`[modern-admin] could not set role '${opts.role}' for ${opts.email}`, {
+        error: err instanceof Error ? err.message : String(err),
+      })
+    }
+  }
 
-        console.warn(`[modern-admin] could not set role '${opts.role}' for ${opts.email}`)
+  /** `{ headers }` when the host configured them, otherwise `{}`. */
+  private async seedHeaders(): Promise<{ headers?: Headers }> {
+    const raw = this.options.seedAdminHeaders
+    if (!raw) return {}
+    return { headers: typeof raw === 'function' ? await raw() : raw }
+  }
+
+  /**
+   * Resolve an existing account's id so its role can be reconciled.
+   *
+   * Better Auth's `listUsers` sits behind its session middleware, and boot
+   * has no session — so without `seedAdminHeaders` this cannot work, and the
+   * honest thing is to say which knob is missing rather than swallow the
+   * rejection and leave the role quietly unchanged.
+   */
+  private async findExistingUserId(
+    api: {
+      listUsers?: (args: {
+        query: { filterField?: string; filterValue?: string; limit?: number }
+        headers?: Headers
+      }) => Promise<{ users?: Array<{ id?: string }> } | null>
+    },
+    email: string,
+  ): Promise<string | undefined> {
+    if (typeof api.listUsers !== 'function') {
+      this.log.warn(
+        `[modern-admin] cannot reconcile the role of the existing admin ${email}: ` +
+        'this Better Auth instance has no admin plugin (`listUsers` is absent).',
+      )
+      return undefined
+    }
+    try {
+      const result = await api.listUsers({
+        query: { filterField: 'email', filterValue: email, limit: 1 },
+        ...(await this.seedHeaders()),
+      })
+      const found = result?.users?.[0]?.id
+      if (!found) {
+        this.log.warn(`[modern-admin] admin ${email} exists but could not be looked up; role left unchanged.`)
       }
+      return found
+    } catch (err) {
+      this.log.warn(
+        `[modern-admin] cannot reconcile the role of the existing admin ${email}. ` +
+        '`listUsers` is session-guarded and bootstrap has no session — pass ' +
+        '`seedAdminHeaders` to BetterAuthProvider if you need the role kept in sync.',
+        { error: err instanceof Error ? err.message : String(err) },
+      )
+      return undefined
     }
   }
 

@@ -130,7 +130,7 @@ export function RevisionsButton({
           <span className="hidden sm:inline">{t('history:revisions')}</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-5xl">
+      <SheetContent closeLabel={t('common:close')} side="right" className="w-full overflow-y-auto sm:max-w-5xl">
         <SheetHeader>
           <SheetTitle>{t('history:revisions')}</SheetTitle>
         </SheetHeader>

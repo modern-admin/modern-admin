@@ -376,10 +376,12 @@
       },
       "peerDependencies": {
         "@scalar/nestjs-api-reference": "^1.2.14",
+        "@types/express": "^5.0.0",
         "express": "^5.2.1",
       },
       "optionalPeers": [
         "@scalar/nestjs-api-reference",
+        "@types/express",
         "express",
       ],
     },

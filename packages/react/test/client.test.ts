@@ -54,6 +54,18 @@ const captureRequests = async (
   return seen
 }
 
+describe('AdminClient — audit log', () => {
+  it('serializes both parts of a composite cursor', async () => {
+    const [req] = await captureRequests((client) =>
+      client.listAuditLog({ before: 1_700_000_000_000, beforeId: 'cursor-id' }),
+    )
+
+    expect(req?.url).toBe(
+      'https://example.test/admin/api/audit-log?before=1700000000000&beforeId=cursor-id',
+    )
+  })
+})
+
 describe('AdminClient — custom actions', () => {
   it('POSTs a resource action with the payload as the body', async () => {
     const [req] = await captureRequests((c) =>

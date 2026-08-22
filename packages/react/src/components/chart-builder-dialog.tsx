@@ -307,7 +307,7 @@ export function ChartBuilderDialog({
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
-      <DialogContent className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent closeLabel={t('common:close')} className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {initial ? t('chart:editChart') : t('chart:newChart')}

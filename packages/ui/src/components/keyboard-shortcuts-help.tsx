@@ -28,6 +28,8 @@ export interface KeyboardShortcutsHelpProps {
   title?: React.ReactNode
   description?: React.ReactNode
   emptyMessage?: React.ReactNode
+  /** Visually-hidden label on the dialog's close button. Default: 'Close'. */
+  closeLabel?: string
 }
 
 function chordParts(combo: string, modLabel: string): string[] {
@@ -64,6 +66,7 @@ export function KeyboardShortcutsHelp({
   title,
   description,
   emptyMessage,
+  closeLabel,
 }: KeyboardShortcutsHelpProps): React.ReactElement {
   const modLabel = getModKeyLabel()
 
@@ -86,6 +89,7 @@ export function KeyboardShortcutsHelp({
           rendered. When `description` is provided the prop is omitted so
           Radix can wire its context-based aria-describedby automatically. */}
       <DialogContent
+        closeLabel={closeLabel}
         className="max-w-md"
         {...(!description ? { 'aria-describedby': undefined } : {})}
       >

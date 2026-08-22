@@ -1,4 +1,3 @@
-import type { Request, Response, NextFunction } from 'express'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 
 /**
@@ -43,13 +42,13 @@ const NEST_AUTH_PATHS: ReadonlySet<string> = new Set(['/me', '/login', '/ui-prop
  */
 export function createBetterAuthMiddleware(
   authHandler: NodeHandler,
-): (req: Request, res: Response, next: NextFunction) => void {
-  return (req: Request, res: Response, next: NextFunction): void => {
+): (req: IncomingMessage, res: ServerResponse, next: (err?: unknown) => void) => void {
+  return (req: IncomingMessage, res: ServerResponse, next: (err?: unknown) => void): void => {
     const path = (req.url ?? '').split('?')[0] ?? ''
     if (NEST_AUTH_PATHS.has(path)) {
       next()
       return
     }
-    void authHandler(req as unknown as IncomingMessage, res as unknown as ServerResponse)
+    void authHandler(req, res)
   }
 }

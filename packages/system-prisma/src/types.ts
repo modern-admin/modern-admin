@@ -20,6 +20,11 @@ export interface PrismaDelegate<TRow = any> {
   delete(args: { where: any }): Promise<TRow>
   deleteMany(args?: { where?: any }): Promise<{ count: number }>
   count(args?: any): Promise<number>
+  /**
+   * Present on every generated Prisma delegate. Optional here so hand-written
+   * test doubles stay assignable; callers fall back when it is absent.
+   */
+  groupBy?(args: any): Promise<any[]>
 }
 
 /**

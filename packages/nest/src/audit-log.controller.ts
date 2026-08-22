@@ -31,6 +31,10 @@ const queryZ = z.object({
   limit: z.coerce.number().int().min(1).max(200).optional(),
   offset: z.coerce.number().int().min(0).optional(),
   before: z.coerce.number().int().min(0).optional(),
+  beforeId: z.string().min(1).max(128).optional(),
+}).refine((query) => query.beforeId === undefined || query.before !== undefined, {
+  message: '`beforeId` requires `before`',
+  path: ['beforeId'],
 })
 
 export interface AuditLogResponse {
@@ -69,6 +73,7 @@ export class AuditLogController {
       ...(query.from ? { from: new Date(query.from) } : {}),
       ...(query.to ? { to: new Date(query.to) } : {}),
       ...(query.before != null ? { before: query.before } : {}),
+      ...(query.beforeId != null ? { beforeId: query.beforeId } : {}),
       limit: query.limit ?? 50,
       offset: query.offset ?? 0,
     })

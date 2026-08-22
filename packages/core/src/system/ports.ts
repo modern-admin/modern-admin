@@ -40,10 +40,21 @@ export interface IQueryableLogStore extends ILogStore {
     actions?: string[]
     from?: Date
     to?: Date
+    /**
+     * Page size. Defaults to 50 in every shipped implementation — the audit
+     * log is append-only and unbounded, so an implicit "all rows" default is
+     * a memory hazard. Pass an explicit value to widen it.
+     */
     limit?: number
     offset?: number
-    /** Cursor: return only entries with `at` strictly before this unix-ms value. */
+    /** Unix-ms part of the `(at, id)` cursor. */
     before?: number
+    /**
+     * Id part of the `(at, id)` cursor. When supplied with `before`, entries
+     * at the same millisecond continue strictly after this id instead of
+     * being skipped. Omit for the legacy timestamp-only behaviour.
+     */
+    beforeId?: string
   }): Promise<ActionLogEntry[]>
 }
 

@@ -10,6 +10,7 @@ import {
   NoDatabaseAdapterError,
   NoResourceAdapterError,
 } from '../errors'
+import { ConsoleLogger, type ILogger } from '../ports'
 import { deepMerge, RESOURCE_OPTIONS_ARRAY_STRATEGIES } from '../utils/merge-options.js'
 
 /**
@@ -90,6 +91,13 @@ export interface BuildResourcesArgs {
   resources?: Array<unknown | ResourceWithOptions>
   adapters: Adapter[]
   plugins?: GlobalPlugin[]
+  /**
+   * Where the registration diagnostic below goes. Defaults to the console.
+   * `ModernAdmin` passes its own `options.logger`, so hosts can route or
+   * silence it like every other framework message — a `static` method has
+   * no other way to reach it.
+   */
+  logger?: ILogger
 }
 
 const isResourceWithOptions = (raw: unknown): raw is ResourceWithOptions =>
@@ -97,7 +105,8 @@ const isResourceWithOptions = (raw: unknown): raw is ResourceWithOptions =>
 
 export class ResourcesFactory {
   static buildResources(args: BuildResourcesArgs): BaseResource[] {
-    const { databases = [], resources = [], adapters, plugins = [] } = args
+    const { databases = [], resources = [], adapters, plugins = [], logger } = args
+    const log = logger ?? new ConsoleLogger()
 
     const fromOptions = ResourcesFactory.convertResources(resources, adapters)
     const optionIds = new Set(fromOptions.map((r) => r.resource.id()))
@@ -111,8 +120,8 @@ export class ResourcesFactory {
     // under raw names (`Customer`). Both sets then end up registered in
     // parallel, surfacing as duplicates in dropdowns/dashboards. Honest
     // false-positives exist (e.g. `databases:` auto-discovery + one
-    // unrelated custom resource via `resources:`) — emit `console.warn`
-    // rather than throw so the user can ignore if intentional.
+    // unrelated custom resource via `resources:`) — warn rather than throw
+    // so the user can ignore it if intentional.
     if (
       fromDatabasesAll.length > 0 &&
       fromOptions.length > 0 &&
@@ -121,7 +130,7 @@ export class ResourcesFactory {
       const dbIds = fromDatabasesAll.map((r) => r.id())
       const optIds = fromOptions.map((r) => r.resource.id())
 
-      console.warn(
+      log.warn(
         `[modern-admin] Registered ${dbIds.length} resource(s) from \`databases:\` ` +
         `(ids: ${dbIds.join(', ')}) and ${optIds.length} from \`resources:\`/\`@AdminResource\` ` +
         `(ids: ${optIds.join(', ')}) with no id overlap. If your @AdminResource ` +

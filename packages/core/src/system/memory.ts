@@ -7,6 +7,10 @@
 // Not suitable for production: nothing here survives a process restart.
 
 import { uuidv7 } from '../utils/uuid.js'
+import { ConsoleLogger, type ILogger } from '../ports'
+
+/** Applied by `IQueryableLogStore.list` when the caller passes no `limit`. */
+const DEFAULT_LOG_LIST_LIMIT = 50
 import type {
   IAiTaskStore,
   ICacheStore,
@@ -40,7 +44,9 @@ const nowIso = (): string => new Date().toISOString()
 
 export class MemoryLogStore implements IQueryableLogStore {
   public readonly entries: ActionLogEntry[] = []
-  record(entry: ActionLogEntry): void { this.entries.push(entry) }
+  record(entry: ActionLogEntry): void {
+    this.entries.push({ ...entry, id: entry.id ?? uuidv7() })
+  }
   async list(filter: Parameters<IQueryableLogStore['list']>[0] = {}): Promise<ActionLogEntry[]> {
     let result = this.entries.slice()
     if (filter.resourceId) result = result.filter((e) => e.resourceId === filter.resourceId)
@@ -52,19 +58,54 @@ export class MemoryLogStore implements IQueryableLogStore {
     }
     if (filter.from) result = result.filter((e) => e.at >= filter.from!.getTime())
     if (filter.to) result = result.filter((e) => e.at <= filter.to!.getTime())
-    if (filter.before != null) result = result.filter((e) => e.at < filter.before!)
-    result.sort((a, b) => b.at - a.at)
+    if (filter.before != null) {
+      const before = filter.before
+      const beforeId = filter.beforeId
+      result = result.filter((e) =>
+        e.at < before || (
+          beforeId !== undefined &&
+          e.at === before &&
+          String(e.id ?? '') < beforeId
+        ),
+      )
+    }
+    // Ties broken by id (UUIDv7, so already time-ordered) to match the
+    // Prisma store's `orderBy` and keep paging deterministic.
+    result.sort((a, b) => {
+      if (a.at !== b.at) return b.at - a.at
+      const aId = String(a.id ?? '')
+      const bId = String(b.id ?? '')
+      return aId === bId ? 0 : aId < bId ? 1 : -1
+    })
     if (filter.offset) result = result.slice(filter.offset)
-    if (filter.limit !== undefined) result = result.slice(0, filter.limit)
+    // Same default as the Prisma store. Diverging here would let a caller
+    // pass its tests against an unbounded in-memory store and then silently
+    // truncate in production.
+    result = result.slice(0, filter.limit ?? DEFAULT_LOG_LIST_LIMIT)
     return result
   }
   clear(): void { this.entries.length = 0 }
 }
 
+/**
+ * Writes each action-log entry as one line. Defaults to the console (hence
+ * the name), but takes any {@link ILogger} — pass the same one you gave
+ * `ModernAdminOptions.logger` and the audit trail lands in the host's log
+ * pipeline instead of bypassing it.
+ */
 export class ConsoleLogStore implements ILogStore {
-  record(entry: ActionLogEntry): void {
+  private readonly log: ILogger
 
-    console.log('[modern-admin:action-log]', JSON.stringify(entry))
+  constructor(logger?: ILogger) {
+    this.log = logger ?? new ConsoleLogger()
+  }
+
+  record(entry: ActionLogEntry): void {
+    // Serialised into the message, not passed as structured context: a
+    // context object goes through `util.inspect` at depth 2, which renders
+    // anything nested inside `payload`/`result` as `[Object]` and stops the
+    // line being machine-readable.
+    this.log.info(`[modern-admin:action-log] ${JSON.stringify(entry)}`)
   }
 }
 

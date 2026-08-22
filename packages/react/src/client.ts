@@ -480,6 +480,7 @@ export class AdminClient {
     if (query.limit != null) params.set('limit', String(query.limit))
     if (query.offset != null) params.set('offset', String(query.offset))
     if (query.before != null) params.set('before', String(query.before))
+    if (query.beforeId != null) params.set('beforeId', query.beforeId)
     const qs = params.toString() ? `?${params.toString()}` : ''
     return this.request<AuditLogResponse>(`/admin/api/audit-log${qs}`)
   }
@@ -503,6 +504,8 @@ export class AdminClient {
     const url = `${this.baseUrl}/admin/api/resources/${encodeURIComponent(resourceId)}/actions/upload?field=${encodeURIComponent(field)}`
     const form = new FormData()
     form.append('files', file)
+    const fail = (status: number, code: UploadErrorCode): AdminApiError =>
+      new AdminApiError(status, options.messages?.[code] ?? DEFAULT_UPLOAD_MESSAGES[code], code)
     return new Promise<UploadedFileInfo>((resolve, reject) => {
       const xhr = new XMLHttpRequest()
       xhr.open('POST', url, true)
@@ -525,21 +528,23 @@ export class AdminClient {
             const arr = JSON.parse(xhr.responseText) as UploadedFileInfo[]
             const first = arr[0]
             if (!first) {
-              reject(new AdminApiError(500, 'Server returned no upload result'))
+              reject(fail(500, 'emptyResponse'))
               return
             }
             // Emit a final 100% progress tick so UI can settle the bar.
             options.onProgress?.({ loaded: file.size, total: file.size, percent: 100 })
             resolve(first)
-          } catch (err) {
-            reject(new AdminApiError(500, err instanceof Error ? err.message : 'Invalid upload response'))
+          } catch {
+            // The parse error's own message names a byte offset in a body the
+            // user never sees — useless to them, so use the translatable one.
+            reject(fail(500, 'invalidResponse'))
           }
         } else {
           reject(new AdminApiError(xhr.status, xhr.responseText || xhr.statusText))
         }
       }
-      xhr.onerror = (): void => reject(new AdminApiError(0, 'Network error during upload'))
-      xhr.onabort = (): void => reject(new AdminApiError(0, 'Upload aborted'))
+      xhr.onerror = (): void => reject(fail(0, 'network'))
+      xhr.onabort = (): void => reject(fail(0, 'aborted'))
       if (options.signal) {
         if (options.signal.aborted) {
           xhr.abort()
@@ -580,6 +585,7 @@ export class AdminClient {
           const info = await this.uploadFile(resourceId, field, file, {
             signal: options.signal,
             onProgress: (p) => options.onItemProgress?.(i, file, p),
+            ...(options.messages ? { messages: options.messages } : {}),
           })
           results[i] = info
           options.onItemComplete?.(i, file, info)
@@ -937,8 +943,10 @@ export interface AuditLogQuery {
   to?: string
   limit?: number
   offset?: number
-  /** Cursor: fetch only entries with `at` strictly before this unix-ms value. */
+  /** Unix-ms part of the audit-log cursor. */
   before?: number
+  /** Id part of the audit-log cursor; prevents skipping equal timestamps. */
+  beforeId?: string
 }
 
 export interface AuditLogResponse {
@@ -1129,9 +1137,31 @@ export interface UploadProgress {
   percent: number
 }
 
+/**
+ * Upload failures the client raises itself, rather than relaying a server
+ * response. Surfaced as `AdminApiError.code` so UI can translate them.
+ */
+export type UploadErrorCode = 'emptyResponse' | 'invalidResponse' | 'network' | 'aborted'
+
+/**
+ * Translated replacements for the four client-side upload failures. This
+ * module is deliberately i18n-unaware — the React layer passes strings in,
+ * the same way `@modern-admin/ui` components take a `labels` prop.
+ */
+export type UploadErrorMessages = Partial<Record<UploadErrorCode, string>>
+
+const DEFAULT_UPLOAD_MESSAGES: Record<UploadErrorCode, string> = {
+  emptyResponse: 'Server returned no upload result',
+  invalidResponse: 'Invalid upload response',
+  network: 'Network error during upload',
+  aborted: 'Upload aborted',
+}
+
 export interface UploadFileOptions {
   onProgress?: (p: UploadProgress) => void
   signal?: AbortSignal
+  /** Translated messages for the client-side failures. */
+  messages?: UploadErrorMessages
 }
 
 export interface UploadFilesOptions {
@@ -1142,6 +1172,8 @@ export interface UploadFilesOptions {
   onItemProgress?: (index: number, file: File, p: UploadProgress) => void
   onItemComplete?: (index: number, file: File, info: UploadedFileInfo) => void
   onItemError?: (index: number, file: File, error: Error) => void
+  /** Translated messages for the client-side failures, per file. */
+  messages?: UploadErrorMessages
 }
 
 export interface GlobalSearchHit {
@@ -1170,7 +1202,16 @@ export interface GlobalSearchResponse {
 }
 
 export class AdminApiError extends Error {
-  constructor(public readonly status: number, message: string) {
+  constructor(
+    public readonly status: number,
+    message: string,
+    /**
+     * Stable identifier for errors the client raises itself (as opposed to
+     * relaying a server body). Lets callers translate the failure instead of
+     * showing the English fallback in `message`.
+     */
+    public readonly code?: UploadErrorCode,
+  ) {
     super(message)
     this.name = 'AdminApiError'
   }

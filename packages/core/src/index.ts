@@ -1,6 +1,28 @@
 // @modern-admin/core — universal admin panel core abstractions.
 
-export const VERSION = '0.0.0'
+/**
+ * Package version.
+ *
+ * Two layers, so this is correct with or without build tooling:
+ *
+ * 1. `FALLBACK_VERSION` tracks `package.json#version`. The release versioning
+ *    script updates it alongside the workspace manifests. It is what
+ *    ships if nothing substitutes anything — which is what happened before:
+ *    the constant was a bare `'0.0.0'` literal, so a 0.5.0 package reported
+ *    version zero to every consumer that read it.
+ * 2. A bundler `define` for `__MODERN_ADMIN_VERSION__` (tsup/Vite `define`,
+ *    esbuild `--define:`) overrides it for anyone who wires it up.
+ *
+ * `typeof` on an undeclared global is safe in JS, so running straight from
+ * source (tests, ts-node) never throws here.
+ */
+declare const __MODERN_ADMIN_VERSION__: string | undefined
+
+/** Synced from `package.json#version` by `scripts/sync-lock-workspace-versions.ts`. */
+const FALLBACK_VERSION = '0.6.0'
+
+export const VERSION: string =
+  typeof __MODERN_ADMIN_VERSION__ === 'string' ? __MODERN_ADMIN_VERSION__ : FALLBACK_VERSION
 
 // Adapters
 export {
@@ -102,6 +124,7 @@ export {
   bulkDeleteAction,
   normalizeActionNesting,
   searchAction,
+  valuesAction,
   CacheRuntime,
   CACHE_KEY_VERSION,
   cacheKey,

@@ -11,15 +11,10 @@ import * as React from 'react'
 import { useWatch, type Control, type UseFormTrigger } from 'react-hook-form'
 import {
   Button,
-  Field,
-  FieldError,
-  FieldLabel,
-  FormField,
-  InfoTooltip,
   cn,
 } from '@modern-admin/ui'
 import { Check, ChevronLeft, ChevronRight, Plus, X } from 'lucide-react'
-import { PropertyEditor } from '../property-renderer.js'
+import { RecordFormField } from './record-form-field.js'
 import { evaluateShowWhen } from '../show-when.js'
 import type { PropertyJSON } from '../types.js'
 
@@ -192,38 +187,12 @@ export function WizardForm({
             control={control}
             property={property}
           >
-            <FormField
+            <RecordFormField
               control={control}
-              name={property.path}
-              render={({ field, fieldState }) => (
-                <Field
-                  data-invalid={fieldState.error ? true : undefined}
-                  className="mb-8 break-inside-avoid"
-                >
-                  <FieldLabel htmlFor={field.name}>
-                    {property.label}
-                    {property.description ? (
-                      <InfoTooltip
-                        content={property.description}
-                        ariaLabel={property.description}
-                      />
-                    ) : null}
-                    {property.isRequired && (
-                      <span className="ml-1 text-destructive">*</span>
-                    )}
-                  </FieldLabel>
-                  <PropertyEditor
-                    property={property}
-                    value={field.value}
-                    onChange={field.onChange}
-                    disabled={isSubmitting}
-                    resourceId={resourceId}
-                  />
-                  {fieldState.error?.message && (
-                    <FieldError>{fieldState.error.message}</FieldError>
-                  )}
-                </Field>
-              )}
+              property={property}
+              disabled={isSubmitting}
+              resourceId={resourceId}
+              idPrefix="wizard-field"
             />
           </WizardConditionalField>
         ))}

@@ -53,6 +53,12 @@ export interface FindOptions {
  * Cursor-based pagination — extension over AdminJS' offset-only model.
  */
 export interface StreamOptions {
+  /**
+   * Opaque adapter-defined resume token. Only adapters that override
+   * `streamFind` with real cursor semantics support it — the base
+   * implementation paginates by offset and throws `NotImplementedError`
+   * rather than silently restarting from the first page.
+   */
   cursor?: string
   pageSize?: number
   sort?: { sortBy: string; direction: SortDirection }
@@ -92,8 +98,6 @@ export interface TimeSeriesQuery {
   field?: string
   from: Date
   to: Date
-  /** List-page-style narrowing applied before aggregation. */
-  filters?: Record<string, string>
   /**
    * Optional secondary breakdown — produces one series per distinct value.
    * Adapters truncate to `topN` series + an "other" bucket.

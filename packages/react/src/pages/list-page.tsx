@@ -73,6 +73,7 @@ import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
+  dateFnsLocale,
 } from '@modern-admin/ui'
 import {
   ArrowDown,
@@ -2117,6 +2118,7 @@ function FilterPanel({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
+        closeLabel={t('common:close')}
         side="right"
         className="flex w-full flex-col gap-0 p-0 sm:max-w-md"
         aria-describedby={undefined}
@@ -2236,6 +2238,10 @@ function DateRangeFilter({
   onToChange(v: unknown): void
   t: (key: string, params?: Record<string, string | number>) => string
 }): React.ReactElement {
+  // The calendar popover needs a date-fns locale of its own — the `t` prop
+  // only covers the surrounding labels.
+  const { locale: uiLocale } = useI18n()
+  const locale = dateFnsLocale(uiLocale)
   return (
     <div className="space-y-2">
       <div className="space-y-1">
@@ -2245,6 +2251,7 @@ function DateRangeFilter({
           value={from ?? ''}
           onChange={(v) => onFromChange(v)}
           ariaLabel={t('common:from')}
+          locale={locale}
         />
       </div>
       <div className="space-y-1">
@@ -2254,6 +2261,7 @@ function DateRangeFilter({
           value={to ?? ''}
           onChange={(v) => onToChange(v)}
           ariaLabel={t('common:to')}
+          locale={locale}
         />
       </div>
     </div>
