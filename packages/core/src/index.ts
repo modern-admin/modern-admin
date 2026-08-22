@@ -19,7 +19,7 @@
 declare const __MODERN_ADMIN_VERSION__: string | undefined
 
 /** Synced from `package.json#version` by `scripts/sync-lock-workspace-versions.ts`. */
-const FALLBACK_VERSION = '0.6.0'
+const FALLBACK_VERSION = '0.7.0'
 
 export const VERSION: string =
   typeof __MODERN_ADMIN_VERSION__ === 'string' ? __MODERN_ADMIN_VERSION__ : FALLBACK_VERSION
