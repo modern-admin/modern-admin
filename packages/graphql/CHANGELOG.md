@@ -1,5 +1,13 @@
 # @modern-admin/graphql
 
+## 0.7.0
+
+### Patch Changes
+
+- Updated dependencies [[`18a001e`](https://github.com/modern-admin/modern-admin/commit/18a001e875d4c5fa4b56592fbe9b1b54f9191558)]:
+  - @modern-admin/core@0.7.0
+  - @modern-admin/nest@0.7.0
+
 ## 0.6.0
 
 ### Patch Changes
