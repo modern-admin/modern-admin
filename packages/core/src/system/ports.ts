@@ -47,13 +47,14 @@ export interface IQueryableLogStore extends ILogStore {
      */
     limit?: number
     offset?: number
-    /**
-     * Cursor: return only entries with `at` strictly before this unix-ms
-     * value. Entries are ordered by `(at, id)` descending, so paging is
-     * deterministic; `at` is not unique, so a page boundary landing inside a
-     * single millisecond can still skip its ties.
-     */
+    /** Unix-ms part of the `(at, id)` cursor. */
     before?: number
+    /**
+     * Id part of the `(at, id)` cursor. When supplied with `before`, entries
+     * at the same millisecond continue strictly after this id instead of
+     * being skipped. Omit for the legacy timestamp-only behaviour.
+     */
+    beforeId?: string
   }): Promise<ActionLogEntry[]>
 }
 

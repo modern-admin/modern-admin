@@ -142,7 +142,9 @@ const PAGE_SIZE = 25
 export function AuditLogPage(): React.ReactElement {
   const { t, locale } = useI18n()
   const resources = useResources()
-  const [filters, setFilters] = React.useState<Omit<AuditLogQuery, 'before' | 'limit' | 'offset'>>({})
+  const [filters, setFilters] = React.useState<
+    Omit<AuditLogQuery, 'before' | 'beforeId' | 'limit' | 'offset'>
+  >({})
 
   const log = useInfiniteAuditLog(filters, PAGE_SIZE)
 

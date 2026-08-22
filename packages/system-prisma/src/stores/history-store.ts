@@ -9,6 +9,8 @@ import {
 } from '@modern-admin/core'
 import type { PrismaDelegate } from '../types.js'
 
+const PRUNE_BATCH_SIZE = 1_000
+
 export class PrismaHistoryStore implements IHistoryStore {
   constructor(private readonly delegate: PrismaDelegate<HistoryRow>) {}
 
@@ -72,9 +74,11 @@ export class PrismaHistoryStore implements IHistoryStore {
    *
    * Bounds combine: a revision survives only if it satisfies all of them, so
    * they are applied in sequence. `keepDays` is one `deleteMany`; `keepLast`
-   * is per-record, which no single `deleteMany` can express, so it costs two
-   * queries per record that has revisions. This is a maintenance job (cron,
-   * startup), never a request-path operation.
+   * is per-record, which no single `deleteMany` can express. Obsolete ids are
+   * selected and deleted in bounded batches. Deleting an explicit snapshot
+   * of ids is intentional: a concurrent append must never be caught by a
+   * broad `notIn` predicate and removed as if it were an old revision. This
+   * is a maintenance job (cron, startup), never a request-path operation.
    */
   async prune(retention: HistoryRetention): Promise<number> {
     let removed = 0
@@ -92,16 +96,21 @@ export class PrismaHistoryStore implements IHistoryStore {
       const groups = await this.recordGroups()
       for (const group of groups) {
         const scope = { resourceId: group.resourceId, recordId: group.recordId }
-        const survivors = (await this.delegate.findMany({
-          where: scope,
-          orderBy: { createdAt: 'desc' },
-          select: { id: true },
-          take: keep,
-        })) as unknown as Array<{ id: string }>
-        const { count } = await this.delegate.deleteMany({
-          where: { ...scope, id: { notIn: survivors.map((r) => r.id) } },
-        })
-        removed += count
+        while (true) {
+          const obsolete = (await this.delegate.findMany({
+            where: scope,
+            orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+            select: { id: true },
+            ...(keep > 0 ? { skip: keep } : {}),
+            take: PRUNE_BATCH_SIZE,
+          })) as unknown as Array<{ id: string }>
+          if (obsolete.length === 0) break
+
+          const { count } = await this.delegate.deleteMany({
+            where: { ...scope, id: { in: obsolete.map((row) => row.id) } },
+          })
+          removed += count
+        }
       }
     }
 

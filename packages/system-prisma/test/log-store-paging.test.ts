@@ -48,6 +48,33 @@ describe('PrismaLogStore paging', () => {
     expect(page.map((e) => e.at)).toEqual([base + 4, base + 3, base + 2])
   })
 
+  it('does not skip entries that share the cursor millisecond', async () => {
+    const prisma = fakePrisma()
+    const { logStore } = setupPrismaSystem(prisma as never)
+    const at = 1_700_000_000_000
+    for (let i = 0; i < 60; i++) {
+      await logStore.record({
+        resourceId: 'users',
+        action: 'edit',
+        recordId: String(i),
+        at,
+      })
+    }
+
+    const seen: string[] = []
+    let cursor: { before: number; beforeId: string } | undefined
+    for (let guard = 0; guard < 10; guard++) {
+      const page = await logStore.list({ limit: 25, ...(cursor ?? {}) })
+      if (page.length === 0) break
+      seen.push(...page.map((entry) => entry.id!))
+      const last = page.at(-1)!
+      cursor = { before: last.at, beforeId: last.id! }
+    }
+
+    expect(seen).toHaveLength(60)
+    expect(new Set(seen).size).toBe(60)
+  })
+
   it('defaults to a bounded page instead of the whole table', async () => {
     const { logStore } = await seed(60)
     expect(await logStore.list()).toHaveLength(50)

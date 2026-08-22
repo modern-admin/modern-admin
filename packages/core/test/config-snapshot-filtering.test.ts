@@ -75,13 +75,27 @@ describe('ModernAdmin#toJSON access filtering', () => {
   test('toJSON(admin) drops what that principal may not see', async () => {
     const users = resourceOf(await build().toJSON({ id: '2', role: 'viewer' }))
     expect(users.properties.map((p: { path: string }) => p.path)).not.toContain('secret')
+    for (const paths of Object.values(users.propertyOrder) as string[][]) {
+      expect(paths).not.toContain('secret')
+    }
     expect(users.actions.map((a: { name: string }) => a.name)).not.toContain('archive')
   })
 
   test('toJSON(null) filters anonymously instead of returning everything', async () => {
     const users = resourceOf(await build().toJSON(null))
     expect(users.properties.map((p: { path: string }) => p.path)).not.toContain('secret')
+    for (const paths of Object.values(users.propertyOrder) as string[][]) {
+      expect(paths).not.toContain('secret')
+    }
     expect(users.actions.map((a: { name: string }) => a.name)).not.toContain('archive')
+  })
+
+  test('filtered propertyOrder contains only paths present in properties', async () => {
+    const users = resourceOf(await build().toJSON({ id: '2', role: 'viewer' }))
+    const accessible = new Set(users.properties.map((p: { path: string }) => p.path))
+    for (const paths of Object.values(users.propertyOrder) as string[][]) {
+      expect(paths.every((path) => accessible.has(path))).toBe(true)
+    }
   })
 
   test('an anonymous caller never sees more than a low-privilege one', async () => {

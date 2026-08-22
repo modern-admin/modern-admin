@@ -45,7 +45,21 @@ export class PrismaLogStore implements IQueryableLogStore {
     const range: Record<string, bigint> = {}
     if (filter.from) range['gte'] = BigInt(filter.from.getTime())
     if (filter.to) range['lte'] = BigInt(filter.to.getTime())
-    if (filter.before !== undefined) range['lt'] = BigInt(filter.before)
+    if (filter.before !== undefined) {
+      const cursorAt = BigInt(filter.before)
+      if (filter.beforeId !== undefined) {
+        // Lexicographic continuation of the `(at, id) DESC` order. Keeping
+        // the id in the cursor is essential because `at` has ms precision and
+        // many audit entries can legitimately share it.
+        where['OR'] = [
+          { at: { lt: cursorAt } },
+          { at: cursorAt, id: { lt: filter.beforeId } },
+        ]
+      } else {
+        // Backwards-compatible timestamp-only cursor for existing callers.
+        range['lt'] = cursorAt
+      }
+    }
     if (Object.keys(range).length > 0) where['at'] = range
     const rows = await this.delegate.findMany({
       where,

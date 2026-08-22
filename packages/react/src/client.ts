@@ -480,6 +480,7 @@ export class AdminClient {
     if (query.limit != null) params.set('limit', String(query.limit))
     if (query.offset != null) params.set('offset', String(query.offset))
     if (query.before != null) params.set('before', String(query.before))
+    if (query.beforeId != null) params.set('beforeId', query.beforeId)
     const qs = params.toString() ? `?${params.toString()}` : ''
     return this.request<AuditLogResponse>(`/admin/api/audit-log${qs}`)
   }
@@ -942,8 +943,10 @@ export interface AuditLogQuery {
   to?: string
   limit?: number
   offset?: number
-  /** Cursor: fetch only entries with `at` strictly before this unix-ms value. */
+  /** Unix-ms part of the audit-log cursor. */
   before?: number
+  /** Id part of the audit-log cursor; prevents skipping equal timestamps. */
+  beforeId?: string
 }
 
 export interface AuditLogResponse {

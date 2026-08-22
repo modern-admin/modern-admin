@@ -212,7 +212,7 @@ export interface BetterAuthProviderOptions {
   /**
    * Headers carrying an existing admin session, used by `seedAdmin` to look
    * up an already-created root account so its role can be reconciled on
-   * boot. Better Auth's `listUsers` and `adminSetRole` are session-guarded
+   * boot. Better Auth's `listUsers` and `setRole` are session-guarded
    * and there is no session during bootstrap, so without this the role is
    * only ever set on the boot that *creates* the account.
    *
@@ -332,7 +332,7 @@ export class BetterAuthProvider implements IAuthProvider {
    * wrong:
    *
    * - **The role is reconciled for existing accounts too — when it can be.**
-   *   The "already exists" branch used to `return` before `adminSetRole` ran,
+   *   The "already exists" branch used to `return` before `setRole` ran,
    *   so changing `rootAdmin.role` in config had no effect after the first
    *   boot ever. Reconciling needs the existing user's id, and the only
    *   public way to get it is the admin plugin's `listUsers`, which is
@@ -358,8 +358,9 @@ export class BetterAuthProvider implements IAuthProvider {
       signUpEmail?: (args: {
         body: { email: string; password: string; name: string }
       }) => Promise<{ user?: { id?: string } } | null>
-      adminSetRole?: (args: {
+      setRole?: (args: {
         body: { userId: string; role: string }
+        headers?: Headers
       }) => Promise<unknown>
       listUsers?: (args: {
         query: { filterField?: string; filterValue?: string; limit?: number }
@@ -378,7 +379,7 @@ export class BetterAuthProvider implements IAuthProvider {
       userId = result?.user?.id
       // Says only what has happened. The role comes from Better Auth's
       // `admin.defaultRole` at this point; `opts.role` is applied below, and
-      // is logged there — after `adminSetRole` actually returns.
+      // is logged there — after `setRole` actually returns.
       this.log.info(`[modern-admin] created admin ${opts.email}`)
     } catch (err) {
       if (!isUserAlreadyExistsError(err, opts.email)) {
@@ -396,15 +397,15 @@ export class BetterAuthProvider implements IAuthProvider {
     // Reconcile the role on every boot, for freshly created *and* existing
     // accounts, so config stays the source of truth.
     if (!opts.role || !userId) return
-    if (typeof api.adminSetRole !== 'function') {
+    if (typeof api.setRole !== 'function') {
       this.log.warn(
         `[modern-admin] role '${opts.role}' requested for ${opts.email}, but this Better Auth ` +
-        'instance has no admin plugin (`adminSetRole` is absent) — the account keeps its default role.',
+        'instance has no admin plugin (`setRole` is absent) — the account keeps its default role.',
       )
       return
     }
     try {
-      await api.adminSetRole({
+      await api.setRole({
         body: { userId, role: opts.role },
         ...(await this.seedHeaders()),
       })

@@ -654,27 +654,33 @@ export const useAuditLog = (
 
 /**
  * Cursor-based infinite scroll variant of `useAuditLog`.
- * Each page passes the `at` timestamp of the last entry as the `before` cursor.
+ * Each page passes the `(at, id)` of its last visible entry as the cursor.
  * `pageSize` entries are requested; if the response is full, there are more pages.
  */
 export const useInfiniteAuditLog = (
-  filters: Omit<AuditLogQuery, 'before' | 'offset' | 'limit'>,
+  filters: Omit<AuditLogQuery, 'before' | 'beforeId' | 'offset' | 'limit'>,
   pageSize: number,
 ): UseInfiniteQueryResult<InfiniteData<AuditLogResponse>, Error> => {
   const client = useAdminClient()
   return useInfiniteQuery({
     queryKey: ['modern-admin', 'audit-log-infinite', filters],
-    queryFn: ({ pageParam }) =>
-      client.listAuditLog({
+    queryFn: ({ pageParam }) => {
+      const cursor = pageParam as { before: number; beforeId?: string } | undefined
+      return client.listAuditLog({
         ...filters,
         limit: pageSize + 1,
-        before: pageParam as number | undefined,
-      }),
-    initialPageParam: undefined as number | undefined,
+        ...(cursor ?? {}),
+      })
+    },
+    initialPageParam: undefined as { before: number; beforeId?: string } | undefined,
     getNextPageParam: (lastPage) => {
       const events = lastPage.events
       if (events.length <= pageSize) return undefined
-      return events[pageSize - 1]!.at
+      const lastVisible = events[pageSize - 1]!
+      return {
+        before: lastVisible.at,
+        ...(lastVisible.id ? { beforeId: lastVisible.id } : {}),
+      }
     },
     staleTime: 30_000,
   })

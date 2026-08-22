@@ -44,7 +44,9 @@ const nowIso = (): string => new Date().toISOString()
 
 export class MemoryLogStore implements IQueryableLogStore {
   public readonly entries: ActionLogEntry[] = []
-  record(entry: ActionLogEntry): void { this.entries.push(entry) }
+  record(entry: ActionLogEntry): void {
+    this.entries.push({ ...entry, id: entry.id ?? uuidv7() })
+  }
   async list(filter: Parameters<IQueryableLogStore['list']>[0] = {}): Promise<ActionLogEntry[]> {
     let result = this.entries.slice()
     if (filter.resourceId) result = result.filter((e) => e.resourceId === filter.resourceId)
@@ -56,10 +58,25 @@ export class MemoryLogStore implements IQueryableLogStore {
     }
     if (filter.from) result = result.filter((e) => e.at >= filter.from!.getTime())
     if (filter.to) result = result.filter((e) => e.at <= filter.to!.getTime())
-    if (filter.before != null) result = result.filter((e) => e.at < filter.before!)
+    if (filter.before != null) {
+      const before = filter.before
+      const beforeId = filter.beforeId
+      result = result.filter((e) =>
+        e.at < before || (
+          beforeId !== undefined &&
+          e.at === before &&
+          String(e.id ?? '') < beforeId
+        ),
+      )
+    }
     // Ties broken by id (UUIDv7, so already time-ordered) to match the
     // Prisma store's `orderBy` and keep paging deterministic.
-    result.sort((a, b) => b.at - a.at || String(b.id ?? '').localeCompare(String(a.id ?? '')))
+    result.sort((a, b) => {
+      if (a.at !== b.at) return b.at - a.at
+      const aId = String(a.id ?? '')
+      const bId = String(b.id ?? '')
+      return aId === bId ? 0 : aId < bId ? 1 : -1
+    })
     if (filter.offset) result = result.slice(filter.offset)
     // Same default as the Prisma store. Diverging here would let a caller
     // pass its tests against an unbounded in-memory store and then silently

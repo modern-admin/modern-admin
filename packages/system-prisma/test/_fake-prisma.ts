@@ -16,6 +16,14 @@ type Where = Record<string, any>
 const matches = (row: any, where: Where | undefined): boolean => {
   if (!where) return true
   for (const [k, v] of Object.entries(where)) {
+    if (k === 'OR' && Array.isArray(v)) {
+      if (!v.some((clause) => matches(row, clause))) return false
+      continue
+    }
+    if (k === 'AND' && Array.isArray(v)) {
+      if (!v.every((clause) => matches(row, clause))) return false
+      continue
+    }
     // composite-key shortcut, e.g. { scope_scopeId_key: { ... } }
     if (k.includes('_') && typeof v === 'object' && v !== null && !('in' in v) && !('gte' in v) && !('lte' in v) && !('lt' in v) && !('gt' in v)) {
       for (const [ck, cv] of Object.entries(v)) {
@@ -25,6 +33,7 @@ const matches = (row: any, where: Where | undefined): boolean => {
     }
     if (v !== null && typeof v === 'object') {
       if ('in' in v && Array.isArray(v.in) && !v.in.includes(row[k])) return false
+      if ('notIn' in v && Array.isArray(v.notIn) && v.notIn.includes(row[k])) return false
       if ('gte' in v && !(row[k] >= v.gte)) return false
       if ('lte' in v && !(row[k] <= v.lte)) return false
       if ('gt' in v && !(row[k] > v.gt)) return false
