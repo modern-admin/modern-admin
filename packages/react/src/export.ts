@@ -5,7 +5,7 @@
 // download. Pure functions live here so they're trivially unit-testable;
 // the dialog UI in pages/export-dialog.tsx wires them together.
 
-import type { AdminClient } from './client.js'
+import type { IAdminClient } from './client.js'
 import type { ListQuery, PropertyJSON, RecordJSON } from './types.js'
 
 export type ExportFormat = 'csv' | 'json'
@@ -25,7 +25,7 @@ export interface FetchAllOptions {
  * and `query.perPage` are overwritten — pass the user's filters/sorting only.
  */
 export async function fetchAllRecords(
-  client: AdminClient,
+  client: IAdminClient,
   resourceId: string,
   query: ListQuery | undefined,
   opts: FetchAllOptions = {},

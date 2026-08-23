@@ -9,7 +9,7 @@
  * No build-time env vars: one bundle serves any deployment.
  */
 
-import type { MetadataTranslations } from '@modern-admin/react'
+import type { AdminAuthPaths, MetadataTranslations } from '@modern-admin/react'
 
 export interface ModernAdminBrand {
   /** Shown in the sidebar header and login screen. */
@@ -84,6 +84,8 @@ export interface ModernAdminRuntimeConfig {
    * elsewhere; pass *without* a trailing slash.
    */
   authBasePath?: string
+  /** Per-route auth overrides for backends whose provider uses different URLs. */
+  authPaths?: Partial<AdminAuthPaths>
   /**
    * URL prefix where the SPA is mounted (e.g. `/admin`). Injected
    * automatically by `ModernAdminStaticUiMiddleware` from its `path` option

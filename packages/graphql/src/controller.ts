@@ -23,8 +23,8 @@ import {
   execute,
   type ExecutionResult,
 } from 'graphql'
-import { MODERN_ADMIN, ModernAdminAuthGuard } from '@modern-admin/nest'
-import type { IRealtimeBus, ModernAdmin } from '@modern-admin/core'
+import { MODERN_ADMIN, type IRealtimeBus, type ModernAdmin } from '@modern-admin/core'
+import { ModernAdminGraphqlAuthGuard } from './auth.guard.js'
 import { ModernAdminGraphqlSchemaHolder } from './schema-holder.js'
 import { createContext } from './schema-builder.js'
 import { GRAPHQL_OPTIONS, GRAPHQL_REALTIME_BUS } from './tokens.js'
@@ -78,7 +78,7 @@ export class GraphqlController {
 
   /**
    * The data surface: executes queries/mutations against the dynamic schema.
-   * Guarded by {@link ModernAdminAuthGuard}, which resolves the configured
+   * Guarded by {@link ModernAdminGraphqlAuthGuard}, which resolves the configured
    * `IAuthProvider` into `req.currentAdmin` and rejects anonymous callers with
    * 401 — the REST transport gates its controllers the same way. Without this
    * the endpoint was fail-open: the core api-key and role gates wave through a
@@ -87,7 +87,7 @@ export class GraphqlController {
    */
   @Post()
   @HttpCode(200)
-  @UseGuards(ModernAdminAuthGuard)
+  @UseGuards(ModernAdminGraphqlAuthGuard)
   async run(@Body() body: GraphqlRequestBody, @Req() req: AdminRequest): Promise<ExecutionResult> {
     // 1 — Pick up multipart-encoded uploads if present, otherwise fall back to
     //     the standard JSON body. Multipart wire format is the GraphQL

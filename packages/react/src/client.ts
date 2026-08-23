@@ -43,9 +43,39 @@ export interface AdminClientOptions {
    * slash, e.g. `'/api/auth'` (Better Auth's own default).
    */
   authBasePath?: string
+  /** Override individual auth routes for providers that do not use Better Auth's URL shape. */
+  authPaths?: Partial<AdminAuthPaths>
+  /** Injectable request function for tests, non-browser runtimes, and custom transports. */
+  fetchImpl?: AdminFetch
+  /** Injectable session storage. Pass `null` to disable browser storage access. */
+  storage?: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | null
+  /** Resolve the current browser URL for OAuth callbacks. */
+  getCurrentUrl?: () => string
+  /** Navigate to an OAuth redirect URL. */
+  navigate?: (url: string) => void
 }
 
 const DEFAULT_AUTH_BASE_PATH = '/admin/api/auth'
+
+export interface AdminAuthPaths {
+  emailSignIn: string
+  socialSignIn: string
+  signOut: string
+}
+
+export type AdminFetch = (
+  input: RequestInfo | URL,
+  init?: RequestInit,
+) => Promise<Response>
+
+const defaultStorage = (): Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | null => {
+  if (typeof window === 'undefined') return null
+  try {
+    return window.localStorage
+  } catch {
+    return null
+  }
+}
 
 const buildQuery = (query?: ListQuery): string => {
   if (!query) return ''
@@ -65,14 +95,73 @@ const buildQuery = (query?: ListQuery): string => {
   return qs ? `?${qs}` : ''
 }
 
-export class AdminClient {
+/** Transport-facing contract consumed by the React context and hooks. */
+export interface IAdminClient {
+  readonly apiBaseUrl: string
+  config(): Promise<AdminConfig>
+  me(): Promise<{ user: CurrentUser }>
+  login(email: string, password: string): Promise<void>
+  getAuthUiProps(): Promise<AuthUiProps>
+  loginSocial(provider: string, callbackUrl?: string): Promise<void>
+  logout(): Promise<void>
+  list(resourceId: string, query?: ListQuery, options?: { refresh?: boolean }): Promise<ListResponse>
+  show(resourceId: string, recordId: string): Promise<RecordResponse>
+  create(resourceId: string, payload: Record<string, unknown>): Promise<RecordResponse>
+  update(resourceId: string, recordId: string, payload: Record<string, unknown>): Promise<RecordResponse>
+  delete(resourceId: string, recordId: string): Promise<void>
+  bulkDelete(resourceId: string, recordIds: ReadonlyArray<string>): Promise<unknown>
+  distinctValues(resourceId: string, field: string, options?: { search?: string; limit?: number }): Promise<{ values: string[]; hasMore: boolean }>
+  search(resourceId: string, query: string): Promise<ListResponse>
+  globalSearch(query: string, perResourceLimit?: number, options?: { signal?: AbortSignal }): Promise<GlobalSearchResponse>
+  fetchRecordAction(resourceId: string, recordId: string, actionName: string, query?: Record<string, string>): Promise<CustomActionResponse>
+  fetchResourceAction(resourceId: string, actionName: string, query?: Record<string, string>): Promise<CustomActionResponse>
+  invokeRecordAction(resourceId: string, recordId: string, actionName: string, payload?: Record<string, unknown>): Promise<CustomActionResponse>
+  invokeBulkAction(resourceId: string, actionName: string, recordIds: ReadonlyArray<string>, payload?: Record<string, unknown>): Promise<CustomActionResponse>
+  invokeResourceAction(resourceId: string, actionName: string, payload?: Record<string, unknown>): Promise<CustomActionResponse>
+  timeseries(query: TimeSeriesQuery): Promise<TimeSeriesResponse>
+  listHistory(resourceId: string, recordId: string, query?: { limit?: number; offset?: number }): Promise<HistoryListResponse>
+  getHistoryRevision(resourceId: string, recordId: string, revisionId: string): Promise<HistoryRevisionResponse>
+  revertHistoryRevision(resourceId: string, recordId: string, revisionId: string, body?: { reason?: string }): Promise<RecordResponse>
+  listAuditLog(query?: AuditLogQuery): Promise<AuditLogResponse>
+  uploadFile(resourceId: string, field: string, file: File, options?: UploadFileOptions): Promise<UploadedFileInfo>
+  uploadFiles(resourceId: string, field: string, files: ReadonlyArray<File>, options?: UploadFilesOptions): Promise<UploadedFileInfo[]>
+  loadDashboard(): Promise<{ dashboard: DashboardBlob }>
+  saveDashboard(dashboard: DashboardBlob): Promise<{ ok: boolean }>
+  cacheStats(): Promise<CacheStatsResponse>
+  resetCacheStats(): Promise<CacheStatsResponse>
+  invalidateResourceCache(resourceId: string): Promise<{ ok: true }>
+  listApiKeys(): Promise<{ keys: ApiKeyRecord[] }>
+  createApiKey(payload: { name: string; permissions: Record<string, string[]>; expiresInDays?: number | null }): Promise<{ key: string; record: ApiKeyRecord }>
+  updateApiKey(id: string, payload: { name?: string; enabled?: boolean; permissions?: Record<string, string[]>; expiresInDays?: number | null }): Promise<{ record: ApiKeyRecord }>
+  deleteApiKey(id: string): Promise<{ success: true }>
+  listWebhooks(): Promise<{ webhooks: WebhookRecord[] }>
+  createWebhook(payload: WebhookInput): Promise<{ webhook: WebhookRecord }>
+  updateWebhook(id: string, payload: Partial<WebhookInput>): Promise<{ webhook: WebhookRecord }>
+  deleteWebhook(id: string): Promise<{ success: true }>
+  listWebhookDeliveries(id: string, limit?: number): Promise<{ deliveries: WebhookDeliveryRecord[] }>
+  testWebhook(id: string): Promise<{ success: true }>
+  cancelUpload(resourceId: string, field: string, key: string): Promise<void>
+  aiFillFromImage(resourceId: string, file: File, options?: { signal?: AbortSignal }): Promise<AiFillResponse>
+  getAiAssistantSettings(): Promise<AiAssistantSettings>
+  updateAiAssistantSettings(payload: { enabled: boolean; model: string; apiKey?: string; systemPrompt?: string }): Promise<AiAssistantSettings>
+  sendAiAssistantChat(messages: AiAssistantChatMessage[], requestId?: string, locale?: string, conversationId?: string, clientContext?: AiClientContext): Promise<AiAssistantChatEnqueueResponse>
+  listAiAssistantChats(): Promise<AiAssistantChatHistoryItem[]>
+  getAiAssistantTask(taskId: string): Promise<AiAssistantTask>
+}
+
+export class AdminClient implements IAdminClient {
   private readonly baseUrl: string
   private readonly credentials: RequestCredentials
   private readonly headers: Record<string, string>
   private readonly demoSessionStorageKey: string | null
   private readonly authBasePath: string
   private readonly signInPath: string
+  private readonly socialSignInPath: string
   private readonly signOutPath: string
+  private readonly fetchImpl: AdminFetch
+  private readonly storage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | null
+  private readonly getCurrentUrl: () => string
+  private readonly navigate: (url: string) => void
 
   constructor(opts: AdminClientOptions = {}) {
     this.baseUrl = opts.baseUrl?.replace(/\/$/, '') ?? ''
@@ -82,8 +171,19 @@ export class AdminClient {
       ? (opts.demoSessionStorageKey ?? DEFAULT_DEMO_SESSION_STORAGE_KEY)
       : null
     this.authBasePath = (opts.authBasePath ?? DEFAULT_AUTH_BASE_PATH).replace(/\/$/, '')
-    this.signInPath = `${this.authBasePath}/sign-in/email`
-    this.signOutPath = `${this.authBasePath}/sign-out`
+    this.signInPath = opts.authPaths?.emailSignIn ?? `${this.authBasePath}/sign-in/email`
+    this.socialSignInPath = opts.authPaths?.socialSignIn ?? `${this.authBasePath}/sign-in/social`
+    this.signOutPath = opts.authPaths?.signOut ?? `${this.authBasePath}/sign-out`
+    this.fetchImpl = opts.fetchImpl ?? ((input, init) => globalThis.fetch(input, init))
+    this.storage = opts.storage === undefined
+      ? defaultStorage()
+      : opts.storage
+    this.getCurrentUrl = opts.getCurrentUrl
+      ?? (() => (typeof window === 'undefined' ? '/' : window.location.href))
+    this.navigate = opts.navigate
+      ?? ((url) => {
+        if (typeof window !== 'undefined') window.location.href = url
+      })
   }
 
   /** Base URL the client was configured with ('' = same-origin). The
@@ -93,7 +193,7 @@ export class AdminClient {
   }
 
   private async requestOnce<T>(path: string, init: RequestInit = {}): Promise<T> {
-    const res = await fetch(`${this.baseUrl}${path}`, {
+    const res = await this.fetchImpl(`${this.baseUrl}${path}`, {
       credentials: this.credentials,
       ...init,
       headers: {
@@ -128,9 +228,9 @@ export class AdminClient {
   }
 
   private readDemoSession(): StoredDemoSession | null {
-    if (!this.demoSessionStorageKey || typeof window === 'undefined') return null
+    if (!this.demoSessionStorageKey || !this.storage) return null
     try {
-      const raw = window.localStorage.getItem(this.demoSessionStorageKey)
+      const raw = this.storage.getItem(this.demoSessionStorageKey)
       if (!raw) return null
       const parsed = JSON.parse(raw) as Partial<StoredDemoSession>
       if (typeof parsed.email !== 'string' || typeof parsed.password !== 'string') return null
@@ -141,18 +241,18 @@ export class AdminClient {
   }
 
   private writeDemoSession(session: StoredDemoSession): void {
-    if (!this.demoSessionStorageKey || typeof window === 'undefined') return
+    if (!this.demoSessionStorageKey || !this.storage) return
     try {
-      window.localStorage.setItem(this.demoSessionStorageKey, JSON.stringify(session))
+      this.storage.setItem(this.demoSessionStorageKey, JSON.stringify(session))
     } catch {
       return
     }
   }
 
   private clearDemoSession(): void {
-    if (!this.demoSessionStorageKey || typeof window === 'undefined') return
+    if (!this.demoSessionStorageKey || !this.storage) return
     try {
-      window.localStorage.removeItem(this.demoSessionStorageKey)
+      this.storage.removeItem(this.demoSessionStorageKey)
     } catch {
       return
     }
@@ -207,18 +307,15 @@ export class AdminClient {
    *  `callbackUrl` defaults to the current page so the app re-checks auth
    *  after the provider redirects back. */
   async loginSocial(provider: string, callbackUrl?: string): Promise<void> {
-    const resolved =
-      callbackUrl ?? (typeof window !== 'undefined' ? window.location.href : '/')
+    const resolved = callbackUrl ?? this.getCurrentUrl()
     const data = await this.requestOnce<{ url?: string }>(
-      `${this.authBasePath}/sign-in/social`,
+      this.socialSignInPath,
       {
         method: 'POST',
         body: JSON.stringify({ provider, callbackURL: resolved }),
       },
     )
-    if (data.url && typeof window !== 'undefined') {
-      window.location.href = data.url
-    }
+    if (data.url) this.navigate(data.url)
   }
 
   /** Sign the current session out. Better Auth's sign-out endpoint requires
@@ -715,7 +812,7 @@ export class AdminClient {
    */
   async cancelUpload(resourceId: string, field: string, key: string): Promise<void> {
     const qs = `?field=${encodeURIComponent(field)}&key=${encodeURIComponent(key)}`
-    const res = await fetch(
+    const res = await this.fetchImpl(
       `${this.baseUrl}/admin/api/resources/${encodeURIComponent(resourceId)}/actions/upload${qs}`,
       { method: 'DELETE', credentials: this.credentials, headers: this.headers },
     )
@@ -745,7 +842,7 @@ export class AdminClient {
     const doFetch = async (): Promise<AiFillResponse> => {
       const form = new FormData()
       form.append('image', file)
-      const res = await fetch(url, {
+      const res = await this.fetchImpl(url, {
         method: 'POST',
         credentials: this.credentials,
         // Intentionally omit Content-Type — the browser sets it automatically
@@ -1028,7 +1125,7 @@ export interface WebhookDeliveryRecord {
 export interface AiAssistantSettings {
   enabled: boolean
   configured: boolean
-  provider: 'openrouter'
+  provider: string
   model: string
   maskedApiKey: string | null
   systemPrompt: string

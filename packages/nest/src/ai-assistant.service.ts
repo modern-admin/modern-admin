@@ -9,8 +9,6 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common'
 import { InjectQueue } from '@nestjs/bullmq'
-import { generateText, stepCountIs } from 'ai'
-import { createOpenRouter } from '@openrouter/ai-sdk-provider'
 import type { Queue } from 'bullmq'
 import {
   type AiTask,
@@ -26,19 +24,21 @@ import {
 import { builtinLocales, I18n } from '@modern-admin/i18n'
 import { MODERN_ADMIN, MODERN_ADMIN_OPTIONS } from './tokens.js'
 import type { ModernAdminModuleOptions } from './module.js'
+import { defaultLlmProvider, type ILlmProvider } from './llm-provider.js'
 import { type AiAssistantCitation, type AiAssistantSqlResource, buildAiAssistantTools } from './ai-assistant-tools.js'
 import { AI_ASSISTANT_CHAT_JOB, AI_ASSISTANT_QUEUE } from './ai-assistant.constants.js'
 import type {
   AiAssistantChatJobData,
   AiAssistantChatMessageInput,
   AiAssistantTaskOutput,
+  IAiAssistantQueueDispatcher,
   AiClientContext,
   AiUiAction,
 } from './ai-assistant.types.js'
 
 export interface AiAssistantStoredSettings {
   enabled?: boolean
-  provider?: 'openrouter'
+  provider?: string
   model?: string
   apiKey?: string
   systemPrompt?: string
@@ -47,7 +47,7 @@ export interface AiAssistantStoredSettings {
 export interface AiAssistantPublicSettings {
   enabled: boolean
   configured: boolean
-  provider: 'openrouter'
+  provider: string
   model: string
   maskedApiKey: string | null
   systemPrompt: string
@@ -105,6 +105,10 @@ export class AiAssistantService {
   ) {
   }
 
+  private get llmProvider(): ILlmProvider {
+    return this.options.aiAssistant?.provider ?? defaultLlmProvider
+  }
+
   async getSettings(currentAdmin?: CurrentAdmin): Promise<AiAssistantPublicSettings> {
     const settings = await this.loadSettings()
     return this.toPublicSettings(settings, currentAdmin)
@@ -118,7 +122,7 @@ export class AiAssistantService {
     const current = await this.loadSettings()
     const next: AiAssistantStoredSettings = {
       enabled: input.enabled,
-      provider: 'openrouter',
+      provider: this.llmProvider.id,
       model: input.model,
       apiKey: input.apiKey !== undefined
         ? input.apiKey.trim() || current.apiKey || ''
@@ -144,8 +148,8 @@ export class AiAssistantService {
     if (!settings.enabled) {
       throw new ForbiddenException('AI assistant is disabled')
     }
-    if (!settings.apiKey) {
-      throw new PreconditionFailedException('AI assistant API key is not configured')
+    if (!this.llmProvider.isConfigured(settings.apiKey)) {
+      throw new PreconditionFailedException('AI assistant provider is not configured')
     }
     const minimalAdmin = minimizeCurrentAdmin(currentAdmin)
     const taskStore = this.requireTaskStore()
@@ -174,8 +178,7 @@ export class AiAssistantService {
       },
     })
     await taskStore.appendEvent(task.id, 'queued', { queuedAt: new Date().toISOString() })
-    await this.requireQueue().add(
-      AI_ASSISTANT_CHAT_JOB,
+    await this.enqueueJob(
       {
         taskId: task.id,
         messages,
@@ -187,10 +190,7 @@ export class AiAssistantService {
       } satisfies AiAssistantChatJobData,
       {
         attempts: this.options.aiAssistant?.queue?.attempts ?? 1,
-        backoff: {
-          type: 'exponential',
-          delay: this.options.aiAssistant?.queue?.backoffMs ?? 1000,
-        },
+        backoffMs: this.options.aiAssistant?.queue?.backoffMs ?? 1000,
         removeOnComplete: this.options.aiAssistant?.queue?.removeOnComplete ?? 100,
         removeOnFail: this.options.aiAssistant?.queue?.removeOnFail ?? 500,
       },
@@ -252,15 +252,9 @@ export class AiAssistantService {
     if (!settings.enabled) {
       throw new ForbiddenException('AI assistant is disabled')
     }
-    if (!settings.apiKey) {
-      throw new PreconditionFailedException('AI assistant API key is not configured')
+    if (!this.llmProvider.isConfigured(settings.apiKey)) {
+      throw new PreconditionFailedException('AI assistant provider is not configured')
     }
-
-    const openrouter = createOpenRouter({
-      apiKey: settings.apiKey,
-      appName: this.options.aiAssistant?.appName ?? 'Modern Admin',
-      ...(this.options.aiAssistant?.appUrl ? { appUrl: this.options.aiAssistant.appUrl } : {}),
-    })
 
     // Build a thin dashboard store backed by the global configStore so the AI
     // can create / update / delete charts on the shared dashboard.
@@ -332,8 +326,9 @@ export class AiAssistantService {
     await taskStore.updateStatus(data.taskId, { status: 'running', progress: 30 })
 
     try {
-      const result = await generateText({
-        model: openrouter(settings.model ?? 'google/gemini-3.1-flash-lite-preview'),
+      const result = await this.llmProvider.generate({
+        apiKey: settings.apiKey,
+        model: settings.model ?? this.llmProvider.defaultModel,
         system: this.buildSystemPrompt(
           settings,
           built.descriptors,
@@ -346,7 +341,11 @@ export class AiAssistantService {
           content: message.content,
         })),
         tools: built.tools,
-        stopWhen: stepCountIs(this.options.aiAssistant?.maxSteps ?? 8),
+        maxSteps: this.options.aiAssistant?.maxSteps ?? 8,
+        appName: this.options.aiAssistant?.appName ?? 'Modern Admin',
+        ...(this.options.aiAssistant?.appUrl
+          ? { appUrl: this.options.aiAssistant.appUrl }
+          : {}),
       })
 
       if (debug) {
@@ -362,7 +361,7 @@ export class AiAssistantService {
       const output: AiAssistantTaskOutput = {
         text: result.text.trim() || summarizeToolResults(result.toolResults, data.locale),
         citations: dedupeCitations(citations),
-        toolCalls: result.toolCalls.map((toolCall) => ({ toolName: toolCall.toolName })),
+        toolCalls: result.toolCalls,
         uiActions: dedupeUiActions(uiActions),
       }
       await taskStore.appendEvent(data.taskId, 'result', output)
@@ -389,11 +388,22 @@ export class AiAssistantService {
     }
   }
 
-  private requireQueue(): Queue {
-    if (!this.queue) {
-      throw new ServiceUnavailableException('AI assistant queue is not configured')
+  private async enqueueJob(
+    data: AiAssistantChatJobData,
+    options: Parameters<IAiAssistantQueueDispatcher['enqueue']>[1],
+  ): Promise<void> {
+    const dispatcher = this.options.aiAssistant?.queue?.dispatcher
+    if (dispatcher) {
+      await dispatcher.enqueue(data, options)
+      return
     }
-    return this.queue
+    if (!this.queue) throw new ServiceUnavailableException('AI assistant queue is not configured')
+    await this.queue.add(AI_ASSISTANT_CHAT_JOB, data, {
+      attempts: options.attempts,
+      backoff: { type: 'exponential', delay: options.backoffMs },
+      removeOnComplete: options.removeOnComplete,
+      removeOnFail: options.removeOnFail,
+    })
   }
 
   private requireTaskStore() {
@@ -420,8 +430,8 @@ export class AiAssistantService {
     const envApiKey = this.options.aiAssistant?.apiKey?.trim() ?? ''
     const defaults: AiAssistantStoredSettings = {
       enabled: this.options.aiAssistant?.enabled ?? true,
-      provider: 'openrouter',
-      model: this.options.aiAssistant?.defaultModel ?? 'google/gemini-3.1-flash-lite-preview',
+      provider: this.llmProvider.id,
+      model: this.options.aiAssistant?.defaultModel ?? this.llmProvider.defaultModel,
       apiKey: envApiKey,
       systemPrompt: this.options.aiAssistant?.systemPrompt ?? '',
     }
@@ -430,7 +440,7 @@ export class AiAssistantService {
     const stored = raw as AiAssistantStoredSettings
     return {
       enabled: stored.enabled ?? defaults.enabled,
-      provider: 'openrouter',
+      provider: this.llmProvider.id,
       model: stored.model ?? defaults.model,
       // stored key takes precedence; fall back to env-seeded key
       apiKey: stored.apiKey?.trim() || envApiKey,
@@ -451,9 +461,9 @@ export class AiAssistantService {
     const apiKey = settings.apiKey?.trim() ?? ''
     return {
       enabled: settings.enabled ?? true,
-      configured: apiKey.length > 0,
-      provider: 'openrouter',
-      model: settings.model ?? this.options.aiAssistant?.defaultModel ?? 'google/gemini-3.1-flash-lite-preview',
+      configured: this.llmProvider.isConfigured(apiKey),
+      provider: this.llmProvider.id,
+      model: settings.model ?? this.options.aiAssistant?.defaultModel ?? this.llmProvider.defaultModel,
       maskedApiKey: apiKey ? this.maskApiKey(apiKey) : null,
       systemPrompt: settings.systemPrompt ?? '',
       canManage: this.canManage(currentAdmin),

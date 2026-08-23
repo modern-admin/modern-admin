@@ -10,7 +10,7 @@ import {
   type IDashboardStore,
   type TimeRange,
 } from '@modern-admin/core'
-import type { AdminClient, TimeSeriesMetric, TimeSeriesStep } from './client.js'
+import type { IAdminClient, TimeSeriesMetric, TimeSeriesStep } from './client.js'
 
 const STORAGE_PREFIX = 'modern-admin:dashboard:v1:'
 const ANON_USER = '__anon__'
@@ -61,7 +61,7 @@ const defaultStore = new LocalStorageDashboardStore()
  * returns an empty dashboard (e.g. first load or missing configStore).
  */
 export class ServerDashboardStore implements IDashboardStore {
-  constructor(private readonly client: AdminClient) {}
+  constructor(private readonly client: IAdminClient) {}
 
   async load(_userId: string): Promise<DashboardBlob> {
     try {

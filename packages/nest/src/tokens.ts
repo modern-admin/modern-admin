@@ -1,7 +1,8 @@
-// DI tokens for the NestJS module. We avoid coupling to specific concrete
-// classes so consumers can swap implementations through `forRoot()`.
+// DI tokens for the NestJS module. The framework-instance token is owned by
+// core so sibling transports can inject the same instance without depending
+// on this REST transport package.
 
-export const MODERN_ADMIN = Symbol.for('@modern-admin/nest:ModernAdmin')
+export { MODERN_ADMIN } from '@modern-admin/core'
 export const MODERN_ADMIN_OPTIONS = Symbol.for('@modern-admin/nest:Options')
 /**
  * Optional DI token. When provided, exposes `IApiKeyService` to the

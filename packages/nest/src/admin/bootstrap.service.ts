@@ -11,7 +11,6 @@
 import { Inject, Injectable, Logger, type OnApplicationBootstrap } from '@nestjs/common'
 import { HttpAdapterHost } from '@nestjs/core'
 import type { BaseResource, ModernAdmin } from '@modern-admin/core'
-import { collectTelemetryInfo, reportTelemetry } from '@modern-admin/telemetry'
 import { MODERN_ADMIN, MODERN_ADMIN_OPTIONS } from '../tokens.js'
 import type { ModernAdminModuleOptions } from '../module.js'
 import { AdminControllerScanner } from './scanner.js'
@@ -37,33 +36,35 @@ export class ModernAdminBootstrapService implements OnApplicationBootstrap {
     }
 
     const pairs = this.scanner.scan()
-    if (pairs.length === 0) return
-    const before = this.admin.resources.length
-    this.admin.registerResources({
-      resources: pairs.map((p) => p.rwo),
-      ...(this.options.adapters ? { adapters: this.options.adapters } : {}),
-    })
-    // Built resources are appended in scan order. Match each controller to
-    // the BaseResource the factory just produced so user code can rely on
-    // `this.admin` / `this.resource` immediately.
-    const added = this.admin.resources.slice(before)
-    if (added.length !== pairs.length) {
-      // Duplicate id between scan results is the only path that produces
-      // a mismatch — surface it loudly so the user fixes the conflict.
-      const ids = pairs.map((p) => p.rwo.options?.id ?? '<auto>')
-      throw new Error(
-        `[modern-admin/nest] resource registration mismatch (${pairs.length} controllers vs ${added.length} resources). Likely duplicate ids: ${ids.join(', ')}`,
-      )
+    if (pairs.length > 0) {
+      const before = this.admin.resources.length
+      this.admin.registerResources({
+        resources: pairs.map((p) => p.rwo),
+        ...(this.options.adapters ? { adapters: this.options.adapters } : {}),
+      })
+      // Built resources are appended in scan order. Match each controller to
+      // the BaseResource the factory just produced so user code can rely on
+      // `this.admin` / `this.resource` immediately.
+      const added = this.admin.resources.slice(before)
+      if (added.length !== pairs.length) {
+        // Duplicate id between scan results is the only path that produces
+        // a mismatch — surface it loudly so the user fixes the conflict.
+        const ids = pairs.map((p) => p.rwo.options?.id ?? '<auto>')
+        throw new Error(
+          `[modern-admin/nest] resource registration mismatch (${pairs.length} controllers vs ${added.length} resources). Likely duplicate ids: ${ids.join(', ')}`,
+        )
+      }
+      pairs.forEach(({ controller }, i) => {
+        controller.admin = this.admin
+        controller.resource = added[i] as BaseResource
+      })
     }
-    pairs.forEach(({ controller }, i) => {
-      controller.admin = this.admin
-      controller.resource = added[i] as BaseResource
-    })
 
-    // Opt-in telemetry ping — fires only when MODERN_ADMIN_TELEMETRY=1.
-    // Fire-and-forget: never awaited in the hot path, silently swallows
-    // any network error.
-    void reportTelemetry(collectTelemetryInfo(this.admin))
+    // The host chooses the telemetry implementation. Keep it off the hot path
+    // and isolate bootstrap from adapter failures.
+    if (this.options.telemetry) {
+      void Promise.resolve(this.options.telemetry(this.admin)).catch(() => undefined)
+    }
   }
 
   /**

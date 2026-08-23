@@ -15,8 +15,12 @@ import type { IncomingMessage } from 'node:http'
 import type { Socket } from 'node:net'
 import { useServer } from 'graphql-ws/use/ws'
 import type { Disposable } from 'graphql-ws'
-import { MODERN_ADMIN } from '@modern-admin/nest'
-import type { CurrentAdmin, IRealtimeBus, ModernAdmin } from '@modern-admin/core'
+import {
+  MODERN_ADMIN,
+  type CurrentAdmin,
+  type IRealtimeBus,
+  type ModernAdmin,
+} from '@modern-admin/core'
 import { ModernAdminGraphqlSchemaHolder } from './schema-holder.js'
 import { createContext } from './schema-builder.js'
 import { GRAPHQL_OPTIONS, GRAPHQL_REALTIME_BUS } from './tokens.js'

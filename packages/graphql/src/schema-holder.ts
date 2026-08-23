@@ -7,8 +7,7 @@
 
 import { Inject, Injectable } from '@nestjs/common'
 import { type GraphQLSchema } from 'graphql'
-import { MODERN_ADMIN } from '@modern-admin/nest'
-import type { ModernAdmin } from '@modern-admin/core'
+import { MODERN_ADMIN, type ModernAdmin } from '@modern-admin/core'
 import { buildGraphqlSchema } from './schema-builder.js'
 import { GRAPHQL_OPTIONS } from './tokens.js'
 import type { ResolvedGraphqlOptions } from './module.js'

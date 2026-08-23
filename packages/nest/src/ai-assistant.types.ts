@@ -55,3 +55,15 @@ export interface AiAssistantChatJobData {
   currentAdmin?: CurrentAdmin
   clientContext?: AiClientContext
 }
+
+export interface AiAssistantQueueOptions {
+  attempts: number
+  backoffMs: number
+  removeOnComplete: boolean | number
+  removeOnFail: boolean | number
+}
+
+/** Broker-neutral dispatch port used by the assistant service. */
+export interface IAiAssistantQueueDispatcher {
+  enqueue(data: AiAssistantChatJobData, options: AiAssistantQueueOptions): void | Promise<void>
+}

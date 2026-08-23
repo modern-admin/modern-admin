@@ -1,279 +1,192 @@
 # Dependency Inversion audit
 
-**Scope:** all 24 workspace packages under `packages/*`, plus the reference apps
-under `apps/*`.
-**Method:** package-level dependency graph (`dependencies` / `peerDependencies`)
-cross-checked against actual source imports, plus targeted reads of the wiring
-points (`ModernAdmin` constructor, `ResourcesFactory`, the Nest module, the
-React provider).
-**Date:** 2026-07-31 · **Commit:** `86a3dc3`
+**Scope:** all 24 workspace packages under `packages/*`, plus the reference
+applications under `apps/*`.
+
+**Method:** workspace dependency graph and source imports, followed by targeted
+inspection of the composition roots and the seven boundaries identified by the
+previous audit: LLM generation, frontend data access, authentication routes,
+GraphQL DI, upload transport packaging, telemetry, and background jobs.
+
+**Updated:** 2026-08-23 · **Baseline:** `6ffece0` (PR branch after merging the
+latest `origin/main`)
 
 ---
 
 ## Verdict
 
-Dependency inversion is applied systematically across the core and data layers.
-High-level modules own the abstractions, concrete implementations live in
-separate packages behind `peerDependencies`, and every dependency arrow points
-inward — there is not a single upward import from an adapter package into a
-transport or into an app.
+Dependency inversion is consistently applied across core, adapters, system
+stores, transports, and the frontend after the remediation in this PR. Core
+owns framework-wide abstractions and the shared framework-instance token;
+concrete infrastructure remains replaceable at composition roots.
 
-The violations that do exist are concentrated at the edges of the system, in
-subsystems added after the port pattern was established: the AI assistant, the
-frontend HTTP client, and the packaging of `feature-upload` / `graphql`. None of
-them compromises the core; two of them are worth fixing.
+The seven findings from the 2026-07-31 audit have been rechecked against the
+current tree. All now have an explicit substitution seam. OpenRouter and the
+upload transport stack are optional peers, GraphQL no longer depends on the
+REST package, and telemetry no longer runs as an unstubbable concrete call from
+Nest bootstrap.
 
----
-
-## What holds
-
-### 1. The core has no concrete dependencies
-
-`@modern-admin/core` declares exactly one runtime dependency: `zod`. A search
-across `packages/core/src` for `@prisma`, `drizzle`, `@nestjs`, `react`,
-`ioredis`, `better-auth`, `graphql`, `express`, `socket`, `node:` builtins, and
-`process.env` returns zero matches. The layering rule in `CLAUDE.md` is not
-aspirational — it is actually enforced in the source.
-
-### 2. Ports are owned by the high-level module
-
-This is the defining shape of DIP: the consumer declares the interface, the
-implementer conforms to it. Both port families live in core.
-
-Runtime ports — `packages/core/src/ports/`:
-
-| Port | File | Default (same layer) |
-| --- | --- | --- |
-| `IAuthProvider` | `auth-provider.ts:15` | `AnonymousAuthProvider` (`:40`) |
-| `ICacheProvider` | `cache-provider.ts:6` | `NoopCacheProvider` (`:31`), `MemoryCacheProvider` (`:66`) |
-| `IRealtimeBus` | `realtime-bus.ts:24` | `NoopRealtimeBus` (`:34`), `InMemoryRealtimeBus` (`:51`) |
-| `IComponentLoader` | `component-loader.ts` | `ComponentLoader` |
-
-System stores — `packages/core/src/system/ports.ts`:
-`ILogStore` (`:30`), `IQueryableLogStore` (`:35`), `IWebhookStore` (`:52`),
-`IConfigStore` (`:68`), `IHistoryStore` (`:90`), `IAiTaskStore` (`:118`),
-`ICacheStore` (`:158`), aggregated by `ISystemStores` (`:179`). In-memory
-defaults sit alongside in `system/memory.ts`.
-
-### 3. Null-object defaults plus constructor injection
-
-`packages/core/src/modern-admin.ts:184-191`:
-
-```ts
-this.auth = options.auth ?? new AnonymousAuthProvider()
-this.cache = withCrossInstanceInvalidation(options.cache ?? new NoopCacheProvider())
-this.componentLoader = options.componentLoader ?? new ComponentLoader()
-this.realtime = options.realtime ?? new NoopRealtimeBus()
-```
-
-Core instantiates only its own no-op defaults, so the framework boots with zero
-infrastructure and every dependency stays substitutable. Defaults living in the
-same layer as the interface is the correct placement — it does not re-couple the
-high-level module to anything external.
-
-### 4. Every arrow points inward
-
-Verified per package by grepping `@modern-admin/*` specifiers in the sources:
-
-| Package | Imports | ORM / infra placement |
-| --- | --- | --- |
-| `adapter-prisma` | `core` only | `@prisma/client` → peer |
-| `adapter-drizzle` | `core` only | `drizzle-orm` → peer |
-| `system-prisma` | `core` only | `@prisma/client` → peer |
-| `system-drizzle` | `core` only | `drizzle-orm` → peer |
-| `cache-redis` | `core` only | `ioredis` → peer |
-| `auth-better-auth` | `core` only | `better-auth` → peer |
-
-No adapter imports a transport, an app, or another adapter. Keeping the ORM
-clients in `peerDependencies` means the abstraction, not the implementation,
-decides what the host installs.
-
-### 5. The adapter contract is structural
-
-`packages/core/src/factories/resources-factory.ts:40`:
-
-```ts
-export interface Adapter { Database: DatabaseClass; Resource: ResourceClass }
-```
-
-paired with runtime dispatch via `isAdapterFor(db)`. Core never names Prisma or
-Drizzle — not in a type, not in a union, not in a string literal. Adding a third
-ORM requires no change to core.
-
-### 6. Function-level ports where an interface would be overkill
-
-- `packages/feature-password/src/types.ts:37` — `hash: (plain: string) => string | Promise<string>`.
-  The host picks argon2 / bcrypt; the feature never imports either.
-- `aiAssistant.rawQuery?: (sql: string) => Promise<unknown[]>` (`packages/nest/src/module.ts`) —
-  the SQL executor is injected, with the read-only enforcement contract
-  documented at the injection point.
-- `apps/_shared/src/admin/source-registry.ts` — shared `@AdminResource`
-  controllers reference resources by logical id and resolve through a registry
-  the host populates before bootstrap. This is the cleanest instance of the
-  pattern in the repo: the same controller code runs against an in-memory table
-  or a Prisma model without knowing which.
-
-### 7. Pluggable storage in `feature-upload`
-
-`IUploadProvider` (`packages/feature-upload/src/types.ts:45`) with
-`LocalUploadProvider` and `S3UploadProvider` as built-ins, and a documented
-example of a third-party GCS implementation. Four methods, no leakage of S3
-concepts into the interface.
-
-### 8. Nest DI keyed by symbols, not classes
-
-`packages/nest/src/tokens.ts` — `MODERN_ADMIN`, `MODERN_ADMIN_OPTIONS`,
-`MODERN_ADMIN_API_KEY_SERVICE`, with the rationale stated in the file header
-("avoid coupling to specific concrete classes so consumers can swap
-implementations through `forRoot()`"). Controllers inject `ModernAdmin` by token
-and go through `invoke()` rather than reaching into resources.
-
-### 9. The frontend realtime layer is transport-agnostic
-
-`packages/react/src/realtime.ts:20`:
-
-```ts
-export type RealtimeSubscriber = (handler: (event: RealtimeWireEvent) => void) => () => void
-```
-
-The socket.io implementation is isolated in `realtime-socket.ts` specifically so
-hosts bringing their own wire carry no socket.io dependency. Worth noting as the
-in-repo precedent for how finding #2 below should be resolved.
+The built-in defaults remain intentionally pragmatic: OpenRouter for LLM calls,
+Better Auth-compatible routes in the browser client, BullMQ for background
+jobs, and the bundled Nest upload subpath. Defaults no longer define the
+interfaces consumed by high-level policy.
 
 ---
 
-## Findings
+## Dependency rules that hold
 
-### F1 — The AI assistant is compiled against OpenRouter · **High**
+### Core remains infrastructure-free
 
-`packages/nest/src/ai-assistant.service.ts`
+`@modern-admin/core` has one runtime dependency, `zod`. It does not import an
+ORM, transport, browser framework, queue, telemetry backend, or vendor SDK.
+Runtime services and system stores are expressed as ports under
+`packages/core/src/ports/` and `packages/core/src/system/ports.ts`.
 
-```
-:13    import { createOpenRouter } from '@openrouter/ai-sdk-provider'
-:41    provider?: 'openrouter'
-:50    provider: 'openrouter'
-:259   const openrouter = createOpenRouter({ apiKey: settings.apiKey, ... })
-:336   model: openrouter(settings.model ?? 'google/gemini-3.1-flash-lite-preview')
-```
+The shared `MODERN_ADMIN` DI token is now owned by core in
+`packages/core/src/ports/di-tokens.ts`. It deliberately retains the historical
+`Symbol.for('@modern-admin/nest:ModernAdmin')` registry key for binary/runtime
+compatibility while allowing sibling transports to inject the framework
+instance without importing `@modern-admin/nest`.
 
-This is the only subsystem in the framework without a port. High-level policy —
-task lifecycle, tool assembly, per-role permission gates, i18n, `uiActions`
-collection — is welded to one vendor SDK. The `provider` field is typed as a
-single-member string literal, so the shape does not even anticipate a second
-implementation.
+### Adapters still point inward
 
-Packaging makes it worse: `ai` and `@openrouter/ai-sdk-provider` are hard
-`dependencies` of `@modern-admin/nest`, so every consumer installs the LLM SDK
-even with the assistant disabled — unlike every ORM and cache backend in the
-repo, which are peers.
+The database, system-store, auth, cache, feature, realtime, and transport
+packages depend on core abstractions. No ORM adapter imports a transport or an
+application. Prisma, Drizzle, Redis, and Better Auth implementations remain
+outside core and are supplied by the host.
 
-**Fix:** define `ILlmProvider` in core (`generate(messages, tools, opts)`),
-ship `OpenRouterLlmProvider` as its own package or behind an optional peer, and
-inject it through `ModernAdminModuleOptions.aiAssistant.provider`.
+### Null-object defaults remain local to the abstraction
 
-### F2 — `AdminClient` is a concrete class with no interface · **High**
+`ModernAdmin` still defaults to `AnonymousAuthProvider`, `NoopCacheProvider`,
+`ComponentLoader`, and `NoopRealtimeBus`. These implementations have no
+external infrastructure and preserve the zero-configuration core runtime.
 
-`packages/react/src/client.ts:68` — roughly 1100 lines, calling `fetch` directly
-(`:96`, `:682`, `:712`) and touching browser globals (`window.localStorage` at
-`:133-155`, `window.location` at `:211-220`).
+### The `invoke()` pipeline remains the transport boundary
 
-The context is typed by the implementation, not an abstraction:
-
-```ts
-// packages/react/src/provider.tsx:70
-export const useAdminClient = (): AdminClient => useAdminContext().client
-```
-
-Every hook in `hooks.ts` and every data-fetching component depends on that
-concrete type. Two consequences are already visible:
-
-1. `packages/react/test/client.test.ts:6-15` has to monkey-patch
-   `globalThis.fetch` and restore it in a `finally`, because there is no seam to
-   inject a stub through.
-2. The GraphQL transport that exists on the backend (`@modern-admin/graphql`)
-   cannot be substituted on the frontend — the UI can only speak REST.
-
-The same package already solves the equivalent problem correctly for realtime
-(see #9 above), which makes this an inconsistency rather than a missing idea.
-
-**Fix:** extract `IAdminClient` and type the context by it. Minimal interim step:
-accept a `fetchImpl` / `transport` option in `AdminClientOptions` so tests and
-alternative transports have a seam.
-
-### F3 — `AdminClient` hardcodes Better Auth's URL shape · **Medium**
-
-`packages/react/src/client.ts:85-86`
-
-```ts
-this.signInPath = `${this.authBasePath}/sign-in/email`
-this.signOutPath = `${this.authBasePath}/sign-out`
-```
-
-The backend hides the auth provider behind `IAuthProvider`; the frontend bakes
-in one provider's endpoint contract. Only the base path is configurable, not the
-path shapes, so swapping the backend `IAuthProvider` implementation for one with
-different routes silently breaks the client. Layer asymmetry rather than a hard
-break.
-
-### F4 — `@modern-admin/graphql` depends on `@modern-admin/nest` · **Medium**
-
-`controller.ts:26`, `module.ts:6`, `schema-holder.ts:10`,
-`subscription-server.ts:18` all import from `@modern-admin/nest` — for the
-`MODERN_ADMIN` DI token and `ModernAdminAuthGuard`.
-
-Two transports at the same layer, one depending on the other for shared
-plumbing. The GraphQL transport cannot be used without pulling in the REST one.
-
-**Fix:** move the shared DI tokens and the guard into a neutral package (or
-expose the token constants from core) so both transports depend on that, not on
-each other.
-
-### F5 — `feature-upload` pulls NestJS into the feature layer · **Medium**
-
-`packages/feature-upload/src/nest/` ships `upload.module.ts`,
-`upload.controller.ts`, and `upload-sweeper.service.ts`, with `@nestjs/common`,
-`@nestjs/core`, `rxjs`, and `busboy` as unconditional `dependencies`.
-
-The other five `feature-*` packages depend on `@modern-admin/core` alone. This
-one couples a mid-level policy package to a specific transport framework.
-Containment in a subdirectory limits the blast radius, but the install cost is
-paid by everyone.
-
-**Fix:** split out `@modern-admin/feature-upload-nest`, or demote the Nest deps
-to optional peers.
-
-### F6 — Telemetry is called as a concrete function · **Low**
-
-`packages/nest/src/admin/bootstrap.service.ts:14` imports `collectTelemetryInfo`
-and `reportTelemetry`; `packages/telemetry/src/report.ts:34` performs a bare
-`fetch`. No port, no injection point.
-
-Gated behind `MODERN_ADMIN_TELEMETRY=1` and therefore low-impact in practice,
-but it is unstubbable network I/O on the bootstrap path.
-
-### F7 — BullMQ is the only queue implementation · **Low**
-
-`packages/nest/src/ai-assistant.service.ts:104` injects a bullmq `Queue`;
-`ai-assistant.processor.ts` extends `WorkerHost` from `@nestjs/bullmq`.
-`@modern-admin/queue` is a BullMQ module, not an abstraction over queues.
-
-Mitigated by conditional registration — `packages/nest/src/module.ts:219` only
-imports `QueueModule` when the assistant is enabled. Not worth acting on unless
-a second broker becomes a requirement.
+REST, GraphQL, and realtime authorization continue to delegate framework
+policy to `ModernAdmin` and its ports. The GraphQL HTTP guard is now local to
+the GraphQL transport and resolves identity through core's `IAuthProvider`.
 
 ---
 
-## Priority
+## Finding status
 
-| # | Finding | Severity | Effort |
+| # | Previous finding | Previous severity | Current status |
 | --- | --- | --- | --- |
-| F1 | AI assistant bound to OpenRouter | High | Medium |
-| F2 | `AdminClient` has no interface | High | Medium |
-| F3 | Better Auth URL shape in the client | Medium | Low |
-| F4 | `graphql` → `nest` dependency | Medium | Low |
-| F5 | `feature-upload` carries NestJS | Medium | Medium |
-| F6 | Telemetry has no port | Low | Low |
-| F7 | Queue is BullMQ-only | Low | High |
+| F1 | AI assistant compiled directly against OpenRouter | High | Resolved |
+| F2 | React context depended on concrete `AdminClient` | High | Resolved |
+| F3 | Browser client fixed Better Auth route shapes | Medium | Resolved |
+| F4 | `graphql` depended on sibling `nest` transport | Medium | Resolved |
+| F5 | Upload feature installed Nest transport dependencies unconditionally | Medium | Resolved |
+| F6 | Nest bootstrap called concrete telemetry functions | Low | Resolved |
+| F7 | AI background work had no broker-neutral dispatch seam | Low | Resolved |
 
-F1 and F2 are the two that carry real cost. F3–F5 are packaging and layering
-hygiene. F6 and F7 are noted for completeness.
+### F1 — LLM provider port
+
+`packages/nest/src/llm-provider.ts` defines the consumer-owned
+`ILlmProvider` contract. `AiAssistantService` supplies prompts, tools, messages,
+and step policy to that interface and only reads provider identity/defaults
+through it.
+
+`OpenRouterLlmProvider` is the built-in adapter. It dynamically imports `ai`
+and `@openrouter/ai-sdk-provider` only when generation is requested; both SDKs
+are optional peers of `@modern-admin/nest`. A host can pass any implementation
+through `ModernAdminModuleOptions.aiAssistant.provider` without changing the
+assistant task lifecycle, authorization, tool assembly, citations, or UI
+actions.
+
+The stored/public provider field is now a string rather than the former
+single-member `'openrouter'` literal, so alternate providers cross the settings
+boundary without unsafe casts.
+
+### F2 — Frontend client abstraction and injectable browser effects
+
+`packages/react/src/client.ts` now exports `IAdminClient`, and
+`ModernAdminProvider`, hooks, dashboard query code, and export helpers consume
+that structural contract. Applications may inject a REST client, a GraphQL
+client, a test double, or another implementation through the existing
+`client` prop.
+
+The bundled `AdminClient` implements the interface and accepts `fetchImpl`,
+`storage`, `getCurrentUrl`, and `navigate` adapters. Unit tests no longer need
+to mutate `globalThis.fetch`; browser-only effects have explicit seams.
+
+### F3 — Provider-specific authentication routes
+
+`AdminClientOptions.authPaths` independently configures email sign-in, social
+sign-in, and sign-out endpoints. `authBasePath` and its Better Auth-compatible
+defaults remain for backward compatibility. The same option is exposed by
+`ModernAdminRuntimeConfig`, so the standalone SPA can use a different auth
+provider without rebuilding the bundle.
+
+### F4 — GraphQL and REST are siblings
+
+`@modern-admin/graphql` no longer declares or imports `@modern-admin/nest`.
+It uses core's shared `MODERN_ADMIN` token and its own
+`ModernAdminGraphqlAuthGuard`, which authenticates through `IAuthProvider`.
+The package remains a Nest-hosted GraphQL transport and therefore peers on the
+Nest framework itself, but it no longer pulls in the REST transport.
+
+### F5 — Upload transport dependencies are optional
+
+The root `@modern-admin/feature-upload` dependency set is core-only. Nest,
+Busboy, RxJS, and reflection packages are optional peers used by the explicit
+`@modern-admin/feature-upload/nest` subpath; GraphQL and AWS SDK integrations
+follow the same optional-peer pattern. Consumers using only the feature policy
+or a custom transport no longer install the bundled Nest upload stack.
+
+### F6 — Telemetry is injected at bootstrap
+
+`ModernAdminModuleOptions.telemetry` is a host-supplied callback. Nest bootstrap
+invokes it asynchronously and isolates failures, but no longer imports
+`@modern-admin/telemetry` or performs network I/O directly.
+
+`@modern-admin/telemetry` exports `reportModernAdminTelemetry` as the built-in
+adapter. The reference Prisma application wires it explicitly, preserving the
+existing `MODERN_ADMIN_TELEMETRY=1` opt-in behavior at the composition root.
+
+### F7 — Broker-neutral AI dispatch
+
+`IAiAssistantQueueDispatcher` owns the assistant's enqueue contract. A host can
+provide it through `aiAssistant.queue.dispatcher`; in that mode the Nest module
+does not register its BullMQ queue or worker. The external adapter is
+responsible for delivering `AiAssistantChatJobData` to
+`AiAssistantService.runChatJob()`.
+
+BullMQ remains the backwards-compatible default. `forRootAsync` exposes the
+matching synchronous `aiAssistantQueue: 'bullmq' | 'external'` selector because
+Nest freezes imports/providers before the async options factory resolves, and
+bootstrap validation rejects a selector/dispatcher mismatch.
+
+---
+
+## Remaining design constraints
+
+These are deliberate defaults rather than inversion violations:
+
+- `@modern-admin/graphql` and `@modern-admin/feature-upload/nest` are Nest-hosted
+  integrations and therefore require Nest when those entry points are used.
+- The bundled REST client still implements the Modern Admin REST protocol; an
+  alternative protocol is supplied as another `IAdminClient` implementation.
+- The default LLM adapter requires an API key. A custom `ILlmProvider` decides
+  its own readiness through `isConfigured()` and may ignore the key.
+- The default AI queue remains BullMQ to preserve existing deployments; the
+  service's dispatch policy no longer depends on BullMQ's API.
+
+---
+
+## Regression checks
+
+Changes to these boundaries should preserve the following checks:
+
+1. `packages/core` must not import ORM, Nest, React, queue, telemetry, or vendor
+   SDK modules.
+2. `packages/graphql` must not import or depend on `@modern-admin/nest`.
+3. React hooks and providers must use `IAdminClient`, not require the concrete
+   REST implementation.
+4. LLM SDK imports must remain lazy and confined to provider adapters.
+5. Nest bootstrap must call only the configured telemetry callback.
+6. Selecting an external AI queue must omit BullMQ registration and require a
+   dispatcher.
+7. Importing the root upload feature must not require Nest/Busboy/RxJS to be
+   installed.

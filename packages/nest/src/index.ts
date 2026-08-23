@@ -14,7 +14,21 @@ export {
 } from './ai-assistant.service.js'
 export { AiAssistantProcessor } from './ai-assistant.processor.js'
 export { AI_ASSISTANT_QUEUE, AI_ASSISTANT_CHAT_JOB } from './ai-assistant.constants.js'
-export type { AiAssistantChatJobData, AiAssistantChatMessageInput, AiAssistantTaskOutput } from './ai-assistant.types.js'
+export {
+  OpenRouterLlmProvider,
+  type ILlmProvider,
+  type LlmChatMessage,
+  type LlmGenerateInput,
+  type LlmGenerateResult,
+  type LlmTool,
+} from './llm-provider.js'
+export type {
+  AiAssistantChatJobData,
+  AiAssistantChatMessageInput,
+  AiAssistantQueueOptions,
+  AiAssistantTaskOutput,
+  IAiAssistantQueueDispatcher,
+} from './ai-assistant.types.js'
 export {
   AnalyticsController,
   type TimeSeriesRequest,

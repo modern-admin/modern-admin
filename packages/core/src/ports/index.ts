@@ -1,4 +1,5 @@
 export type { CurrentAdmin } from './current-admin.js'
+export { MODERN_ADMIN } from './di-tokens.js'
 export { ConsoleLogger, type ILogger } from './logger.js'
 export {
   AnonymousAuthProvider,

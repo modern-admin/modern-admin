@@ -7,6 +7,7 @@ export {
   type BuildGraphqlSchemaOptions,
 } from './schema-builder.js'
 export { GraphqlController } from './controller.js'
+export { ModernAdminGraphqlAuthGuard } from './auth.guard.js'
 export {
   ModernAdminGraphqlModule,
   type ModernAdminGraphqlOptions,

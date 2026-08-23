@@ -34,6 +34,7 @@ import { ModernAdminUploadModule } from '@modern-admin/feature-upload/nest'
 import { uploadGraphqlExtension } from '@modern-admin/feature-upload/graphql'
 import { historyPlugin } from '@modern-admin/feature-history'
 import { setupPrismaSystem } from '@modern-admin/system-prisma'
+import { reportModernAdminTelemetry } from '@modern-admin/telemetry'
 import {
   AdminsAdminModule,
   buildAiAssistantConfig,
@@ -129,6 +130,7 @@ const apiKeyService = buildApiKeyService(authProvider)
       historyStore: system.historyStore,
       logStore: system.logStore,
       webhookStore: system.webhookStore,
+      telemetry: reportModernAdminTelemetry,
       // Execute AI assistant SQL queries inside a PostgreSQL READ ONLY
       // transaction that is always rolled back — two layers of defence:
       //   1. SET TRANSACTION READ ONLY — PostgreSQL physically blocks any

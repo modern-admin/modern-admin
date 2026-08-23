@@ -170,6 +170,7 @@ export {
   ConsoleLogger,
   InMemoryRealtimeBus,
   MemoryCacheProvider,
+  MODERN_ADMIN,
   NoopCacheProvider,
   NoopRealtimeBus,
   withCrossInstanceInvalidation,
