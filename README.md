@@ -37,11 +37,11 @@ weaknesses:
 | UI           | shadcn/ui, Tailwind CSS 4 (CSS-first), Recharts 3 |
 | Backend      | NestJS 11+ (REST + GraphQL + WebSocket + OpenAPI) |
 | ORMs         | Prisma 7+, Drizzle 0.45+                          |
-| Auth         | Better Auth 1.6+ (cookies + API keys)             |
+| Auth         | Better Auth 1.7+ (cookies + API keys)             |
 | Cache        | Redis (backend) + TanStack Query 5 (frontend)     |
 | Queue        | BullMQ + `@nestjs/bullmq` (jobs, cron, webhooks)  |
 | Validation   | Zod 4 end-to-end                                  |
-| Language     | TypeScript 6 (strict)                             |
+| Language     | TypeScript 7 (strict)                             |
 
 > Dependency policy: this project always pins to the latest stable release of
 > each library. Code is adapted for breaking changes, not held back.
@@ -78,7 +78,7 @@ modern-admin/
 │   ├── feature-json-by-key/       — declarative JSON sub-properties
 │   ├── license/                   — license-gate (jose, Ed25519/JWS) for Pro packages
 │   ├── telemetry/                 — anonymous usage telemetry
-│   ├── create/                    — `bun create @modern-admin <name>` scaffolder
+│   ├── create/                    — scaffold, schema-generation, and custom-UI CLI
 │   └── tsconfig/                  — shared TS presets
 ├── .changeset/                    — Changesets workflow
 ├── .github/workflows/release.yml  — CI publish → npm (registry.npmjs.org)
@@ -184,6 +184,13 @@ Scaffold a new project:
 bun create @modern-admin my-admin
 ```
 
+Extend an existing host project:
+
+```bash
+bunx @modern-admin/create generate   # add ma_* system tables
+bunx @modern-admin/create setup-ui   # create and connect a custom UI bundle
+```
+
 ## Documentation
 
 Full documentation lives at **<https://docs.modernadminpro.com/docs/getting-started>**.
@@ -205,8 +212,9 @@ Full documentation lives at **<https://docs.modernadminpro.com/docs/getting-star
   `@modern-admin/react/styles.css` and add one `@source` for their own files.
   `border` requires an explicit color in Tailwind 4 — pair with
   `border-border`.
-- TypeScript 6 stricter checks: use `as unknown as T` for variance/abstract
-  constructor casts.
+- TypeScript 7 carries the stricter TypeScript 6 checks forward: use
+  `as unknown as T` for variance/abstract constructor casts. ESLint and DTS
+  tooling temporarily use the side-by-side TypeScript 6 JavaScript API.
 - React 19: use `import type { ReactElement } from 'react'` instead of
   `JSX.Element`.
 - Mobile-first UI: base classes target small viewports, `sm:`/`md:`/`lg:`
@@ -222,10 +230,14 @@ Full documentation lives at **<https://docs.modernadminpro.com/docs/getting-star
 - `relatedResources[].label` is translatable: set `relatedResources` map in
   `metadataTranslations`; `localizeRelatedResources()` resolves the labels.
 - Cache behavior is configurable per resource via `ResourceOptions.cache`:
-  `{ action?: { enabled, ttl }, http?: { enabled, ttl } }`. Core ships
-  `MemoryCacheProvider` (TTL + tags) and `NoopCacheProvider`; Redis is in
-  `@modern-admin/cache-redis`. HTTP responses and action cache share the same
-  `listTag` / `recordTag` split for targeted invalidation.
+  `{ list/show/search/http?: { enabled, ttl, jitterRatio, crossReplicaLock } }`.
+  Core ships bounded-LRU `MemoryCacheProvider` and the default
+  `NoopCacheProvider`; Redis is in `@modern-admin/cache-redis`. HTTP entries
+  are scoped per principal, invalidated with role-permission changes, and
+  bypassed when functional action/property `isAccessible` rules make a cached
+  filtered response unsafe to replay. Action and HTTP caches share versioned
+  keys, tag-generation fencing, targeted invalidation, positive TTL jitter,
+  fail-open reads/writes, and invalidation quarantine.
 - Commit messages follow Angular Conventional Commits:
   `<type>(<scope>): <subject>` with a per-package body.
 - Releases run through **Changesets + `.github/workflows/release.yml`** —

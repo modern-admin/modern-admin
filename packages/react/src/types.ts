@@ -122,6 +122,7 @@ export interface AdminFeatures {
   aiAssistant: boolean
   /** Realtime WS gateway is mounted — the SPA live-invalidates its cache. */
   realtime: boolean
+  cache: boolean
 }
 
 const ALL_FEATURES_OFF: AdminFeatures = {
@@ -131,6 +132,7 @@ const ALL_FEATURES_OFF: AdminFeatures = {
   apiKeys: false,
   aiAssistant: false,
   realtime: false,
+  cache: false,
 }
 
 /** Defensive resolver for older API servers that don't yet surface
@@ -141,8 +143,33 @@ export const resolveFeatures = (raw?: Partial<AdminFeatures>): AdminFeatures => 
   ...(raw ?? {}),
 })
 
+/**
+ * Client-side branding overrides: what to call the panel and which mark to
+ * show, applied on the sidebar header, the loading splash, and the login
+ * screen. Supplied by the host through `AdminAppProps.brand` (the standalone
+ * bundle forwards `window.__MODERN_ADMIN__.brand`).
+ *
+ * Takes precedence over the server's `AdminConfig.branding.companyName`,
+ * which in turn takes precedence over the `common:appName` translation.
+ */
+export interface AdminBrand {
+  /** Product name shown in the sidebar header, splash, and login screen. */
+  title?: string
+  /** Logo image URL, rendered in place of the built-in database mark. */
+  logoUrl?: string
+}
+
 export interface AdminConfig {
   rootPath: string
+  /**
+   * Server-side branding from `ModernAdminOptions.branding`. Only
+   * `companyName` is read by the SPA.
+   *
+   * @deprecated `logo` and `theme` have never had a reader in any package.
+   *   Use `AdminAppProps.brand.logoUrl` for the logo, and
+   *   `ModernAdminStaticUiOptions.themeCss` (or your own stylesheet) for the
+   *   theme. Both fields are ignored and will be removed.
+   */
   branding?: { companyName?: string; logo?: string; theme?: string }
   auth: Record<string, unknown>
   resources: ResourceJSON[]
@@ -260,4 +287,19 @@ export interface PropertyEditorProps {
   disabled?: boolean
   /** Required for `type: 'file'` properties to route uploads correctly. */
   resourceId?: string
+  /**
+   * `id` of the editor's focusable control. Record forms pass the field name
+   * here so the `<FieldLabel htmlFor=…>` above actually resolves — without it
+   * no field on the edit screen has an accessible name.
+   *
+   * Custom editors registered through the extension registry should forward
+   * it (plus the three ARIA props below) to whatever element they render.
+   */
+  id?: string
+  /** Id of the error/description element, forwarded as `aria-describedby`. */
+  describedBy?: string
+  /** Whether the field currently fails validation — sets `aria-invalid`. */
+  invalid?: boolean
+  /** Whether the field is required — sets `aria-required`. */
+  required?: boolean
 }

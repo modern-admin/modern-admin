@@ -9,21 +9,60 @@ import {
   type FindOptions,
 } from '@modern-admin/core'
 import { PrismaProperty } from './property.js'
+import type { PrismaDialect } from './types.js'
+
+/**
+ * `mode: 'insensitive'` is a PostgreSQL/MongoDB-only Prisma feature — MySQL
+ * and SQLite reject it outright. Every string clause below routes through
+ * this so a non-Postgres `dialect` degrades to the database's own collation
+ * (case-insensitive by default on MySQL, case-*sensitive* on SQLite) instead
+ * of throwing.
+ *
+ * Spread into a clause: `{ contains: v, ...insensitive(dialect) }`.
+ */
+const insensitive = (dialect: PrismaDialect): { mode?: 'insensitive' } =>
+  dialect === 'pg' ? { mode: 'insensitive' } : {}
+
+/** Matches the default used across the adapter when no dialect is configured. */
+const DEFAULT_DIALECT: PrismaDialect = 'pg'
+
+/**
+ * Whether Prisma accepts substring operators (`contains`, `startsWith`,
+ * `endsWith`) on this column.
+ *
+ * The core property *type* is too narrow a signal here: a `String @id` is
+ * surfaced as `uuid` by {@link PrismaProperty.resolveType} and FK columns as
+ * `reference`, yet underneath both are plain `String` columns Prisma is happy
+ * to match against. Gating on the taxonomy dropped those clauses silently, so
+ * filtering a list by a pasted id returned the *unfiltered* list.
+ *
+ * Deliberately NOT used for `eq`/`neq`: those stay exact on non-string types.
+ * The string branch may add `mode: 'insensitive'`, which costs the btree index on
+ * the column — and equality on an id / FK is the hot path (every related-records
+ * tab issues one). Substring matching can't use that index either way.
+ */
+const acceptsSubstringOps = (property: PrismaProperty | null): boolean => {
+  if (property == null) return false
+  if (property.type() === 'string') return true
+  const field = property.field
+  return field?.kind === 'scalar' && field.type === 'String'
+}
 
 /**
  * Build the Prisma `where` clause for a single filter element.
  *
  * When an explicit `operator` is set, it takes precedence over legacy
- * implicit behaviour. All string operations use `mode: 'insensitive'`
- * for case-insensitive matching (supported by Prisma on PostgreSQL and MongoDB).
+ * implicit behaviour. String operations add `mode: 'insensitive'` only on
+ * dialects where Prisma supports it (PostgreSQL, MongoDB) — see
+ * {@link insensitive}.
  */
-const buildClause = (element: FilterElement): unknown => {
+const buildClause = (element: FilterElement, dialect: PrismaDialect): unknown => {
   const property = element.property as PrismaProperty | null
   const { value, operator } = element
 
   // ── Explicit operator ────────────────────────────────────────────────
   if (operator) {
-    return buildOperatorClause(operator, value, property)
+    return buildOperatorClause(operator, value, property, dialect)
   }
 
   // ── Legacy implicit behaviour (backward compat) ──────────────────────
@@ -47,14 +86,14 @@ const buildClause = (element: FilterElement): unknown => {
   const coerced = coerceScalar(value, property)
   if (property?.isArray()) return { has: coerced }
   if (property && property.type() === 'string' && typeof coerced === 'string') {
-    return { contains: coerced, mode: 'insensitive' }
+    return { contains: coerced, ...insensitive(dialect) }
   }
   return { equals: coerced }
 }
 
 /**
  * Translate an explicit FilterOperator to a Prisma **field-level** where clause.
- * String comparisons are case-insensitive via `mode: 'insensitive'`.
+ * String comparisons request `mode: 'insensitive'` where the dialect allows.
  *
  * NOTE: `empty`, `nempty` and `nco` require top-level WHERE clauses (OR / NOT)
  * and are handled directly in {@link filterToWhere}. They never reach here.
@@ -63,8 +102,10 @@ const buildOperatorClause = (
   operator: FilterOperator,
   value: FilterValue,
   property: PrismaProperty | null,
+  dialect: PrismaDialect,
 ): unknown => {
   const isString = property != null && property.type() === 'string'
+  const canSubstring = acceptsSubstringOps(property)
   const isArray = property?.isArray() ?? false
 
   // ── Scalar-list (e.g. `String[]`, `Int[]`) field semantics ──────────
@@ -95,7 +136,7 @@ const buildOperatorClause = (
   case 'eq': {
     const coerced = coerceScalar(value, property)
     if (isString && typeof coerced === 'string') {
-      return { equals: coerced, mode: 'insensitive' }
+      return { equals: coerced, ...insensitive(dialect) }
     }
     return { equals: coerced }
   }
@@ -104,27 +145,27 @@ const buildOperatorClause = (
     if (isString && typeof coerced === 'string') {
       // `notIn` + `mode` is valid at field level; `not: { equals, mode }` is NOT
       // because NestedStringFilter has no `mode`.
-      return { notIn: [coerced], mode: 'insensitive' }
+      return { notIn: [coerced], ...insensitive(dialect) }
     }
     return { not: coerced }
   }
   case 'co': {
     // `contains`/`startsWith`/`endsWith` are only valid on string columns.
-    // Drop the clause on non-string fields instead of emitting an invalid
+    // Drop the clause on anything else instead of emitting an invalid
     // where that crashes Prisma.
-    if (!isString) return undefined
+    if (!canSubstring) return undefined
     const coerced = coerceScalar(value, property)
-    return { contains: String(coerced), mode: 'insensitive' }
+    return { contains: String(coerced), ...insensitive(dialect) }
   }
   case 'sw': {
-    if (!isString) return undefined
+    if (!canSubstring) return undefined
     const coerced = coerceScalar(value, property)
-    return { startsWith: String(coerced), mode: 'insensitive' }
+    return { startsWith: String(coerced), ...insensitive(dialect) }
   }
   case 'ew': {
-    if (!isString) return undefined
+    if (!canSubstring) return undefined
     const coerced = coerceScalar(value, property)
-    return { endsWith: String(coerced), mode: 'insensitive' }
+    return { endsWith: String(coerced), ...insensitive(dialect) }
   }
   case 'in': {
     if (Array.isArray(value)) {
@@ -183,7 +224,10 @@ const buildOperatorClause = (
  * clauses because Prisma only allows these at the `where` root — not inside
  * a field-level filter. These are collected separately and merged via `AND`.
  */
-export const filterToWhere = (filter: Filter): Record<string, unknown> => {
+export const filterToWhere = (
+  filter: Filter,
+  dialect: PrismaDialect = DEFAULT_DIALECT,
+): Record<string, unknown> => {
   const where: Record<string, unknown> = {}
   const topLevel: unknown[] = []
 
@@ -220,9 +264,9 @@ export const filterToWhere = (filter: Filter): Record<string, unknown> => {
     if (operator === 'nco') {
       // `contains` is only defined on string columns; drop silently on
       // anything else so the request never 500s.
-      if (!isString) return null
+      if (!acceptsSubstringOps(property)) return null
       const coerced = coerceScalar(value, property)
-      topLevel.push({ NOT: { [path]: { contains: String(coerced), mode: 'insensitive' } } })
+      topLevel.push({ NOT: { [path]: { contains: String(coerced), ...insensitive(dialect) } } })
       return null
     }
 
@@ -244,7 +288,7 @@ export const filterToWhere = (filter: Filter): Record<string, unknown> => {
         for (const [innerKey, innerValue] of Object.entries(value as Record<string, unknown>)) {
           if (innerValue == null || innerValue === '') continue
           inner[innerKey] = typeof innerValue === 'string'
-            ? { contains: innerValue, mode: 'insensitive' }
+            ? { contains: innerValue, ...insensitive(dialect) }
             : { equals: innerValue }
         }
         if (Object.keys(inner).length === 0) return null
@@ -259,7 +303,7 @@ export const filterToWhere = (filter: Filter): Record<string, unknown> => {
       return null
     }
 
-    const clause = buildClause(element)
+    const clause = buildClause(element, dialect)
     if (clause !== undefined) where[path] = clause
     return null
   }, null)

@@ -4,6 +4,7 @@ import {
   BaseResource,
   buildDisplaySql,
   isoDate,
+  parseDateValue,
   stringifyKey,
   toNumber,
   truncateDate,
@@ -41,6 +42,23 @@ const lowerFirst = (s: string): string => (s.length ? s[0]!.toLowerCase() + s.sl
  * its own client.
  */
 const txStorage = new AsyncLocalStorage<{ base: PrismaClientLike; tx: PrismaClientLike }>()
+
+/**
+ * `meta` on a `PrismaClientKnownRequestError`, covering both the legacy Rust
+ * engine shape (`target` / `field_name`) and the Prisma 7 driver-adapter one
+ * (`driverAdapterError`).
+ */
+interface PrismaErrorMeta {
+  target?: string[]
+  field_name?: string
+  modelName?: string
+  driverAdapterError?: {
+    cause?: {
+      kind?: string
+      constraint?: { fields?: string[]; index?: string; foreignKey?: boolean }
+    }
+  }
+}
 
 const isPrismaResourceConfig = (raw: unknown): raw is PrismaResourceConfig =>
   typeof raw === 'object' &&
@@ -106,6 +124,15 @@ export class PrismaResource extends BaseResource {
 
   override id(): string {
     return this.model.name
+  }
+
+  /**
+   * Prisma's `mode: 'insensitive'` is PostgreSQL/MongoDB-only; MySQL and
+   * SQLite reject it. Spread this into string clauses so the configured
+   * `dialect` is actually honoured instead of producing an invalid query.
+   */
+  private insensitive(): { mode?: 'insensitive' } {
+    return this.dialect === 'pg' ? { mode: 'insensitive' } : {}
   }
 
   override databaseName(): string {
@@ -190,10 +217,13 @@ export class PrismaResource extends BaseResource {
       if (field.isRequired && normalised === null) continue
       // datetime-local inputs produce "YYYY-MM-DDTHH:mm" (no seconds / no tz).
       // Prisma 7 requires a complete ISO-8601 DateTime string, so we round-trip
-      // through Date to normalise any partial string.  Invalid strings are
-      // passed through unchanged so Prisma can surface the validation error.
+      // through Date to normalise any partial string.  `parseDateValue` reads
+      // an offset-less string as UTC — plain `new Date` would resolve it in the
+      // server's timezone, shifting the stored instant by the browser/server
+      // gap on every save.  Invalid strings are passed through unchanged so
+      // Prisma can surface the validation error.
       if (field.type === 'DateTime' && typeof normalised === 'string' && normalised !== '') {
-        const d = new Date(normalised)
+        const d = parseDateValue(normalised)
         out[field.name] = Number.isNaN(d.getTime()) ? normalised : d.toISOString()
       } else if (typeof normalised === 'string') {
         // Form-encoded payloads (`application/x-www-form-urlencoded`,
@@ -225,7 +255,7 @@ export class PrismaResource extends BaseResource {
     const isNullable = !modelField.isRequired
     const conditions: Record<string, unknown>[] = []
     if (isNullable) conditions.push({ [field]: { not: null } })
-    if (options?.search) conditions.push({ [field]: { contains: options.search, mode: 'insensitive' } })
+    if (options?.search) conditions.push({ [field]: { contains: options.search, ...this.insensitive() } })
     const where: Record<string, unknown> =
       conditions.length === 0 ? {}
         : conditions.length === 1 ? conditions[0]!
@@ -246,7 +276,7 @@ export class PrismaResource extends BaseResource {
 
   override async count(filter: Filter): Promise<number> {
     try {
-      return await this.delegate().count({ where: filterToWhere(filter) })
+      return await this.delegate().count({ where: filterToWhere(filter, this.dialect) })
     } catch (err) {
       throw this.toValidationError(err)
     }
@@ -255,7 +285,7 @@ export class PrismaResource extends BaseResource {
   override async find(filter: Filter, options: FindOptions): Promise<BaseRecord[]> {
     try {
       const rows = (await this.delegate().findMany({
-        where: filterToWhere(filter),
+        where: filterToWhere(filter, this.dialect),
         ...findOptionsToPrisma(options),
       })) as ParamsType[]
       return rows.map((row) => new BaseRecord(row, this))
@@ -282,7 +312,7 @@ export class PrismaResource extends BaseResource {
     const stringFields = fields.filter((f) => stringFieldNames.has(f))
     if (stringFields.length === 0) return []
     const contains = (field: string): Record<string, unknown> => ({
-      [field]: { contains: query, mode: 'insensitive' },
+      [field]: { contains: query, ...this.insensitive() },
     })
     const where =
       stringFields.length === 1
@@ -334,13 +364,19 @@ export class PrismaResource extends BaseResource {
   }
 
   override async delete(id: string): Promise<void> {
-    await this.delegate().delete({ where: this.idClause(id) })
+    try {
+      await this.delegate().delete({ where: this.idClause(id) })
+    } catch (err) {
+      // Delete-restrict raises P2003 — the single most common way users meet
+      // a foreign-key error, so it must surface as a 400 like the rest.
+      throw this.toValidationError(err)
+    }
   }
 
   override async deleteMany(filter: Filter): Promise<number> {
     try {
       const { count } = (await this.delegate().deleteMany({
-        where: filterToWhere(filter),
+        where: filterToWhere(filter, this.dialect),
       })) as { count: number }
       return count
     } catch (err) {
@@ -406,7 +442,7 @@ export class PrismaResource extends BaseResource {
       if (!f) throw new Error(`aggregateTimeSeries: groupBy "${query.groupBy}" not found`)
     }
 
-    const baseWhere = filterToWhere(filter)
+    const baseWhere = filterToWhere(filter, this.dialect)
     const where: Record<string, unknown> = {
       ...baseWhere,
       [query.dateField]: { gte: query.from, lte: query.to },
@@ -538,6 +574,67 @@ export class PrismaResource extends BaseResource {
   }
 
   /**
+   * Resolve a physical column name back to its Prisma field name, honouring
+   * `@map`. Falls back to the field name itself so unmapped schemas work.
+   */
+  private fieldNameForColumn(column: string): string | undefined {
+    return this.model.fields.find((f) => (f.dbName ?? f.name) === column)?.name
+  }
+
+  /**
+   * Split a constraint/index name (`Model_a_b_key`) into Prisma field names.
+   * Returns `[]` when the name doesn't belong to this model's table — that
+   * happens on delete-restrict, where the violated constraint lives on the
+   * *referencing* table.
+   */
+  private fieldNamesFromIndex(index: string): string[] {
+    const table = this.model.dbName ?? this.model.name
+    if (!index.startsWith(`${table}_`)) return []
+    const body = index.slice(table.length + 1).replace(/_(fkey|key|pkey|idx)$/, '')
+    if (!body) return []
+    const direct = this.fieldNameForColumn(body)
+    if (direct) return [direct]
+    // Composite constraints join columns with `_`, and a column may itself
+    // contain one — walk the segments longest-match-first.
+    const segments = body.split('_')
+    const names: string[] = []
+    let i = 0
+    while (i < segments.length) {
+      let matched = false
+      for (let j = segments.length; j > i; j--) {
+        const name = this.fieldNameForColumn(segments.slice(i, j).join('_'))
+        if (!name) continue
+        names.push(name)
+        i = j
+        matched = true
+        break
+      }
+      if (!matched) return []
+    }
+    return names
+  }
+
+  /**
+   * Prisma 7 driver adapters (`@prisma/adapter-pg` and friends) no longer
+   * emit the Rust engine's `meta.target` / `meta.field_name`. Constraint
+   * details now arrive under `meta.driverAdapterError.cause.constraint` in
+   * one of three shapes: `{ fields }` (column list, typical for P2002),
+   * `{ index }` (constraint name, typical for P2003) or `{ foreignKey }`
+   * (no detail at all). Normalise every shape onto Prisma field names.
+   */
+  private constraintFieldNames(meta: PrismaErrorMeta | undefined): string[] {
+    const constraint = meta?.driverAdapterError?.cause?.constraint
+    if (!constraint) return []
+    if (Array.isArray(constraint.fields)) {
+      return constraint.fields
+        .map((c) => this.fieldNameForColumn(c))
+        .filter((f): f is string => typeof f === 'string')
+    }
+    if (typeof constraint.index === 'string') return this.fieldNamesFromIndex(constraint.index)
+    return []
+  }
+
+  /**
    * Map Prisma's known error shapes onto a core ValidationError so the action
    * layer can render per-field messages. Unknown errors propagate as-is.
    */
@@ -547,21 +644,44 @@ export class PrismaResource extends BaseResource {
       code?: string
       name?: string
       constructor?: { name?: string }
-      meta?: { target?: string[]; field_name?: string; modelName?: string }
+      meta?: PrismaErrorMeta
       message?: string
     }
-    if (e.code === 'P2002' && Array.isArray(e.meta?.target)) {
-      const fields = e.meta.target
+    if (e.code === 'P2002') {
+      const fields = Array.isArray(e.meta?.target)
+        ? e.meta.target
+        : this.constraintFieldNames(e.meta)
+      if (fields.length === 0) {
+        // Constraint details unavailable (`{ foreignKey: true }`, or an index
+        // we can't map) — still a 400, just without a field anchor.
+        return new ValidationError({}, { type: 'unique', message: 'a record with these values already exists' })
+      }
       return new ValidationError(
         Object.fromEntries(
           fields.map((f) => [f, { type: 'unique', message: `${f} must be unique` }]),
         ),
       )
     }
-    if (e.code === 'P2003' && e.meta?.field_name) {
-      return new ValidationError({
-        [e.meta.field_name]: { type: 'foreignKey', message: 'related record not found' },
-      })
+    if (e.code === 'P2003') {
+      // The legacy engine's `field_name` is either a bare field or a
+      // constraint name (sometimes suffixed with ` (index)`).
+      const legacy = e.meta?.field_name?.replace(/\s*\(index\)$/, '')
+      const fields = legacy
+        ? this.fieldNameForColumn(legacy)
+          ? [this.fieldNameForColumn(legacy)!]
+          : this.fieldNamesFromIndex(legacy)
+        : this.constraintFieldNames(e.meta)
+      if (fields.length === 0) {
+        // The constraint sits on another table: something still points at
+        // this record (delete-restrict), rather than this record pointing at
+        // a missing one.
+        return new ValidationError({}, { type: 'foreignKey', message: 'this record is still referenced by related records' })
+      }
+      return new ValidationError(
+        Object.fromEntries(
+          fields.map((f) => [f, { type: 'foreignKey', message: 'related record not found' }]),
+        ),
+      )
     }
     // `PrismaClientValidationError` covers missing required arguments and
     // type mismatches. Surface as a field-level ValidationError so the

@@ -1,5 +1,5 @@
 import { type BaseResource, type ParamsType, type RecordJSON } from './adapters'
-import { BUILT_IN_ACTIONS, CacheRuntime, listTag, recordTag, recordsTag, type Action, type ActionContext, type ActionRequest, type ActionResponse, type After, type Before } from './actions'
+import { BUILT_IN_ACTIONS, CacheRuntime, cacheKey, listTag, recordTag, recordsTag, rolePermissionsTag, type Action, type ActionContext, type ActionRequest, type ActionResponse, type After, type Before, type CacheRuntimeOptions } from './actions'
 import type { ResourceDecorator, ResourceJSON } from './decorators/resource-decorator.js'
 import type { ActionDecorator } from './decorators/action-decorator.js'
 import { ResourcesFactory, type Adapter, type GlobalPlugin, type ResourceWithOptions } from './factories/resources-factory.js'
@@ -14,7 +14,7 @@ export interface RegisterResourcesArgs {
   /** Defaults to plugins passed at construction time. */
   plugins?: GlobalPlugin[]
 }
-import { AnonymousAuthProvider, ComponentLoader, CrossInstanceCacheProvider, NoopCacheProvider, NoopRealtimeBus, withCrossInstanceInvalidation, type CurrentAdmin, type IAuthProvider, type ICacheProvider, type IComponentLoader, type IRealtimeBus, type RealtimeEvent } from './ports'
+import { AnonymousAuthProvider, ComponentLoader, ConsoleLogger, CrossInstanceCacheProvider, NoopCacheProvider, NoopRealtimeBus, withCrossInstanceInvalidation, type CurrentAdmin, type IAuthProvider, type ICacheProvider, type IComponentLoader, type ILogger, type IRealtimeBus, type RealtimeEvent } from './ports'
 import { setActiveFeatureFlags } from './feature-flags.js'
 
 export interface ModernAdminOptions {
@@ -23,12 +23,35 @@ export interface ModernAdminOptions {
   adapters?: Adapter[]
   rootPath?: string
   branding?: {
+    /**
+     * Product name. Surfaced through `/admin/api/config` and rendered in the
+     * sidebar header, the loading splash, and the login screen — unless the
+     * client overrides it via `AdminAppProps.brand.title`.
+     */
     companyName?: string
+    /**
+     * @deprecated Never had a reader in any package — it was serialised into
+     *   the wire payload and dropped. Set the logo client-side with
+     *   `AdminAppProps.brand.logoUrl` (the standalone bundle reads
+     *   `window.__MODERN_ADMIN__.brand.logoUrl`). Ignored; will be removed.
+     */
     logo?: string
+    /**
+     * @deprecated Never had a reader in any package. Theming is done by
+     *   overriding the `:root` / `.dark` design tokens — see
+     *   `ModernAdminStaticUiOptions.themeCss` in `@modern-admin/nest`.
+     *   Ignored; will be removed.
+     */
     theme?: string
   }
   auth?: IAuthProvider
   cache?: ICacheProvider
+  /** Framework logger. Defaults to a console-backed implementation. */
+  logger?: ILogger
+  /** Failure-isolation, jitter, and retry tuning for the shared cache facade. */
+  cacheRuntime?: Omit<CacheRuntimeOptions, 'logger'>
+  /** Safety TTL for cached role permission matrices. Defaults to 5 minutes. */
+  rolePermissionsCacheTtl?: number
   componentLoader?: IComponentLoader
   realtime?: IRealtimeBus
   /**
@@ -112,6 +135,8 @@ export interface AdminFeatures {
    *  SPA connects to it and live-invalidates its query cache on mutation
    *  events from other sessions/instances. */
   realtime: boolean
+  /** Cache diagnostics page + operator invalidation endpoint. */
+  cache: boolean
 }
 
 const ALL_FEATURES_OFF: AdminFeatures = {
@@ -121,6 +146,7 @@ const ALL_FEATURES_OFF: AdminFeatures = {
   apiKeys: false,
   aiAssistant: false,
   realtime: false,
+  cache: false,
 }
 
 const resolveFeatures = (options?: Partial<AdminFeatures>): AdminFeatures => ({
@@ -144,19 +170,15 @@ export interface ModernAdminJSON {
 export class ModernAdmin {
   public readonly resources: BaseResource[]
   public readonly auth: IAuthProvider
+  /** Low-level provider escape hatch for adapter integrations. Framework and
+   * application reads/invalidation should use `cacheRuntime` so fencing,
+   * quarantine, metrics, and failure isolation remain active. */
   public readonly cache: ICacheProvider
   public readonly cacheRuntime: CacheRuntime
+  public readonly logger: ILogger
   public readonly componentLoader: IComponentLoader
   public readonly realtime: IRealtimeBus
   public readonly rootPath: string
-
-  /**
-   * Process-local cache of role permissions keyed by role name. Filled on
-   * first lookup, cleared whenever the configured `rolesResourceId` is
-   * mutated (see `emitMutationEvents`). A null entry caches "role not
-   * found" to avoid repeated misses for unknown role strings.
-   */
-  private readonly rolePermsCache = new Map<string, RolePermissions | null>()
 
   /**
    * Reverse cache-dependency map: for resource B, the set of resources
@@ -182,11 +204,15 @@ export class ModernAdmin {
     setActiveFeatureFlags(options.featureFlags ?? [])
     this.rootPath = options.rootPath ?? '/admin'
     this.auth = options.auth ?? new AnonymousAuthProvider()
+    this.logger = options.logger ?? new ConsoleLogger()
     // Providers with pub/sub support (RedisCacheProvider with a subscriber
     // client) get wrapped so tag invalidations broadcast to sibling
     // instances; providers without it are used as-is.
-    this.cache = withCrossInstanceInvalidation(options.cache ?? new NoopCacheProvider())
-    this.cacheRuntime = new CacheRuntime(this.cache)
+    this.cache = withCrossInstanceInvalidation(options.cache ?? new NoopCacheProvider(), this.logger)
+    this.cacheRuntime = new CacheRuntime(this.cache, {
+      ...options.cacheRuntime,
+      logger: this.logger,
+    })
     this.componentLoader = options.componentLoader ?? new ComponentLoader()
     this.realtime = options.realtime ?? new NoopRealtimeBus()
     this.resources = ResourcesFactory.buildResources({
@@ -194,6 +220,7 @@ export class ModernAdmin {
       resources: options.resources ?? [],
       adapters: options.adapters ?? [],
       plugins: options.plugins ?? [],
+      logger: this.logger,
     })
   }
 
@@ -202,54 +229,45 @@ export class ModernAdmin {
    * roles resource. Returns null if no `rolesResourceId` is set, the
    * resource is not registered, or the row is missing.
    *
-   * Caches per-role; consumers should not mutate the returned object.
+   * Caches per-role through the shared provider, fenced and invalidated by
+   * `role-perms` tags across replicas. Consumers should not mutate the result.
    */
   async getRolePermissions(roleName: string | undefined): Promise<RolePermissions | null> {
     if (!roleName) return null
     const resourceId = this.options.rolesResourceId
     if (!resourceId) return null
-    if (this.rolePermsCache.has(roleName)) {
-      return this.rolePermsCache.get(roleName) ?? null
-    }
-    // A missing roles *resource* is a static configuration condition (the
-    // feature simply isn't wired) — cache null and let the caller's gate
-    // apply its upgrade-compat "unknown role stays open" stance.
-    let resource: BaseResource
-    try {
-      resource = this.findResource(resourceId)
-    } catch {
-      this.rolePermsCache.set(roleName, null)
-      return null
-    }
-    // A lookup *failure* (DB down, timeout) is NOT the same as "this role
-    // has no row": swallowing it into a null would fail-open (the gate
-    // skips) and, worse, pin that transient error into the cache for the
-    // whole process lifetime. Let it propagate un-cached so the caller
-    // denies (invoke() surfaces it as an error) and a later retry can
-    // succeed once the store recovers.
-    const record = await resource.findOne(roleName)
-    // `record.params` is stored flat (`{ 'permissions.users': [...] }`)
-    // because BaseRecord runs `flatten()` on construction. Rebuild the
-    // nested object so the matrix matches the documented shape. A missing
-    // row (valid role, no permissions configured) resolves to null — the
-    // deliberate "unknown role stays open" upgrade-compat case.
-    const nested = record ? (unflatten(record.params) as Record<string, unknown>) : {}
-    const raw = nested.permissions
-    let perms: RolePermissions | null = null
-    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
-      perms = raw as RolePermissions
-    }
-    this.rolePermsCache.set(roleName, perms)
-    return perms
+    const cached = await this.cacheRuntime.read<{ permissions: RolePermissions | null }>(
+      cacheKey('role-perms', roleName),
+      {
+        enabled: true,
+        ttl: Math.max(1, this.options.rolePermissionsCacheTtl ?? 300),
+        jitterRatio: 0,
+        tags: [rolePermissionsTag(), rolePermissionsTag(roleName)],
+      },
+      async () => {
+        // A missing roles resource is a static configuration condition. A DB
+        // failure still propagates from `findOne`, preserving fail-closed auth.
+        let resource: BaseResource
+        try {
+          resource = this.findResource(resourceId)
+        } catch {
+          return { permissions: null }
+        }
+        const record = await resource.findOne(roleName)
+        const nested = record ? (unflatten(record.params) as Record<string, unknown>) : {}
+        const raw = nested.permissions
+        const permissions = raw && typeof raw === 'object' && !Array.isArray(raw)
+          ? raw as RolePermissions
+          : null
+        return { permissions }
+      },
+    )
+    return cached.permissions
   }
 
-  /** Test/operator hook: drop the cached permission matrix. */
-  invalidateRolePermissionsCache(roleName?: string): void {
-    if (roleName === undefined) {
-      this.rolePermsCache.clear()
-    } else {
-      this.rolePermsCache.delete(roleName)
-    }
+  /** Security-sensitive operator hook. Raw-ORM/CLI role writers must call it. */
+  async invalidateRolePermissionsCache(roleName?: string): Promise<void> {
+    await this.cacheRuntime.invalidateTags(rolePermissionsTag(roleName))
   }
 
   private getCacheDependents(resourceId: string): ReadonlySet<string> {
@@ -302,7 +320,7 @@ export class ModernAdmin {
       tags.add(listTag(dependent))
       tags.add(recordsTag(dependent))
     }
-    await this.cache.invalidateTag(Array.from(tags))
+    await this.cacheRuntime.invalidateTags(Array.from(tags))
   }
 
   /**
@@ -311,6 +329,7 @@ export class ModernAdmin {
    * on graceful shutdown.
    */
   async dispose(): Promise<void> {
+    await this.cacheRuntime.dispose()
     if (this.cache instanceof CrossInstanceCacheProvider) {
       await this.cache.dispose()
     }
@@ -339,7 +358,13 @@ export class ModernAdmin {
     const plugins = args.plugins ?? this.options.plugins ?? []
     if (databases.length === 0 && resources.length === 0) return []
 
-    const built = ResourcesFactory.buildResources({ databases, resources, adapters, plugins })
+    const built = ResourcesFactory.buildResources({
+      databases,
+      resources,
+      adapters,
+      plugins,
+      logger: this.logger,
+    })
     const existing = new Set(this.resources.map((r) => r.decorate().id))
     const added: BaseResource[] = []
     for (const r of built) {
@@ -563,6 +588,9 @@ export class ModernAdmin {
         target === resourceId ? Array.from(recordIds) : [],
       )
     }
+    if (this.options.rolesResourceId && targets.has(this.options.rolesResourceId)) {
+      await this.invalidateRolePermissionsCache()
+    }
   }
 
   /**
@@ -597,18 +625,6 @@ export class ModernAdmin {
       }
     }
 
-    // Drop cached role permissions when the roles resource itself is
-    // mutated through `invoke`. Doesn't catch out-of-band writes (raw
-    // ORM, CLI tools) — those callers should call
-    // `invalidateRolePermissionsCache()` directly.
-    if (
-      this.options.rolesResourceId &&
-      resourceId === this.options.rolesResourceId &&
-      (actionName === 'new' || actionName === 'edit' || actionName === 'delete' || actionName === 'bulkDelete')
-    ) {
-      this.invalidateRolePermissionsCache()
-    }
-
     for (const event of events) {
       try {
         await this.realtime.publish(event)
@@ -618,18 +634,34 @@ export class ModernAdmin {
     }
   }
 
-  /** Public config snapshot — what UI/transports expose to the browser. */
+  /**
+   * Public config snapshot — what UI/transports expose to the browser.
+   *
+   * Three call shapes, and the difference is a security boundary:
+   *
+   * - `toJSON()` — synchronous and **unfiltered**. Every property and every
+   *   action descriptor, including ones declared `isVisible: false` or gated
+   *   behind `isAccessible`. Only for trusted, server-side callers (tooling,
+   *   introspection). Never serve this to an HTTP client.
+   * - `toJSON(currentAdmin)` — filtered against that principal.
+   * - `toJSON(null)` — filtered against *no* principal. This is what an
+   *   anonymous HTTP request must get: `isAccessible` / `isVisible` run with
+   *   `currentAdmin` absent, so a logged-out caller can never see more than
+   *   a logged-in one.
+   */
   toJSON(): ModernAdminJSON
-  toJSON(currentAdmin: CurrentAdmin): Promise<ModernAdminJSON>
-  toJSON(currentAdmin?: CurrentAdmin): ModernAdminJSON | Promise<ModernAdminJSON> {
-    if (currentAdmin) {
+  toJSON(currentAdmin: CurrentAdmin | null): Promise<ModernAdminJSON>
+  toJSON(currentAdmin?: CurrentAdmin | null): ModernAdminJSON | Promise<ModernAdminJSON> {
+    if (currentAdmin !== undefined) {
       return Promise.all(
         this.resources.map((r) =>
           r.decorate().toJSON({
             admin: this,
             resource: r,
             cache: this.cache,
-            currentAdmin,
+            // `PropertyContextBase.currentAdmin` is optional; omitting it is
+            // how an access check sees "anonymous".
+            ...(currentAdmin ? { currentAdmin } : {}),
           }),
         ),
       ).then((resources) => ({

@@ -1,5 +1,51 @@
 # @modern-admin/graphql
 
+## 0.7.0
+
+### Patch Changes
+
+- Updated dependencies [[`18a001e`](https://github.com/modern-admin/modern-admin/commit/18a001e875d4c5fa4b56592fbe9b1b54f9191558)]:
+  - @modern-admin/core@0.7.0
+  - @modern-admin/nest@0.7.0
+
+## 0.6.0
+
+### Patch Changes
+
+- [`3d2a207`](https://github.com/modern-admin/modern-admin/commit/3d2a2077a466e87da55bf162dcafdb9a8b9bd652) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Refresh the monorepo to the latest stable dependency lines, including
+  TypeScript 7, Vite 8.2, TanStack Table 9, BullMQ 6, ioredis 6, Prisma 7.9,
+  NestJS 11.2, and the current React/UI toolchain. The table integration now
+  uses TanStack Table 9's explicit feature API, and the queue lock processor uses
+  BullMQ 6's backend client API. TypeScript 6 remains installed only as the
+  temporary JavaScript Compiler API compatibility layer required by ESLint and
+  declaration tooling while project compilation runs on TypeScript 7.
+- Updated dependencies [[`3d2a207`](https://github.com/modern-admin/modern-admin/commit/3d2a2077a466e87da55bf162dcafdb9a8b9bd652)]:
+  - @modern-admin/core@0.6.0
+  - @modern-admin/nest@0.6.0
+
+## 0.5.0
+
+### Patch Changes
+
+- Updated dependencies [[`4251f7a`](https://github.com/modern-admin/modern-admin/commit/4251f7a6ea01ad80fbd5515a27cec2e138d2ccb5), [`4251f7a`](https://github.com/modern-admin/modern-admin/commit/4251f7a6ea01ad80fbd5515a27cec2e138d2ccb5), [`4251f7a`](https://github.com/modern-admin/modern-admin/commit/4251f7a6ea01ad80fbd5515a27cec2e138d2ccb5)]:
+  - @modern-admin/core@0.5.0
+  - @modern-admin/nest@0.5.0
+
+## 0.4.2
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @modern-admin/nest@0.4.2
+
+## 0.4.1
+
+### Patch Changes
+
+- Updated dependencies [[`d39e559`](https://github.com/modern-admin/modern-admin/commit/d39e559e5e1cdf9fdbba9cd53f3cdf386af6baee), [`d39e559`](https://github.com/modern-admin/modern-admin/commit/d39e559e5e1cdf9fdbba9cd53f3cdf386af6baee)]:
+  - @modern-admin/core@0.4.1
+  - @modern-admin/nest@0.4.1
+
 ## 0.3.5
 
 ### Patch Changes

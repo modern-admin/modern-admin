@@ -40,6 +40,7 @@ import type { WizardStep } from './components/wizard-form.js'
 // pages — instead of blocking first paint for all of them on every load.
 const HomePage = React.lazy(() => import('./pages/home-page.js').then((m) => ({ default: m.HomePage })))
 const AuditLogPage = React.lazy(() => import('./pages/audit-log-page.js').then((m) => ({ default: m.AuditLogPage })))
+const CachePage = React.lazy(() => import('./pages/cache-page.js').then((m) => ({ default: m.CachePage })))
 const SettingsPage = React.lazy(() => import('./pages/settings-page.js').then((m) => ({ default: m.SettingsPage })))
 const ResourceListPage = React.lazy(() => import('./pages/list-page.js').then((m) => ({ default: m.ResourceListPage })))
 const ResourceShowPage = React.lazy(() => import('./pages/show-page.js').then((m) => ({ default: m.ResourceShowPage })))
@@ -96,6 +97,14 @@ const auditLogRoute = createRoute({
   path: '/audit-log',
   component: function AuditLogRouteComponent() {
     return <AuditLogPage />
+  },
+})
+
+const cacheRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/cache',
+  component: function CacheRouteComponent() {
+    return <CachePage />
   },
 })
 
@@ -227,6 +236,7 @@ const extensionRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   homeRoute,
   auditLogRoute,
+  cacheRoute,
   extensionRoute,
   resourceNewRoute,
   resourceActionRoute,

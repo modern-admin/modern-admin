@@ -7,6 +7,7 @@
 // recognising a `{ from, to }` range object, and splitting a `between`
 // `"a,b"` string — is identical between them and lives here.
 
+import { parseDateValue } from '../utils/date.js'
 import type { BaseProperty } from './base-property.js'
 import type { PropertyType } from './types.js'
 import type { FilterValue } from '../filter/filter.js'
@@ -55,7 +56,7 @@ export const coerceScalar = (
     return value === 'true' || value === '1'
   case 'date':
   case 'datetime': {
-    const d = new Date(value)
+    const d = parseDateValue(value)
     return Number.isNaN(d.getTime()) ? value : d
   }
   default:

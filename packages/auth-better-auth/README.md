@@ -12,8 +12,20 @@ end-to-end Zod validation.
 ## Installation
 
 ```sh
-bun add @modern-admin/auth-better-auth
+bun add @modern-admin/auth-better-auth better-auth@^1.7.0
 ```
+
+This release line supports Better Auth 1.7 and its required account identity
+tuple: credential accounts are `providerId: 'credential'`,
+`issuer: 'local:credential'`, and `accountId: user.id`; account uniqueness is
+the pair `(issuer, accountId)`. It does not advertise schema compatibility
+with Better Auth 1.6.
+
+Before upgrading a populated 1.6 installation, stop authentication writes and
+apply the adapter-specific transactional migration shipped by
+`@modern-admin/system-prisma` or `@modern-admin/system-drizzle`. The migrations
+fail closed on unknown providers and duplicate identities and never merge or
+delete users.
 
 ## Documentation
 

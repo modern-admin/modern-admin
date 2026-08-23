@@ -1,5 +1,50 @@
 # @modern-admin/create
 
+## 0.7.0
+
+### Patch Changes
+
+- Updated dependencies [[`18a001e`](https://github.com/modern-admin/modern-admin/commit/18a001e875d4c5fa4b56592fbe9b1b54f9191558)]:
+  - @modern-admin/system-prisma@0.7.0
+  - @modern-admin/system-drizzle@0.7.0
+
+## 0.6.0
+
+### Minor Changes
+
+- [`3d2a207`](https://github.com/modern-admin/modern-admin/commit/3d2a2077a466e87da55bf162dcafdb9a8b9bd652) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Require Better Auth 1.7 and adopt its account identity contract across the
+  Prisma fragment, Drizzle schema, reference app, and generated scaffold.
+  Credential accounts now use `issuer: 'local:credential'`, account identity is
+  unique by `(issuer, accountId)`, and adapter-specific PostgreSQL migrations
+  backfill populated 1.6 installations while failing closed on unknown providers
+  or collisions. Stop authentication writes before running the migration.
+
+- [`a0b80a6`](https://github.com/modern-admin/modern-admin/commit/a0b80a668e02fded1f509e3867a2db46302a5fdc) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Add `modern-admin setup-ui`, which scaffolds a host-owned Vite/React admin
+  bundle, adds the required dependency metadata and scripts, and connects it to
+  an existing `ModernAdminStaticUiModule` without overwriting custom UI files.
+
+### Patch Changes
+
+- Updated dependencies [[`3d2a207`](https://github.com/modern-admin/modern-admin/commit/3d2a2077a466e87da55bf162dcafdb9a8b9bd652), [`a0b80a6`](https://github.com/modern-admin/modern-admin/commit/a0b80a668e02fded1f509e3867a2db46302a5fdc)]:
+  - @modern-admin/system-prisma@0.6.0
+  - @modern-admin/system-drizzle@0.6.0
+
+## 0.5.0
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @modern-admin/system-drizzle@0.5.0
+  - @modern-admin/system-prisma@0.5.0
+
+## 0.4.1
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @modern-admin/system-drizzle@0.4.1
+  - @modern-admin/system-prisma@0.4.1
+
 ## 0.3.5
 
 ### Patch Changes

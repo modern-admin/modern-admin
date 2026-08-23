@@ -44,6 +44,9 @@ test-results
 .idea/tasks.xml
 .idea
 
+# internal notes / analysis — not part of the published repo
+docs-internal/
+
 # OS
 .DS_Store
 

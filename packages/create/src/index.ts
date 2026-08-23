@@ -16,3 +16,9 @@ export {
   type GenerateResult,
   type Orm,
 } from './generate.js'
+export {
+  setupUi,
+  patchStaticUiModule,
+  type SetupUiOptions,
+  type SetupUiResult,
+} from './setup-ui.js'

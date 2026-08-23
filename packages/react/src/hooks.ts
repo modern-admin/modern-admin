@@ -3,6 +3,7 @@
 
 import * as React from 'react'
 import {
+  hashKey,
   keepPreviousData,
   useInfiniteQuery,
   useMutation,
@@ -31,6 +32,7 @@ import {
   type AuthUiProps,
   type AuditLogQuery,
   type AuditLogResponse,
+  type CacheStatsResponse,
   type GlobalSearchResponse,
   type HistoryListResponse,
   type HistoryRevisionResponse,
@@ -181,20 +183,65 @@ export const useDistinctValues = (
   })
 }
 
+/**
+ * Query-key hashes whose next fetch must bypass the server caches. Set by
+ * `useRefreshRecords`, consumed (and cleared) by the `useRecords` fetcher.
+ *
+ * TanStack's `refetch()` carries no per-call arguments, and the flag has
+ * to reach the fetcher of an *existing* query — a piece of component
+ * state wouldn't, since the refetch may be triggered from anywhere the
+ * key is known. Keyed by the structural hash, so a stale marker can at
+ * worst cost one extra uncached round-trip.
+ */
+const pendingListRefresh = new Set<string>()
+
 export const useRecords = (
   resourceId: string,
   query?: ListQuery,
 ): UseQueryResult<ListResponse> => {
   const client = useAdminClient()
+  const key = keyList(resourceId, query)
   return useQuery({
-    queryKey: keyList(resourceId, query),
-    queryFn: () => client.list(resourceId, query),
+    queryKey: key,
+    queryFn: () => {
+      const refresh = pendingListRefresh.delete(hashKey(key))
+      return client.list(resourceId, query, refresh ? { refresh: true } : undefined)
+    },
     // Keep the previous page/sort/filter results on screen while the next
     // query loads (and during background invalidations) instead of blanking
     // the table to skeletons. Skeletons show only on the true first load
     // (`isPending`), where there is no prior data to hold.
     placeholderData: keepPreviousData,
   })
+}
+
+/**
+ * Refetch a list query past every cache in the chain — browser, HTTP
+ * response cache, action cache — so the user gets what the database holds
+ * right now. Unchanged data is simply re-served; changed data also drops
+ * the resource's server-side cached scopes (see `CacheRuntime.revalidate`).
+ *
+ * Deliberately narrower than `invalidateResourceData`: refreshing a list
+ * is a read, so it must not mark half the client cache stale and set off a
+ * cascade of refetches.
+ */
+export const useRefreshRecords = (
+  resourceId: string,
+  query?: ListQuery,
+): (() => Promise<void>) => {
+  const qc = useQueryClient()
+  return React.useCallback(async () => {
+    const key = keyList(resourceId, query)
+    const hash = hashKey(key)
+    pendingListRefresh.add(hash)
+    try {
+      await qc.refetchQueries({ queryKey: key, exact: true })
+    } finally {
+      // No-op when the fetcher consumed it; clears the marker when the
+      // query was removed/disabled before it could run.
+      pendingListRefresh.delete(hash)
+    }
+  }, [qc, resourceId, query])
 }
 
 export const useRecord = (
@@ -607,28 +654,94 @@ export const useAuditLog = (
 
 /**
  * Cursor-based infinite scroll variant of `useAuditLog`.
- * Each page passes the `at` timestamp of the last entry as the `before` cursor.
+ * Each page passes the `(at, id)` of its last visible entry as the cursor.
  * `pageSize` entries are requested; if the response is full, there are more pages.
  */
 export const useInfiniteAuditLog = (
-  filters: Omit<AuditLogQuery, 'before' | 'offset' | 'limit'>,
+  filters: Omit<AuditLogQuery, 'before' | 'beforeId' | 'offset' | 'limit'>,
   pageSize: number,
 ): UseInfiniteQueryResult<InfiniteData<AuditLogResponse>, Error> => {
   const client = useAdminClient()
   return useInfiniteQuery({
     queryKey: ['modern-admin', 'audit-log-infinite', filters],
-    queryFn: ({ pageParam }) =>
-      client.listAuditLog({
+    queryFn: ({ pageParam }) => {
+      const cursor = pageParam as { before: number; beforeId?: string } | undefined
+      return client.listAuditLog({
         ...filters,
         limit: pageSize + 1,
-        before: pageParam as number | undefined,
-      }),
-    initialPageParam: undefined as number | undefined,
+        ...(cursor ?? {}),
+      })
+    },
+    initialPageParam: undefined as { before: number; beforeId?: string } | undefined,
     getNextPageParam: (lastPage) => {
       const events = lastPage.events
       if (events.length <= pageSize) return undefined
-      return events[pageSize - 1]!.at
+      const lastVisible = events[pageSize - 1]!
+      return {
+        before: lastVisible.at,
+        ...(lastVisible.id ? { beforeId: lastVisible.id } : {}),
+      }
     },
     staleTime: 30_000,
+  })
+}
+
+const CACHE_STATS_QUERY_KEY = ['modern-admin', 'cache-stats'] as const
+
+export const clearCacheStatsEntries = (stats: CacheStatsResponse): CacheStatsResponse => ({
+  ...stats,
+  entries: [],
+})
+
+export const useCacheStats = (): UseQueryResult<CacheStatsResponse> => {
+  const client = useAdminClient()
+  return useQuery({
+    queryKey: CACHE_STATS_QUERY_KEY,
+    queryFn: () => client.cacheStats(),
+    refetchInterval: 10_000,
+  })
+}
+
+export const useInvalidateResourceCache = (): UseMutationResult<
+  { ok: true },
+  Error,
+  string
+> => {
+  const client = useAdminClient()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (resourceId) => client.invalidateResourceCache(resourceId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: CACHE_STATS_QUERY_KEY })
+    },
+  })
+}
+
+interface ResetCacheStatsContext {
+  previous?: CacheStatsResponse
+}
+
+export const useResetCacheStats = (): UseMutationResult<
+  CacheStatsResponse,
+  Error,
+  void,
+  ResetCacheStatsContext
+> => {
+  const client = useAdminClient()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => client.resetCacheStats(),
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: CACHE_STATS_QUERY_KEY })
+      const previous = qc.getQueryData<CacheStatsResponse>(CACHE_STATS_QUERY_KEY)
+      if (previous) qc.setQueryData(CACHE_STATS_QUERY_KEY, clearCacheStatsEntries(previous))
+      return { previous }
+    },
+    onSuccess: (stats) => {
+      qc.setQueryData(CACHE_STATS_QUERY_KEY, clearCacheStatsEntries(stats))
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previous) qc.setQueryData(CACHE_STATS_QUERY_KEY, context.previous)
+    },
   })
 }

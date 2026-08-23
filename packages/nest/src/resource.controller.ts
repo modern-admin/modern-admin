@@ -13,6 +13,7 @@ import {
   Query,
   Req,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common'
 import { ApiCookieAuth, ApiTags } from '@nestjs/swagger'
 import {
@@ -27,7 +28,9 @@ import {
 } from '@modern-admin/core'
 import { MODERN_ADMIN } from './tokens.js'
 import { ModernAdminAuthGuard } from './auth.guard.js'
+import { ModernAdminCacheInterceptor } from './cache.interceptor.js'
 import { NoHttpCache } from './no-http-cache.js'
+import { wantsRevalidation } from './revalidate.js'
 import {
   bulkBodyZ,
   createBodyZ,
@@ -51,6 +54,11 @@ interface AdminRequest {
 @ApiCookieAuth('session')
 @Controller('admin/api/resources/:resourceId')
 @UseGuards(ModernAdminAuthGuard)
+// Bound here rather than as an APP_INTERCEPTOR: the cache keys off a
+// `:resourceId` route param, so a global binding only ever added `x-cache`
+// noise to the host app's own routes — and captured any of them that happened
+// to use the same param name.
+@UseInterceptors(ModernAdminCacheInterceptor)
 export class ResourceController {
   constructor(@Inject(MODERN_ADMIN) private readonly admin: ModernAdmin) {}
 
@@ -66,6 +74,10 @@ export class ResourceController {
         params: { resourceId, action: 'list' },
         method: 'get',
         query,
+        // `Cache-Control: no-cache` (the UI's refresh button) — read past
+        // the action cache and drop the resource's cached scopes if the
+        // rows moved behind our back.
+        ...(wantsRevalidation(req.headers) ? { refresh: true } : {}),
       },
       req,
     )

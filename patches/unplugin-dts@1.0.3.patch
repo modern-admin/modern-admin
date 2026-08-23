@@ -1,0 +1,74 @@
+diff --git a/dist/shared/unplugin-dts.BU1tibsL.mjs b/dist/shared/unplugin-dts.BU1tibsL.mjs
+index fd3be99114ec5ee946e131e9e987a614b285f1bd..8690ce273f8e17f0018a3eb9710bcda71254079a 100644
+--- a/dist/shared/unplugin-dts.BU1tibsL.mjs
++++ b/dist/shared/unplugin-dts.BU1tibsL.mjs
+@@ -29,6 +29,7 @@ function requireTsLoader () {
+ 	hasRequiredTsLoader = 1;
+ 	const { createRequire } = require$$0;
+ 	const require_ = createRequire(__filename);
++	const hostRequire = createRequire(resolve$1(process.cwd(), "package.json"));
+ 	function loadTs() {
+ 	  try {
+ 	    const ts = require_("typescript");
+@@ -44,6 +45,13 @@ function requireTsLoader () {
+ 	    }
+ 	  } catch {
+ 	  }
++	  try {
++	    const ts = hostRequire("@typescript/typescript6");
++	    if (typeof ts.createProgram === "function") {
++	      return ts;
++	    }
++	  } catch {
++	  }
+ 	  throw new Error(
+ 	    '[unplugin-dts] The installed "typescript" package does not provide the JavaScript Compiler API (this happens with TypeScript 7+), and the fallback "@typescript/typescript6" was not found.\nPlease install it alongside TypeScript 7:\n  npm install -D @typescript/typescript6\nThis allows TypeScript 7 to be used for compilation while keeping the JS API available for tooling.\nSee: https://devblogs.microsoft.com/typescript/announcing-typescript-7-0-beta/'
+ 	  );
+diff --git a/dist/shared/unplugin-dts.Bd7VMaAx.cjs b/dist/shared/unplugin-dts.Bd7VMaAx.cjs
+index be127521d9181f8e359c2db1e765f515b157cbee..04dfd32613ac5fd70f709e7d093837ef565b7ef3 100644
+--- a/dist/shared/unplugin-dts.Bd7VMaAx.cjs
++++ b/dist/shared/unplugin-dts.Bd7VMaAx.cjs
+@@ -31,6 +31,7 @@ function requireTsLoader () {
+ 	hasRequiredTsLoader = 1;
+ 	const { createRequire } = require$$0__default;
+ 	const require_ = createRequire(__filename);
++	const hostRequire = createRequire(node_path.resolve(process.cwd(), "package.json"));
+ 	function loadTs() {
+ 	  try {
+ 	    const ts = require_("typescript");
+@@ -46,6 +47,13 @@ function requireTsLoader () {
+ 	    }
+ 	  } catch {
+ 	  }
++	  try {
++	    const ts = hostRequire("@typescript/typescript6");
++	    if (typeof ts.createProgram === "function") {
++	      return ts;
++	    }
++	  } catch {
++	  }
+ 	  throw new Error(
+ 	    '[unplugin-dts] The installed "typescript" package does not provide the JavaScript Compiler API (this happens with TypeScript 7+), and the fallback "@typescript/typescript6" was not found.\nPlease install it alongside TypeScript 7:\n  npm install -D @typescript/typescript6\nThis allows TypeScript 7 to be used for compilation while keeping the JS API available for tooling.\nSee: https://devblogs.microsoft.com/typescript/announcing-typescript-7-0-beta/'
+ 	  );
+diff --git a/package.json b/package.json
+index 4af9fecea4d68ff0f58e4b1af679d19c222e073f..4a4ceb0eec5975d3877a0caa1936481f50a30a17 100644
+--- a/package.json
++++ b/package.json
+@@ -119,6 +119,7 @@
+     "unplugin": "^2.3.2"
+   },
+   "peerDependencies": {
++    "@typescript/typescript6": ">=6",
+     "@microsoft/api-extractor": ">=7",
+     "@rspack/core": "^1",
+     "@vue/language-core": "^3.1.5",
+@@ -130,6 +131,9 @@
+     "webpack": "^4 || ^5"
+   },
+   "peerDependenciesMeta": {
++    "@typescript/typescript6": {
++      "optional": true
++    },
+     "@microsoft/api-extractor": {
+       "optional": true
+     },

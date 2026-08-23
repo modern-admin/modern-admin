@@ -18,7 +18,7 @@
 #           checked-in `*-chromium-linux.png` baselines match byte-for-byte.
 #           Isolated from the main e2e job so a container/service hiccup can't
 #           take the other specs down. Baselines are regenerated in the same
-#           image (`mcr.microsoft.com/playwright:v1.61.1-noble`).
+#           image (`mcr.microsoft.com/playwright:v1.62.1-noble`).
 
 name: CI
 
@@ -127,9 +127,9 @@ jobs:
     runs-on: ubuntu-latest
     # Run inside the official Playwright image so chromium + its fonts match
     # the environment the checked-in baselines were generated in. Pin the tag
-    # to the installed @playwright/test version (1.61.1).
+    # to the installed @playwright/test version (1.62.1).
     container:
-      image: mcr.microsoft.com/playwright:v1.61.1-noble
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
     services:
       postgres:
         image: postgres:16

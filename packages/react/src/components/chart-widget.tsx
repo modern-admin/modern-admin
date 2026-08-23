@@ -47,6 +47,7 @@ import {
   SelectValue,
   Skeleton,
   paletteFor,
+  dateFnsLocale,
 } from '@modern-admin/ui'
 import { ReferenceCombobox } from '../reference.js'
 import type { PropertyJSON } from '../types.js'
@@ -177,45 +178,20 @@ export function ChartWidget({
   const [draftFrom, setDraftFrom] = React.useState(range.from)
   const [draftTo, setDraftTo] = React.useState(range.to)
 
-  // Draft state for quick filters exposed above the chart. The user tweaks
-  // values inline and clicks Apply to refetch — mirroring the custom-range
-  // pattern so widgets don't refetch on every keystroke.
+  // Quick filters exposed inline in the toolbar, alongside the date range
+  // controls. Each change applies immediately — no separate Apply step.
   const quickFilterPaths = config.quickFilters ?? []
-  const [draftFilters, setDraftFilters] = React.useState<Record<string, string>>(
-    () => seedDraftFilters(quickFilterPaths, config.filters),
-  )
-  // Re-seed whenever the saved chart definition changes externally.
-  const quickFiltersKey = quickFilterPaths.join('|')
-  const savedFiltersKey = React.useMemo(
-    () =>
-      Object.entries(config.filters)
-        .map(([k, v]) => `${k}=${v}`)
-        .sort()
-        .join('|'),
-    [config.filters],
-  )
-  React.useEffect(() => {
-    setDraftFilters(seedDraftFilters(quickFilterPaths, config.filters))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [quickFiltersKey, savedFiltersKey])
-
-  const applyQuickFilters = (): void => {
-    const next: Record<string, string> = { ...config.filters }
-    for (const p of quickFilterPaths) {
-      const v = draftFilters[p] ?? ''
-      if (v === '') delete next[p]
-      else next[p] = v
-    }
-    update({ filters: next })
-  }
-
-  const draftDirty = quickFilterPaths.some(
-    (p) => (draftFilters[p] ?? '') !== (config.filters[p] ?? ''),
-  )
 
   // Mutators — persisted by the parent via `onUpdate(updatedDef)`.
   const update = (patch: Partial<ChartDefInput>): void => {
     onUpdate({ ...config, ...patch, updatedAt: new Date().toISOString() })
+  }
+
+  const applyQuickFilter = (path: string, value: string): void => {
+    const next: Record<string, string> = { ...config.filters }
+    if (value === '') delete next[path]
+    else next[path] = value
+    update({ filters: next })
   }
 
   const onPresetChange = (preset: TimeRangePreset): void => {
@@ -455,38 +431,25 @@ export function ChartWidget({
       </CardHeader>
 
       <CardContent className="flex-1 p-3 pt-0 space-y-3 sm:p-6 sm:pt-0">
-        {/* Quick filters — compact inline row, label as placeholder, Apply on the right. */}
-        {!unsupported && quickFilterPaths.length > 0 && resourceConfig && (
-          <div className="flex flex-wrap items-center gap-2">
-            {quickFilterPaths.map((path) => {
-              const prop = resourceConfig.properties.find((p) => p.path === path)
-              if (!prop) return null
-              return (
-                <QuickFilterInput
-                  key={path}
-                  property={prop}
-                  placeholder={prop.label}
-                  value={draftFilters[path] ?? ''}
-                  onChange={(v) => setDraftFilters((prev) => ({ ...prev, [path]: v }))}
-                />
-              )
-            })}
-            <Button
-              size="sm"
-              className="h-8 px-3 text-xs shrink-0"
-              onClick={applyQuickFilters}
-              disabled={!draftDirty}
-            >
-              <Check className="size-3.5 mr-1" />
-              {t('common:apply')}
-            </Button>
-          </div>
-        )}
-
-        {/* Toolbar — step + range + window display. Hidden for unsupported
-            adapters because changing knobs would have no effect. */}
+        {/* Toolbar — quick filters + step + range + window display, all in one
+            row. Hidden for unsupported adapters because changing knobs would
+            have no effect. Quick filters apply immediately on change. */}
         {!unsupported && (
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            {quickFilterPaths.length > 0 && resourceConfig &&
+              quickFilterPaths.map((path) => {
+                const prop = resourceConfig.properties.find((p) => p.path === path)
+                if (!prop) return null
+                return (
+                  <QuickFilterInput
+                    key={path}
+                    property={prop}
+                    placeholder={prop.label}
+                    value={config.filters[path] ?? ''}
+                    onChange={(v) => applyQuickFilter(path, v)}
+                  />
+                )
+              })}
             {!isKpi && (
               <Select
                 value={config.step === 'all' ? 'day' : config.step}
@@ -532,6 +495,7 @@ export function ChartWidget({
                   onChange={setDraftFrom}
                   ariaLabel={t('common:from')}
                   openCalendarLabel={t('common:openCalendar')}
+                  locale={dateFnsLocale(locale)}
                   className="w-[130px]"
                   inputClassName="h-8 text-xs"
                 />
@@ -541,6 +505,7 @@ export function ChartWidget({
                   onChange={setDraftTo}
                   ariaLabel={t('common:to')}
                   openCalendarLabel={t('common:openCalendar')}
+                  locale={dateFnsLocale(locale)}
                   className="w-[130px]"
                   inputClassName="h-8 text-xs"
                 />
@@ -603,6 +568,7 @@ export function ChartWidget({
             labelFormatter={makeLabelFormatter(renderStep, locale)}
             valueFormatter={valueFormatter}
             axisValueFormatter={axisValueFormatter}
+            locale={locale}
             labels={{
               noData: t('chart:noData'),
               showAll: t('dashboard:widget.showAll'),
@@ -652,15 +618,6 @@ export function ChartWidget({
 const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1)
 
 const QF_NONE = '__none__'
-
-function seedDraftFilters(
-  paths: ReadonlyArray<string>,
-  filters: Record<string, string>,
-): Record<string, string> {
-  const out: Record<string, string> = {}
-  for (const p of paths) out[p] = filters[p] ?? ''
-  return out
-}
 
 /** Compact inline filter input — label is passed as placeholder so no
  *  extra row is needed. Matches the `h-7 text-xs` sizing of toolbar controls. */

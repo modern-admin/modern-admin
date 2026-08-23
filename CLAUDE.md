@@ -19,7 +19,8 @@ bun run dev:web                # Vite + React SPA       → http://localhost:300
 
 bun run typecheck              # every workspace (tsc --noEmit)
 bun run lint                   # every workspace (eslint .)
-bun test                       # unit tests, all packages (= bun --filter '*' test)
+bun run test                   # unit tests, per workspace (= bun --filter '*' test)
+bun test                       # unit tests, one bun runner over the whole repo
 bun run build                  # build all publishable packages
 bun run e2e                    # Playwright suite (apps/e2e)
 ```
@@ -65,7 +66,7 @@ Three jobs: **check** (install → `prisma generate` → typecheck → lint → 
 tests; hermetic, no services), **e2e** (docker-compose Postgres/Redis,
 `prisma:push`, `build:standalone`, everything except the visual-regression
 spec), and **e2e-visual** (that spec only, inside
-`mcr.microsoft.com/playwright:v1.61.1-noble` so the checked-in
+`mcr.microsoft.com/playwright:v1.62.1-noble` so the checked-in
 `*-chromium-linux.png` baselines match byte-for-byte — regenerate baselines in
 that same image). The api app boots `ModernAdminStaticUiModule`, which reads
 `packages/web/dist/standalone/index.html`, so
@@ -179,7 +180,7 @@ Majors currently locked, with the gotchas they impose:
 
 | Package                 | Current major | Notes                                                                          |
 | ----------------------- | ------------- | ------------------------------------------------------------------------------ |
-| typescript              | 6.x           | stricter checks; use `as unknown as T` for variance/abstract-ctor casts         |
+| typescript              | 7.x           | native compiler; tooling uses the side-by-side TS 6 JS API                      |
 | eslint / typescript-eslint | 10.x / 8.x | flat config, `eslint.base.config.mjs` at the root                              |
 | @nestjs/*               | 11.x          | Node 20+; cache-manager API changed                                            |
 | zod                     | 4.x           | new error API; `z.email()` instead of `.email()`                               |
@@ -189,14 +190,15 @@ Majors currently locked, with the gotchas they impose:
 | react / react-dom       | 19.x          | `import type { ReactElement } from 'react'`, not `JSX.Element`                  |
 | @tanstack/react-query   | 5.x           |                                                                                |
 | @tanstack/react-router  | 1.x           | browser history via `createBrowserHistory()`; NOT TanStack Start (no SSR)      |
+| @tanstack/react-table   | 9.x           | explicit `tableFeatures`; core row model is automatic                           |
 | @hookform/resolvers     | 5.x           | API tweaks                                                                     |
 | lucide-react            | 1.x           | verify icon names                                                              |
 | tailwind-merge          | 3.x           |                                                                                |
 | prisma / @prisma/client | 7.x           | new ESM engine, client API changes                                             |
 | drizzle-orm             | 0.45.x        | driver API and schema-gen changes                                              |
-| better-auth             | 1.6+          |                                                                                |
+| better-auth             | 1.7+          | Account identity is the unique `(issuer, accountId)` pair                       |
 | graphql                 | 17.x          |                                                                                |
-| bullmq                  | 5.x           |                                                                                |
+| bullmq                  | 6.x           | queue clients are exposed through `Queue.getBackend()`                          |
 | recharts                | 3.x           |                                                                                |
 
 When touching one of those, expect to update call sites for the new API.
@@ -222,6 +224,14 @@ When touching one of those, expect to update call sites for the new API.
 - **Tests** live in `<pkg>/test/` and run with `bun test`. Unit tests are
   hermetic — Redis is faked and no Postgres is required. E2E specs live in
   `apps/e2e/tests/` and need docker-compose services + `SEED_DEMO=1` fixtures.
+  Those specs are `*.spec.ts`, which matches bun's test glob but explodes under
+  bun's runner — the root `bunfig.toml` excludes them via
+  `[test] pathIgnorePatterns`, and `apps/e2e` carries a `test` script that just
+  points at `bun run e2e`. A workspace holding unit tests must declare
+  `"test": "bun test"`, otherwise `bun --filter '*' test` skips it silently.
+- **Every new cache entry point needs an invalidation/fencing regression test.**
+  Cover the mutation or permission change that makes the value stale, including
+  an in-flight read when the entry is tagged.
 - **Agent skills** vendored under `.agents/skills/` (`graphql-schema`,
   `graphql-operations` from apollographql, `shadcn`), pinned in
   `skills-lock.json`. Consult them when doing GraphQL schema/operation or

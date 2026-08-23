@@ -2,6 +2,7 @@ import { Filter } from '../../filter/filter.js'
 import type { BaseRecord } from '../../adapters'
 import type { PropertyDecorator } from '../../decorators/property-decorator.js'
 import { listTag } from '../cache-runtime.js'
+import { searchCacheKey } from '../cache-keys.js'
 import { resolveResourceCacheConfig } from '../../decorators/cache-config.js'
 import type {
   Action,
@@ -129,7 +130,7 @@ const handler = async (
     }
   }
 
-  const cacheKey = `search:${resource.id()}:${query}`
+  const cacheKey = searchCacheKey(resource.id(), query)
   const cfg = resolveResourceCacheConfig(resource.decorate().options, 'search')
 
   return cacheRuntime.read<ListActionResponse>(
@@ -137,6 +138,8 @@ const handler = async (
     {
       enabled: cfg.enabled,
       ttl: cfg.ttl,
+      jitterRatio: cfg.jitterRatio,
+      crossReplicaLock: cfg.crossReplicaLock,
       tags: [listTag(resource.id())],
     },
     async () => {

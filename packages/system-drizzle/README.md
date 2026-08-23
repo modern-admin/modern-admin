@@ -20,6 +20,16 @@ bun add @modern-admin/system-drizzle
 Setup guides, architecture, and usage examples live in the
 [Modern Admin README](https://github.com/modern-admin/modern-admin#readme).
 
+## Better Auth 1.7 migration
+
+The PostgreSQL schema targets Better Auth 1.7: `ma_account.issuer` is required
+and `(issuer, account_id)` is unique. A populated Better Auth 1.6 database must
+be upgraded during an authentication maintenance window with
+`migrations/postgres/better-auth-1.7-account-identities.sql`. Review its
+explicit provider mapping first. Unknown providers and identity collisions
+abort and roll back the complete transaction; users are never merged or
+deleted.
+
 ## License
 
 [MIT](https://github.com/modern-admin/modern-admin/blob/main/LICENSE) © Modern Admin

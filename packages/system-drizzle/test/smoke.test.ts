@@ -14,6 +14,9 @@
 // which exercise the same logic on the same Zod entry shapes.
 
 import { describe, expect, it } from 'bun:test'
+import { getTableConfig } from 'drizzle-orm/pg-core'
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { setupDrizzleSystem } from '../src/index.js'
 import { systemTables } from '../src/schema/pg.js'
 
@@ -126,5 +129,44 @@ describe('schema/pg', () => {
     expect(systemTables.maAiTask).toBeDefined()
     expect(systemTables.maAiTaskEvent).toBeDefined()
     expect(systemTables.maCache).toBeDefined()
+  })
+
+  it('maAccount matches the Better Auth 1.7 identity contract', () => {
+    const config = getTableConfig(systemTables.maAccount)
+    const issuer = config.columns.find((column) => column.name === 'issuer')
+    expect(issuer?.notNull).toBe(true)
+    expect(config.uniqueConstraints).toContainEqual(
+      expect.objectContaining({
+        name: 'ma_account_issuer_account_id_uq',
+        columns: expect.arrayContaining([
+          expect.objectContaining({ name: 'issuer' }),
+          expect.objectContaining({ name: 'account_id' }),
+        ]),
+      }),
+    )
+    expect(config.indexes).toContainEqual(
+      expect.objectContaining({
+        config: expect.objectContaining({ name: 'ma_account_user_id_idx' }),
+      }),
+    )
+  })
+
+  it('ships a fail-closed transactional Better Auth 1.7 migration', async () => {
+    const migration = await readFile(
+      join(import.meta.dir, '../migrations/postgres/better-auth-1.7-account-identities.sql'),
+      'utf8',
+    )
+    const addNullable = migration.indexOf('ADD COLUMN issuer TEXT;')
+    const backfill = migration.indexOf('UPDATE ma_account')
+    const setNotNull = migration.indexOf('ALTER COLUMN issuer SET NOT NULL')
+    expect(addNullable).toBeGreaterThan(-1)
+    expect(backfill).toBeGreaterThan(addNullable)
+    expect(setNotNull).toBeGreaterThan(backfill)
+    expect(migration).toContain("WHEN 'credential' THEN 'local:credential'")
+    expect(migration).toContain("WHEN 'google' THEN 'https://accounts.google.com'")
+    expect(migration).toContain('unknown account providers')
+    expect(migration).toContain('duplicate (issuer, accountId) identities')
+    expect(migration).toContain('BEGIN;')
+    expect(migration).toContain('COMMIT;')
   })
 })

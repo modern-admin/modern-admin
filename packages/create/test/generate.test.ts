@@ -110,6 +110,9 @@ describe('generate (filesystem)', () => {
     const written = await readFile(join(cwd, 'prisma/schema.prisma'), 'utf8')
     expect(written).toContain('model MaUser')
     expect(written).toContain('model MaLog')
+    expect(written).toMatch(/model MaAccount \{[\s\S]*?issuer\s+String/)
+    expect(written).toContain('@@unique([issuer, accountId])')
+    expect(written).toContain('@@index([userId])')
     // Existing model body preserved.
     expect(written).toContain('model MaRole {\n  id String @id\n}')
   })

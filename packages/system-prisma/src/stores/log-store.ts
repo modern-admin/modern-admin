@@ -8,6 +8,9 @@ import {
 } from '@modern-admin/core'
 import type { PrismaDelegate } from '../types.js'
 
+/** Applied when the caller passes no `limit`. Matches `MemoryLogStore`. */
+const DEFAULT_LIST_LIMIT = 50
+
 export class PrismaLogStore implements IQueryableLogStore {
   constructor(private readonly delegate: PrismaDelegate<LogRow>) {}
 
@@ -35,16 +38,40 @@ export class PrismaLogStore implements IQueryableLogStore {
     if (filter.recordId) where['recordId'] = filter.recordId
     if (filter.userId) where['userId'] = filter.userId
     if (filter.actions?.length) where['action'] = { in: filter.actions }
-    if (filter.from || filter.to) {
-      const range: Record<string, bigint> = {}
-      if (filter.from) range['gte'] = BigInt(filter.from.getTime())
-      if (filter.to) range['lte'] = BigInt(filter.to.getTime())
-      where['at'] = range
+    // `from`/`to` bound the window; `before` is the keyset cursor the audit
+    // log's "load more" pages on. All three narrow the same column, so they
+    // merge into one range clause — dropping `before` (as this store used to)
+    // made every extra page return the first page again, forever.
+    const range: Record<string, bigint> = {}
+    if (filter.from) range['gte'] = BigInt(filter.from.getTime())
+    if (filter.to) range['lte'] = BigInt(filter.to.getTime())
+    if (filter.before !== undefined) {
+      const cursorAt = BigInt(filter.before)
+      if (filter.beforeId !== undefined) {
+        // Lexicographic continuation of the `(at, id) DESC` order. Keeping
+        // the id in the cursor is essential because `at` has ms precision and
+        // many audit entries can legitimately share it.
+        where['OR'] = [
+          { at: { lt: cursorAt } },
+          { at: cursorAt, id: { lt: filter.beforeId } },
+        ]
+      } else {
+        // Backwards-compatible timestamp-only cursor for existing callers.
+        range['lt'] = cursorAt
+      }
     }
+    if (Object.keys(range).length > 0) where['at'] = range
     const rows = await this.delegate.findMany({
       where,
-      orderBy: { at: 'desc' },
-      ...(filter.limit !== undefined ? { take: filter.limit } : {}),
+      // `at` is milliseconds and not unique, so it alone is not a total
+      // order — two entries in the same millisecond could swap between
+      // pages. Ids are UUIDv7, i.e. already time-ordered, so they are the
+      // natural tiebreaker.
+      orderBy: [{ at: 'desc' }, { id: 'desc' }],
+      // The audit log is append-only and unbounded; an unbounded SELECT over
+      // it is a memory hazard. Compare `PrismaHistoryStore.list`, which has
+      // always defaulted to 50.
+      take: filter.limit ?? DEFAULT_LIST_LIMIT,
       ...(filter.offset !== undefined ? { skip: filter.offset } : {}),
     })
     return rows.map(rowToLogEntry)

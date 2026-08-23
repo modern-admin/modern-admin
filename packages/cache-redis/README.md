@@ -15,6 +15,32 @@ end-to-end Zod validation.
 bun add @modern-admin/cache-redis
 ```
 
+## Usage
+
+```ts
+import { RedisCacheProvider } from '@modern-admin/cache-redis'
+
+const cache = new RedisCacheProvider({
+  client: redis,
+  subscriber: redis.duplicate(),
+  prefix: 'ma:',
+  defaultTtl: 300,
+})
+```
+
+Use a scripting-capable Redis 7+ client. Tagged writes atomically store the
+value, tag memberships, reverse index, and expected tag epochs in Lua. The
+same atomic contract fences a slow computation that started before an
+invalidation on another replica. Clients without `EVAL` remain supported as a
+degraded, explicitly logged fallback, but cannot provide the race-free
+guarantee.
+
+`tagTtl` is a floor for indexes covering expiring values and defaults to 30
+days. Persistent values always receive persistent indexes. Explicit deletes
+and overwrites remove old memberships; invalidation increments tag epochs
+before draining values. Optional locks use `SET PX NX` and token-checked Lua
+release.
+
 ## Documentation
 
 Setup guides, architecture, and usage examples live in the

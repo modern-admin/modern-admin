@@ -469,6 +469,25 @@ describe('filterToWhere — relation filters', () => {
     })
   })
 
+  test('foreign-key with co operator matches the underlying String column', () => {
+    // Regression: `co`/`sw`/`ew` used to be gated on `type() === 'string'`, so
+    // a uuid-promoted column silently produced NO clause — the list came back
+    // unfiltered, which reads as "the filter did nothing" rather than an error.
+    // The DMMF field underneath is a plain `String`, which Prisma can match.
+    expect(where({ authorId: 'co:user-4' })).toEqual({
+      authorId: { contains: 'user-4', mode: 'insensitive' },
+    })
+    expect(where({ id: 'sw:0199' })).toEqual({
+      id: { startsWith: '0199', mode: 'insensitive' },
+    })
+  })
+
+  test('non-string columns still drop substring operators', () => {
+    // Prisma rejects `contains` on Int/DateTime; dropping the clause beats a 500.
+    expect(where({ age: 'co:4' })).toEqual({})
+    expect(where({ createdAt: 'co:2026' })).toEqual({})
+  })
+
   test('foreign-key with in operator', () => {
     expect(where({ authorId: 'in:u1,u2,u3' })).toEqual({
       authorId: { in: ['u1', 'u2', 'u3'] },

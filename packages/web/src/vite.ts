@@ -39,6 +39,25 @@ const gzip = promisify(zlib.gzip)
 /** Layout StaticUiMiddleware resolves as `<webPackage>/dist/standalone`. */
 const STANDALONE_OUT_DIR = 'dist/standalone'
 
+// ProseMirror uses class identity checks between packages. Bun's isolated
+// linker can expose the same version through multiple physical store paths,
+// so Vite must collapse every import to the app-level instance.
+const PROSEMIRROR_SINGLETONS = [
+  'prosemirror-changeset',
+  'prosemirror-commands',
+  'prosemirror-dropcursor',
+  'prosemirror-gapcursor',
+  'prosemirror-history',
+  'prosemirror-inputrules',
+  'prosemirror-keymap',
+  'prosemirror-model',
+  'prosemirror-schema-list',
+  'prosemirror-state',
+  'prosemirror-tables',
+  'prosemirror-transform',
+  'prosemirror-view',
+]
+
 export interface AdminAppConfigOptions {
   /** Dev server port. Defaults to `WEB_PORT`, then 3000. */
   port?: number
@@ -62,6 +81,20 @@ export interface AdminAppConfigOptions {
   devConfig?: ModernAdminRuntimeConfig
   /** Directory the standalone build writes to. Rarely worth changing. */
   outDir?: string
+  /**
+   * Production source maps. Defaults to `false`.
+   *
+   * `true` emits `.map` files next to every chunk. The static-UI middleware
+   * serves them publicly with `immutable` caching, so anything in them —
+   * including the full source of proprietary components in a custom bundle —
+   * is readable by anyone who can reach the panel. They also dominate the
+   * tarball: the stock standalone build is ~17MB, of which ~13MB is maps.
+   *
+   * `'hidden'` writes the maps but omits the `//# sourceMappingURL` comment,
+   * which is the right setting for uploading them to an error tracker
+   * without exposing them to browsers.
+   */
+  sourcemap?: boolean | 'hidden'
   /** Extra plugins, appended after the built-in ones. */
   plugins?: PluginOption[]
 }
@@ -186,6 +219,7 @@ export function defineAdminAppConfig(
     apiProxyPath = ['/admin/api', '/socket.io'],
     devConfig,
     outDir = STANDALONE_OUT_DIR,
+    sourcemap = false,
     plugins: extraPlugins = [],
   } = options
   return ({ command }) => {
@@ -193,13 +227,14 @@ export function defineAdminAppConfig(
     if (command === 'build') {
       return {
         plugins: [...shared, precompressPlugin(outDir), prefetchHintsPlugin(), ...extraPlugins],
+        resolve: { dedupe: PROSEMIRROR_SINGLETONS },
         // Relative base so one bundle can be mounted under any path — the
         // host server rewrites `./assets/` to its own mount prefix.
         base: './',
         build: {
           outDir,
           emptyOutDir: true,
-          sourcemap: true,
+          sourcemap,
         },
       }
     }
@@ -209,6 +244,7 @@ export function defineAdminAppConfig(
         ...(devConfig ? [devRuntimeConfigPlugin(devConfig)] : []),
         ...extraPlugins,
       ],
+      resolve: { dedupe: PROSEMIRROR_SINGLETONS },
       server: {
         port: options.port ?? Number(process.env.WEB_PORT ?? 3000),
         host: true,

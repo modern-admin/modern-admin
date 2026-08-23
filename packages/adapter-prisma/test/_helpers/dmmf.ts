@@ -10,6 +10,7 @@ const f = (overrides: Partial<DmmfField>): DmmfField => ({
   isId: overrides.isId ?? false,
   isReadOnly: overrides.isReadOnly ?? false,
   hasDefaultValue: overrides.hasDefaultValue ?? false,
+  ...(overrides.dbName ? { dbName: overrides.dbName } : {}),
   ...(overrides.relationName ? { relationName: overrides.relationName } : {}),
   ...(overrides.relationFromFields ? { relationFromFields: overrides.relationFromFields } : {}),
   ...(overrides.relationToFields ? { relationToFields: overrides.relationToFields } : {}),

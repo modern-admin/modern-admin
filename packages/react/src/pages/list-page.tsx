@@ -7,15 +7,23 @@
 
 import * as React from 'react'
 import {
+  columnFilteringFeature,
+  columnResizingFeature,
+  columnSizingFeature,
+  type ColumnVisibilityState,
   type ColumnDef,
   type ColumnFiltersState,
   type ColumnSizingState,
   flexRender,
-  getCoreRowModel,
+  type ReactTable,
+  rowPaginationFeature,
+  rowSelectionFeature,
+  rowSortingFeature,
   type RowSelectionState,
   type SortingState,
-  useReactTable,
-  type VisibilityState,
+  tableFeatures,
+  useTable,
+  columnVisibilityFeature,
 } from '@tanstack/react-table'
 import {
   Badge,
@@ -65,6 +73,7 @@ import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
+  dateFnsLocale,
 } from '@modern-admin/ui'
 import {
   ArrowDown,
@@ -96,6 +105,7 @@ import {
   useInvokeRecordAction,
   useInvokeResourceAction,
   useRecords,
+  useRefreshRecords,
   useResource,
 } from '../hooks.js'
 import { PropertyDisplay } from '../property-renderer.js'
@@ -142,6 +152,20 @@ import type {
 import { confirmGuard } from '../action-guard.js'
 import { showActionNotice } from '../action-notice.js'
 import { hasActionComponent, useActionLauncher } from '../action-launcher.js'
+
+const LIST_TABLE_FEATURES = tableFeatures({
+  columnFilteringFeature,
+  rowSortingFeature,
+  rowPaginationFeature,
+  rowSelectionFeature,
+  columnVisibilityFeature,
+  columnSizingFeature,
+  columnResizingFeature,
+})
+
+type ListTableFeatures = typeof LIST_TABLE_FEATURES
+type ListColumnDef = ColumnDef<ListTableFeatures, RecordJSON>
+type ListTable = ReactTable<ListTableFeatures, RecordJSON>
 
 const PAGE_SIZES = [10, 20, 50, 100] as const
 
@@ -434,7 +458,7 @@ export function ResourceListPage({
     [urlQuery.page, urlQuery.perPage],
   )
 
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
+  const [columnVisibility, setColumnVisibility] = React.useState<ColumnVisibilityState>({})
   const [columnSizing, setColumnSizing] = React.useState<ColumnSizingState>(() =>
     loadColumnSizing(resourceId),
   )
@@ -611,6 +635,10 @@ export function ResourceListPage({
   ])
 
   const records = useRecords(resourceId, query)
+  // Refresh means "show me what the database holds now" — the request
+  // carries `Cache-Control: no-cache` so the server reads past its own
+  // caches and busts them when the rows turn out to have changed.
+  const refreshRecords = useRefreshRecords(resourceId, query)
 
   const visible = React.useMemo<PropertyJSON[]>(() => {
     const all = resource
@@ -622,6 +650,30 @@ export function ResourceListPage({
     }
     return all
   }, [resource, lockedFilters])
+
+  // The filter panel has its own view — `filterProperties` (whitelist + order)
+  // or, absent that, every property whose `isVisible.filter` holds. Feeding it
+  // `visible` would tie filtering to the table columns, so a property hidden
+  // from the list becomes unfilterable and one hidden from filters still shows
+  // up. Both sets are computed server-side; use the matching one.
+  const filterable = React.useMemo<PropertyJSON[]>(() => {
+    const all = resource
+      ? visibleRecordProperties(resource.properties, 'filter', resource.propertyOrder?.filter)
+      : []
+    // Locked filters are fixed for the whole view — offering them as editable
+    // filter inputs would let the user contradict the lock.
+    if (lockedFilters && Object.keys(lockedFilters).length > 0) {
+      return all.filter((p) => !(p.path in lockedFilters))
+    }
+    return all
+  }, [resource, lockedFilters])
+
+  // Header (per-column) filters answer the same question as the panel, so they
+  // follow the same view: a column that isn't filterable gets no filter icon.
+  const filterablePaths = React.useMemo(
+    () => new Set(filterable.map((p) => p.path)),
+    [filterable],
+  )
 
   const { customResourceActions, customRecordActions, customBulkActions } = React.useMemo(() => {
     const builtInActionNames = new Set([
@@ -693,8 +745,8 @@ export function ResourceListPage({
   )
 
   const showSelectColumn = f.bulk || isSelectionControlled
-  const columns = React.useMemo<ColumnDef<RecordJSON>[]>(() => {
-    const cols: ColumnDef<RecordJSON>[] = []
+  const columns = React.useMemo<ListColumnDef[]>(() => {
+    const cols: ListColumnDef[] = []
     if (showSelectColumn) {
       cols.push({
         id: '_select',
@@ -724,7 +776,7 @@ export function ResourceListPage({
         ),
       })
     }
-    cols.push(...visible.map<ColumnDef<RecordJSON>>((property) => ({
+    cols.push(...visible.map<ListColumnDef>((property) => ({
       id: property.path,
       accessorFn: (row) => row.params[property.path],
       size: defaultColumnSize(property),
@@ -748,7 +800,7 @@ export function ResourceListPage({
               else column.clearSorting()
             }}
           />
-          {f.headerFilters && (
+          {f.headerFilters && filterablePaths.has(property.path) && (
             <ColumnFilterPopover
               property={property}
               getFilters={() => columnFiltersRef.current}
@@ -801,6 +853,7 @@ export function ResourceListPage({
     navigate,
     t,
     handleColumnFilterApply,
+    filterablePaths,
     f.headerFilters,
     showSelectColumn,
     disableRowNavigation,
@@ -812,7 +865,8 @@ export function ResourceListPage({
   const total = records.data?.meta.total ?? 0
   const pageCount = Math.max(1, Math.ceil(total / pagination.pageSize))
 
-  const table = useReactTable({
+  const table = useTable({
+    features: LIST_TABLE_FEATURES,
     data: records.data?.records ?? [],
     columns,
     pageCount,
@@ -832,7 +886,6 @@ export function ResourceListPage({
     // avoiding a re-render storm that 'onChange' triggers on every mousemove.
     columnResizeMode: 'onEnd',
     defaultColumn: { minSize: 80, size: 200, maxSize: 800 },
-    getCoreRowModel: getCoreRowModel(),
     getRowId: (row) => row.id,
   })
 
@@ -874,7 +927,7 @@ export function ResourceListPage({
   useHotkey(
     'r',
     () => {
-      if (!records.isFetching) records.refetch()
+      if (!records.isFetching) void refreshRecords()
     },
     { enabled: f.refresh, description: t('common:refresh') },
   )
@@ -934,7 +987,7 @@ export function ResourceListPage({
       {f.filters && !hasToolbarActions && (
         <FilterControl
           showTrigger={false}
-          properties={visible}
+          properties={filterable}
           filters={columnFilters}
           onChange={handleFilterChange}
           resourceId={resourceId}
@@ -952,7 +1005,7 @@ export function ResourceListPage({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => records.refetch()}
+                      onClick={() => void refreshRecords()}
                       disabled={records.isFetching}
                       aria-label={t('common:refresh')}
                     >
@@ -968,7 +1021,7 @@ export function ResourceListPage({
               {f.filters && (
                 <FilterControl
                   showTrigger
-                  properties={visible}
+                  properties={filterable}
                   filters={columnFilters}
                   onChange={handleFilterChange}
                   resourceId={resourceId}
@@ -1291,7 +1344,7 @@ export function ResourceListPage({
                 const resizingHeader = table.getHeaderGroups()
                   .flatMap((hg) => hg.headers)
                   .find((h) => h.column.getIsResizing())
-                const deltaOffset = table.getState().columnSizingInfo.deltaOffset ?? 0
+                const deltaOffset = table.state.columnResizing.deltaOffset ?? 0
                 const resizeLeft = resizingHeader
                   ? leafCols
                     .slice(
@@ -1669,12 +1722,12 @@ function RowActions({
   )
 }
 
-function ColumnVisibilityMenu<TData>({
+function ColumnVisibilityMenu({
   table,
   properties,
   t,
 }: {
-  table: ReturnType<typeof useReactTable<TData>>
+  table: ListTable
   properties: PropertyJSON[]
   t: (key: string, params?: Record<string, string | number>) => string
 }): React.ReactElement {
@@ -1725,16 +1778,16 @@ function getPageRange(pageIndex: number, pageCount: number, windowSize = 10): nu
   return Array.from({ length: end - start }, (_, i) => start + i)
 }
 
-function Paginator<TData>({
+function Paginator({
   table,
   total,
   t,
 }: {
-  table: ReturnType<typeof useReactTable<TData>>
+  table: ListTable
   total: number
   t: (key: string, params?: Record<string, string | number>) => string
 }): React.ReactElement {
-  const { pageIndex, pageSize } = table.getState().pagination
+  const { pageIndex, pageSize } = table.state.pagination
   const pageCount = table.getPageCount()
   const pages = getPageRange(pageIndex, pageCount)
   // Click-and-drag horizontal scroll on the page-buttons row, mirroring the
@@ -2065,6 +2118,7 @@ function FilterPanel({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
+        closeLabel={t('common:close')}
         side="right"
         className="flex w-full flex-col gap-0 p-0 sm:max-w-md"
         aria-describedby={undefined}
@@ -2184,6 +2238,10 @@ function DateRangeFilter({
   onToChange(v: unknown): void
   t: (key: string, params?: Record<string, string | number>) => string
 }): React.ReactElement {
+  // The calendar popover needs a date-fns locale of its own — the `t` prop
+  // only covers the surrounding labels.
+  const { locale: uiLocale } = useI18n()
+  const locale = dateFnsLocale(uiLocale)
   return (
     <div className="space-y-2">
       <div className="space-y-1">
@@ -2193,6 +2251,7 @@ function DateRangeFilter({
           value={from ?? ''}
           onChange={(v) => onFromChange(v)}
           ariaLabel={t('common:from')}
+          locale={locale}
         />
       </div>
       <div className="space-y-1">
@@ -2202,6 +2261,7 @@ function DateRangeFilter({
           value={to ?? ''}
           onChange={(v) => onToChange(v)}
           ariaLabel={t('common:to')}
+          locale={locale}
         />
       </div>
     </div>
@@ -2327,8 +2387,14 @@ function StringFilterField({
 
   // Default to "is one of" only for fields with few distinct values; fields with
   // more choices default to "contains" (free-text) since a long checkbox list is
-  // unwieldy.
-  const shouldDefaultToOneOf = isLowCardinality && distinctValues.length <= ONE_OF_DEFAULT_MAX
+  // unwieldy. An *empty* distinct list is not "low cardinality" — adapters
+  // return no values for non-string columns (uuid, FK ids), and switching those
+  // to a checkbox picker with nothing to check leaves the user unable to type
+  // the value they came to filter by.
+  const shouldDefaultToOneOf =
+    isLowCardinality
+    && distinctValues.length > 0
+    && distinctValues.length <= ONE_OF_DEFAULT_MAX
 
   // If few distinct values, no existing filter, and default op (co with empty
   // val): auto-switch to "is one of" mode to match Metabase behavior.
@@ -2634,7 +2700,10 @@ function ColumnFilterPopover({
           <ListFilter className="size-3.5"/>
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-72 border-border p-3" align="start">
+      <PopoverContent
+        className="max-h-[var(--radix-popover-content-available-height)] w-72 overflow-y-auto overscroll-contain border-border p-3"
+        align="start"
+      >
         <div className="space-y-3">
           <FilterField
             property={property}

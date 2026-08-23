@@ -10,6 +10,10 @@ export const cacheActionOptionsZ = z.object({
   enabled: z.boolean().optional(),
   /** TTL in seconds. Wins over the resource-level `ttl`. */
   ttl: z.number().int().nonnegative().optional(),
+  /** Positive TTL jitter ratio. Set to `0` when the TTL boundary is semantic. */
+  jitterRatio: z.number().min(0).max(1).optional(),
+  /** Coordinate expensive misses across replicas when the provider supports locks. */
+  crossReplicaLock: z.boolean().optional(),
 })
 
 export type CacheActionOptions = z.infer<typeof cacheActionOptionsZ>
@@ -37,12 +41,17 @@ export type CacheStrategy = z.infer<typeof cacheStrategyZ>
  * Per-action overrides (`list`, `show`, `search`, `http`) win over the
  * resource-level `ttl` / `strategy`. The `http` slot governs the
  * NestJS-level response interceptor; the rest govern the action-level
- * cache that lives inside the read handlers.
+ * cache that lives inside the read handlers. Nest scopes HTTP entries per
+ * principal and conservatively bypasses them when an action or property has
+ * a functional `isAccessible` rule, because replaying a filtered body would
+ * otherwise skip request-time authorization.
  */
 export const cacheOptionsObjectZ = z.object({
   strategy: cacheStrategyZ.optional(),
   /** Resource-level default TTL applied to every read action. Seconds. */
   ttl: z.number().int().nonnegative().optional(),
+  /** Resource-level positive TTL jitter ratio. Defaults to 0.1. */
+  jitterRatio: z.number().min(0).max(1).optional(),
   list: cacheActionOptionsZ.optional(),
   show: cacheActionOptionsZ.optional(),
   search: cacheActionOptionsZ.optional(),

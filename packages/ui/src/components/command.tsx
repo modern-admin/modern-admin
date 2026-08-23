@@ -19,12 +19,18 @@ export const Command = React.forwardRef<
 ))
 Command.displayName = CommandPrimitive.displayName
 
+export interface CommandDialogProps extends React.ComponentProps<typeof Dialog> {
+  /** Visually-hidden label on the dialog's close button. Default: 'Close'. */
+  closeLabel?: string
+}
+
 export const CommandDialog = ({
   children,
+  closeLabel,
   ...props
-}: React.ComponentProps<typeof Dialog>): React.ReactElement => (
+}: CommandDialogProps): React.ReactElement => (
   <Dialog {...props}>
-    <DialogContent className="overflow-hidden p-0 shadow-lg">
+    <DialogContent className="overflow-hidden p-0 shadow-lg" closeLabel={closeLabel}>
       <Command className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5">
         {children}
       </Command>
@@ -36,7 +42,7 @@ export const CommandInput = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive.Input>,
   React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input>
 >(({ className, ...props }, ref) => (
-  <div className="flex items-center border-b border-border px-3" cmdk-input-wrapper="">
+  <div className="flex shrink-0 items-center border-b border-border px-3" cmdk-input-wrapper="">
     <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
     <CommandPrimitive.Input
       ref={ref}
@@ -56,7 +62,12 @@ export const CommandList = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <CommandPrimitive.List
     ref={ref}
-    className={cn('max-h-[300px] overflow-y-auto overflow-x-hidden', className)}
+    // `min-h-0` so the list — not the search input above it — is what gives
+    // way when the popover is height-capped to the visible viewport.
+    className={cn(
+      'max-h-[300px] min-h-0 overscroll-contain overflow-y-auto overflow-x-hidden',
+      className,
+    )}
     {...props}
   />
 ))

@@ -158,9 +158,13 @@ export function DialogsProvider({ children }: DialogsProviderProps): React.React
       {children}
       {entries.map((entry) => {
         if (entry.kind === 'confirm') {
-          const title = entry.opts.title ?? t('common:confirmDelete')
+          // Defaults stay action-neutral: the confirm dialog serves every
+          // guarded action, not just deletion. Delete call-sites pass their own
+          // `title` / `confirmLabel`.
+          const title =
+            entry.opts.title ?? t(entry.opts.destructive ? 'common:confirmDelete' : 'common:confirmAction')
           const confirmLabel =
-            entry.opts.confirmLabel ?? t(entry.opts.destructive ? 'common:delete' : 'common:save')
+            entry.opts.confirmLabel ?? t(entry.opts.destructive ? 'common:delete' : 'common:confirm')
           const cancelLabel = entry.opts.cancelLabel ?? t('common:cancel')
           return (
             <AlertDialog
@@ -227,6 +231,7 @@ export function DialogsProvider({ children }: DialogsProviderProps): React.React
             }}
           >
             <DialogContent
+              closeLabel={t('common:close')}
               className={entry.className}
               onInteractOutside={(e) => {
                 if (entry.modal) e.preventDefault()

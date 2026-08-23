@@ -12,9 +12,11 @@
 import * as React from 'react'
 import { Button, Field, FieldDescription, FieldError, FieldLabel, Input, PasswordInput } from '@modern-admin/ui'
 import { Database, Globe, LogIn } from 'lucide-react'
-import { useAuthUiProps, useLogin, useSocialLogin } from '../hooks.js'
+import { useAdminConfig, useAuthUiProps, useLogin, useSocialLogin } from '../hooks.js'
 import { useI18n } from '../i18n.js'
 import { AdminApiError } from '../client.js'
+import { LanguageSwitcher, ThemeToggle } from '../header-controls.js'
+import type { AdminBrand } from '../types.js'
 
 // ─── Social provider registry ────────────────────────────────────────────────
 // Maps a Better Auth provider id to a display label and an icon element.
@@ -74,31 +76,53 @@ function resolveProvider(id: string): ProviderDef {
 // ─── Components ──────────────────────────────────────────────────────────────
 
 export interface LoginPageProps {
-  /** Optional title override (defaults to common:appName). */
+  /**
+   * Product name override. Applies to the heading *and* the brand panel —
+   * `brand.title` sets both if you already pass one.
+   */
   title?: React.ReactNode
   /** Optional helper line under the form — e.g. demo credentials. */
   hint?: React.ReactNode
   /** Optional tagline shown on the brand panel. */
   tagline?: React.ReactNode
+  /** Product name and logo. `title` here is the same knob as the prop above. */
+  brand?: AdminBrand
 }
 
-function BrandMark({ size = 'md' }: { size?: 'sm' | 'md' }): React.ReactElement {
+function BrandMark({
+  size = 'md',
+  logoUrl,
+}: {
+  size?: 'sm' | 'md'
+  logoUrl?: string
+}): React.ReactElement {
   const tile = size === 'sm' ? 'size-8 rounded-lg' : 'size-9 rounded-xl'
   const icon = size === 'sm' ? 'size-4' : 'size-5'
   return (
     <span
       className={`flex ${tile} items-center justify-center bg-primary/10 ring-1 ring-primary/20`}
     >
-      <Database className={`${icon} text-primary`} aria-hidden="true"/>
+      {logoUrl ? (
+        <img src={logoUrl} alt="" aria-hidden="true" className={`${icon} object-contain`}/>
+      ) : (
+        <Database className={`${icon} text-primary`} aria-hidden="true"/>
+      )}
     </span>
   )
 }
 
-export function LoginPage({ title, hint, tagline }: LoginPageProps): React.ReactElement {
+export function LoginPage({ title, hint, tagline, brand }: LoginPageProps): React.ReactElement {
   const { t } = useI18n()
   const login = useLogin()
   const socialLogin = useSocialLogin()
   const { data: authUi } = useAuthUiProps()
+  // Shares the query `AdminApp` already fires, so this adds no request. It
+  // resolves only when `publicConfig: true` — the endpoint is session-guarded
+  // by default, so a logged-out visitor gets a 401 and `config` stays
+  // undefined. Whitelabeling the login screen therefore goes through the
+  // client-side `brand.title` (or a `common:appName` override in
+  // `translations`), not through the server's `branding.companyName`.
+  const { data: config } = useAdminConfig()
   const [email, setEmail] = React.useState('')
   const [password, setPassword] = React.useState('')
 
@@ -130,29 +154,49 @@ export function LoginPage({ title, hint, tagline }: LoginPageProps): React.React
     return err.message || t('errors:server')
   })()
 
-  const heading = title ?? t('common:appName')
+  // One resolution for both marks. The brand panel used to call
+  // `t('common:appName')` directly, so a `title` override reached the <h1>
+  // and nothing else.
+  const appName = title ?? brand?.title ?? config?.branding?.companyName ?? t('common:appName')
   const subtitle = t('auth:subtitle')
   const taglineText = tagline ?? t('auth:tagline')
+  const logoUrl = brand?.logoUrl
+
+  // The shell's static <title> is the framework's, not the deployment's.
+  // `useDocumentTitle` covers the authenticated routes; this screen renders
+  // outside the router, so it sets its own.
+  React.useEffect(() => {
+    if (typeof document !== 'undefined' && typeof appName === 'string') {
+      document.title = appName
+    }
+  }, [appName])
 
   return (
     <div className="grid min-h-screen grid-cols-1 bg-background lg:grid-cols-2">
       {/* Brand panel — desktop only. Mirrors the sidebar's visual rhythm. */}
       <aside className="relative hidden flex-col justify-between border-r border-border bg-muted/30 p-10 lg:flex">
         <div className="flex items-center gap-3">
-          <BrandMark/>
+          <BrandMark logoUrl={logoUrl}/>
           <span className="text-base font-semibold tracking-tight">
-            {t('common:appName')}
+            {appName}
           </span>
         </div>
         <p className="max-w-md text-sm text-muted-foreground">{taglineText}</p>
       </aside>
 
       {/* Form column. Centered card with mobile-friendly padding. */}
-      <main className="flex items-center justify-center p-6 sm:p-10">
+      <main className="relative flex items-center justify-center p-6 sm:p-10">
+        {/* Language and theme are header-only inside the shell, which leaves
+            a logged-out visitor unable to pick either. Both belong on the
+            first screen they see. */}
+        <div className="absolute right-4 top-4 flex items-center gap-1">
+          <LanguageSwitcher/>
+          <ThemeToggle/>
+        </div>
         <div className="w-full max-w-sm">
           <div className="mb-8 flex flex-col items-center gap-3 text-center">
-            <BrandMark/>
-            <h1 className="text-2xl font-semibold tracking-tight">{heading}</h1>
+            <BrandMark logoUrl={logoUrl}/>
+            <h1 className="text-2xl font-semibold tracking-tight">{appName}</h1>
             <p className="text-sm text-muted-foreground">{subtitle}</p>
           </div>
 

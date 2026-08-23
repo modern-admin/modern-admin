@@ -117,6 +117,8 @@ export interface MediaPreviewProps {
     title?: string
     description?: string
     cannotPreview?: string
+    /** Visually-hidden label on the dialog's close button. Default: 'Close'. */
+    close?: string
   }
   /** Show the URL as secondary text next to the trigger. */
   showUrl?: boolean
@@ -212,7 +214,7 @@ export function MediaPreview({
       ) : null}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-3xl" closeLabel={labels?.close}>
           <DialogHeader>
             <DialogTitle>{titleLabel}</DialogTitle>
             {labels?.description ? (

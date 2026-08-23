@@ -31,7 +31,12 @@ export class PrismaProperty extends BaseProperty {
       path: field.name,
       type,
       isId: field.isId,
-      isSortable: field.kind === 'scalar' && !field.isList,
+      // Enum columns order fine in Postgres, MySQL and SQLite, so they are
+      // sortable too — they were excluded only because the taxonomy check
+      // stopped at `scalar`. That was harmless while `isSortable` was a UI
+      // hint; now that the list action enforces it, excluding them would
+      // reject `?sortBy=status` outright.
+      isSortable: (field.kind === 'scalar' || field.kind === 'enum') && !field.isList,
       // Prisma scalar lists (`String[]`, `Int[]`, …) are non-nullable but
       // implicitly default to `[]` at the storage level, so an empty array
       // is a valid value. Treating them as required would force the UI to

@@ -15,6 +15,18 @@ end-to-end Zod validation.
 bun add @modern-admin/nest
 ```
 
+## Cache safety and diagnostics
+
+The GET response cache uses versioned canonical URLs and a per-API-key or
+per-user scope. Resources with functional action/property `isAccessible`
+rules bypass this layer so a filtered response never skips request-time
+authorization. Role permission changes invalidate related HTTP responses.
+
+When a cache provider is configured, the SPA exposes a Cache page backed by
+`/admin/api/cache/stats`. Stats, reset, and resource invalidation endpoints
+default to the `admin` role; configure `cacheRoles` to provide a different
+operator allowlist. API-key principals cannot use these operator endpoints.
+
 ## Documentation
 
 Setup guides, architecture, and usage examples live in the

@@ -28,7 +28,7 @@
 // logical names to its `ma_*` namespace via `modelName: 'ma_user'` (etc.)
 // in the auth-builder, so the *physical* shapes are part of Modern Admin's
 // contract. Keeping them in this fragment means the bundled CLI (`bunx
-// @modern-admin/create-modern-admin generate`) can patch a host
+// @modern-admin/create generate`) can patch a host
 // `schema.prisma` with everything required in one shot — admins don't
 // need to run `@better-auth/cli generate` separately. Should you upgrade
 // Better Auth and find that the upstream column set drifted, re-run
@@ -96,6 +96,7 @@ model MaSession {
 
 model MaAccount {
   id                    String    @id @default(uuid())
+  issuer                String
   accountId             String
   providerId            String
   userId                String
@@ -114,6 +115,8 @@ model MaAccount {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([issuer, accountId])
+  @@index([userId])
   @@map("ma_account")
 }
 

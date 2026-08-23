@@ -1,5 +1,62 @@
 # @modern-admin/cache-redis
 
+## 0.7.0
+
+### Patch Changes
+
+- Updated dependencies [[`18a001e`](https://github.com/modern-admin/modern-admin/commit/18a001e875d4c5fa4b56592fbe9b1b54f9191558)]:
+  - @modern-admin/core@0.7.0
+
+## 0.6.0
+
+### Minor Changes
+
+- [`3d2a207`](https://github.com/modern-admin/modern-admin/commit/3d2a2077a466e87da55bf162dcafdb9a8b9bd652) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Refresh the monorepo to the latest stable dependency lines, including
+  TypeScript 7, Vite 8.2, TanStack Table 9, BullMQ 6, ioredis 6, Prisma 7.9,
+  NestJS 11.2, and the current React/UI toolchain. The table integration now
+  uses TanStack Table 9's explicit feature API, and the queue lock processor uses
+  BullMQ 6's backend client API. TypeScript 6 remains installed only as the
+  temporary JavaScript Compiler API compatibility layer required by ESLint and
+  declaration tooling while project compilation runs on TypeScript 7.
+
+### Patch Changes
+
+- Updated dependencies [[`3d2a207`](https://github.com/modern-admin/modern-admin/commit/3d2a2077a466e87da55bf162dcafdb9a8b9bd652)]:
+  - @modern-admin/core@0.6.0
+
+## 0.5.0
+
+### Minor Changes
+
+- [`4251f7a`](https://github.com/modern-admin/modern-admin/commit/4251f7a6ea01ad80fbd5515a27cec2e138d2ccb5) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Harden server caching across processes and expose cache observability.
+
+  - Route all framework reads, writes, and invalidations through a fail-open
+    `CacheRuntime` with tag-generation fencing, invalidation retry/quarantine,
+    TTL jitter, metrics, and optional distributed single-flight locks.
+  - Make Redis value/tag/reverse-index writes atomic, add cross-instance tag
+    epochs, token-safe locks, exact delete/overwrite cleanup, and monotonic tag
+    TTLs.
+  - Version and canonicalize action and HTTP keys, fix bounded in-memory LRU tag
+    semantics, and actively revoke cached role permissions across replicas.
+  - Scope HTTP entries per principal, bypass dynamic access predicates, and tie
+    cached responses to role-permission invalidation.
+  - Add protected cache stats/reset/resource-invalidation endpoints and a
+    localized Cache diagnostics screen.
+
+- [`4251f7a`](https://github.com/modern-admin/modern-admin/commit/4251f7a6ea01ad80fbd5515a27cec2e138d2ccb5) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Harden server caching across processes and expose cache observability.
+
+### Patch Changes
+
+- Updated dependencies [[`4251f7a`](https://github.com/modern-admin/modern-admin/commit/4251f7a6ea01ad80fbd5515a27cec2e138d2ccb5), [`4251f7a`](https://github.com/modern-admin/modern-admin/commit/4251f7a6ea01ad80fbd5515a27cec2e138d2ccb5), [`4251f7a`](https://github.com/modern-admin/modern-admin/commit/4251f7a6ea01ad80fbd5515a27cec2e138d2ccb5)]:
+  - @modern-admin/core@0.5.0
+
+## 0.4.1
+
+### Patch Changes
+
+- Updated dependencies [[`d39e559`](https://github.com/modern-admin/modern-admin/commit/d39e559e5e1cdf9fdbba9cd53f3cdf386af6baee), [`d39e559`](https://github.com/modern-admin/modern-admin/commit/d39e559e5e1cdf9fdbba9cd53f3cdf386af6baee)]:
+  - @modern-admin/core@0.4.1
+
 ## 0.3.5
 
 ### Patch Changes

@@ -43,6 +43,7 @@ export interface ListQueryState {
 export type Route =
   | { name: 'home' }
   | { name: 'audit-log' }
+  | { name: 'cache' }
   | { name: 'list'; resourceId: string; query?: ListQueryState }
   | { name: 'show'; resourceId: string; recordId: string }
   | { name: 'edit'; resourceId: string; recordId: string }
@@ -131,6 +132,7 @@ export const parseLocation = (pathname: string, searchStr: string): Route => {
   const parts = pathname.split('/').filter(Boolean)
   if (parts.length === 0) return { name: 'home' }
   if (parts[0] === 'audit-log') return { name: 'audit-log' }
+  if (parts[0] === 'cache') return { name: 'cache' }
   if (parts[0] === 'settings') {
     const section = parts[1] ? decodeURIComponent(parts[1]) : undefined
     return section ? { name: 'settings', section } : { name: 'settings' }
@@ -179,6 +181,8 @@ export const buildHref = (route: Route): string => {
     return '/'
   case 'audit-log':
     return '/audit-log'
+  case 'cache':
+    return '/cache'
   case 'list':
     return `/resources/${encodeURIComponent(route.resourceId)}${buildListQuery(route.query)}`
   case 'show':

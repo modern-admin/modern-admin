@@ -6,6 +6,8 @@ export {
   AdminApiError,
   type AdminClientOptions,
   type AuthUiProps,
+  type CacheStatsEntry,
+  type CacheStatsResponse,
   type AiAssistantChatEnqueueResponse,
   type AiAssistantChatMessage,
   type AiAssistantChatResponse,
@@ -17,6 +19,8 @@ export {
   type UploadProgress,
   type UploadFileOptions,
   type UploadFilesOptions,
+  type UploadErrorCode,
+  type UploadErrorMessages,
 } from './client.js'
 export { ComponentLoader, type ComponentEntry } from './component-loader.js'
 export {
@@ -46,6 +50,7 @@ export {
   useResource,
   useResources,
   useRecords,
+  useRefreshRecords,
   useRecord,
   useCreateRecord,
   useUpdateRecord,
@@ -59,6 +64,9 @@ export {
   useCurrentUser,
   useLogin,
   useLogout,
+  useCacheStats,
+  useInvalidateResourceCache,
+  useResetCacheStats,
   useAuthUiProps,
   useSocialLogin,
   invalidateResourceData,
@@ -67,9 +75,14 @@ export {
 export {
   PropertyDisplay,
   PropertyEditor,
+  isGroupPropertyEditor,
   type PropertyDisplayProps,
   type PropertyEditorProps,
 } from './property-renderer.js'
+export {
+  RecordFormField,
+  type RecordFormFieldProps,
+} from './components/record-form-field.js'
 export {
   ReferenceLink,
   ReferenceLinkList,
@@ -87,6 +100,7 @@ export {
   type MetadataLocaleTranslations,
   type MetadataTranslations,
 } from './i18n.js'
+export { useDocumentTitle } from './use-document-title.js'
 export { useHotkey, type HotkeyOptions } from './use-hotkey.js'
 export {
   HotkeyRegistryProvider,
@@ -171,6 +185,7 @@ export {
   type WizardFormProps,
 } from './components/wizard-form.js'
 export { HomePage } from './pages/home-page.js'
+export { CachePage } from './pages/cache-page.js'
 export { ExportDialog, type ExportDialogProps } from './pages/export-dialog.js'
 export {
   PageBreadcrumbs,
@@ -190,6 +205,7 @@ export {
   type SerializeOptions,
 } from './export.js'
 export type {
+  AdminBrand,
   AdminConfig,
   AdminFeatures,
   ActionComponentProps,

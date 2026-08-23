@@ -6,6 +6,11 @@ describe('buildHref', () => {
     expect(buildHref({ name: 'home' })).toBe('/')
   })
 
+  test('cache', () => {
+    expect(buildHref({ name: 'cache' })).toBe('/cache')
+    expect(parseLocation('/cache', '')).toEqual({ name: 'cache' })
+  })
+
   test('list', () => {
     expect(buildHref({ name: 'list', resourceId: 'users' })).toBe('/resources/users')
   })

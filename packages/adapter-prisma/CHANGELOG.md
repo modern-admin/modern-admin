@@ -1,5 +1,143 @@
 # @modern-admin/adapter-prisma
 
+## 0.7.0
+
+### Minor Changes
+
+- [#26](https://github.com/modern-admin/modern-admin/pull/26) [`18a001e`](https://github.com/modern-admin/modern-admin/commit/18a001e875d4c5fa4b56592fbe9b1b54f9191558) Thanks [@zingerman-dev](https://github.com/zingerman-dev)! - Implement the 22 findings from the v0.5.0 audit: supported whitelabeling and UI-string
+  overrides, an access-filtered and authenticated `/admin/api/config`, accessible names on the
+  record editor, and the removal of nine declared-but-never-read public options.
+  
+  Contains behaviour changes that need a conscious upgrade:
+  
+  - `GET /admin/api/config` now requires a session. Its anonymous branch also no longer skips
+    the `isAccessible` / `isVisible` filtering the authenticated branch performed, so an
+    anonymous caller can never see more of the schema than an authenticated one. Opt back into
+    anonymous access with `ModernAdminModule.forRoot({ publicConfig: true })`.
+  - `ModernAdminModule.forRootAsync` takes an explicit `aiAssistant?: boolean` and throws at
+    boot when it disagrees with the options the factory returned. Hosts that configure the AI
+    assistant asynchronously must add `aiAssistant: true`.
+  - `?sortBy=` is validated against `isSortable()` and returns 400 instead of reaching the ORM.
+  - `IQueryableLogStore.list()` defaults to 50 rows in both shipped stores.
+  - Production source maps are off by default (`AdminAppConfigOptions.sourcemap`), and `.map`
+    files are excluded from the `@modern-admin/web` tarball.
+  - `ModernAdminStaticUiModule` rejects a root mount (`path: '/'`) at boot.
+  - The HTTP cache interceptor is bound to the admin controllers instead of `APP_INTERCEPTOR`.
+  - `TimeSeriesQuery.filters` is removed and `StreamOptions.cursor` throws in the offset-based
+    base implementation, rather than both being silently ignored.
+  
+  Covered by 30 new tests across core, nest, adapter-prisma and system-prisma.
+
+### Patch Changes
+
+- Updated dependencies [[`18a001e`](https://github.com/modern-admin/modern-admin/commit/18a001e875d4c5fa4b56592fbe9b1b54f9191558)]:
+  - @modern-admin/core@0.7.0
+
+## 0.6.0
+
+### Patch Changes
+
+- [`3d2a207`](https://github.com/modern-admin/modern-admin/commit/3d2a2077a466e87da55bf162dcafdb9a8b9bd652) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Refresh the monorepo to the latest stable dependency lines, including
+  TypeScript 7, Vite 8.2, TanStack Table 9, BullMQ 6, ioredis 6, Prisma 7.9,
+  NestJS 11.2, and the current React/UI toolchain. The table integration now
+  uses TanStack Table 9's explicit feature API, and the queue lock processor uses
+  BullMQ 6's backend client API. TypeScript 6 remains installed only as the
+  temporary JavaScript Compiler API compatibility layer required by ESLint and
+  declaration tooling while project compilation runs on TypeScript 7.
+- Updated dependencies [[`3d2a207`](https://github.com/modern-admin/modern-admin/commit/3d2a2077a466e87da55bf162dcafdb9a8b9bd652)]:
+  - @modern-admin/core@0.6.0
+
+## 0.5.0
+
+### Patch Changes
+
+- Updated dependencies [[`4251f7a`](https://github.com/modern-admin/modern-admin/commit/4251f7a6ea01ad80fbd5515a27cec2e138d2ccb5), [`4251f7a`](https://github.com/modern-admin/modern-admin/commit/4251f7a6ea01ad80fbd5515a27cec2e138d2ccb5), [`4251f7a`](https://github.com/modern-admin/modern-admin/commit/4251f7a6ea01ad80fbd5515a27cec2e138d2ccb5)]:
+  - @modern-admin/core@0.5.0
+
+## 0.4.2
+
+### Patch Changes
+
+- [`3ad467e`](https://github.com/modern-admin/modern-admin/commit/3ad467edaf7f219843d5468f39ceb1a9a09b0383) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Added user friendly chart's filters and selector component adoptation for mobile view
+
+- [`3ad467e`](https://github.com/modern-admin/modern-admin/commit/3ad467edaf7f219843d5468f39ceb1a9a09b0383) Thanks [@SergiyIva](https://github.com/SergiyIva)! - fix: map Prisma 7 driver-adapter constraint errors to 400 instead of 500
+
+  `toValidationError` only understood the legacy Rust engine's `meta.target`
+  (P2002) and `meta.field_name` (P2003). With a driver adapter (`@prisma/adapter-pg`
+  and friends) Prisma 7 reports constraints under
+  `meta.driverAdapterError.cause.constraint` instead, so both branches missed and
+  every unique/foreign-key conflict surfaced as an internal server error. All
+  three constraint shapes (`{ fields }`, `{ index }`, `{ foreignKey }`) are now
+  resolved to Prisma field names — honouring `@map` and composite indexes — with a
+  record-level 400 when the constraint carries no usable detail.
+
+  `delete()` also no longer bypasses the mapper: delete-restrict raises P2003 and
+  now yields a 400 explaining the record is still referenced, rather than a 500.
+
+## 0.4.1
+
+### Patch Changes
+
+- [`d39e559`](https://github.com/modern-admin/modern-admin/commit/d39e559e5e1cdf9fdbba9cd53f3cdf386af6baee) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Build the filter panel from the filter view instead of the list columns.
+
+  `ResourceListPage` fed `FilterControl` the same property set it fed the table,
+  so everything the server computed for the `filter` view was discarded by the
+  SPA. `filterProperties` and `isVisible: { filter: … }` read as working config —
+  documented, typed, Zod-validated, merged with replace semantics — while having
+  no effect at all, and a property hidden from the table was silently
+  unfilterable. The panel (and the per-column header filters) now render
+  `propertyOrder.filter`, which the API has been serialising all along.
+
+  Two consequences of the old behaviour are fixed with it:
+
+  - **Filtering by id works when you ask for it.** The filter view drops id
+    columns by default; listing one in `filterProperties` (or setting
+    `isVisible: { filter: true }`) now actually surfaces it, so a record can be
+    looked up by an id pasted from a log or a support ticket.
+  - **A field excluded from filtering can no longer reach the adapter.** Virtual
+    properties marked `isVisible: { filter: false }` used to stay in the panel and
+    emit a `where` clause against a column that doesn't exist.
+
+  Two adjacent defects surfaced while verifying the above, both of which made the
+  id filter useless even once it rendered:
+
+  - Adapters return no distinct values for non-string columns, and the string
+    filter field read an _empty_ distinct list as "low cardinality" — switching to
+    a checkbox picker with nothing to check, so the value could not be typed.
+  - `@modern-admin/adapter-prisma` gated `contains`/`startsWith`/`endsWith` on the
+    core property _type_, so on a `String @id` (surfaced as `uuid`) the clause was
+    dropped and the unfiltered list came back. The gate now asks the underlying
+    DMMF field. `eq`/`neq` deliberately stay exact on those columns — the
+    case-insensitive branch costs the btree index, and id/FK equality is the hot
+    path.
+
+- [`d39e559`](https://github.com/modern-admin/modern-admin/commit/d39e559e5e1cdf9fdbba9cd53f3cdf386af6baee) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Stop `datetime` values drifting by the browser↔server timezone offset on save.
+
+  `DatePicker` in `mode="datetime"` emitted browser-local wall time with no
+  offset (`2026-08-04T15:00`). Per spec, `new Date(...)` resolves an offset-less
+  date-time in the _running process's_ timezone, so the Prisma adapter stored a
+  different instant than the user picked whenever the two timezones differed —
+  and because the show/edit views render the instant back in browser-local time,
+  re-saving an untouched record shifted it again. With a browser on UTC+3 and an
+  API on UTC (the default in a plain Docker image), three hours were added per
+  round trip.
+
+  - `@modern-admin/ui` now emits a full UTC instant (`toISOString()`) for
+    datetime. The visible text input keeps its human-readable
+    `yyyy-MM-dd HH:mm` shape; only the wire format changed. `mode="date"` is
+    unaffected — a bare `yyyy-MM-dd` is already spec'd to parse as UTC midnight.
+  - `@modern-admin/core` exports `parseDateValue`, which reads an offset-less
+    date-time as UTC instead of inheriting `process.env.TZ`, and uses it when
+    coercing filter values. `@modern-admin/adapter-prisma` uses it when
+    normalising `DateTime` writes. Explicit offsets (`Z`, `+03:00`) are honoured
+    as given. This keeps older clients, form posts and hand-written API calls
+    correct without depending on deployment config.
+
+- [`d39e559`](https://github.com/modern-admin/modern-admin/commit/d39e559e5e1cdf9fdbba9cd53f3cdf386af6baee) Thanks [@SergiyIva](https://github.com/SergiyIva)! - fixed timezone gap, filter list by default
+
+- Updated dependencies [[`d39e559`](https://github.com/modern-admin/modern-admin/commit/d39e559e5e1cdf9fdbba9cd53f3cdf386af6baee), [`d39e559`](https://github.com/modern-admin/modern-admin/commit/d39e559e5e1cdf9fdbba9cd53f3cdf386af6baee)]:
+  - @modern-admin/core@0.4.1
+
 ## 0.3.5
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/system-drizzle",
-  "version": "0.3.5",
+  "version": "0.7.0",
   "description": "Drizzle-backed implementation of Modern Admin system stores.",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/system-drizzle#readme",
   "keywords": [
@@ -29,7 +29,8 @@
   },
   "files": [
     "dist",
-    "src"
+    "src",
+    "migrations"
   ],
   "publishConfig": {
     "registry": "https://registry.npmjs.org",
@@ -54,12 +55,12 @@
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
-    "@types/bun": "^1.3.13",
+    "@types/bun": "^1.3.14",
     "drizzle-orm": "^0.45.2",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   },
   "peerDependencies": {
-    "drizzle-orm": ">=0.45"
+    "drizzle-orm": "^0.45.2"
   },
   "peerDependenciesMeta": {
     "drizzle-orm": {

@@ -41,7 +41,7 @@ datasource db {
 // the framework's runtime stores (logs, history, config, AI tasks, etc.).
 // Mirrored from `@modern-admin/system-prisma`'s canonical fragment — if
 // you upgrade `@modern-admin/system-prisma` and the upstream shapes drift,
-// re-run `bunx modern-admin generate` to reconcile.
+// re-run `bunx @modern-admin/create generate` to reconcile.
 
 model MaUser {
   id            String    @id @default(uuid(7))
@@ -83,6 +83,7 @@ model MaSession {
 
 model MaAccount {
   id                    String    @id @default(uuid(7))
+  issuer                String
   accountId             String
   providerId            String
   userId                String
@@ -101,6 +102,8 @@ model MaAccount {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([issuer, accountId])
+  @@index([userId])
   @@map("ma_account")
 }
 

@@ -9,6 +9,7 @@ export {
 } from './components/accordion.js'
 
 export { cn } from './lib/utils.js'
+export { dateFnsLocale, type Locale } from './lib/date-locales.js'
 export {
   initTheme,
   readThemeMode,
@@ -97,6 +98,7 @@ export {
   DialogFooter,
   DialogTitle,
   DialogDescription,
+  type DialogContentProps,
 } from './components/dialog.js'
 export {
   AlertDialog,
@@ -159,6 +161,7 @@ export {
   CommandItem,
   CommandShortcut,
   CommandSeparator,
+  type CommandDialogProps,
 } from './components/command.js'
 
 // Form (react-hook-form bindings)
@@ -267,6 +270,7 @@ export {
 export {
   JsonEditor,
   JsonView,
+  formatJsonValue,
   type JsonEditorProps,
   type JsonViewProps,
 } from './components/json-editor.js'

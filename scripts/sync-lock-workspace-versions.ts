@@ -25,6 +25,20 @@ import { fileURLToPath } from 'node:url'
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const LOCK_PATH = join(REPO_ROOT, 'bun.lock')
+const CORE_INDEX_PATH = join(REPO_ROOT, 'packages/core/src/index.ts')
+
+async function syncCoreFallbackVersion(version: string): Promise<boolean> {
+  const original = await readFile(CORE_INDEX_PATH, 'utf8')
+  const versionRe = /(const FALLBACK_VERSION = ')[^']+(')/
+  if (!versionRe.test(original)) {
+    throw new Error(`Could not find FALLBACK_VERSION in ${CORE_INDEX_PATH}`)
+  }
+  const updated = original.replace(versionRe, `$1${version}$2`)
+  if (updated === original) return false
+  await writeFile(CORE_INDEX_PATH, updated, 'utf8')
+  console.log(`  packages/core/src/index.ts: FALLBACK_VERSION → ${version}`)
+  return true
+}
 
 async function workspaceVersions(): Promise<Map<string, string>> {
   const versions = new Map<string, string>()
@@ -51,6 +65,10 @@ async function workspaceVersions(): Promise<Map<string, string>> {
 
 async function main(): Promise<void> {
   const versions = await workspaceVersions()
+  const coreVersion = versions.get('packages/core')
+  const coreVersionFixed = coreVersion
+    ? await syncCoreFallbackVersion(coreVersion)
+    : false
   const original = await readFile(LOCK_PATH, 'utf8')
   let lock = original
   let fixes = 0
@@ -73,7 +91,11 @@ async function main(): Promise<void> {
   }
 
   if (fixes === 0) {
-    console.log('bun.lock workspace versions already in sync.')
+    console.log(
+      coreVersionFixed
+        ? '✓ core runtime version synced; bun.lock workspace versions already in sync.'
+        : 'bun.lock workspace versions and core runtime version already in sync.',
+    )
     return
   }
   await writeFile(LOCK_PATH, lock, 'utf8')

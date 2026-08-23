@@ -1,6 +1,12 @@
 import { describe, expect, test } from 'bun:test'
 import { type ApiKeyCreated, BetterAuthProvider } from '../src/index.js'
 
+const silentLogger = {
+  debug: () => {},
+  info: () => {},
+  warn: () => {},
+  error: () => {},
+}
 
 const fakeAuth = (overrides: Partial<{
   user: unknown
@@ -85,6 +91,62 @@ describe('BetterAuthProvider', () => {
     })
     await provider.logout({ headers: { cookie: 'valid' } })
     expect(called).toBe(true)
+  })
+
+  test('seedAdmin assigns the requested role through Better Auth setRole', async () => {
+    const calls: Array<{ body: { userId: string; role: string }; headers?: Headers }> = []
+    const headers = new Headers({ cookie: 'seed-session' })
+    const provider = new BetterAuthProvider({
+      auth: {
+        api: {
+          signUpEmail: async () => ({ user: { id: 'new-user' } }),
+          setRole: async (args: { body: { userId: string; role: string }; headers?: Headers }) => {
+            calls.push(args)
+          },
+        },
+      },
+      logger: silentLogger,
+      seedAdminHeaders: headers,
+    })
+
+    await provider.seedAdmin({
+      email: 'root@example.test',
+      password: 'correct horse battery staple',
+      role: 'root',
+    })
+
+    expect(calls).toHaveLength(1)
+    expect(calls[0]?.body).toEqual({ userId: 'new-user', role: 'root' })
+    expect(calls[0]?.headers).toBe(headers)
+  })
+
+  test('seedAdmin reconciles the role of an existing account through setRole', async () => {
+    const calls: Array<{ body: { userId: string; role: string } }> = []
+    const provider = new BetterAuthProvider({
+      auth: {
+        api: {
+          signUpEmail: async () => {
+            throw { body: { code: 'USER_ALREADY_EXISTS' } }
+          },
+          listUsers: async () => ({ users: [{ id: 'existing-user' }] }),
+          setRole: async (args: { body: { userId: string; role: string } }) => {
+            calls.push(args)
+          },
+        },
+      },
+      logger: silentLogger,
+      seedAdminHeaders: new Headers({ cookie: 'seed-session' }),
+    })
+
+    await provider.seedAdmin({
+      email: 'root@example.test',
+      password: 'correct horse battery staple',
+      role: 'admin',
+    })
+
+    expect(calls.map((call) => call.body)).toEqual([
+      { userId: 'existing-user', role: 'admin' },
+    ])
   })
 
   test('getApiKeyAdmin createApiKey resolves session user and passes userId', async () => {

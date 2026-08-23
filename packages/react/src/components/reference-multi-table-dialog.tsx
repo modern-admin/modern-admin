@@ -144,6 +144,7 @@ export function ReferenceMultiTableDialog({
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
+          closeLabel={t('common:close')}
           // Wide layout so the embedded table has room. Cap height and let
           // the body scroll independently of the footer.
           className="flex max-h-[90vh] w-[95vw] max-w-5xl flex-col gap-0 p-0"

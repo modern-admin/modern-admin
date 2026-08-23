@@ -20,7 +20,7 @@
 // i18n-unaware by design: all visible strings are passed via `labels`.
 
 import * as React from 'react'
-import { addMonths, format, isSameMonth, isValid, parse, parseISO, startOfMonth } from 'date-fns'
+import { addMonths, format, isSameMonth, isValid, parse, parseISO, startOfMonth, type Locale } from 'date-fns'
 import { CalendarRange, X } from 'lucide-react'
 import type { DateRange } from 'react-day-picker'
 import { cn } from '../lib/utils.js'
@@ -53,6 +53,12 @@ export interface DateRangeInputProps {
   disabled?: boolean
   className?: string
   labels?: DateRangeInputLabels
+  /**
+   * date-fns locale for the calendars — month names, weekday headers, and
+   * react-day-picker's own ARIA labels. Without it they render in `en-US`
+   * regardless of the surrounding UI language.
+   */
+  locale?: Locale
 }
 
 export function DateRangeInput({
@@ -62,6 +68,7 @@ export function DateRangeInput({
   disabled,
   className,
   labels = {},
+  locale,
 }: DateRangeInputProps): React.ReactElement {
   const placeholder = labels.placeholder ?? 'Select date range'
   const applyLabel = labels.apply ?? 'Apply'
@@ -195,8 +202,8 @@ export function DateRangeInput({
 
   const displayText = hasValue
     ? [
-      fromDate ? format(fromDate, DISPLAY_FMT) : '…',
-      toDate ? format(toDate, DISPLAY_FMT) : '…',
+      fromDate ? format(fromDate, DISPLAY_FMT, { locale }) : '…',
+      toDate ? format(toDate, DISPLAY_FMT, { locale }) : '…',
     ].join(' – ')
     : null
 
@@ -246,6 +253,7 @@ export function DateRangeInput({
           <div className="flex flex-col sm:flex-row">
             <Calendar
               mode="range"
+              locale={locale}
               selected={pending}
               onSelect={handleSelect}
               numberOfMonths={1}
@@ -256,6 +264,7 @@ export function DateRangeInput({
             />
             <Calendar
               mode="range"
+              locale={locale}
               selected={pending}
               onSelect={handleSelect}
               numberOfMonths={1}
@@ -267,6 +276,7 @@ export function DateRangeInput({
         ) : (
           <Calendar
             mode="range"
+            locale={locale}
             selected={pending}
             onSelect={handleSelect}
             numberOfMonths={1}

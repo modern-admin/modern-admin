@@ -1,14 +1,15 @@
 // Popover-driven date / datetime input. Single picker handles both modes:
 // pass `mode="datetime"` to surface an HH:MM time input below the calendar.
 //
-// Value is an ISO-ish string (`yyyy-MM-dd` for dates, `yyyy-MM-ddTHH:mm` for
-// datetime — same shape <input type="date">/<input type="datetime-local">
-// produce, so callers can stay format-stable). The trigger is a real text
+// Value is an ISO string: `yyyy-MM-dd` for dates, a full UTC instant
+// (`toISOString()`) for datetime — offset-less wall time would be re-read in
+// the server's timezone and drift. Incoming values may be in any ISO shape;
+// only what we emit is normalised. The trigger is a real text
 // input so users can also type the date manually; clicks on the trailing
 // calendar icon open the popover with the inline picker.
 
 import * as React from 'react'
-import { format, isValid, parse, parseISO } from 'date-fns'
+import { format, isValid, parse, parseISO, type Locale } from 'date-fns'
 import { Calendar as CalendarIcon } from 'lucide-react'
 import { cn } from '../lib/utils.js'
 import { Button } from './button.js'
@@ -34,6 +35,20 @@ export interface DatePickerProps {
   openCalendarLabel?: string
   /** Label for the time input shown in datetime mode. Default: "Time". */
   timeLabel?: string
+  /**
+   * date-fns locale for the popover calendar — month names, weekday headers,
+   * and react-day-picker's own ARIA labels. Without it the calendar renders
+   * in `en-US` regardless of the surrounding UI language.
+   */
+  locale?: Locale
+  /** `id` of the trigger input, so a `<label for=…>` can point at it. */
+  id?: string
+  /** Forwarded to the trigger input as `aria-describedby`. */
+  describedBy?: string
+  /** Marks the trigger input `aria-invalid`. */
+  invalid?: boolean
+  /** Marks the trigger input `aria-required`. */
+  required?: boolean
 }
 
 const DATE_FMT = 'yyyy-MM-dd'
@@ -73,8 +88,14 @@ function formatForInput(date: Date | undefined, mode: DatePickerMode): string {
   return format(date, mode === 'datetime' ? DATETIME_DISPLAY_FMT : DATE_FMT)
 }
 
+// Datetime values go out as a UTC instant, never as browser-local wall time.
+// A `yyyy-MM-ddTHH:mm` string carries no offset, so whoever resolves it later
+// (`new Date(...)` on the server) reads it in *that process's* timezone — a
+// browser/server timezone gap then shifts the stored instant on every save,
+// cumulatively. `date` mode keeps the bare `yyyy-MM-dd`: a date-only string is
+// spec'd to parse as UTC midnight, and it has no instant to preserve.
 function formatForApi(date: Date, mode: DatePickerMode): string {
-  return format(date, mode === 'datetime' ? DATETIME_FMT : DATE_FMT)
+  return mode === 'datetime' ? date.toISOString() : format(date, DATE_FMT)
 }
 
 export function DatePicker({
@@ -88,6 +109,11 @@ export function DatePicker({
   ariaLabel,
   openCalendarLabel = 'Open calendar',
   timeLabel = 'Time',
+  locale,
+  id,
+  describedBy,
+  invalid,
+  required,
 }: DatePickerProps): React.ReactElement {
   const [open, setOpen] = React.useState(false)
   const date = parseValue(value)
@@ -170,12 +196,16 @@ export function DatePicker({
         <Input
           type="text"
           inputMode="numeric"
+          id={id}
           value={draft}
           onChange={handleInputChange}
           onBlur={handleInputBlur}
           placeholder={inputPlaceholder}
           disabled={disabled}
           aria-label={ariaLabel}
+          aria-describedby={describedBy}
+          aria-invalid={invalid || undefined}
+          aria-required={required || undefined}
           className={cn(inputClassName, 'pr-10')}
         />
         <PopoverTrigger asChild>
@@ -196,6 +226,7 @@ export function DatePicker({
           mode="single"
           selected={date}
           defaultMonth={date}
+          locale={locale}
           onSelect={(d) => {
             commitDate(d)
             if (mode === 'date') setOpen(false)

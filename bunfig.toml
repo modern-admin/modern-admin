@@ -8,4 +8,7 @@ auto = "auto"
 # placeholder for private registries when needed
 
 [test]
-# default test runner config
+# `apps/e2e/tests/*.spec.ts` are Playwright specs — they match bun's test glob
+# but blow up under bun's runner ("Playwright Test did not expect
+# test.describe() to be called here"). Run them with `bun run e2e`.
+pathIgnorePatterns = ["**/apps/e2e/**"]

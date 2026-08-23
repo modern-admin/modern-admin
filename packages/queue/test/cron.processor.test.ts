@@ -30,7 +30,7 @@ const buildProcessor = (overrides?: {
   } as unknown as CronService
 
   const cronQueue = {
-    client: Promise.resolve(redis),
+    getBackend: () => ({ client: Promise.resolve(redis) }),
   } as unknown as Queue
 
   const processor = new CronProcessor(cronService, cronQueue)

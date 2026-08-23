@@ -1,6 +1,28 @@
 // @modern-admin/core — universal admin panel core abstractions.
 
-export const VERSION = '0.0.0'
+/**
+ * Package version.
+ *
+ * Two layers, so this is correct with or without build tooling:
+ *
+ * 1. `FALLBACK_VERSION` tracks `package.json#version`. The release versioning
+ *    script updates it alongside the workspace manifests. It is what
+ *    ships if nothing substitutes anything — which is what happened before:
+ *    the constant was a bare `'0.0.0'` literal, so a 0.5.0 package reported
+ *    version zero to every consumer that read it.
+ * 2. A bundler `define` for `__MODERN_ADMIN_VERSION__` (tsup/Vite `define`,
+ *    esbuild `--define:`) overrides it for anyone who wires it up.
+ *
+ * `typeof` on an undeclared global is safe in JS, so running straight from
+ * source (tests, ts-node) never throws here.
+ */
+declare const __MODERN_ADMIN_VERSION__: string | undefined
+
+/** Synced from `package.json#version` by `scripts/sync-lock-workspace-versions.ts`. */
+const FALLBACK_VERSION = '0.7.0'
+
+export const VERSION: string =
+  typeof __MODERN_ADMIN_VERSION__ === 'string' ? __MODERN_ADMIN_VERSION__ : FALLBACK_VERSION
 
 // Adapters
 export {
@@ -102,11 +124,24 @@ export {
   bulkDeleteAction,
   normalizeActionNesting,
   searchAction,
+  valuesAction,
   CacheRuntime,
+  CACHE_KEY_VERSION,
+  cacheKey,
+  listCacheKey,
   listTag,
+  recordCacheKey,
   recordTag,
   recordsTag,
+  rolePermissionsTag,
+  searchCacheKey,
+  stableCacheStringify,
+  type CacheMetricCounters,
+  type CacheReadStatus,
+  type CacheRuntimeOptions,
   type CacheRuntimeReadOptions,
+  type CacheRuntimeStats,
+  type CacheStatsEntry,
   type Action,
   type ActionContext,
   type ActionDescriptor,
@@ -132,16 +167,19 @@ export {
   CACHE_INVALIDATION_CHANNEL,
   ComponentLoader,
   CrossInstanceCacheProvider,
+  ConsoleLogger,
   InMemoryRealtimeBus,
   MemoryCacheProvider,
   NoopCacheProvider,
   NoopRealtimeBus,
   withCrossInstanceInvalidation,
   type CacheSetOptions,
+  type CacheTagEpochs,
   type ComponentLoaderEntry,
   type CurrentAdmin,
   type IAuthProvider,
   type ICacheProvider,
+  type ILogger,
   type IComponentLoader,
   type IRealtimeBus,
   type LoginCredentials,
@@ -250,6 +288,11 @@ export {
 // normalise pre-mutation snapshots to the same shape that `toJSON()`
 // emits on the response, keeping diffs symmetric.
 export { unflatten } from './utils/flat.js'
+
+// Timezone-stable date parsing. Adapters resolve wire strings with this
+// instead of bare `new Date(...)`, so an offset-less date-time means UTC
+// rather than "whatever `TZ` the server happens to run under".
+export { parseDateValue } from './utils/date.js'
 
 // Action-hook chaining helpers. Resource features append `before`/`after`
 // hooks onto built-in actions without clobbering pre-existing ones — these

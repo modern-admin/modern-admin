@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { Database } from 'bun:sqlite'
+import { getAuthTables } from 'better-auth/db'
 import type { ILogStore, ActionLogEntry } from '@modern-admin/core'
 import { buildBetterAuth, setAuditLogStore, type BuildBetterAuthOptions } from '../src/index.js'
 
@@ -57,6 +58,19 @@ describe('buildBetterAuth', () => {
     const { config } = buildBetterAuth({ database: makeDatabase() })
     expect(config.rateLimit?.enabled).toBe(true)
     expect(config.secret).toBeDefined()
+  })
+
+  test('exposes the stable Better Auth 1.7 account identity schema', () => {
+    const { config } = buildBetterAuth({ database: makeDatabase() })
+    const account = getAuthTables(config).account!
+    expect(account.fields.issuer).toMatchObject({ type: 'string', required: true })
+    expect(account.fields.accountId).toMatchObject({ type: 'string', required: true })
+    expect(account.fields.providerId).toMatchObject({ type: 'string', required: true })
+    expect(account.fields.userId).toMatchObject({ required: true, index: true })
+    expect(account.indexes).toContainEqual({
+      fields: ['issuer', 'accountId'],
+      unique: true,
+    })
   })
 
   test('always installs a session.create.after audit hook', () => {

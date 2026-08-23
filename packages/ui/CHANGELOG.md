@@ -1,5 +1,108 @@
 # @modern-admin/ui
 
+## 0.7.0
+
+### Minor Changes
+
+- [#26](https://github.com/modern-admin/modern-admin/pull/26) [`18a001e`](https://github.com/modern-admin/modern-admin/commit/18a001e875d4c5fa4b56592fbe9b1b54f9191558) Thanks [@zingerman-dev](https://github.com/zingerman-dev)! - Implement the 22 findings from the v0.5.0 audit: supported whitelabeling and UI-string
+  overrides, an access-filtered and authenticated `/admin/api/config`, accessible names on the
+  record editor, and the removal of nine declared-but-never-read public options.
+  
+  Contains behaviour changes that need a conscious upgrade:
+  
+  - `GET /admin/api/config` now requires a session. Its anonymous branch also no longer skips
+    the `isAccessible` / `isVisible` filtering the authenticated branch performed, so an
+    anonymous caller can never see more of the schema than an authenticated one. Opt back into
+    anonymous access with `ModernAdminModule.forRoot({ publicConfig: true })`.
+  - `ModernAdminModule.forRootAsync` takes an explicit `aiAssistant?: boolean` and throws at
+    boot when it disagrees with the options the factory returned. Hosts that configure the AI
+    assistant asynchronously must add `aiAssistant: true`.
+  - `?sortBy=` is validated against `isSortable()` and returns 400 instead of reaching the ORM.
+  - `IQueryableLogStore.list()` defaults to 50 rows in both shipped stores.
+  - Production source maps are off by default (`AdminAppConfigOptions.sourcemap`), and `.map`
+    files are excluded from the `@modern-admin/web` tarball.
+  - `ModernAdminStaticUiModule` rejects a root mount (`path: '/'`) at boot.
+  - The HTTP cache interceptor is bound to the admin controllers instead of `APP_INTERCEPTOR`.
+  - `TimeSeriesQuery.filters` is removed and `StreamOptions.cursor` throws in the offset-based
+    base implementation, rather than both being silently ignored.
+  
+  Covered by 30 new tests across core, nest, adapter-prisma and system-prisma.
+
+## 0.6.0
+
+### Patch Changes
+
+- [`3d2a207`](https://github.com/modern-admin/modern-admin/commit/3d2a2077a466e87da55bf162dcafdb9a8b9bd652) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Refresh the monorepo to the latest stable dependency lines, including
+  TypeScript 7, Vite 8.2, TanStack Table 9, BullMQ 6, ioredis 6, Prisma 7.9,
+  NestJS 11.2, and the current React/UI toolchain. The table integration now
+  uses TanStack Table 9's explicit feature API, and the queue lock processor uses
+  BullMQ 6's backend client API. TypeScript 6 remains installed only as the
+  temporary JavaScript Compiler API compatibility layer required by ESLint and
+  declaration tooling while project compilation runs on TypeScript 7.
+
+## 0.5.0
+
+### Minor Changes
+
+- [`4251f7a`](https://github.com/modern-admin/modern-admin/commit/4251f7a6ea01ad80fbd5515a27cec2e138d2ccb5) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Harden server caching across processes and expose cache observability.
+
+### Patch Changes
+
+- [`4251f7a`](https://github.com/modern-admin/modern-admin/commit/4251f7a6ea01ad80fbd5515a27cec2e138d2ccb5) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Added localized text search for resources on the admin home page and hid the
+  native search reset control when an Input provides its own clear button. Select
+  menus now retain their height after the down-scroll indicator disappears.
+  JSON properties in the show view now offer a copy button.
+
+## 0.4.2
+
+### Patch Changes
+
+- [`3ad467e`](https://github.com/modern-admin/modern-admin/commit/3ad467edaf7f219843d5468f39ceb1a9a09b0383) Thanks [@SergiyIva](https://github.com/SergiyIva)! - fix(ui): keep floating layers usable on mobile
+
+  Floating content (Popover, Select, DropdownMenu incl. submenus, Tooltip) now
+  portals into the enclosing Dialog / AlertDialog / Sheet instead of
+  `document.body`. Radix wraps modal content in `react-remove-scroll`, which only
+  lets touch gestures through inside that subtree — a dropdown portaled to the
+  body rendered fine but could not be scrolled with a finger while the filter
+  sheet was open.
+
+  They also get a default `collisionPadding` that folds in the mobile browser's
+  visual-viewport insets (URL bar, on-screen keyboard), so a layer that flips
+  above its trigger no longer lands behind browser chrome, and they cap their
+  height to the available viewport space — the reference combobox and the column
+  filter popover now shrink their list instead of overflowing off-screen, keeping
+  the search field visible.
+
+- [`3ad467e`](https://github.com/modern-admin/modern-admin/commit/3ad467edaf7f219843d5468f39ceb1a9a09b0383) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Added user friendly chart's filters and selector component adoptation for mobile view
+
+## 0.4.1
+
+### Patch Changes
+
+- [`d39e559`](https://github.com/modern-admin/modern-admin/commit/d39e559e5e1cdf9fdbba9cd53f3cdf386af6baee) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Stop `datetime` values drifting by the browser↔server timezone offset on save.
+
+  `DatePicker` in `mode="datetime"` emitted browser-local wall time with no
+  offset (`2026-08-04T15:00`). Per spec, `new Date(...)` resolves an offset-less
+  date-time in the _running process's_ timezone, so the Prisma adapter stored a
+  different instant than the user picked whenever the two timezones differed —
+  and because the show/edit views render the instant back in browser-local time,
+  re-saving an untouched record shifted it again. With a browser on UTC+3 and an
+  API on UTC (the default in a plain Docker image), three hours were added per
+  round trip.
+
+  - `@modern-admin/ui` now emits a full UTC instant (`toISOString()`) for
+    datetime. The visible text input keeps its human-readable
+    `yyyy-MM-dd HH:mm` shape; only the wire format changed. `mode="date"` is
+    unaffected — a bare `yyyy-MM-dd` is already spec'd to parse as UTC midnight.
+  - `@modern-admin/core` exports `parseDateValue`, which reads an offset-less
+    date-time as UTC instead of inheriting `process.env.TZ`, and uses it when
+    coercing filter values. `@modern-admin/adapter-prisma` uses it when
+    normalising `DateTime` writes. Explicit offsets (`Z`, `+03:00`) are honoured
+    as given. This keeps older clients, form posts and hand-written API calls
+    correct without depending on deployment config.
+
+- [`d39e559`](https://github.com/modern-admin/modern-admin/commit/d39e559e5e1cdf9fdbba9cd53f3cdf386af6baee) Thanks [@SergiyIva](https://github.com/SergiyIva)! - fixed timezone gap, filter list by default
+
 ## 0.4.0
 
 ### Minor Changes

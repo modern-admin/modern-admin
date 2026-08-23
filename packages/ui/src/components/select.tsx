@@ -2,6 +2,7 @@ import * as React from 'react'
 import * as SelectPrimitive from '@radix-ui/react-select'
 import { Check, ChevronDown, ChevronUp } from 'lucide-react'
 import { cn } from '../lib/utils.js'
+import { usePortalContainer, useViewportCollisionPadding } from '../lib/floating-layer.js'
 
 /**
  * Thin wrapper around `SelectPrimitive.Root` that suppresses the spurious
@@ -71,13 +72,18 @@ export const SelectScrollUpButton = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.ScrollUpButton>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.ScrollUpButton>
 >(({ className, ...props }, ref) => (
-  <SelectPrimitive.ScrollUpButton
-    ref={ref}
-    className={cn('flex cursor-default items-center justify-center py-1', className)}
-    {...props}
-  >
-    <ChevronUp className="h-4 w-4" />
-  </SelectPrimitive.ScrollUpButton>
+  // Radix mounts this button after the viewport leaves the first option.
+  // Keep its 24px slot mounted so the list does not grow and jump at that
+  // point; the inner button still appears as intended.
+  <div className="flex h-6 shrink-0">
+    <SelectPrimitive.ScrollUpButton
+      ref={ref}
+      className={cn('flex w-full cursor-default items-center justify-center py-1', className)}
+      {...props}
+    >
+      <ChevronUp className="h-4 w-4" />
+    </SelectPrimitive.ScrollUpButton>
+  </div>
 ))
 SelectScrollUpButton.displayName = SelectPrimitive.ScrollUpButton.displayName
 
@@ -85,46 +91,66 @@ export const SelectScrollDownButton = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.ScrollDownButton>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.ScrollDownButton>
 >(({ className, ...props }, ref) => (
-  <SelectPrimitive.ScrollDownButton
-    ref={ref}
-    className={cn('flex cursor-default items-center justify-center py-1', className)}
-    {...props}
-  >
-    <ChevronDown className="h-4 w-4" />
-  </SelectPrimitive.ScrollDownButton>
+  // Radix unmounts this button after the viewport reaches the last option.
+  // Keep its 24px slot mounted so the list does not shrink and jump at that
+  // point; the inner button still disappears as intended.
+  <div className="flex h-6 shrink-0">
+    <SelectPrimitive.ScrollDownButton
+      ref={ref}
+      className={cn('flex w-full cursor-default items-center justify-center py-1', className)}
+      {...props}
+    >
+      <ChevronDown className="h-4 w-4" />
+    </SelectPrimitive.ScrollDownButton>
+  </div>
 ))
 SelectScrollDownButton.displayName = SelectPrimitive.ScrollDownButton.displayName
 
+export interface SelectContentProps
+  extends React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content> {
+  /** Override the portal target. Defaults to the enclosing Dialog/Sheet
+   *  content (so touch-scroll works inside it) or `document.body`. */
+  container?: HTMLElement | null
+}
+
 export const SelectContent = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
->(({ className, children, position = 'popper', ...props }, ref) => (
-  <SelectPrimitive.Portal>
-    <SelectPrimitive.Content
-      ref={ref}
-      className={cn(
-        'relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-md border border-border bg-popover text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2',
-        position === 'popper' &&
-          'data-[side=bottom]:translate-y-1 data-[side=top]:-translate-y-1',
-        className,
-      )}
-      position={position}
-      {...props}
-    >
-      <SelectScrollUpButton />
-      <SelectPrimitive.Viewport
+  SelectContentProps
+>(({ className, children, position = 'popper', collisionPadding, container, ...props }, ref) => {
+  const portalContainer = usePortalContainer()
+  const viewportPadding = useViewportCollisionPadding()
+  return (
+    <SelectPrimitive.Portal container={container ?? portalContainer}>
+      <SelectPrimitive.Content
+        ref={ref}
         className={cn(
-          'p-1',
+          // `max-h-96` is the design cap; the available-height variable is the
+          // hard one — it keeps the list inside the visible viewport on short
+          // mobile screens instead of overflowing under the browser chrome.
+          'relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-md border border-border bg-popover text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2',
           position === 'popper' &&
-            'h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]',
+            'max-h-[min(24rem,var(--radix-select-content-available-height))] data-[side=bottom]:translate-y-1 data-[side=top]:-translate-y-1',
+          className,
         )}
+        position={position}
+        collisionPadding={collisionPadding ?? viewportPadding}
+        {...props}
       >
-        {children}
-      </SelectPrimitive.Viewport>
-      <SelectScrollDownButton />
-    </SelectPrimitive.Content>
-  </SelectPrimitive.Portal>
-))
+        <SelectScrollUpButton />
+        <SelectPrimitive.Viewport
+          className={cn(
+            'p-1',
+            position === 'popper' &&
+              'h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]',
+          )}
+        >
+          {children}
+        </SelectPrimitive.Viewport>
+        <SelectScrollDownButton />
+      </SelectPrimitive.Content>
+    </SelectPrimitive.Portal>
+  )
+})
 SelectContent.displayName = SelectPrimitive.Content.displayName
 
 export const SelectLabel = React.forwardRef<
