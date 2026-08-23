@@ -41,6 +41,7 @@ import {
 import type { AdminController } from './admin'
 import type { ILlmProvider } from './llm-provider.js'
 import type { IAiAssistantQueueDispatcher } from './ai-assistant.types.js'
+import { translateServerMessage } from './server-i18n.js'
 
 export interface ModernAdminModuleOptions extends ModernAdminOptions {
   /**
@@ -450,8 +451,8 @@ function assertAiQueueAgreement(
   if (bullQueueEnabled === !hasExternalDispatcher) return
   throw new Error(
     hasExternalDispatcher
-      ? '[modern-admin] ModernAdminModule.forRootAsync: the factory returned an external AI queue dispatcher; set `aiAssistantQueue: \'external\'` so the BullMQ worker is not mounted.'
-      : '[modern-admin] ModernAdminModule.forRootAsync was configured with `aiAssistantQueue: \'external\'`, but the factory returned no `aiAssistant.queue.dispatcher`.',
+      ? translateServerMessage(undefined, 'aiAssistant:error.externalQueueModeRequired')
+      : translateServerMessage(undefined, 'aiAssistant:error.externalQueueDispatcherRequired'),
   )
 }
 
@@ -473,11 +474,7 @@ function assertAiAssistantAgreement(
   if (aiEnabled === configured) return
   throw new Error(
     configured
-      ? '[modern-admin] ModernAdminModule.forRootAsync: your factory returned an `aiAssistant` block, ' +
-        'but the AI controller and its queue are not mounted. Nest resolves `controllers`/`imports` ' +
-        'before the factory runs, so it cannot be inferred — add `aiAssistant: true` alongside ' +
-        '`useFactory` (and make sure a root `BullModule.forRoot()` is present).'
-      : '[modern-admin] ModernAdminModule.forRootAsync was called with `aiAssistant: true`, but the ' +
-        'factory returned no `aiAssistant` options. Either return an `aiAssistant` block or drop the flag.',
+      ? translateServerMessage(undefined, 'aiAssistant:error.asyncFlagRequired')
+      : translateServerMessage(undefined, 'aiAssistant:error.asyncOptionsRequired'),
   )
 }

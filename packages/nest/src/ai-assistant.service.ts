@@ -21,10 +21,10 @@ import {
   type ModernAdmin,
   permissionsAllow,
 } from '@modern-admin/core'
-import { builtinLocales, I18n } from '@modern-admin/i18n'
 import { MODERN_ADMIN, MODERN_ADMIN_OPTIONS } from './tokens.js'
 import type { ModernAdminModuleOptions } from './module.js'
 import { defaultLlmProvider, type ILlmProvider } from './llm-provider.js'
+import { translateServerMessage as translate } from './server-i18n.js'
 import { type AiAssistantCitation, type AiAssistantSqlResource, buildAiAssistantTools } from './ai-assistant-tools.js'
 import { AI_ASSISTANT_CHAT_JOB, AI_ASSISTANT_QUEUE } from './ai-assistant.constants.js'
 import type {
@@ -351,6 +351,7 @@ export class AiAssistantService {
         ...(this.options.aiAssistant?.appUrl
           ? { appUrl: this.options.aiAssistant.appUrl }
           : {}),
+        ...(data.locale ? { locale: data.locale } : {}),
       })
 
       if (debug) {
@@ -690,11 +691,6 @@ const titleFromTask = (task: AiTask): string => {
   const firstUser = messages.find((message) => message.role === 'user' && typeof message.content === 'string')
   const title = typeof firstUser?.content === 'string' ? firstUser.content.trim() : ''
   return title.length > 80 ? `${title.slice(0, 77)}...` : title || task.id
-}
-
-const translate = (locale: string | undefined, key: string, params?: Record<string, unknown>): string => {
-  const runtime = new I18n({ locales: builtinLocales, defaultLocale: locale ?? 'en', fallbackLocale: 'en' })
-  return runtime.t(key, params)
 }
 
 const summarizeToolResults = (

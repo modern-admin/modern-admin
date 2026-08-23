@@ -1,3 +1,5 @@
+import { translateServerMessage } from './server-i18n.js'
+
 export interface LlmChatMessage {
   role: 'user' | 'assistant'
   content: string
@@ -19,6 +21,7 @@ export interface LlmGenerateInput {
   maxSteps: number
   appName?: string
   appUrl?: string
+  locale?: string
 }
 
 export interface LlmGenerateResult {
@@ -49,7 +52,11 @@ export class OpenRouterLlmProvider implements ILlmProvider {
   }
 
   async generate(input: LlmGenerateInput): Promise<LlmGenerateResult> {
-    if (!input.apiKey) throw new Error('OpenRouter API key is not configured')
+    if (!input.apiKey) {
+      throw new Error(
+        translateServerMessage(input.locale, 'aiAssistant:error.openRouterApiKeyMissing'),
+      )
+    }
     let modules: [typeof import('ai'), typeof import('@openrouter/ai-sdk-provider')]
     try {
       modules = await Promise.all([
@@ -58,8 +65,7 @@ export class OpenRouterLlmProvider implements ILlmProvider {
       ])
     } catch (cause) {
       throw new Error(
-        'OpenRouterLlmProvider requires the optional peers `ai` and ' +
-          '`@openrouter/ai-sdk-provider`; install them in the host application.',
+        translateServerMessage(input.locale, 'aiAssistant:error.openRouterPeersMissing'),
         { cause },
       )
     }
