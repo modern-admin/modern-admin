@@ -1,5 +1,19 @@
 # @modern-admin/nest
 
+## 0.8.0
+
+### Minor Changes
+
+- [#21](https://github.com/modern-admin/modern-admin/pull/21) [`b8ad7c2`](https://github.com/modern-admin/modern-admin/commit/b8ad7c2f97a84fe02c66c6992d4d11d0b65e44b9) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Add injectable LLM, admin-client, authentication-route, telemetry, and AI queue
+  boundaries; move the shared framework DI token to core; decouple GraphQL from
+  the REST transport; and make upload transport dependencies optional peers.
+
+### Patch Changes
+
+- Updated dependencies [[`b8ad7c2`](https://github.com/modern-admin/modern-admin/commit/b8ad7c2f97a84fe02c66c6992d4d11d0b65e44b9)]:
+  - @modern-admin/core@0.8.0
+  - @modern-admin/i18n@0.8.0
+
 ## 0.7.0
 
 ### Minor Changes

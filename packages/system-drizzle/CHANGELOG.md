@@ -1,5 +1,13 @@
 # @modern-admin/system-drizzle
 
+## 0.8.0
+
+### Patch Changes
+
+- [#29](https://github.com/modern-admin/modern-admin/pull/29) [`2c1d847`](https://github.com/modern-admin/modern-admin/commit/2c1d847b92ea808c629a77537adef51fa798a78d) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Expose the documented `@modern-admin/system-drizzle/pg` PostgreSQL schema subpath in both workspace and published package manifests.
+- Updated dependencies [[`b8ad7c2`](https://github.com/modern-admin/modern-admin/commit/b8ad7c2f97a84fe02c66c6992d4d11d0b65e44b9)]:
+  - @modern-admin/core@0.8.0
+
 ## 0.7.0
 
 ### Patch Changes
