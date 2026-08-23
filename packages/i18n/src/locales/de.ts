@@ -472,6 +472,8 @@ export const de: LocaleBundle = {
     'aiAssistant:fallback.noRows': 'Für diese Anfrage wurden keine Datensätze gefunden.',
     'aiAssistant:fallback.rowsFound': 'Gefundene Zeilen: {count}.',
     'aiAssistant:taskFailed': 'KI-Assistent-Aufgabe fehlgeschlagen',
+    'aiAssistant:error.providerNotConfigured': 'Der KI-Anbieter ist nicht konfiguriert',
+    'aiAssistant:error.queueNotConfigured': 'Die Warteschlange des KI-Assistenten ist nicht konfiguriert',
     'aiAssistant:settings.title': 'KI-Assistent',
     'aiAssistant:settings.description': 'Konfigurieren Sie das schwebende Chat-Widget, das Modell und das serverseitige Assistentenverhalten.',
     'aiAssistant:settings.enabled': 'Aktiviert',

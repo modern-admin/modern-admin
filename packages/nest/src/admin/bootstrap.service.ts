@@ -63,7 +63,9 @@ export class ModernAdminBootstrapService implements OnApplicationBootstrap {
     // The host chooses the telemetry implementation. Keep it off the hot path
     // and isolate bootstrap from adapter failures.
     if (this.options.telemetry) {
-      void Promise.resolve(this.options.telemetry(this.admin)).catch(() => undefined)
+      void Promise.resolve()
+        .then(() => this.options.telemetry?.(this.admin))
+        .catch(() => undefined)
     }
   }
 

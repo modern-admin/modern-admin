@@ -472,6 +472,8 @@ export const fr: LocaleBundle = {
     'aiAssistant:fallback.noRows': 'Aucun enregistrement trouvé pour cette requête.',
     'aiAssistant:fallback.rowsFound': 'Lignes trouvées00a0: {count}.',
     'aiAssistant:taskFailed': 'Échec de la tâche de l’assistant IA',
+    'aiAssistant:error.providerNotConfigured': 'Le fournisseur de l’assistant IA n’est pas configuré',
+    'aiAssistant:error.queueNotConfigured': 'La file d’attente de l’assistant IA n’est pas configurée',
     'aiAssistant:settings.title': 'Assistant IA',
     'aiAssistant:settings.description': 'Configurez le widget de chat flottant, le modèle et le comportement côté serveur.',
     'aiAssistant:settings.enabled': 'Activé',

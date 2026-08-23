@@ -472,6 +472,8 @@ export const ru: LocaleBundle = {
     'aiAssistant:fallback.noRows': 'По этому запросу записи не найдены.',
     'aiAssistant:fallback.rowsFound': 'Найдено строк: {count}.',
     'aiAssistant:taskFailed': 'Задача AI помощника не выполнена',
+    'aiAssistant:error.providerNotConfigured': 'Провайдер AI-помощника не настроен',
+    'aiAssistant:error.queueNotConfigured': 'Очередь AI-помощника не настроена',
     'aiAssistant:settings.title': 'AI Помощник',
     'aiAssistant:settings.description': 'Настройте плавающий чат-виджет, модель и серверное поведение помощника.',
     'aiAssistant:settings.enabled': 'Включён',

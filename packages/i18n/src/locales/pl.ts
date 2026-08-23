@@ -472,6 +472,8 @@ export const pl: LocaleBundle = {
     'aiAssistant:fallback.noRows': 'Nie znaleziono rekordów dla tego żądania.',
     'aiAssistant:fallback.rowsFound': 'Znalezione wiersze: {count}.',
     'aiAssistant:taskFailed': 'Zadanie asystenta AI nie powiodło się',
+    'aiAssistant:error.providerNotConfigured': 'Dostawca asystenta AI nie jest skonfigurowany',
+    'aiAssistant:error.queueNotConfigured': 'Kolejka asystenta AI nie jest skonfigurowana',
     'aiAssistant:settings.title': 'Asystent AI',
     'aiAssistant:settings.description': 'Skonfiguruj pływający widżet czatu AI, model i zachowanie asystenta po stronie serwera.',
     'aiAssistant:settings.enabled': 'Włączony',

@@ -149,7 +149,9 @@ export class AiAssistantService {
       throw new ForbiddenException('AI assistant is disabled')
     }
     if (!this.llmProvider.isConfigured(settings.apiKey)) {
-      throw new PreconditionFailedException('AI assistant provider is not configured')
+      throw new PreconditionFailedException(
+        translate(locale, 'aiAssistant:error.providerNotConfigured'),
+      )
     }
     const minimalAdmin = minimizeCurrentAdmin(currentAdmin)
     const taskStore = this.requireTaskStore()
@@ -194,6 +196,7 @@ export class AiAssistantService {
         removeOnComplete: this.options.aiAssistant?.queue?.removeOnComplete ?? 100,
         removeOnFail: this.options.aiAssistant?.queue?.removeOnFail ?? 500,
       },
+      locale,
     )
     return { taskId: task.id, status: task.status }
   }
@@ -253,7 +256,9 @@ export class AiAssistantService {
       throw new ForbiddenException('AI assistant is disabled')
     }
     if (!this.llmProvider.isConfigured(settings.apiKey)) {
-      throw new PreconditionFailedException('AI assistant provider is not configured')
+      throw new PreconditionFailedException(
+        translate(data.locale, 'aiAssistant:error.providerNotConfigured'),
+      )
     }
 
     // Build a thin dashboard store backed by the global configStore so the AI
@@ -391,13 +396,18 @@ export class AiAssistantService {
   private async enqueueJob(
     data: AiAssistantChatJobData,
     options: Parameters<IAiAssistantQueueDispatcher['enqueue']>[1],
+    locale?: string,
   ): Promise<void> {
     const dispatcher = this.options.aiAssistant?.queue?.dispatcher
     if (dispatcher) {
       await dispatcher.enqueue(data, options)
       return
     }
-    if (!this.queue) throw new ServiceUnavailableException('AI assistant queue is not configured')
+    if (!this.queue) {
+      throw new ServiceUnavailableException(
+        translate(locale, 'aiAssistant:error.queueNotConfigured'),
+      )
+    }
     await this.queue.add(AI_ASSISTANT_CHAT_JOB, data, {
       attempts: options.attempts,
       backoff: { type: 'exponential', delay: options.backoffMs },

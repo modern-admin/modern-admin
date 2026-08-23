@@ -6,6 +6,7 @@
 '@modern-admin/telemetry': minor
 '@modern-admin/graphql': patch
 '@modern-admin/feature-upload': patch
+'@modern-admin/i18n': patch
 ---
 
 Add injectable LLM, admin-client, authentication-route, telemetry, and AI queue

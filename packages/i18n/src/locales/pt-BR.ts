@@ -472,6 +472,8 @@ export const ptBR: LocaleBundle = {
     'aiAssistant:fallback.noRows': 'Nenhum registro foi encontrado para esta solicitação.',
     'aiAssistant:fallback.rowsFound': 'Linhas encontradas: {count}.',
     'aiAssistant:taskFailed': 'A tarefa do assistente IA falhou',
+    'aiAssistant:error.providerNotConfigured': 'O provedor do assistente IA não está configurado',
+    'aiAssistant:error.queueNotConfigured': 'A fila do assistente IA não está configurada',
     'aiAssistant:settings.title': 'Assistente IA',
     'aiAssistant:settings.description': 'Configure o widget flutuante de chat IA, o modelo e o comportamento do assistente no servidor.',
     'aiAssistant:settings.enabled': 'Ativado',

@@ -472,6 +472,8 @@ export const en: LocaleBundle = {
     'aiAssistant:fallback.noRows': 'No records were found for this request.',
     'aiAssistant:fallback.rowsFound': 'Rows found: {count}.',
     'aiAssistant:taskFailed': 'AI assistant task failed',
+    'aiAssistant:error.providerNotConfigured': 'AI assistant provider is not configured',
+    'aiAssistant:error.queueNotConfigured': 'AI assistant queue is not configured',
     'aiAssistant:settings.title': 'AI Assistant',
     'aiAssistant:settings.description': 'Configure the floating AI chat widget, model, and server-side assistant behavior.',
     'aiAssistant:settings.enabled': 'Enabled',

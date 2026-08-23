@@ -472,6 +472,8 @@ export const ja: LocaleBundle = {
     'aiAssistant:fallback.noRows': 'このリクエストに一致するレコードは見つかりませんでした。',
     'aiAssistant:fallback.rowsFound': '見つかった行数: {count}。',
     'aiAssistant:taskFailed': 'AI アシスタントのタスクが失敗しました',
+    'aiAssistant:error.providerNotConfigured': 'AI アシスタントのプロバイダーが設定されていません',
+    'aiAssistant:error.queueNotConfigured': 'AI アシスタントのキューが設定されていません',
     'aiAssistant:settings.title': 'AI アシスタント',
     'aiAssistant:settings.description': 'フローティング AI チャットウィジェット、モデル、サーバー側アシスタントの動作を構成します。',
     'aiAssistant:settings.enabled': '有効',
