@@ -1,5 +1,13 @@
 # @modern-admin/create
 
+## 0.8.0
+
+### Patch Changes
+
+- Updated dependencies [[`2c1d847`](https://github.com/modern-admin/modern-admin/commit/2c1d847b92ea808c629a77537adef51fa798a78d)]:
+  - @modern-admin/system-drizzle@0.8.0
+  - @modern-admin/system-prisma@0.8.0
+
 ## 0.7.0
 
 ### Patch Changes

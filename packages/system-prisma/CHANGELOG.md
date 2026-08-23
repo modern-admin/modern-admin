@@ -1,5 +1,12 @@
 # @modern-admin/system-prisma
 
+## 0.8.0
+
+### Patch Changes
+
+- Updated dependencies [[`b8ad7c2`](https://github.com/modern-admin/modern-admin/commit/b8ad7c2f97a84fe02c66c6992d4d11d0b65e44b9)]:
+  - @modern-admin/core@0.8.0
+
 ## 0.7.0
 
 ### Minor Changes
