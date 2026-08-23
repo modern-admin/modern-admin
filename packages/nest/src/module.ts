@@ -42,6 +42,7 @@ import type { AdminController } from './admin'
 import type { ILlmProvider } from './llm-provider.js'
 import type { IAiAssistantQueueDispatcher } from './ai-assistant.types.js'
 import { translateServerMessage } from './server-i18n.js'
+import type { LocaleBundle } from '@modern-admin/i18n'
 
 export interface ModernAdminModuleOptions extends ModernAdminOptions {
   /**
@@ -63,6 +64,8 @@ export interface ModernAdminModuleOptions extends ModernAdminOptions {
    * for hosts that want the built-in opt-in reporter.
    */
   telemetry?: (admin: ModernAdmin) => void | Promise<void>
+  /** Host-defined locale bundles used by server-side errors. */
+  serverLocales?: ReadonlyArray<LocaleBundle>
   /**
    * Allow `GET /admin/api/config` to answer requests without a session.
    * Defaults to `false`.
@@ -451,8 +454,18 @@ function assertAiQueueAgreement(
   if (bullQueueEnabled === !hasExternalDispatcher) return
   throw new Error(
     hasExternalDispatcher
-      ? translateServerMessage(undefined, 'aiAssistant:error.externalQueueModeRequired')
-      : translateServerMessage(undefined, 'aiAssistant:error.externalQueueDispatcherRequired'),
+      ? translateServerMessage(
+        undefined,
+        'aiAssistant:error.externalQueueModeRequired',
+        undefined,
+        resolved.serverLocales,
+      )
+      : translateServerMessage(
+        undefined,
+        'aiAssistant:error.externalQueueDispatcherRequired',
+        undefined,
+        resolved.serverLocales,
+      ),
   )
 }
 
@@ -474,7 +487,17 @@ function assertAiAssistantAgreement(
   if (aiEnabled === configured) return
   throw new Error(
     configured
-      ? translateServerMessage(undefined, 'aiAssistant:error.asyncFlagRequired')
-      : translateServerMessage(undefined, 'aiAssistant:error.asyncOptionsRequired'),
+      ? translateServerMessage(
+        undefined,
+        'aiAssistant:error.asyncFlagRequired',
+        undefined,
+        resolved.serverLocales,
+      )
+      : translateServerMessage(
+        undefined,
+        'aiAssistant:error.asyncOptionsRequired',
+        undefined,
+        resolved.serverLocales,
+      ),
   )
 }

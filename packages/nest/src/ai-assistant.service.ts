@@ -150,7 +150,12 @@ export class AiAssistantService {
     }
     if (!this.llmProvider.isConfigured(settings.apiKey)) {
       throw new PreconditionFailedException(
-        translate(locale, 'aiAssistant:error.providerNotConfigured'),
+        translate(
+          locale,
+          'aiAssistant:error.providerNotConfigured',
+          undefined,
+          this.options.serverLocales,
+        ),
       )
     }
     const minimalAdmin = minimizeCurrentAdmin(currentAdmin)
@@ -257,7 +262,12 @@ export class AiAssistantService {
     }
     if (!this.llmProvider.isConfigured(settings.apiKey)) {
       throw new PreconditionFailedException(
-        translate(data.locale, 'aiAssistant:error.providerNotConfigured'),
+        translate(
+          data.locale,
+          'aiAssistant:error.providerNotConfigured',
+          undefined,
+          this.options.serverLocales,
+        ),
       )
     }
 
@@ -352,6 +362,9 @@ export class AiAssistantService {
           ? { appUrl: this.options.aiAssistant.appUrl }
           : {}),
         ...(data.locale ? { locale: data.locale } : {}),
+        ...(this.options.serverLocales
+          ? { serverLocales: this.options.serverLocales }
+          : {}),
       })
 
       if (debug) {
@@ -406,7 +419,12 @@ export class AiAssistantService {
     }
     if (!this.queue) {
       throw new ServiceUnavailableException(
-        translate(locale, 'aiAssistant:error.queueNotConfigured'),
+        translate(
+          locale,
+          'aiAssistant:error.queueNotConfigured',
+          undefined,
+          this.options.serverLocales,
+        ),
       )
     }
     await this.queue.add(AI_ASSISTANT_CHAT_JOB, data, {

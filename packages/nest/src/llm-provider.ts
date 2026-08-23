@@ -1,4 +1,5 @@
 import { translateServerMessage } from './server-i18n.js'
+import type { LocaleBundle } from '@modern-admin/i18n'
 
 export interface LlmChatMessage {
   role: 'user' | 'assistant'
@@ -22,6 +23,8 @@ export interface LlmGenerateInput {
   appName?: string
   appUrl?: string
   locale?: string
+  /** Host-defined server locale bundles used for provider failures. */
+  serverLocales?: ReadonlyArray<LocaleBundle>
 }
 
 export interface LlmGenerateResult {
@@ -54,7 +57,12 @@ export class OpenRouterLlmProvider implements ILlmProvider {
   async generate(input: LlmGenerateInput): Promise<LlmGenerateResult> {
     if (!input.apiKey) {
       throw new Error(
-        translateServerMessage(input.locale, 'aiAssistant:error.openRouterApiKeyMissing'),
+        translateServerMessage(
+          input.locale,
+          'aiAssistant:error.openRouterApiKeyMissing',
+          undefined,
+          input.serverLocales,
+        ),
       )
     }
     let modules: [typeof import('ai'), typeof import('@openrouter/ai-sdk-provider')]
@@ -65,7 +73,12 @@ export class OpenRouterLlmProvider implements ILlmProvider {
       ])
     } catch (cause) {
       throw new Error(
-        translateServerMessage(input.locale, 'aiAssistant:error.openRouterPeersMissing'),
+        translateServerMessage(
+          input.locale,
+          'aiAssistant:error.openRouterPeersMissing',
+          undefined,
+          input.serverLocales,
+        ),
         { cause },
       )
     }

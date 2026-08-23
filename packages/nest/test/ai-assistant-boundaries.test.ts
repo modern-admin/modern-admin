@@ -8,6 +8,7 @@ import type {
 } from '../src/ai-assistant.types.js'
 import type { ILlmProvider } from '../src/llm-provider.js'
 import { ModernAdminModule, type ModernAdminModuleOptions } from '../src/module.js'
+import { translateServerMessage } from '../src/server-i18n.js'
 
 const provider: ILlmProvider = {
   id: 'test-provider',
@@ -56,5 +57,22 @@ describe('AI assistant dependency boundaries', () => {
     const module = ModernAdminModule.forRoot(buildOptions({ enqueue: () => undefined }))
 
     expect(module.providers).not.toContain(AiAssistantProcessor)
+  })
+
+  test('host-defined server locales override the built-in fallback', () => {
+    const message = translateServerMessage(
+      'zh-CN',
+      'aiAssistant:error.providerNotConfigured',
+      undefined,
+      [{
+        code: 'zh-CN',
+        name: '简体中文',
+        dict: {
+          'aiAssistant:error.providerNotConfigured': 'AI 助手提供商未配置',
+        },
+      }],
+    )
+
+    expect(message).toBe('AI 助手提供商未配置')
   })
 })
