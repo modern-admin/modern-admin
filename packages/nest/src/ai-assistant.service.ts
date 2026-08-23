@@ -378,7 +378,11 @@ export class AiAssistantService {
         return value?.citations ?? []
       })
       const output: AiAssistantTaskOutput = {
-        text: result.text.trim() || summarizeToolResults(result.toolResults, data.locale),
+        text: result.text.trim() || summarizeToolResults(
+          result.toolResults,
+          data.locale,
+          this.options.serverLocales,
+        ),
         citations: dedupeCitations(citations),
         toolCalls: result.toolCalls,
         uiActions: dedupeUiActions(uiActions),
@@ -714,22 +718,28 @@ const titleFromTask = (task: AiTask): string => {
 const summarizeToolResults = (
   toolResults: Array<{ toolName?: string; output: unknown }>,
   locale: string | undefined,
+  serverLocales: ModernAdminModuleOptions['serverLocales'],
 ): string => {
   const lastSuccessful = [...toolResults].reverse().find((toolResult) => {
     const output = toolResult.output as { rows?: unknown[]; records?: unknown[]; error?: unknown } | undefined
     return output && !output.error && (Array.isArray(output.rows) || Array.isArray(output.records))
   })
   if (!lastSuccessful) {
-    return translate(locale, 'aiAssistant:fallback.noToolResult')
+    return translate(locale, 'aiAssistant:fallback.noToolResult', undefined, serverLocales)
   }
 
   const output = lastSuccessful.output as { rows?: unknown[]; records?: unknown[]; rowCount?: number; total?: number }
   const rows = output.rows ?? output.records ?? []
-  if (rows.length === 0) return translate(locale, 'aiAssistant:fallback.noRows')
+  if (rows.length === 0) {
+    return translate(locale, 'aiAssistant:fallback.noRows', undefined, serverLocales)
+  }
 
   const count = output.rowCount ?? output.total ?? rows.length
   const preview = rows.slice(0, 10).map((row, index) => `${index + 1}. ${formatToolRow(row)}`)
-  return [translate(locale, 'aiAssistant:fallback.rowsFound', { count }), ...preview].join('\n')
+  return [
+    translate(locale, 'aiAssistant:fallback.rowsFound', { count }, serverLocales),
+    ...preview,
+  ].join('\n')
 }
 
 const formatToolRow = (row: unknown): string => {

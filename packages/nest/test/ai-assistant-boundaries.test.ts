@@ -75,4 +75,42 @@ describe('AI assistant dependency boundaries', () => {
 
     expect(message).toBe('AI 助手提供商未配置')
   })
+
+  test('host-defined server locales reach tool-result fallbacks', async () => {
+    const stores = createMemorySystem()
+    await stores.configStore.set('global', null, 'modern-admin.ai-assistant', {
+      enabled: true,
+      apiKey: 'test-key',
+    })
+    const localizedProvider: ILlmProvider = {
+      ...provider,
+      generate: async () => ({
+        text: '',
+        toolCalls: [],
+        toolResults: [{ toolName: 'list_records', output: { rows: [] } }],
+      }),
+    }
+    const service = new AiAssistantService(new ModernAdmin(), {
+      configStore: stores.configStore,
+      aiTaskStore: stores.aiTaskStore,
+      aiAssistant: { provider: localizedProvider },
+      serverLocales: [{
+        code: 'zh-CN',
+        name: '简体中文',
+        dict: { 'aiAssistant:fallback.noRows': '没有找到记录' },
+      }],
+    })
+    const task = await stores.aiTaskStore.enqueue({
+      kind: 'assistant-chat',
+      input: {},
+    })
+
+    const output = await service.runChatJob({
+      taskId: task.id,
+      messages: [],
+      locale: 'zh-CN',
+    })
+
+    expect(output.text).toBe('没有找到记录')
+  })
 })
