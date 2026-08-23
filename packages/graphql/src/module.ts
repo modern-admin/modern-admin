@@ -1,11 +1,11 @@
 // Wraps the dynamic GraphQL schema in a Nest module. The module is global by
-// default — it depends on the host app having `MODERN_ADMIN` registered via
-// `@modern-admin/nest` ModernAdminModule.
+// default — it depends on the host app registering core's `MODERN_ADMIN`
+// token (the Nest REST module is one possible composition root).
 
 import { type DynamicModule, Inject, Module, type OnApplicationBootstrap } from '@nestjs/common'
-import { MODERN_ADMIN } from '@modern-admin/nest'
-import type { IRealtimeBus, ModernAdmin } from '@modern-admin/core'
+import { MODERN_ADMIN, type IRealtimeBus, type ModernAdmin } from '@modern-admin/core'
 import { GraphqlController } from './controller.js'
+import { ModernAdminGraphqlAuthGuard } from './auth.guard.js'
 import { GRAPHQL_OPTIONS, GRAPHQL_REALTIME_BUS, GRAPHQL_SCHEMA } from './tokens.js'
 import { ModernAdminGraphqlSchemaHolder } from './schema-holder.js'
 import { GraphqlSubscriptionServer } from './subscription-server.js'
@@ -84,6 +84,7 @@ export class ModernAdminGraphqlModule implements OnApplicationBootstrap {
       maxFiles: options.maxFiles ?? 10,
     }
     const providers: DynamicModule['providers'] = [
+      ModernAdminGraphqlAuthGuard,
       ModernAdminGraphqlSchemaHolder,
       { provide: GRAPHQL_SCHEMA, useExisting: ModernAdminGraphqlSchemaHolder },
       { provide: GRAPHQL_OPTIONS, useValue: resolved },
@@ -100,7 +101,13 @@ export class ModernAdminGraphqlModule implements OnApplicationBootstrap {
       global: options.global ?? false,
       controllers: [GraphqlController],
       providers,
-      exports: [GRAPHQL_SCHEMA, GRAPHQL_OPTIONS, GRAPHQL_REALTIME_BUS, ModernAdminGraphqlSchemaHolder],
+      exports: [
+        GRAPHQL_SCHEMA,
+        GRAPHQL_OPTIONS,
+        GRAPHQL_REALTIME_BUS,
+        ModernAdminGraphqlSchemaHolder,
+        ModernAdminGraphqlAuthGuard,
+      ],
     }
   }
 }

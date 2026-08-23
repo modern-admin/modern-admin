@@ -39,6 +39,10 @@ import {
   ModernAdminBootstrapService,
 } from './admin'
 import type { AdminController } from './admin'
+import type { ILlmProvider } from './llm-provider.js'
+import type { IAiAssistantQueueDispatcher } from './ai-assistant.types.js'
+import { translateServerMessage } from './server-i18n.js'
+import type { LocaleBundle } from '@modern-admin/i18n'
 
 export interface ModernAdminModuleOptions extends ModernAdminOptions {
   /**
@@ -53,6 +57,15 @@ export interface ModernAdminModuleOptions extends ModernAdminOptions {
    * never did.)
    */
   global?: boolean
+  /**
+   * Optional telemetry adapter invoked after bootstrap. The Nest transport
+   * owns the hook but does not depend on a concrete collector or network
+   * client; `@modern-admin/telemetry` exports `reportModernAdminTelemetry`
+   * for hosts that want the built-in opt-in reporter.
+   */
+  telemetry?: (admin: ModernAdmin) => void | Promise<void>
+  /** Host-defined locale bundles used by server-side errors. */
+  serverLocales?: ReadonlyArray<LocaleBundle>
   /**
    * Allow `GET /admin/api/config` to answer requests without a session.
    * Defaults to `false`.
@@ -70,6 +83,8 @@ export interface ModernAdminModuleOptions extends ModernAdminOptions {
   aiTaskStore?: IAiTaskStore
   /** AI assistant configuration for the built-in chat widget + endpoints. */
   aiAssistant?: {
+    /** Model backend. Defaults to the optional OpenRouter adapter. */
+    provider?: ILlmProvider
     enabled?: boolean
     defaultModel?: string
     /** Seed API key from environment. Stored value from configStore takes precedence once set via UI. */
@@ -116,6 +131,12 @@ export interface ModernAdminModuleOptions extends ModernAdminOptions {
      */
     rawQuery?: (sql: string) => Promise<unknown[]>
     queue?: {
+      /**
+       * Alternative broker dispatcher. When present, the module does not
+       * register its BullMQ queue/worker; the adapter must eventually invoke
+       * `AiAssistantService.runChatJob(data)` in its worker process.
+       */
+      dispatcher?: IAiAssistantQueueDispatcher
       attempts?: number
       backoffMs?: number
       removeOnComplete?: boolean | number
@@ -252,9 +273,14 @@ const buildControllers = (aiEnabled: boolean): NonNullable<DynamicModule['contro
 ]
 
 /** The AI subsystem's imports — a BullMQ queue, so only when AI is on. */
-const buildImports = (aiEnabled: boolean): NonNullable<DynamicModule['imports']> => [
+const buildImports = (
+  aiEnabled: boolean,
+  bullQueueEnabled: boolean,
+): NonNullable<DynamicModule['imports']> => [
   DiscoveryModule,
-  ...(aiEnabled ? [QueueModule.register({ queues: [AI_ASSISTANT_QUEUE] })] : []),
+  ...(aiEnabled && bullQueueEnabled
+    ? [QueueModule.register({ queues: [AI_ASSISTANT_QUEUE] })]
+    : []),
 ]
 
 /**
@@ -264,6 +290,7 @@ const buildImports = (aiEnabled: boolean): NonNullable<DynamicModule['imports']>
  */
 const buildProviders = (
   aiEnabled: boolean,
+  bullQueueEnabled: boolean,
   optionsProviders: Provider[],
 ): Provider[] => [
   ...optionsProviders,
@@ -276,7 +303,9 @@ const buildProviders = (
     useFactory: (resolved: ModernAdminModuleOptions) => resolved.apiKeyService ?? null,
     inject: [MODERN_ADMIN_OPTIONS],
   },
-  ...(aiEnabled ? [AiAssistantService, AiAssistantProcessor] : []),
+  ...(aiEnabled
+    ? [AiAssistantService, ...(bullQueueEnabled ? [AiAssistantProcessor] : [])]
+    : []),
   AdminControllerScanner,
   ModernAdminBootstrapService,
   ModernAdminAuthGuard,
@@ -302,13 +331,14 @@ const MODULE_EXPORTS = [
 export class ModernAdminModule {
   static forRoot(options: ModernAdminModuleOptions): DynamicModule {
     const aiEnabled = options.aiAssistant !== undefined
+    const bullQueueEnabled = !options.aiAssistant?.queue?.dispatcher
     const admin = new ModernAdmin({ ...options, features: deriveFeatures(options) })
     return {
       module: ModernAdminModule,
       global: options.global ?? false,
-      imports: buildImports(aiEnabled),
+      imports: buildImports(aiEnabled, bullQueueEnabled),
       controllers: buildControllers(aiEnabled),
-      providers: buildProviders(aiEnabled, [
+      providers: buildProviders(aiEnabled, bullQueueEnabled, [
         { provide: MODERN_ADMIN_OPTIONS, useValue: options },
         { provide: MODERN_ADMIN, useValue: admin },
       ]),
@@ -383,14 +413,17 @@ export class ModernAdminModule {
      * off. Requires a root `BullModule.forRoot()` in the host app.
      */
     aiAssistant?: boolean
+    /** Queue driver used for the assistant. Defaults to the built-in BullMQ adapter. */
+    aiAssistantQueue?: 'bullmq' | 'external'
   }): DynamicModule {
     const aiEnabled = opts.aiAssistant ?? false
+    const bullQueueEnabled = opts.aiAssistantQueue !== 'external'
     return {
       module: ModernAdminModule,
       global: opts.global ?? false,
-      imports: [...buildImports(aiEnabled), ...(opts.imports ?? [])],
+      imports: [...buildImports(aiEnabled, bullQueueEnabled), ...(opts.imports ?? [])],
       controllers: buildControllers(aiEnabled),
-      providers: buildProviders(aiEnabled, [
+      providers: buildProviders(aiEnabled, bullQueueEnabled, [
         {
           provide: MODERN_ADMIN_OPTIONS,
           useFactory: opts.useFactory,
@@ -400,6 +433,7 @@ export class ModernAdminModule {
           provide: MODERN_ADMIN,
           useFactory: (resolved: ModernAdminModuleOptions) => {
             assertAiAssistantAgreement(aiEnabled, resolved)
+            assertAiQueueAgreement(aiEnabled, bullQueueEnabled, resolved)
             return new ModernAdmin({ ...resolved, features: deriveFeatures(resolved) })
           },
           inject: [MODERN_ADMIN_OPTIONS],
@@ -408,6 +442,31 @@ export class ModernAdminModule {
       exports: MODULE_EXPORTS,
     }
   }
+}
+
+function assertAiQueueAgreement(
+  aiEnabled: boolean,
+  bullQueueEnabled: boolean,
+  resolved: ModernAdminModuleOptions,
+): void {
+  if (!aiEnabled) return
+  const hasExternalDispatcher = resolved.aiAssistant?.queue?.dispatcher !== undefined
+  if (bullQueueEnabled === !hasExternalDispatcher) return
+  throw new Error(
+    hasExternalDispatcher
+      ? translateServerMessage(
+        undefined,
+        'aiAssistant:error.externalQueueModeRequired',
+        undefined,
+        resolved.serverLocales,
+      )
+      : translateServerMessage(
+        undefined,
+        'aiAssistant:error.externalQueueDispatcherRequired',
+        undefined,
+        resolved.serverLocales,
+      ),
+  )
 }
 
 /**
@@ -428,11 +487,17 @@ function assertAiAssistantAgreement(
   if (aiEnabled === configured) return
   throw new Error(
     configured
-      ? '[modern-admin] ModernAdminModule.forRootAsync: your factory returned an `aiAssistant` block, ' +
-        'but the AI controller and its queue are not mounted. Nest resolves `controllers`/`imports` ' +
-        'before the factory runs, so it cannot be inferred — add `aiAssistant: true` alongside ' +
-        '`useFactory` (and make sure a root `BullModule.forRoot()` is present).'
-      : '[modern-admin] ModernAdminModule.forRootAsync was called with `aiAssistant: true`, but the ' +
-        'factory returned no `aiAssistant` options. Either return an `aiAssistant` block or drop the flag.',
+      ? translateServerMessage(
+        undefined,
+        'aiAssistant:error.asyncFlagRequired',
+        undefined,
+        resolved.serverLocales,
+      )
+      : translateServerMessage(
+        undefined,
+        'aiAssistant:error.asyncOptionsRequired',
+        undefined,
+        resolved.serverLocales,
+      ),
   )
 }

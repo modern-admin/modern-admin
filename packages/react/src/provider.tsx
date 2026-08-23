@@ -3,18 +3,18 @@
 
 import * as React from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { AdminClient, type AdminClientOptions } from './client.js'
+import { AdminClient, type AdminClientOptions, type IAdminClient } from './client.js'
 import type { ComponentLoader } from './component-loader.js'
 
 interface ContextShape {
-  client: AdminClient
+  client: IAdminClient
   components: ComponentLoader | null
 }
 
 const ModernAdminContext = React.createContext<ContextShape | null>(null)
 
 export interface ModernAdminProviderProps {
-  client?: AdminClient
+  client?: IAdminClient
   clientOptions?: AdminClientOptions
   queryClient?: QueryClient
   components?: ComponentLoader
@@ -67,4 +67,4 @@ export const useAdminContext = (): ContextShape => {
   return ctx
 }
 
-export const useAdminClient = (): AdminClient => useAdminContext().client
+export const useAdminClient = (): IAdminClient => useAdminContext().client

@@ -3,7 +3,6 @@ import { AdminClient } from '../src/client.js'
 
 describe('AdminClient.timeseries', () => {
   it('serializes date-only ranges as ISO datetimes', async () => {
-    const originalFetch = globalThis.fetch
     let body: Record<string, unknown> | undefined
     const fetchMock = mock(async (_input: RequestInfo | URL, init?: RequestInit) => {
       body = JSON.parse(String(init?.body)) as Record<string, unknown>
@@ -12,21 +11,18 @@ describe('AdminClient.timeseries', () => {
         headers: { 'Content-Type': 'application/json' },
       })
     })
-    globalThis.fetch = fetchMock as unknown as typeof fetch
-
-    try {
-      const client = new AdminClient({ baseUrl: 'https://example.test' })
-      await client.timeseries({
-        resource: 'users',
-        dateField: 'createdAt',
-        step: 'day',
-        metric: 'count',
-        from: '2026-05-01',
-        to: '2026-05-09',
-      })
-    } finally {
-      globalThis.fetch = originalFetch
-    }
+    const client = new AdminClient({
+      baseUrl: 'https://example.test',
+      fetchImpl: fetchMock as unknown as typeof fetch,
+    })
+    await client.timeseries({
+      resource: 'users',
+      dateField: 'createdAt',
+      step: 'day',
+      metric: 'count',
+      from: '2026-05-01',
+      to: '2026-05-09',
+    })
 
     expect(body?.from).toBe('2026-05-01T00:00:00.000Z')
     expect(body?.to).toBe('2026-05-09T23:59:59.999Z')
@@ -37,20 +33,15 @@ describe('AdminClient.timeseries', () => {
 const captureRequests = async (
   run: (client: AdminClient) => Promise<unknown>,
 ): Promise<Array<{ url: string; init?: RequestInit }>> => {
-  const originalFetch = globalThis.fetch
   const seen: Array<{ url: string; init?: RequestInit }> = []
-  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+  const fetchImpl = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     seen.push({ url: String(input), ...(init ? { init } : {}) })
     return new Response(JSON.stringify({}), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     })
-  }) as unknown as typeof fetch
-  try {
-    await run(new AdminClient({ baseUrl: 'https://example.test' }))
-  } finally {
-    globalThis.fetch = originalFetch
   }
+  await run(new AdminClient({ baseUrl: 'https://example.test', fetchImpl }))
   return seen
 }
 
@@ -63,6 +54,37 @@ describe('AdminClient — audit log', () => {
     expect(req?.url).toBe(
       'https://example.test/admin/api/audit-log?before=1700000000000&beforeId=cursor-id',
     )
+  })
+})
+
+describe('AdminClient — injectable boundaries', () => {
+  it('uses provider-specific auth paths', async () => {
+    const seen: string[] = []
+    const client = new AdminClient({
+      baseUrl: 'https://example.test',
+      authPaths: {
+        emailSignIn: '/session/login',
+        socialSignIn: '/session/oauth',
+        signOut: '/session/logout',
+      },
+      navigate: () => undefined,
+      fetchImpl: async (input) => {
+        seen.push(String(input))
+        return new Response(JSON.stringify({}), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      },
+    })
+    await client.login('admin@example.test', 'secret')
+    await client.loginSocial('example', 'https://app.test/callback')
+    await client.logout()
+
+    expect(seen).toEqual([
+      'https://example.test/session/login',
+      'https://example.test/session/oauth',
+      'https://example.test/session/logout',
+    ])
   })
 })
 

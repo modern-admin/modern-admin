@@ -1,5 +1,4 @@
 import { Logger } from '@nestjs/common'
-import { tool, type Tool } from 'ai'
 import { z } from 'zod/v4'
 import {
   chartDefZ,
@@ -10,6 +9,13 @@ import {
   uuidv7,
 } from '@modern-admin/core'
 import type { AiUiAction } from './ai-assistant.types.js'
+import type { LlmTool } from './llm-provider.js'
+
+const tool = <TSchema extends z.ZodType, TResult>(definition: {
+  description?: string
+  inputSchema: TSchema
+  execute?: (input: z.infer<TSchema>, context?: unknown) => TResult
+}): LlmTool => definition as unknown as LlmTool
 
 export interface AiAssistantCitation {
   resourceId: string
@@ -62,7 +68,7 @@ export interface BuildAiAssistantToolsOptions {
 }
 
 export interface BuiltAiAssistantTools {
-  tools: Record<string, Tool<any, any>>
+  tools: Record<string, LlmTool>
   /** Resource ids that produced at least one tool. */
   resourceIds: string[]
   /** Tool descriptors for logging, debug UI, and system prompt hints. */
@@ -75,7 +81,7 @@ export interface BuiltAiAssistantTools {
   sqlResources: AiAssistantSqlResource[]
 }
 
-type AiTool = Tool<any, any>
+type AiTool = LlmTool
 
 const logger = new Logger('AiAssistantTools')
 

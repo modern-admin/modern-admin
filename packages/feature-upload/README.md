@@ -15,6 +15,10 @@ end-to-end Zod validation.
 bun add @modern-admin/feature-upload
 ```
 
+The root feature is core-only. Install the optional Nest/Busboy peers when
+using `@modern-admin/feature-upload/nest`, or the matching GraphQL/AWS peers
+when using those integration entry points.
+
 ## Documentation
 
 Setup guides, architecture, and usage examples live in the

@@ -3,7 +3,10 @@
 [![npm version](https://img.shields.io/npm/v/@modern-admin/graphql)](https://www.npmjs.com/package/@modern-admin/graphql)
 [![license](https://img.shields.io/npm/l/@modern-admin/graphql)](https://github.com/modern-admin/modern-admin/blob/main/LICENSE)
 
-> Apollo + code-first GraphQL transport for @modern-admin/nest.
+> Apollo + code-first GraphQL transport for @modern-admin/core.
+
+The transport shares core's `MODERN_ADMIN` injection token with host adapters
+and does not depend on the sibling REST transport package.
 
 Part of [**Modern Admin**](https://github.com/modern-admin/modern-admin) — a universal, modern admin panel framework
 built on NestJS + React 19, with Prisma/Drizzle adapters, Tailwind 4 UI, and

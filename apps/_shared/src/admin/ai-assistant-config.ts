@@ -1,9 +1,12 @@
 // Project-wide defaults for the AI assistant configuration block.
-// Both reference apps default to OpenRouter's `gpt-4o-mini` and gate the
+// The reference app uses the built-in OpenRouter adapter and gates the
 // settings UI behind the `admin` role; only the optional `rawQuery` slot
 // (host SQL executor) and the API key source typically differ.
 
+import type { ILlmProvider, IAiAssistantQueueDispatcher } from '@modern-admin/nest'
+
 export interface AiAssistantConfigBase {
+  provider?: ILlmProvider
   enabled?: boolean
   defaultModel?: string
   apiKey?: string
@@ -19,6 +22,7 @@ export interface AiAssistantConfigBase {
   appUrl?: string
   rawQuery?: (sql: string) => Promise<unknown[]>
   queue?: {
+    dispatcher?: IAiAssistantQueueDispatcher
     attempts?: number
     backoffMs?: number
     removeOnComplete?: boolean | number

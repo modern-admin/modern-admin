@@ -53,6 +53,7 @@ export function App({ config, components }: AppProps): ReactElement {
           headers: config.headers,
           persistDemoSession: config.persistDemoSession,
           authBasePath: config.authBasePath,
+          authPaths: config.authPaths,
         }}
       >
         <AdminApp

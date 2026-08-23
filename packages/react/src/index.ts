@@ -4,7 +4,10 @@
 export {
   AdminClient,
   AdminApiError,
+  type IAdminClient,
   type AdminClientOptions,
+  type AdminAuthPaths,
+  type AdminFetch,
   type AuthUiProps,
   type CacheStatsEntry,
   type CacheStatsResponse,
