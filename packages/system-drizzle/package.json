@@ -25,6 +25,10 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./pg": {
+      "types": "./src/schema/pg.ts",
+      "default": "./src/schema/pg.ts"
     }
   },
   "files": [
@@ -41,6 +45,10 @@
       ".": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
+      },
+      "./pg": {
+        "types": "./dist/schema/pg.d.ts",
+        "default": "./dist/schema/pg.js"
       }
     }
   },
