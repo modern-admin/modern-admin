@@ -472,6 +472,8 @@ export const ja: LocaleBundle = {
     'aiAssistant:fallback.noRows': 'このリクエストに一致するレコードは見つかりませんでした。',
     'aiAssistant:fallback.rowsFound': '見つかった行数: {count}。',
     'aiAssistant:taskFailed': 'AI アシスタントのタスクが失敗しました',
+    'aiAssistant:provider.api-stock': 'API Stock',
+    'aiAssistant:provider.openrouter': 'OpenRouter',
     'aiAssistant:error.providerNotConfigured': 'AI アシスタントのプロバイダーが設定されていません',
     'aiAssistant:error.queueNotConfigured': 'AI アシスタントのキューが設定されていません',
     'aiAssistant:error.apiStockApiKeyMissing': 'API Stock の API キーが設定されていません',

@@ -41,7 +41,7 @@ describe('AI assistant dependency boundaries', () => {
     expect(defaultLlmProvider).toBeInstanceOf(ApiStockLlmProvider)
     expect(settings).toMatchObject({
       provider: 'api-stock',
-      providerName: 'API Stock',
+      providerName: 'api-stock',
       apiKeyUrl: 'https://api-stock.com',
       model: 'gemini-3.5-flash',
       configured: false,

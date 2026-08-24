@@ -49,7 +49,6 @@ export interface ILlmProvider {
  */
 export class ApiStockLlmProvider implements ILlmProvider {
   readonly id = 'api-stock'
-  readonly displayName = 'API Stock'
   readonly apiKeyUrl = 'https://api-stock.com'
   readonly defaultModel = 'gemini-3.5-flash'
 

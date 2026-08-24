@@ -472,6 +472,8 @@ export const ptBR: LocaleBundle = {
     'aiAssistant:fallback.noRows': 'Nenhum registro foi encontrado para esta solicitação.',
     'aiAssistant:fallback.rowsFound': 'Linhas encontradas: {count}.',
     'aiAssistant:taskFailed': 'A tarefa do assistente IA falhou',
+    'aiAssistant:provider.api-stock': 'API Stock',
+    'aiAssistant:provider.openrouter': 'OpenRouter',
     'aiAssistant:error.providerNotConfigured': 'O provedor do assistente IA não está configurado',
     'aiAssistant:error.queueNotConfigured': 'A fila do assistente IA não está configurada',
     'aiAssistant:error.apiStockApiKeyMissing': 'A chave de API do API Stock não está configurada',

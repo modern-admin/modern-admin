@@ -67,6 +67,11 @@ export function AiAssistantSettingsSection(): React.ReactElement {
   if (!data) {
     return <div className="py-8 text-sm text-muted-foreground">{t('aiAssistant:settings.empty')}</div>
   }
+  const providerNameKey = `aiAssistant:provider.${data.provider}`
+  const localizedProviderName = t(providerNameKey)
+  const providerName = localizedProviderName === providerNameKey
+    ? data.providerName
+    : localizedProviderName
 
   return (
     <div className="flex flex-col gap-4">
@@ -84,7 +89,7 @@ export function AiAssistantSettingsSection(): React.ReactElement {
             {data.configured ? t('aiAssistant:settings.configured') : t('aiAssistant:settings.apiKeyRequired')}
           </Badge>
           <Badge variant="outline">{t('aiAssistant:settings.readOnly')}</Badge>
-          <Badge variant="outline">{t('aiAssistant:settings.provider', { provider: data.providerName })}</Badge>
+          <Badge variant="outline">{t('aiAssistant:settings.provider', { provider: providerName })}</Badge>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -137,7 +142,7 @@ export function AiAssistantSettingsSection(): React.ReactElement {
                 rel="noreferrer"
                 className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
               >
-                {t('aiAssistant:settings.createApiKey', { provider: data.providerName })}
+                {t('aiAssistant:settings.createApiKey', { provider: providerName })}
                 <ExternalLink className="size-3"/>
               </a>
             )}

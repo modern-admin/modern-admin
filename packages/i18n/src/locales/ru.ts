@@ -472,6 +472,8 @@ export const ru: LocaleBundle = {
     'aiAssistant:fallback.noRows': 'По этому запросу записи не найдены.',
     'aiAssistant:fallback.rowsFound': 'Найдено строк: {count}.',
     'aiAssistant:taskFailed': 'Задача AI помощника не выполнена',
+    'aiAssistant:provider.api-stock': 'API Stock',
+    'aiAssistant:provider.openrouter': 'OpenRouter',
     'aiAssistant:error.providerNotConfigured': 'Провайдер AI-помощника не настроен',
     'aiAssistant:error.queueNotConfigured': 'Очередь AI-помощника не настроена',
     'aiAssistant:error.apiStockApiKeyMissing': 'Ключ API Stock не настроен',

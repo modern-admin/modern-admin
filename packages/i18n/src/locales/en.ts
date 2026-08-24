@@ -472,6 +472,8 @@ export const en: LocaleBundle = {
     'aiAssistant:fallback.noRows': 'No records were found for this request.',
     'aiAssistant:fallback.rowsFound': 'Rows found: {count}.',
     'aiAssistant:taskFailed': 'AI assistant task failed',
+    'aiAssistant:provider.api-stock': 'API Stock',
+    'aiAssistant:provider.openrouter': 'OpenRouter',
     'aiAssistant:error.providerNotConfigured': 'AI assistant provider is not configured',
     'aiAssistant:error.queueNotConfigured': 'AI assistant queue is not configured',
     'aiAssistant:error.apiStockApiKeyMissing': 'API Stock API key is not configured',

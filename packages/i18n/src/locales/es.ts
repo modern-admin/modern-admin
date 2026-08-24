@@ -472,6 +472,8 @@ export const es: LocaleBundle = {
     'aiAssistant:fallback.noRows': 'No se encontraron registros para esta solicitud.',
     'aiAssistant:fallback.rowsFound': 'Filas encontradas: {count}.',
     'aiAssistant:taskFailed': 'Tarea del asistente IA fallida',
+    'aiAssistant:provider.api-stock': 'API Stock',
+    'aiAssistant:provider.openrouter': 'OpenRouter',
     'aiAssistant:error.providerNotConfigured': 'El proveedor del asistente IA no está configurado',
     'aiAssistant:error.queueNotConfigured': 'La cola del asistente IA no está configurada',
     'aiAssistant:error.apiStockApiKeyMissing': 'La clave API de API Stock no está configurada',

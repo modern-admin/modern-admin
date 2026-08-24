@@ -472,6 +472,8 @@ export const de: LocaleBundle = {
     'aiAssistant:fallback.noRows': 'Für diese Anfrage wurden keine Datensätze gefunden.',
     'aiAssistant:fallback.rowsFound': 'Gefundene Zeilen: {count}.',
     'aiAssistant:taskFailed': 'KI-Assistent-Aufgabe fehlgeschlagen',
+    'aiAssistant:provider.api-stock': 'API Stock',
+    'aiAssistant:provider.openrouter': 'OpenRouter',
     'aiAssistant:error.providerNotConfigured': 'Der KI-Anbieter ist nicht konfiguriert',
     'aiAssistant:error.queueNotConfigured': 'Die Warteschlange des KI-Assistenten ist nicht konfiguriert',
     'aiAssistant:error.apiStockApiKeyMissing': 'Der API-Stock-API-Schlüssel ist nicht konfiguriert',
