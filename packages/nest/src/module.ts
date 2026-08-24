@@ -83,7 +83,7 @@ export interface ModernAdminModuleOptions extends ModernAdminOptions {
   aiTaskStore?: IAiTaskStore
   /** AI assistant configuration for the built-in chat widget + endpoints. */
   aiAssistant?: {
-    /** Model backend. Defaults to the optional OpenRouter adapter. */
+    /** Model backend. Defaults to the optional API Stock adapter. */
     provider?: ILlmProvider
     enabled?: boolean
     defaultModel?: string

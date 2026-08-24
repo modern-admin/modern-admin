@@ -15,6 +15,7 @@ export {
 export { AiAssistantProcessor } from './ai-assistant.processor.js'
 export { AI_ASSISTANT_QUEUE, AI_ASSISTANT_CHAT_JOB } from './ai-assistant.constants.js'
 export {
+  ApiStockLlmProvider,
   OpenRouterLlmProvider,
   type ILlmProvider,
   type LlmChatMessage,

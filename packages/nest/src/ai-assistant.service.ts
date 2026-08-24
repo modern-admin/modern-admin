@@ -48,6 +48,8 @@ export interface AiAssistantPublicSettings {
   enabled: boolean
   configured: boolean
   provider: string
+  providerName: string
+  apiKeyUrl: string | null
   model: string
   maskedApiKey: string | null
   systemPrompt: string
@@ -471,12 +473,14 @@ export class AiAssistantService {
     const raw = await this.requireConfigStore().get('global', null, SETTINGS_KEY)
     if (!raw || typeof raw !== 'object') return defaults
     const stored = raw as AiAssistantStoredSettings
+    const matchesProvider = stored.provider === this.llmProvider.id
     return {
       enabled: stored.enabled ?? defaults.enabled,
       provider: this.llmProvider.id,
-      model: stored.model ?? defaults.model,
-      // stored key takes precedence; fall back to env-seeded key
-      apiKey: stored.apiKey?.trim() || envApiKey,
+      // A key saved for another provider must never be sent to the current
+      // provider. Models are provider-specific too, so reset both together.
+      model: matchesProvider ? (stored.model ?? defaults.model) : defaults.model,
+      apiKey: matchesProvider ? (stored.apiKey?.trim() || envApiKey) : envApiKey,
       systemPrompt: stored.systemPrompt ?? defaults.systemPrompt,
     }
   }
@@ -496,6 +500,8 @@ export class AiAssistantService {
       enabled: settings.enabled ?? true,
       configured: this.llmProvider.isConfigured(apiKey),
       provider: this.llmProvider.id,
+      providerName: this.llmProvider.displayName ?? this.llmProvider.id,
+      apiKeyUrl: this.llmProvider.apiKeyUrl ?? null,
       model: settings.model ?? this.options.aiAssistant?.defaultModel ?? this.llmProvider.defaultModel,
       maskedApiKey: apiKey ? this.maskApiKey(apiKey) : null,
       systemPrompt: settings.systemPrompt ?? '',

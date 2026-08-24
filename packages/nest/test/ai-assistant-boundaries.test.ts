@@ -7,6 +7,7 @@ import type {
   IAiAssistantQueueDispatcher,
 } from '../src/ai-assistant.types.js'
 import type { ILlmProvider } from '../src/llm-provider.js'
+import { ApiStockLlmProvider, defaultLlmProvider } from '../src/llm-provider.js'
 import { ModernAdminModule, type ModernAdminModuleOptions } from '../src/module.js'
 import { translateServerMessage } from '../src/server-i18n.js'
 
@@ -29,6 +30,42 @@ const buildOptions = (
 }
 
 describe('AI assistant dependency boundaries', () => {
+  test('uses API Stock as the built-in provider', async () => {
+    const stores = createMemorySystem()
+    const service = new AiAssistantService(new ModernAdmin(), {
+      configStore: stores.configStore,
+    })
+
+    const settings = await service.getSettings({ id: 'admin', role: 'admin' })
+
+    expect(defaultLlmProvider).toBeInstanceOf(ApiStockLlmProvider)
+    expect(settings).toMatchObject({
+      provider: 'api-stock',
+      providerName: 'API Stock',
+      apiKeyUrl: 'https://api-stock.com',
+      model: 'gemini-3.5-flash',
+      configured: false,
+    })
+  })
+
+  test('does not reuse a key saved for another provider', async () => {
+    const stores = createMemorySystem()
+    await stores.configStore.set('global', null, 'modern-admin.ai-assistant', {
+      provider: 'openrouter',
+      model: 'openrouter-model',
+      apiKey: 'openrouter-secret',
+    })
+    const service = new AiAssistantService(new ModernAdmin(), {
+      configStore: stores.configStore,
+    })
+
+    const settings = await service.getSettings({ id: 'admin', role: 'admin' })
+
+    expect(settings.model).toBe('gemini-3.5-flash')
+    expect(settings.configured).toBeFalse()
+    expect(settings.maskedApiKey).toBeNull()
+  })
+
   test('public settings come from the injected LLM provider', async () => {
     const dispatcher: IAiAssistantQueueDispatcher = { enqueue: () => undefined }
     const options = buildOptions(dispatcher)
@@ -37,6 +74,8 @@ describe('AI assistant dependency boundaries', () => {
     const settings = await service.getSettings({ id: 'admin', role: 'admin' })
 
     expect(settings.provider).toBe('test-provider')
+    expect(settings.providerName).toBe('test-provider')
+    expect(settings.apiKeyUrl).toBeNull()
     expect(settings.model).toBe('test-model')
     expect(settings.configured).toBeTrue()
   })

@@ -39,6 +39,7 @@
     "@nestjs/platform-express": "^11.2.1",
     "@nestjs/platform-socket.io": "^11.2.1",
     "@nestjs/websockets": "^11.2.1",
+    "@ai-sdk/openai-compatible": "^3.0.35",
     "@openrouter/ai-sdk-provider": "^3.0.0",
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",

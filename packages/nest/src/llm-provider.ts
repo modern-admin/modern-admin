@@ -36,9 +36,82 @@ export interface LlmGenerateResult {
 /** Consumer-owned port for the AI assistant's model invocation. */
 export interface ILlmProvider {
   readonly id: string
+  readonly displayName?: string
+  readonly apiKeyUrl?: string
   readonly defaultModel: string
   isConfigured(apiKey?: string): boolean
   generate(input: LlmGenerateInput): Promise<LlmGenerateResult>
+}
+
+/**
+ * Built-in API Stock adapter. API Stock exposes an OpenAI-compatible chat
+ * endpoint, so the standard AI SDK tool loop can be reused unchanged.
+ */
+export class ApiStockLlmProvider implements ILlmProvider {
+  readonly id = 'api-stock'
+  readonly displayName = 'API Stock'
+  readonly apiKeyUrl = 'https://api-stock.com'
+  readonly defaultModel = 'gemini-3.5-flash'
+
+  isConfigured(apiKey?: string): boolean {
+    return Boolean(apiKey?.trim())
+  }
+
+  async generate(input: LlmGenerateInput): Promise<LlmGenerateResult> {
+    if (!input.apiKey) {
+      throw new Error(
+        translateServerMessage(
+          input.locale,
+          'aiAssistant:error.apiStockApiKeyMissing',
+          undefined,
+          input.serverLocales,
+        ),
+      )
+    }
+    let modules: [typeof import('ai'), typeof import('@ai-sdk/openai-compatible')]
+    try {
+      modules = await Promise.all([
+        import('ai'),
+        import('@ai-sdk/openai-compatible'),
+      ])
+    } catch (cause) {
+      throw new Error(
+        translateServerMessage(
+          input.locale,
+          'aiAssistant:error.apiStockPeersMissing',
+          undefined,
+          input.serverLocales,
+        ),
+        { cause },
+      )
+    }
+    const [{ generateText, stepCountIs }, { createOpenAICompatible }] = modules
+    const apiStock = createOpenAICompatible({
+      name: 'apiStock',
+      apiKey: input.apiKey,
+      baseURL: 'https://api.api-stock.com/api/v1',
+    })
+    const generate = generateText as unknown as (options: Record<string, unknown>) => Promise<{
+      text: string
+      toolCalls: Array<{ toolName: string }>
+      toolResults: Array<{ toolName?: string; output: unknown }>
+    }>
+    const result = await generate({
+      model: apiStock.chatModel(input.model),
+      system: input.system,
+      messages: input.messages,
+      tools: input.tools,
+      stopWhen: stepCountIs(input.maxSteps),
+    })
+    return {
+      text: result.text,
+      toolCalls: result.toolCalls.map((call) => ({ toolName: call.toolName })),
+      toolResults: result.toolResults.map((toolResult) => ({
+        toolName: toolResult.toolName,
+        output: toolResult.output,
+      })),
+    }
+  }
 }
 
 /**
@@ -111,4 +184,4 @@ export class OpenRouterLlmProvider implements ILlmProvider {
   }
 }
 
-export const defaultLlmProvider = new OpenRouterLlmProvider()
+export const defaultLlmProvider = new ApiStockLlmProvider()

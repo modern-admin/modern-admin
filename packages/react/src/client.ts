@@ -1126,6 +1126,8 @@ export interface AiAssistantSettings {
   enabled: boolean
   configured: boolean
   provider: string
+  providerName: string
+  apiKeyUrl: string | null
   model: string
   maskedApiKey: string | null
   systemPrompt: string
