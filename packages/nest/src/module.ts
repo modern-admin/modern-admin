@@ -9,6 +9,7 @@ import { QueueModule } from '@modern-admin/queue'
 import {
   ModernAdmin,
   type IAiTaskStore,
+  type IMediaGenerationProvider,
   type IConfigStore,
   type IHistoryStore,
   type IQueryableLogStore,
@@ -43,6 +44,9 @@ import type { ILlmProvider } from './llm-provider.js'
 import type { IAiAssistantQueueDispatcher } from './ai-assistant.types.js'
 import { translateServerMessage } from './server-i18n.js'
 import type { LocaleBundle } from '@modern-admin/i18n'
+import { MediaGenerationController, MediaGenerationWebhookController } from './media-generation.controller.js'
+import { MediaGenerationService } from './media-generation.service.js'
+import type { MediaGenerationOptions } from './media-generation.types.js'
 
 export interface ModernAdminModuleOptions extends ModernAdminOptions {
   /**
@@ -143,6 +147,8 @@ export interface ModernAdminModuleOptions extends ModernAdminOptions {
       removeOnFail?: boolean | number
     }
   }
+  /** Webhook-driven image/video generation. The server never polls the provider. */
+  mediaGeneration?: MediaGenerationOptions & { provider: IMediaGenerationProvider }
   /**
    * Implementation that powers `/admin/api/api-keys/*` (Settings → API
    * Keys). When omitted, the endpoints respond with 501. Hosts using
@@ -210,6 +216,7 @@ const deriveFeatures = (
   webhooks: options.webhookStore !== undefined,
   apiKeys: options.apiKeyService !== undefined,
   aiAssistant: options.aiAssistant !== undefined,
+  mediaGeneration: options.mediaGeneration !== undefined,
   // A wired realtime bus implies the host also mounts the WS gateway
   // (`ModernAdminRealtimeModule`); hosts that only publish server-side
   // can override with `features: { realtime: false }`.
@@ -270,6 +277,8 @@ const buildControllers = (aiEnabled: boolean): NonNullable<DynamicModule['contro
   WebhooksController,
   DashboardController,
   CacheController,
+  MediaGenerationController,
+  MediaGenerationWebhookController,
 ]
 
 /** The AI subsystem's imports — a BullMQ queue, so only when AI is on. */
@@ -306,6 +315,7 @@ const buildProviders = (
   ...(aiEnabled
     ? [AiAssistantService, ...(bullQueueEnabled ? [AiAssistantProcessor] : [])]
     : []),
+  MediaGenerationService,
   AdminControllerScanner,
   ModernAdminBootstrapService,
   ModernAdminAuthGuard,

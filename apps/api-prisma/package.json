@@ -20,6 +20,7 @@
   "dependencies": {
     "@better-auth/api-key": "^1.7.0",
     "@modern-admin/adapter-prisma": "workspace:*",
+    "@modern-admin/api-stock": "workspace:*",
     "@modern-admin/app-shared": "workspace:*",
     "@modern-admin/auth-better-auth": "workspace:*",
     "@modern-admin/cache-redis": "workspace:*",

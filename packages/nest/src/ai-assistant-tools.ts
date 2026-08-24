@@ -60,6 +60,8 @@ export interface BuildAiAssistantToolsOptions {
    * role. Defaults to read-only.
    */
   dashboardWritable?: boolean
+  /** Allow the assistant to open a client-side media generation draft. */
+  mediaGenerationAvailable?: boolean
   /**
    * Collector for UI side-effects (navigate / refresh). Tools push into this
    * array; the service surfaces the deduped result via `output.uiActions`.
@@ -323,6 +325,7 @@ export function buildAiAssistantTools({
   rawQuery,
   dashboardStore,
   dashboardWritable = false,
+  mediaGenerationAvailable = false,
   uiActions,
 }: BuildAiAssistantToolsOptions): BuiltAiAssistantTools {
   const include = includeResourceIds ? new Set(includeResourceIds) : null
@@ -818,6 +821,36 @@ export function buildAiAssistantTools({
       },
     })
     descriptors.push({ name: 'navigate_to', resourceId: '__ui__', action: 'list' })
+
+    if (mediaGenerationAvailable) {
+      tools['draft_media_generation'] = tool({
+        description:
+          'Open a client-side media generation draft with a prompt. This never starts a paid request; the user must review the model, confirm the cost, and submit it in the UI.',
+        inputSchema: z.object({
+          prompt: z.string().min(1).max(10_000).describe('Prompt to prefill in the media generation form'),
+          mediaType: z.enum(['image', 'video', 'music']).optional()
+            .describe('Preferred output type. Defaults to image.'),
+        }),
+        execute: async ({ prompt, mediaType }) => {
+          uiActions.push({
+            kind: 'open-media-generation',
+            prompt,
+            ...(mediaType ? { mediaType } : {}),
+          })
+          return {
+            ok: true,
+            draftOpened: true,
+            paidRequestStarted: false,
+            citations: [],
+          }
+        },
+      })
+      descriptors.push({
+        name: 'draft_media_generation',
+        resourceId: '__media_generation__',
+        action: 'list',
+      })
+    }
   }
 
   // ─── Debug instrumentation ────────────────────────────────────────────

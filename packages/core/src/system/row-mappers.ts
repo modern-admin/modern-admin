@@ -58,6 +58,7 @@ export const rowToLogEntry = (row: LogRow): ActionLogEntry => ({
 
 export interface TaskRow {
   id: string
+  idempotencyKey?: string | null
   kind: string
   resourceId: string | null
   recordId: string | null
@@ -75,6 +76,7 @@ export interface TaskRow {
 
 export const rowToTask = (row: TaskRow): AiTask => ({
   id: row.id,
+  ...(row.idempotencyKey ? { idempotencyKey: row.idempotencyKey } : {}),
   kind: row.kind,
   ...(row.resourceId !== null ? { resourceId: row.resourceId } : {}),
   ...(row.recordId !== null ? { recordId: row.recordId } : {}),

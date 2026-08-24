@@ -464,7 +464,8 @@ model MaHistory {
 }
 
 model MaAiTask {
-  id         String    @id @default(uuid(7))
+  id             String    @id @default(uuid(7))
+  idempotencyKey String?   @unique
   kind       String
   resourceId String?
   recordId   String?

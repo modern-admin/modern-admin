@@ -1,7 +1,6 @@
 // Admin Settings hub. Reachable from the user/profile dropdown menu and
-// rendered by the router for `/settings/<section>`. Currently three
-// sections: `api-keys`, `webhooks`, `ai-assistant`; the layout is built so
-// adding more sections is just a new entry in `SECTIONS` + a switch case.
+// rendered by the router for `/settings/<section>`. The layout is built so
+// adding sections is just a new entry in `BUILT_IN_SECTIONS` + a switch case.
 
 import * as React from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -42,6 +41,7 @@ import {
   Eye,
   EyeOff,
   KeyRound,
+  Image,
   Plus,
   Settings as SettingsIcon,
   Trash2,
@@ -57,12 +57,13 @@ import type { ApiKeyRecord, WebhookInput, WebhookRecord } from '../client.js'
 import type { ResourceJSON } from '../types.js'
 import { getSettingsSectionExtensions } from '../extension-registry.js'
 import { AiAssistantSettingsSection } from './ai-assistant-settings-section.js'
+import { MediaGenerationSettingsSection } from './media-generation-settings-section.js'
 import { SettingsCard, SettingsListState, SettingsTableScroll } from './settings-shared.js'
 
 const KEY_LIST = ['modern-admin', 'api-keys'] as const
 const KEY_WEBHOOKS = ['modern-admin', 'webhooks'] as const
 
-type BuiltInSectionKey = 'api-keys' | 'ai-assistant' | 'webhooks'
+type BuiltInSectionKey = 'api-keys' | 'ai-assistant' | 'media-generation' | 'webhooks'
 
 interface SectionDef {
   key: string
@@ -76,6 +77,7 @@ const BUILT_IN_SECTIONS: SectionDef[] = [
   { key: 'api-keys', labelKey: 'settings:apiKeys.title', icon: KeyRound },
   { key: 'webhooks', labelKey: 'settings:webhooks.title', icon: SettingsIcon },
   { key: 'ai-assistant', labelKey: 'aiAssistant:title', icon: Bot },
+  { key: 'media-generation', labelKey: 'mediaGeneration:settings.title', icon: Image },
 ]
 
 export function SettingsPage({ section }: { section?: string }): React.ReactElement {
@@ -90,7 +92,8 @@ export function SettingsPage({ section }: { section?: string }): React.ReactElem
         s.key === 'api-keys' ? features.apiKeys
           : s.key === 'webhooks' ? features.webhooks
             : s.key === 'ai-assistant' ? features.aiAssistant
-              : true,
+              : s.key === 'media-generation' ? features.mediaGeneration
+                : true,
       ),
       ...getSettingsSectionExtensions().map((ext) => ({
         key: ext.key,
@@ -100,11 +103,11 @@ export function SettingsPage({ section }: { section?: string }): React.ReactElem
       })),
     ],
 
-    [features.apiKeys, features.webhooks, features.aiAssistant],
+    [features.apiKeys, features.webhooks, features.aiAssistant, features.mediaGeneration],
   )
   // Resolve the requested section. If the URL is bogus or the section is
   // disabled, fall back to the first enabled section.
-  const builtInKeys: BuiltInSectionKey[] = ['api-keys', 'webhooks', 'ai-assistant']
+  const builtInKeys: BuiltInSectionKey[] = ['api-keys', 'webhooks', 'ai-assistant', 'media-generation']
   const isBuiltIn = (k: string): k is BuiltInSectionKey =>
     (builtInKeys as string[]).includes(k)
   const requested: string | null = section ?? null
@@ -167,6 +170,7 @@ export function SettingsPage({ section }: { section?: string }): React.ReactElem
         {active && isBuiltIn(active) && active === 'api-keys' && <ApiKeysSection />}
         {active && isBuiltIn(active) && active === 'webhooks' && <WebhooksSection />}
         {active && isBuiltIn(active) && active === 'ai-assistant' && <AiAssistantSettingsSection />}
+        {active && isBuiltIn(active) && active === 'media-generation' && <MediaGenerationSettingsSection />}
         {active && !isBuiltIn(active) && (() => {
           const extSection = getSettingsSectionExtensions().find((e) => e.key === active)
           return extSection ? <extSection.component /> : null

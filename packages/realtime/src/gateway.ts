@@ -37,6 +37,7 @@ interface RealtimeSocketLike {
 
 const ALL_ROOM = 'modern-admin:all'
 const resourceRoom = (resourceId: string): string => `modern-admin:resource:${resourceId}`
+const userRoom = (userId: string): string => `modern-admin:user:${userId}`
 
 /**
  * Extra browser origins allowed to open the realtime WebSocket, on top of the
@@ -158,6 +159,9 @@ export class RealtimeGateway implements OnGatewayInit, OnModuleInit {
             return
           }
           socket.data = { ...(socket.data ?? {}), currentAdmin }
+          if (currentAdmin.id !== undefined && typeof socket.join === 'function') {
+            socket.join(userRoom(String(currentAdmin.id)))
+          }
           next()
         })
         .catch(() => next(new Error('Unauthorized')))
@@ -175,6 +179,10 @@ export class RealtimeGateway implements OnGatewayInit, OnModuleInit {
     const server = this.server
     if (!server) return
     if (typeof server.to === 'function') {
+      if (event.audienceUserId) {
+        server.to(userRoom(event.audienceUserId)).emit(REALTIME_EVENT, event)
+        return
+      }
       server.to(resourceRoom(event.resourceId)).emit(REALTIME_EVENT, event)
       server.to(ALL_ROOM).emit(REALTIME_EVENT, event)
       return

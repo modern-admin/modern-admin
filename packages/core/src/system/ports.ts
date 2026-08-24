@@ -127,13 +127,22 @@ export interface IHistoryStore {
 // ─── AI tasks ─────────────────────────────────────────────────────────────
 
 export interface IAiTaskStore {
+  /**
+   * Enqueue a task. Implementations backed by the shipped schemas return the
+   * existing row when the same `idempotencyKey` is submitted again.
+   */
   enqueue(input: AiTaskInput): Promise<AiTask>
+  /** Atomically transition a pending task to running. Returns null when another worker claimed it. */
+  claim(id: string): Promise<AiTask | null>
   get(id: string): Promise<AiTask | null>
+  getByIdempotencyKey?(idempotencyKey: string): Promise<AiTask | null>
   list(filter?: {
     kind?: string
+    idempotencyKey?: string
     status?: AiTaskStatus | AiTaskStatus[]
     userId?: string
     resourceId?: string
+    createdAfter?: string
     limit?: number
   }): Promise<AiTask[]>
 

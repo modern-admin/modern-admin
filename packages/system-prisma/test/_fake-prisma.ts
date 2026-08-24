@@ -84,6 +84,12 @@ export class FakeDelegate {
     return rows[0] ? { ...rows[0] } : null
   }
   async create(args: { data: any }): Promise<any> {
+    if (
+      args.data.idempotencyKey
+      && this.rows.some((row) => row.idempotencyKey === args.data.idempotencyKey)
+    ) {
+      throw new Error('unique constraint failed: idempotencyKey')
+    }
     const row = {
       id: args.data.id ?? uuidv7(),
       ...this.defaults(),
@@ -116,6 +122,15 @@ export class FakeDelegate {
     const before = this.rows.length
     this.rows = this.rows.filter((r) => !matches(r, args.where))
     return { count: before - this.rows.length }
+  }
+  async updateMany(args: { where?: any; data: any }): Promise<{ count: number }> {
+    let count = 0
+    this.rows = this.rows.map((row) => {
+      if (!matches(row, args.where)) return row
+      count++
+      return { ...row, ...args.data, updatedAt: new Date() }
+    })
+    return { count }
   }
   async count(args: any = {}): Promise<number> {
     return this.rows.filter((r) => matches(r, args.where)).length

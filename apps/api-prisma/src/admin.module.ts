@@ -26,6 +26,7 @@ import {
   type IRealtimeBus,
 } from '@modern-admin/core'
 import { ModernAdminModule } from '@modern-admin/nest'
+import { ApiStockMediaGenerationProvider } from '@modern-admin/api-stock'
 import { PrismaDatabase, PrismaResource } from '@modern-admin/adapter-prisma'
 import { ModernAdminGraphqlModule } from '@modern-admin/graphql'
 import { ModernAdminRealtimeModule, RedisRealtimeBus, type RealtimeRedisLike } from '@modern-admin/realtime'
@@ -154,6 +155,22 @@ const apiKeyService = buildApiKeyService(authProvider)
             })
         },
       }),
+      mediaGeneration: {
+        provider: new ApiStockMediaGenerationProvider(),
+        ...(process.env.API_STOCK_KEY ? { apiKey: process.env.API_STOCK_KEY } : {}),
+        ...(process.env.MEDIA_GENERATION_WEBHOOK_BASE_URL
+          ? { webhookBaseUrl: process.env.MEDIA_GENERATION_WEBHOOK_BASE_URL }
+          : {}),
+        ...(process.env.MEDIA_GENERATION_WEBHOOK_SECRET
+          ? { webhookSecret: process.env.MEDIA_GENERATION_WEBHOOK_SECRET }
+          : {}),
+        ...(Number(process.env.MEDIA_GENERATION_MONTHLY_BUDGET_USD) > 0
+          ? { monthlyBudgetUsdPerUser: Number(process.env.MEDIA_GENERATION_MONTHLY_BUDGET_USD) }
+          : {}),
+        allowedMediaTypes: ['image', 'video'],
+        generateRoles: ['admin'],
+        manageRoles: ['admin'],
+      },
       ...(cacheProvider ? { cache: cacheProvider } : {}),
       ...(authProvider ? { auth: authProvider as IAuthProvider } : {}),
       ...(apiKeyService ? { apiKeyService } : {}),

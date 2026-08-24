@@ -17,6 +17,9 @@ export {
   type AiAssistantCitation,
   type AiAssistantSettings,
   type AiAssistantTask,
+  type CreateMediaGenerationTaskInput,
+  type MediaGenerationSettings,
+  type MediaGenerationTask,
   type ApiKeyRecord,
   type UploadedFileInfo,
   type UploadProgress,
@@ -142,6 +145,11 @@ export {
   ActionComponentHost,
   type ActionComponentHostProps,
 } from './components/action-component-host.js'
+export {
+  MediaGenerationAction,
+  MediaGenerationForm,
+  type MediaGenerationFormProps,
+} from './components/media-generation-form.js'
 export {
   buildValidationSchema,
   buildPropertySchema,

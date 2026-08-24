@@ -129,4 +129,24 @@ describe('buildAiAssistantTools', () => {
     })
     expect(() => JSON.stringify(result)).not.toThrow()
   })
+
+  test('opens a media draft without starting a generation request', async () => {
+    const uiActions: import('../src/ai-assistant.types.js').AiUiAction[] = []
+    const built = buildAiAssistantTools({
+      admin: new ModernAdmin({ resources: [] }),
+      mediaGenerationAvailable: true,
+      uiActions,
+    })
+
+    const result = await (built.tools['draft_media_generation'] as unknown as {
+      execute(input: { prompt: string; mediaType: 'image' }): Promise<unknown>
+    }).execute({ prompt: 'A clean product card', mediaType: 'image' })
+
+    expect(result).toMatchObject({ draftOpened: true, paidRequestStarted: false })
+    expect(uiActions).toEqual([{
+      kind: 'open-media-generation',
+      prompt: 'A clean product card',
+      mediaType: 'image',
+    }])
+  })
 })

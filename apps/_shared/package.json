@@ -22,6 +22,7 @@
     "@modern-admin/auth-better-auth": "workspace:*",
     "@modern-admin/core": "workspace:*",
     "@modern-admin/feature-json-by-key": "workspace:*",
+    "@modern-admin/feature-media-generation": "workspace:*",
     "@modern-admin/feature-m2m": "workspace:*",
     "@modern-admin/feature-password": "workspace:*",
     "@modern-admin/feature-upload": "workspace:*",

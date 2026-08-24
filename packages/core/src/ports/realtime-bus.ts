@@ -4,13 +4,18 @@
  * server-sent events) so frontends can refresh caches in near-realtime.
  */
 export interface RealtimeEvent {
-  kind: 'created' | 'updated' | 'deleted'
+  kind: 'created' | 'updated' | 'deleted' | 'taskUpdated'
   resourceId: string
   recordId?: string
   /** Optional snapshot of the record params after the mutation. */
   record?: Record<string, unknown>
   /** Identifier of the admin user that triggered the change, if known. */
   actorId?: string
+  /** Restrict delivery to the authenticated socket for this user. */
+  audienceUserId?: string
+  /** Local asynchronous task id for `taskUpdated` events. */
+  taskId?: string
+  taskStatus?: string
   /** Server timestamp in ms since epoch. */
   at: number
 }

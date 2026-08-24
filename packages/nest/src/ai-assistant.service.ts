@@ -315,6 +315,7 @@ export class AiAssistantService {
       // the DashboardController PUT gate so the assistant can't overwrite the
       // shared global dashboard for a viewer who couldn't do it via REST.
       dashboardWritable: this.canManageDashboard(data.currentAdmin),
+      mediaGenerationAvailable: this.canDraftMedia(data.currentAdmin),
       uiActions,
     })
 
@@ -519,6 +520,7 @@ export class AiAssistantService {
     clientContext?: AiClientContext,
   ): string {
     const hasNavigateTool = descriptors.some((d) => d.name === 'navigate_to')
+    const hasMediaDraftTool = descriptors.some((d) => d.name === 'draft_media_generation')
     const lines = [
       'You are the Modern Admin AI assistant.',
       'You answer questions about admin data, build reports, inspect relationships, and explain findings.',
@@ -531,9 +533,15 @@ export class AiAssistantService {
       ...(hasNavigateTool
         ? [
           'UI NAVIGATION is allowed and encouraged. You have a `navigate_to` tool that takes the user to a specific admin page. This is NOT a write operation — it only changes which page is displayed in the browser.',
-          'Call `navigate_to` whenever the user asks to "open", "go to", "show me", "switch to", "перейти", "открой", or otherwise navigate. Supported routes: { name: "home" }, { name: "audit-log" }, { name: "list", resourceId }, { name: "show", resourceId, recordId }, { name: "settings", section? }.',
-          'After calling `navigate_to`, briefly confirm in your text reply that you navigated the user (e.g. "Открыл пост ..."), do not say navigation is unavailable.',
-          'When the user references "this", "current", "сюда", "к нему" etc., resolve the subject from the current pathname (see below) before navigating.',
+          'Call `navigate_to` whenever the user asks to open, go to, show, switch to, or otherwise navigate. Supported routes: { name: "home" }, { name: "audit-log" }, { name: "list", resourceId }, { name: "show", resourceId, recordId }, { name: "settings", section? }.',
+          'After calling `navigate_to`, briefly confirm in the user\'s language that navigation completed; do not say navigation is unavailable.',
+          'When the user uses contextual references such as "this", "current", or their equivalents in another language, resolve the subject from the current pathname before navigating.',
+        ]
+        : []),
+      ...(hasMediaDraftTool
+        ? [
+          'MEDIA DRAFTS are available through `draft_media_generation`. Use it when the user asks to create or generate an image, video, or audio asset.',
+          'The tool only opens a prefilled draft. It does not start a paid request; tell the user to review the model and confirm the cost in the form.',
         ]
         : []),
       ...(clientContext?.pathname
@@ -685,6 +693,12 @@ export class AiAssistantService {
     if (!this.isChatAllowed(currentAdmin)) {
       throw new ForbiddenException('You are not allowed to use AI assistant')
     }
+  }
+
+  private canDraftMedia(currentAdmin?: CurrentAdmin): boolean {
+    const config = this.options.mediaGeneration
+    const role = currentAdmin?.role ? String(currentAdmin.role) : ''
+    return Boolean(config && role && (config.generateRoles ?? ['admin']).includes(role))
   }
 }
 
