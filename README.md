@@ -81,8 +81,9 @@ modern-admin/
 │   ├── create/                    — scaffold, schema-generation, and custom-UI CLI
 │   └── tsconfig/                  — shared TS presets
 ├── .changeset/                    — Changesets workflow
-├── .github/workflows/release.yml  — CI publish → npm (registry.npmjs.org)
+├── .github/workflows/             — CI, release preparation, protected npm publish
 ├── scripts/                       — dev.sh orchestrator, release.ts
+├── CONTRIBUTING.md                — contribution and branch workflow
 ├── RELEASING.md                   — full release procedure
 ├── docker-compose.yml             — Postgres + Redis for development
 └── package.json                   — bun workspaces root
@@ -240,8 +241,9 @@ Full documentation lives at **<https://docs.modernadminpro.com/docs/getting-star
   fail-open reads/writes, and invalidation quarantine.
 - Commit messages follow Angular Conventional Commits:
   `<type>(<scope>): <subject>` with a per-package body.
-- Releases run through **Changesets + `.github/workflows/release.yml`** —
-  see `RELEASING.md` for the full procedure.
+- Contributions merge into **`develop`**; prepared releases are promoted to
+  **`main`** and published through Changesets + GitHub Actions. See
+  [`CONTRIBUTING.md`](./CONTRIBUTING.md) and [`RELEASING.md`](./RELEASING.md).
 
 ## License
 

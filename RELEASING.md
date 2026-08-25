@@ -1,301 +1,129 @@
-# Releasing — universal publish procedure
+# Release process
 
-This is the procedure for getting a code change from a working tree to
-published `@modern-admin/*` packages on npm (npmjs.org, public). Use it
-for every release without exception.
+Modern Admin publishes the public `@modern-admin/*` packages to npm through an
+automated Changesets workflow. Contributors describe release-worthy changes in
+their pull requests; maintainers decide when the accumulated changes are ready
+to ship.
 
-The repo uses **Changesets** for version bumps and a **GitHub Actions
-release workflow** (`.github/workflows/release.yml`) for the actual
-publish. You never run `bun publish` locally — CI does it.
+```text
+feature or fix PRs
+        |
+        v
+     develop ----> version PR ----> develop
+                                      |
+                                      v
+                              release PR to main
+                                      |
+                                      v
+                                  npm publish
+```
 
----
+`develop` is the integration branch. `main` contains approved release
+snapshots and is the only branch from which packages are published.
 
-## 0. Prerequisites (one-time setup)
+## Contributing a release-worthy change
 
-- You are on the default branch (`main`).
-- Working tree is **clean** (`git status` shows nothing) — or contains
-  only the change you are about to release.
-- `bun install` has been run and `node_modules/` is up to date.
-- For repository writes: SSH key configured for `git@github.com`.
+Create a short-lived branch from `develop` and open the pull request back to
+`develop`:
 
-No personal access token (PAT) is needed locally. CI publishes with
-the workflow-provided `GITHUB_TOKEN`.
+```bash
+git switch develop
+git pull --ff-only origin develop
+git switch -c feature/short-description
+```
 
----
+Changes to a published package must include a Changesets entry:
 
-## 1. Make and verify the change
-
-1. **Edit code.** Stick to the conventions in `CLAUDE.md`
-   (Conventional Commits, latest deps, bun-only, etc.).
-2. **Run the test suite.** Every test must pass; do not skip or silence
-   a failure.
-
-   ```sh
-   bun test
-   bun run typecheck
-   ```
-
-3. **For library packages**, prefer adding a focused test that covers
-   the new behaviour (see existing patterns under `packages/*/test/`).
-4. **For breaking changes**, add a migration note to the affected
-   package's `CHANGELOG.md` *after* the version bump (step 4 fills the
-   summary line; you can flesh it out in the same PR).
-
----
-
-## 2. Write a changeset
-
-Every release MUST be preceded by at least one changeset file. The
-file is what tells CI which packages to bump and how (`patch` / `minor`
-/ `major`).
-
-```sh
+```bash
 bun changeset
 ```
 
-The wizard asks:
+Select the packages affected by the change, choose the appropriate semantic
+version bump, and write the summary for package consumers:
 
-- **Which packages?** — Tick every package affected by your change. The
-  repo is in **linked** mode (`linked: [["@modern-admin/*"]]`) so all
-  `@modern-admin/*` packages bump *together* to the same version. Tick
-  the ones you actually changed; the linker handles the rest.
-- **Major / minor / patch?**
-  - `patch` — bug fix, doc-only change, internal refactor.
-  - `minor` — additive feature, new public option, new export. No
-    breakage.
-  - `major` — removed export, renamed option, changed runtime behaviour
-    a caller would notice. Requires a migration note.
-- **Summary** — one line written in user-facing voice. Examples:
-  - `fix(core): normalise BigInt fields to strings in BaseRecord.toJSON`
-  - `feat(react): add authBasePath option to AdminClient`
+- `patch` for a backwards-compatible bug fix;
+- `minor` for a backwards-compatible feature or public API addition;
+- `major` for a breaking API or behaviour change.
 
-This produces `.changeset/<random-name>.md`. **Open it and edit the
-body** to a multi-line description if a one-liner is insufficient. The
-body lands verbatim in the published `CHANGELOG.md`.
+The summary becomes part of the generated package changelog. Repository-only
+documentation, tests, CI, and internal tooling do not require a changeset when
+published packages are unaffected.
 
-For trivial CI/docs/internal commits with no consumer impact, skip the
-changeset entirely — CI will not publish without one.
+Before opening a pull request, run the checks appropriate to the change:
 
----
-
-## 3. Commit and push
-
-Follow **Angular Conventional Commits** (`<type>(<scope>): <subject>`):
-
-```sh
-git add -A
-git commit -m "$(cat <<'EOF'
-fix(core,cache-redis): handle BigInt fields in record/JSON pipeline
-
-* @modern-admin/core: BaseRecord.toJSON normalises BigInt → string
-* @modern-admin/cache-redis: defensive sentinel-based BigInt round-trip
-EOF
-)"
-git push origin main
+```bash
+bun run lint
+bun run typecheck
+bun run test
 ```
 
-- **Type** — `fix` | `feat` | `refactor` | `perf` | `docs` | `test` |
-  `chore` | `build` | `ci`.
-- **Scope** — affected package short name(s). Multiple packages →
-  comma-separated, no spaces (`core,react,web`).
-- **Subject** — imperative mood, ≤72 chars, no trailing period.
-- **Body** — one bullet per package with what changed. Wrap at 72.
-- **Co-Authored-By** — required by repo convention; preserve it.
+CI verifies the code and confirms that published-package changes carry release
+intent. Ordinary pull requests are squash-merged into `develop` after review.
 
-NEVER bypass hooks (`--no-verify`) — if a pre-commit/pre-push hook
-fires, fix the underlying issue and recommit (do not amend; create a
-new commit).
+## Preparing package versions
 
-NEVER use `git push --force` to `main`. If the remote rejected because
-someone else pushed, `git pull --rebase` first.
+Changesets collected on `develop` are accumulated into a draft pull request
+from `changeset-release/develop`. The pull request is created and updated
+automatically; it does not publish packages.
 
----
+The version pull request shows the exact release result:
 
-## 4. Let CI run
+- consumed changeset files;
+- package version updates;
+- generated `CHANGELOG.md` entries;
+- synchronized workspace versions in `bun.lock`.
 
-The `release.yml` workflow fires on every push to `main`. It does
-this:
+When maintainers decide to release, they review this pull request, confirm the
+semantic versions and changelog text, wait for CI, and merge it into `develop`.
+Package versions must not be edited manually outside this process.
 
-1. `bun install`
-2. `prisma generate` (apps/api-prisma needs it for typecheck)
-3. `bun run typecheck`
-4. `bun --filter '*' build`
-5. **Branching point**:
-  - If any `.changeset/*.md` files exist → it opens or updates a PR
-    titled **"chore: version packages"** that:
-    - Deletes the changesets,
-    - Bumps every linked package's `package.json` `version`,
-    - Updates each affected package's `CHANGELOG.md`,
-    - Updates `bun.lock`.
-  - If no changesets are pending (Version Packages PR was just
-    merged) → it runs `bun run release`, which calls
-    `scripts/release.ts`, which iterates publishable packages and
-    `bun publish`es each one to `https://registry.npmjs.org` with
-    `access: public`.
+## Promoting a release to `main`
 
-Open the workflow run on GitHub and watch it to completion. Typical
-duration: 4–8 minutes for the bump PR, 6–12 minutes for the publish.
+After the version pull request is merged and `develop` is green, maintainers
+open a release pull request from `develop` to `main`. This pull request is the
+final review of everything included in the release.
 
----
+The release pull request must:
 
-## 5. Review and merge the Version Packages PR
+- originate from the repository's `develop` branch;
+- contain no pending changesets;
+- pass typecheck, lint, unit tests, and Playwright tests;
+- be merged with a merge commit.
 
-When the workflow opens the **"chore: version packages"** PR:
+Using a merge commit preserves the relationship between the two long-lived
+branches. Squashing or rebasing the release pull request would make already
+released integration commits appear again in later comparisons.
 
-1. **Review the diff.** Check that:
-  - Every affected package got the version bump you expected.
-  - Each `CHANGELOG.md` entry reads correctly under the new version
-    header.
-  - `bun.lock` updated for the version bumps and nothing else.
-2. **If the changeset summary needs cleanup**, push commits onto the
-   PR branch (the workflow keeps `bun.lock` in sync on re-run).
-3. **Merge with "Squash and merge".** The squash commit message
-   follows the PR title (`chore: version packages`).
+## Publishing
 
-Do not delete the PR or close it without merging — the new versions
-exist only in that branch until you do.
+Merging the release pull request triggers the release workflow on `main`. The
+workflow verifies the release again, builds the public packages, and determines
+which package versions are not yet present on npm. Publication proceeds only
+when there is something new to publish.
 
----
+The publishing scripts validate package manifests and internal dependency
+ranges before uploading each package. Versions already present on npm are
+skipped, which makes retrying an interrupted release safe.
 
-## 6. CI publishes
+Published packages are available from the
+[`@modern-admin` npm organization](https://www.npmjs.com/org/modern-admin).
 
-The merge-commit-on-`main` triggers `release.yml` a second time. With
-no pending changesets, it now publishes. Watch the run for green
-checkmarks on every `bun publish` step.
+## Failed or defective releases
 
-Confirm on npm
-(`https://www.npmjs.com/org/modern-admin`) that the new
-versions appear with the expected `published <X> ago` timestamps.
+If publication fails because of a transient infrastructure or registry error,
+maintainers rerun the same release workflow. A retry does not require another
+version bump, and already-published packages are skipped.
 
-If a publish step fails:
+Published versions are never overwritten. If a release contains a product
+defect, the fix follows the normal pull-request flow through `develop` and is
+published as a new patch release.
 
-- **`403 Forbidden`** — the workflow's `permissions:` block is missing
-  `packages: write`, or the package name doesn't match the org. Fix
-  the workflow and push.
-- **`409 Conflict` (version already exists)** — someone re-ran the
-  release on an old SHA. Bump versions again via a new changeset.
-- **`E401`** — the `.npmrc` setup step failed; check the workflow log
-  for env-var interpolation issues.
+## Maintainer checklist
 
----
-
-## 7. Consume the new version downstream
-
-In a consumer project (e.g. `rustore/admin-service`):
-
-```sh
-bun add @modern-admin/core@latest @modern-admin/nest@latest \
-        @modern-admin/web@latest   # …every package you depend on
-```
-
-Because the repo is in **linked** mode, every `@modern-admin/*` package
-shares the same version after each release. Bumping them in lockstep
-is the supported path; mixing versions is not.
-
-Verify the consumer typechecks (`bun run typecheck`) and boots
-(`bun run dev`) before announcing the release.
-
----
-
-## TL;DR — one-screen cheat sheet
-
-```sh
-# 1. edit code + tests
-bun test && bun run typecheck
-
-# 2. write a changeset
-bun changeset            # → .changeset/<name>.md, edit if needed
-
-# 3. commit (Conventional Commits + Co-Authored-By) and push
-git add -A
-git commit -m "feat(scope): summary"
-git push origin main
-
-# 4. wait for release.yml to open the "chore: version packages" PR
-# 5. review the bumped versions + CHANGELOG, then Squash-merge it
-# 6. wait for release.yml to publish on the merge commit
-# 7. consumers: bun add @modern-admin/<pkg>@latest
-```
-
----
-
-## 8. Open-core ↔ commercial versioning policy
-
-### Compatibility contract
-
-| Open-core `@modern-admin/*` version | Compatible Pro `@modern-admin-pro/*` version |
-|--------------------------------------|----------------------------------------------|
-| `1.x.y`                              | `1.x.y`                                      |
-| `2.x.y`                              | `2.x.y`                                      |
-
-**Rule**: commercial packages carry the same major version as the open-core
-they depend on. A major bump in `@modern-admin/core` (breaking public API)
-mandates a major bump in every `@modern-admin-pro/*` package that imports it,
-even if the Pro package itself has no breaking change.
-
-This lets consumers of both families pin `^1` on both sides and get
-compatible updates without version-negotiation guesswork.
-
-### Peer dependency range
-
-Every `@modern-admin-pro/*` package declares:
-
-```json
-"peerDependencies": {
-  "@modern-admin/core": "^1"
-}
-```
-
-When open-core publishes `2.0.0`, the Pro side bumps to `2.0.0` and
-changes the range to `"^2"`.
-
-### Feature flag contract
-
-Commercial packages do not activate unless:
-
-1. A valid license key covering the feature is present (`MODERN_ADMIN_LICENSE_KEY`).
-2. The orchestrator explicitly opts in: `new ModernAdmin({ featureFlags: ['<name>'] })`.
-
-Both conditions are required — missing either silently disables the feature
-(no crash, just a `console.warn`).
-
-Feature flag names are **stable identifiers** — changing them is a breaking
-change that requires a major bump in the Pro package. Current names:
-
-| Package                                  | Flag         |
-|------------------------------------------|--------------|
-| `@modern-admin-pro/feature-ai-fill`      | `ai-fill`    |
-| `@modern-admin-pro/feature-webhooks`     | `webhooks`   |
-| `@modern-admin-pro/feature-logging`      | `logging`    |
-
-### Pre-release verification flow
-
-Before releasing Pro packages, run the following sequence:
-
-1. **Open-core green** — `bun test && bun run typecheck` in `modern-admin/`.
-2. **Pro green with bunfig overrides** — `bun test && bun run typecheck` in
-   `modern-admin-pro/` with workspace overrides pointing to the local
-   open-core clone.
-3. **Publish open-core** — wait for it to appear on npm (npmjs.org).
-4. **Bump open-core peer deps in Pro** — update to the published version,
-   remove bunfig overrides, re-run the full test suite without overrides.
-5. **Publish Pro** — run the changeset/release flow in `modern-admin-pro/`.
-
----
-
-## What NOT to do
-
-- **Do not run `bun publish` locally.** It bypasses the version-bump
-  flow and you'll end up with a published version that has no
-  matching `CHANGELOG.md` entry.
-- **Do not edit `package.json#version` by hand.** Changesets owns it.
-- **Do not skip the changeset for a "small" fix.** A change without a
-  changeset is invisible to consumers — no CHANGELOG, no `latest`
-  bump, no `bun add @latest` upgrade.
-- **Do not force-push to `main`.** It rewrites history that CI has
-  already acted on.
-- **Do not publish from a feature branch.** Only `main` triggers the
-  publish workflow.
-- **Do not mix unrelated changes into one changeset.** One
-  changeset = one user-facing change. Multiple changesets are fine in
-  one PR.
+- [ ] Intended changes and their changesets are merged into `develop`.
+- [ ] The version pull request contains the expected versions and changelogs.
+- [ ] The version pull request is merged and `develop` is green.
+- [ ] The `develop` to `main` release pull request is reviewed and green.
+- [ ] The release pull request is merged with a merge commit.
+- [ ] The release workflow completes successfully.
+- [ ] Published versions are visible on npm.

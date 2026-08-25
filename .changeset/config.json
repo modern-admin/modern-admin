@@ -8,7 +8,7 @@
   "fixed": [],
   "linked": [["@modern-admin/*"]],
   "access": "public",
-  "baseBranch": "main",
+  "baseBranch": "develop",
   "updateInternalDependencies": "patch",
   "ignore": [
     "@modern-admin/app-shared",
