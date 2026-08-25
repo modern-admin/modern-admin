@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@modern-admin/ui'
 import { MoreHorizontal, Zap } from 'lucide-react'
-import type { ActionDescriptor, ActionGroup, RecordJSON } from './types.js'
+import type { ActionDescriptor, ActionGroup, RecordJSON, ResourceJSON } from './types.js'
 
 interface ActionMenuGroupNode {
   key: string
@@ -46,6 +46,14 @@ export const isActionAllowedForRecord = (
   actionName: string,
   record: Pick<RecordJSON, 'recordActions'> | undefined,
 ): boolean => !record?.recordActions || record.recordActions.includes(actionName)
+
+/** Whether the server-advertised resource metadata offers an action. */
+export const isActionAllowedForResource = (
+  actionName: string,
+  resource: Pick<ResourceJSON, 'actions'> | undefined,
+): boolean => resource?.actions.some(
+  (action) => action.actionType === 'resource' && action.name === actionName,
+) ?? false
 
 /** Narrow a resource's record actions down to the ones this record offers. */
 export const visibleRecordActions = (

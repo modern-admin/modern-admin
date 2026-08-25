@@ -6,8 +6,12 @@
 // that carry no verdict is pinned here.
 
 import { describe, expect, test } from 'bun:test'
-import { isActionAllowedForRecord, visibleRecordActions } from '../src/action-menu.js'
-import type { ActionDescriptor, RecordJSON } from '../src/types.js'
+import {
+  isActionAllowedForRecord,
+  isActionAllowedForResource,
+  visibleRecordActions,
+} from '../src/action-menu.js'
+import type { ActionDescriptor, RecordJSON, ResourceJSON } from '../src/types.js'
 
 const action = (name: string): ActionDescriptor => ({
   name,
@@ -75,5 +79,26 @@ describe('isActionAllowedForRecord', () => {
 
   test('an empty verdict denies built-ins too', () => {
     expect(isActionAllowedForRecord('edit', record([]))).toBe(false)
+  })
+})
+
+describe('isActionAllowedForResource', () => {
+  const resource = (actions: ActionDescriptor[]): Pick<ResourceJSON, 'actions'> => ({ actions })
+
+  test('allows only advertised resource actions', () => {
+    expect(isActionAllowedForResource('new', resource([
+      { name: 'new', actionType: 'resource', resourceId: 'users' },
+    ]))).toBe(true)
+    expect(isActionAllowedForResource('new', resource([]))).toBe(false)
+  })
+
+  test('does not confuse an equally named record action with a resource action', () => {
+    expect(isActionAllowedForResource('new', resource([
+      { name: 'new', actionType: 'record', resourceId: 'users' },
+    ]))).toBe(false)
+  })
+
+  test('fails closed until resource metadata is available', () => {
+    expect(isActionAllowedForResource('new', undefined)).toBe(false)
   })
 })

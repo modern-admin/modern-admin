@@ -33,6 +33,7 @@ export const ru: LocaleBundle = {
     'auth:loginFailed': 'Неверные данные.',
     'errors:notFound': 'Не найдено.',
     'errors:forbidden': 'Нет доступа к этому ресурсу.',
+    'errors:noEditableProperties': 'В этой форме нет доступных для редактирования полей.',
     'errors:server': 'Что-то пошло не так. Повторите попытку.',
     'common:resources': 'Ресурсы',
     'common:actions': 'Действия',

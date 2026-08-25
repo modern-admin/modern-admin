@@ -28,10 +28,25 @@ import {
   Outlet,
   RouterProvider,
 } from '@tanstack/react-router'
-import { Loader2 } from 'lucide-react'
-import { BasepathContext, useRoute } from './router.js'
+import {
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Empty,
+  EmptyContent,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@modern-admin/ui'
+import { AlertCircle, ChevronLeft, Loader2 } from 'lucide-react'
+import { BasepathContext, Link, useRoute } from './router.js'
 import { getRouteExtension } from './extension-registry.js'
 import { useI18n } from './i18n.js'
+import { useResource } from './hooks.js'
+import { isActionAllowedForResource } from './action-menu.js'
+import { PageBreadcrumbs, homeCrumb } from './breadcrumbs.js'
 import type { WizardStep } from './components/wizard-form.js'
 
 // Every page is a lazy chunk so the critical-path bundle stops at the shell
@@ -135,6 +150,47 @@ const resourceNewRoute = createRoute({
   path: '/resources/$resourceId/new',
   component: function ResourceNewRouteComponent() {
     const { resourceId } = resourceNewRoute.useParams()
+    const resource = useResource(resourceId)
+    const { t } = useI18n()
+    if (!resource) return <PageChunkSpinner />
+    if (!isActionAllowedForResource('new', resource)) {
+      return (
+        <div className="flex min-h-full flex-col gap-4">
+          <PageBreadcrumbs
+            items={[
+              homeCrumb(t('common:home')),
+              { label: resource.name, to: { name: 'list', resourceId } },
+              { label: t('common:new') },
+            ]}
+          />
+          <Card className="flex-1">
+            <CardHeader>
+              <CardTitle className="truncate">
+                {t('common:newRecord', { name: resource.name })}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia>
+                    <AlertCircle aria-hidden="true" />
+                  </EmptyMedia>
+                  <EmptyTitle>{t('errors:forbidden')}</EmptyTitle>
+                </EmptyHeader>
+                <EmptyContent>
+                  <Link to={{ name: 'list', resourceId }}>
+                    <Button variant="outline">
+                      <ChevronLeft data-icon="inline-start" aria-hidden="true" />
+                      {t('common:back')}
+                    </Button>
+                  </Link>
+                </EmptyContent>
+              </Empty>
+            </CardContent>
+          </Card>
+        </div>
+      )
+    }
     if (resourceId === 'products') return <ProductsNewPage />
     return <ResourceEditPage resourceId={resourceId} />
   },

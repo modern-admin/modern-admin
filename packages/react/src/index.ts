@@ -135,6 +135,7 @@ export {
   MoreActionsMenu,
   getActionLabel,
   isActionAllowedForRecord,
+  isActionAllowedForResource,
   visibleRecordActions,
   type ActionMenuProps,
 } from './action-menu.js'

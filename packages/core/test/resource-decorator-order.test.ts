@@ -57,4 +57,54 @@ describe('ResourceDecorator propertyOrder', () => {
     )
     expect(decorator.toJSON().propertyOrder.edit).toEqual(['a', 'b', 'extra'])
   })
+
+  test('new visibility can differ from edit visibility', () => {
+    const decorator = decorate(
+      [new BaseProperty({ path: 'immutableAfterCreate' })],
+      {
+        properties: {
+          immutableAfterCreate: { isVisible: { new: true, edit: false } },
+        },
+      },
+    )
+
+    const json = decorator.toJSON()
+    expect(json.properties[0]?.visibility.new).toBe(true)
+    expect(json.properties[0]?.visibility.edit).toBe(false)
+    expect(json.propertyOrder.new).toEqual(['immutableAfterCreate'])
+    expect(json.propertyOrder.edit).toEqual([])
+  })
+
+  test('new view falls back to edit visibility and property order', () => {
+    const decorator = decorate(
+      [
+        new BaseProperty({ path: 'name' }),
+        new BaseProperty({ path: 'code' }),
+      ],
+      {
+        properties: { code: { isVisible: { edit: false } } },
+        editProperties: ['name'],
+      },
+    )
+
+    const json = decorator.toJSON()
+    expect(json.properties.find((property) => property.path === 'code')?.visibility.new).toBe(false)
+    expect(json.propertyOrder.new).toEqual(['name'])
+  })
+
+  test('newProperties overrides editProperties for creation forms', () => {
+    const decorator = decorate(
+      [
+        new BaseProperty({ path: 'name' }),
+        new BaseProperty({ path: 'code' }),
+      ],
+      {
+        editProperties: ['name'],
+        newProperties: ['code', 'name'],
+      },
+    )
+
+    expect(decorator.toJSON().propertyOrder.new).toEqual(['code', 'name'])
+    expect(decorator.toJSON().propertyOrder.edit).toEqual(['name'])
+  })
 })

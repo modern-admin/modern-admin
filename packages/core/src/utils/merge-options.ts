@@ -24,6 +24,7 @@ export type ArrayMergeStrategies = Record<string, ArrayMergeStrategy>
 export const RESOURCE_OPTIONS_ARRAY_STRATEGIES: ArrayMergeStrategies = {
   listProperties: 'replace',
   showProperties: 'replace',
+  newProperties: 'replace',
   editProperties: 'replace',
   filterProperties: 'replace',
   'properties.*.availableValues': 'replace',

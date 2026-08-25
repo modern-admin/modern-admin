@@ -6,7 +6,18 @@
 import * as React from 'react'
 import { useForm, type SubmitHandler } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Card, CardHeader, CardTitle, Form } from '@modern-admin/ui'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  Form,
+} from '@modern-admin/ui'
+import { AlertCircle } from 'lucide-react'
 import { useCreateRecord, useResource } from '../hooks.js'
 import { useNavigate } from '../router.js'
 import { useI18n } from '../i18n.js'
@@ -48,7 +59,11 @@ export function ResourceWizardCreatePage({
   const editable = React.useMemo<PropertyJSON[]>(
     () =>
       resource
-        ? visibleRecordProperties(resource.properties, 'edit', resource.propertyOrder?.edit).filter(
+        ? visibleRecordProperties(
+          resource.properties,
+          'new',
+          resource.propertyOrder?.new ?? resource.propertyOrder?.edit,
+        ).filter(
           (p) => !p.isDisabled,
         )
         : [],
@@ -144,20 +159,33 @@ export function ResourceWizardCreatePage({
             {t('common:newRecord', { name: resource.name })}
           </CardTitle>
         </CardHeader>
-        <Form {...form}>
-          <WizardForm
-            steps={steps}
-            properties={editable}
-            resourceId={resourceId}
-            control={form.control}
-            trigger={form.trigger}
-            onSubmit={handleSubmit}
-            onCancel={() => navigate({ name: 'list', resourceId })}
-            isSubmitting={form.formState.isSubmitting}
-            submitError={submitError}
-            labels={labels}
-          />
-        </Form>
+        {editable.length === 0 ? (
+          <CardContent>
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia>
+                  <AlertCircle aria-hidden="true" />
+                </EmptyMedia>
+                <EmptyTitle>{t('errors:noEditableProperties')}</EmptyTitle>
+              </EmptyHeader>
+            </Empty>
+          </CardContent>
+        ) : (
+          <Form {...form}>
+            <WizardForm
+              steps={steps}
+              properties={editable}
+              resourceId={resourceId}
+              control={form.control}
+              trigger={form.trigger}
+              onSubmit={handleSubmit}
+              onCancel={() => navigate({ name: 'list', resourceId })}
+              isSubmitting={form.formState.isSubmitting}
+              submitError={submitError}
+              labels={labels}
+            />
+          </Form>
+        )}
       </Card>
     </div>
   )

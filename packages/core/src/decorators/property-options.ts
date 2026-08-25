@@ -12,6 +12,8 @@ export const propertyVisibilityZ = z.union([
   z.object({
     list: z.boolean().optional(),
     show: z.boolean().optional(),
+    /** Creation-form visibility. Falls back to `edit` when omitted. */
+    new: z.boolean().optional(),
     edit: z.boolean().optional(),
     filter: z.boolean().optional(),
   }),
