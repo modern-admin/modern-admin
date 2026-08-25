@@ -1,0 +1,51 @@
+# Repository-side guardrails for the long-lived branch model. Configure the
+# "Branch policy / Validate promotion" check as required on main.
+
+name: Branch policy
+
+on:
+  pull_request:
+    branches: [develop, main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate-promotion:
+    name: Validate promotion
+    runs-on: ubuntu-latest
+    steps:
+      - name: Restrict main to the integration branch
+        shell: bash
+        env:
+          BASE_BRANCH: ${{ github.base_ref }}
+          HEAD_BRANCH: ${{ github.head_ref }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          if [[ "$BASE_BRANCH" == 'main' ]] && \
+             { [[ "$HEAD_BRANCH" != 'develop' ]] || [[ "$HEAD_REPOSITORY" != "$REPOSITORY" ]]; }; then
+            echo "::error::main only accepts promotion pull requests from this repository's develop branch."
+            exit 1
+          fi
+
+      - name: Checkout promotion candidate
+        if: github.base_ref == 'main'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Reject unversioned promotion
+        if: github.base_ref == 'main'
+        shell: bash
+        run: |
+          shopt -s nullglob
+          pending=()
+          for file in .changeset/*.md; do
+            [[ "$file" == '.changeset/README.md' ]] || pending+=("$file")
+          done
+          if (( ${#pending[@]} > 0 )); then
+            echo '::error::Merge the version PR into develop before promoting to main.'
+            printf '  %s\n' "${pending[@]}"
+            exit 1
+          fi
