@@ -24,19 +24,26 @@ failures for downstream consumers.
 
 ## Releasing
 
-CI handles the actual release on `main`:
+Versioning and publishing are deliberately separated:
 
-1. The `release` workflow opens / updates a "Version Packages" PR using
-   `changesets/action`.
-2. Merging that PR consumes the staged `.changeset/*.md` files, bumps
-   `version` fields, and updates `CHANGELOG.md`s.
-3. The post-merge run of the same workflow detects there are no pending
-   changesets, builds every package, and runs `bun scripts/release.ts`
-   which iterates each publishable package and calls
-   `scripts/publish-package.ts` — a thin wrapper around `bun publish`
-   that applies `publishConfig.{main,types,exports}` overrides before
-   handing the package.json to bun (bun does not honour those overrides
-   on its own as of v1.3).
+1. Normal pull requests merge into `develop` with their changesets.
+2. `.github/workflows/prepare-release.yml` maintains a draft
+   `changeset-release/develop` pull request. Merging it into `develop`
+   consumes `.changeset/*.md`, bumps package versions, updates changelogs,
+   and synchronizes `bun.lock`; it never publishes.
+3. A reviewed `develop` -> `main` promotion pull request carries the prepared
+   release. It must be merged with a merge commit so the long-lived branches
+   retain a shared history.
+4. `.github/workflows/release.yml` runs only on `main`, rejects pending
+   changesets, and repeats the quality gates. When Changesets detects an
+   unpublished version, the protected publish job runs
+   `bun scripts/release.ts`. That script skips versions already present on npm,
+   so a failed workflow can be retried safely.
+
+`scripts/publish-package.ts` is the final wrapper around `bun publish`. It
+applies `publishConfig.{main,types,exports}` overrides before handing the
+package manifest to Bun, which does not honour those overrides on its own as
+of v1.3.
 
 Manual one-off release of a single package (rarely needed):
 
