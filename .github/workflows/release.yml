@@ -1,77 +1,73 @@
-# GitHub Actions release workflow for the @modern-admin/* monorepo.
+# Publishes already-versioned @modern-admin/* packages from main.
 #
-# On every push to main this workflow either:
-#
-#   (a) Opens / updates a "Version Packages" pull request — if there are
-#       unreleased `.changeset/*.md` files staged on main.
-#   (b) Publishes every publishable package — if there are NO pending
-#       changesets (i.e. the Version Packages PR has just been merged).
-#
-# Authentication:
-#   - GITHUB_TOKEN (auto-scoped) is used by changesets/action to open the
-#     "Version Packages" PR and create GitHub releases.
-#   - NPM_TOKEN (repo secret: an npm automation token for the `modern-admin`
-#     npm org) is what `bun publish` uses to publish the public packages to
-#     registry.npmjs.org. Create it at npmjs.com → Access Tokens →
-#     Granular/Automation, scoped to the @modern-admin org, then add it as a
-#     repository secret named NPM_TOKEN.
-#
-# Manual publish from a fork / local machine remains possible — see
-# `.changeset/README.md`.
+# Version preparation deliberately lives in prepare-release.yml on develop.
+# By the time a develop -> main promotion PR is merged, changesets have been
+# consumed and package.json/CHANGELOG/bun.lock already describe the release.
 
 name: Release
 
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
-# Concurrency: queue releases per-branch so two pushes don't race.
+permissions: {}
+
+# Publishing is irreversible. Queue runs so a retry cannot race a newer push.
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-main
   cancel-in-progress: false
 
 jobs:
-  release:
-    name: Version or publish
+  verify:
+    name: Verify release
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      github.repository == 'modern-admin/modern-admin'
     runs-on: ubuntu-latest
+    outputs:
+      mode: ${{ steps.release-mode.outputs.mode }}
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # changesets needs full history to compute since-last-release diffs.
-          fetch-depth: 0
+          persist-credentials: false
+
+      # main is publish-only. Pending changesets mean the preparation PR was
+      # bypassed, so fail before npm credentials are exposed to any step.
+      - name: Assert release is versioned
+        shell: bash
+        run: |
+          shopt -s nullglob
+          pending=()
+          for file in .changeset/*.md; do
+            [[ "$file" == '.changeset/README.md' ]] || pending+=("$file")
+          done
+          if (( ${#pending[@]} > 0 )); then
+            echo '::error::Pending changesets reached main. Prepare versions on develop first.'
+            printf '  %s\n' "${pending[@]}"
+            exit 1
+          fi
 
       - name: Setup bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: latest
-
-      # Public npm (npmjs.org) auth for bun: write the token to a
-      # project-local .npmrc so `bun publish` can hit registry.npmjs.org.
-      # bun honours the same npm auth config. NPM_TOKEN is an npm automation
-      # token (bypasses interactive 2FA in CI) for the `modern-admin` org.
-      - name: Configure registry auth
-        run: |
-          cat > .npmrc <<EOF
-          @modern-admin:registry=https://registry.npmjs.org
-          //registry.npmjs.org/:_authToken=${NPM_TOKEN}
-          always-auth=true
-          EOF
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      # Generate the Prisma client for app-api-prisma so its typecheck can
-      # resolve `./generated/prisma/client`. The schema is checked in but
-      # the generated client is not (`src/generated/` is gitignored).
-      # prisma.config.ts eagerly resolves DATABASE_URL via Prisma's env()
-      # helper — pass a dummy URL so the config loads. `prisma generate`
-      # never connects to the database, so the value doesn't matter.
+      # Avoid opening the protected npm environment for repo-only promotions
+      # or workflow retries after every version is already present on npm.
+      - name: Select release mode
+        id: release-mode
+        uses: changesets/action/select-mode@8488615a623b1b9c987934bb89eae8af6a946ac1 # v2.1.1
+
+      # The generated Prisma client is gitignored; typecheck needs it. Prisma
+      # resolves DATABASE_URL while loading its config but generate never
+      # connects, so an inert URL is sufficient.
       - name: Generate Prisma client
         run: bun run --filter @modern-admin/app-api-prisma prisma:generate
         env:
@@ -80,10 +76,6 @@ jobs:
       - name: Typecheck
         run: bun run typecheck
 
-      # Gate versioning/publishing on lint and the unit test suite so a
-      # package can never reach npm with red tests. The e2e suite runs in
-      # ci.yml on the PR instead — it needs Docker services and would slow
-      # every release push.
       - name: Lint
         run: bun run lint
 
@@ -91,28 +83,46 @@ jobs:
         run: bun run test
 
       - name: Build all publishable packages
-        # Build only the packages that will actually be published (packages/*).
-        # Apps are private and not published, so a path filter keeps the build
-        # scoped to the publishable workspace packages.
         run: bun run --filter './packages/*' build
 
-      # Path A: stage changeset bumps in a PR if any pending changesets exist.
-      # Path B: publish if no pending changesets (PR was just merged).
-      - name: Create Release PR or publish
-        id: changesets
-        uses: changesets/action@v1
+  publish:
+    name: Publish packages
+    needs: verify
+    if: needs.verify.outputs.mode == 'publish'
+    runs-on: ubuntu-latest
+    # Approval happens only after the read-only verification job is green.
+    # Restrict this environment to main and require a release owner in
+    # Settings -> Environments -> npm-production.
+    environment: npm-production
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # When pending changesets exist, this opens the "Version Packages"
-          # PR via `bun run version-packages`.
-          version: bun run version-packages
-          # When no pending changesets exist, this triggers publication.
-          publish: bun run release
-          commit: "chore(release): version packages"
-          title: "chore(release): version packages"
+          persist-credentials: false
+
+      - name: Setup bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # Keep npm credentials scoped to the two steps that need them. The
+      # project-local file disappears with the ephemeral runner.
+      - name: Configure registry auth
+        run: |
+          printf '%s\n' \
+            '@modern-admin:registry=https://registry.npmjs.org' \
+            "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" \
+            'always-auth=true' > .npmrc
         env:
-          # changesets/action uses GITHUB_TOKEN for the PR / release.
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # bun publish reads NPM_TOKEN / BUN_AUTH_TOKEN — point both at the
-          # npmjs automation token so publication targets registry.npmjs.org.
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish packages
+        run: bun run release
+        env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           BUN_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -302,9 +302,14 @@ When touching one of those, expect to update call sites for the new API.
   `feat | fix | refactor | style | perf | test | docs | chore | build | ci` and
   scope is the affected package (`fix(adapter-prisma): …`).
 - Any change to a published package needs a **changeset**: `bun run changeset`.
-- Releases go through Changesets + `.github/workflows/release.yml`;
-  `bun run version-packages` also syncs workspace versions into the lockfile.
-  Full procedure in `RELEASING.md`.
+- Normal feature/fix/docs/chore pull requests target **`develop`**, never
+  `main`. `.github/workflows/prepare-release.yml` maintains the Changesets
+  version PR against `develop`; `bun run version-packages` also synchronizes
+  workspace versions into the lockfile.
+- A prepared release is promoted through a `develop` -> `main` pull request
+  using a **merge commit** (never squash/rebase). `main` is publish-only and
+  `.github/workflows/release.yml` is its sole npm publication path. Full
+  public release procedure is in `RELEASING.md`.
 
 ## Workflow rules
 
