@@ -24,7 +24,7 @@ export const isToManyReferenceProperty = (property: PropertyJSON): boolean =>
  */
 export const visibleRecordProperties = (
   properties: ReadonlyArray<PropertyJSON>,
-  view: 'list' | 'show' | 'edit' | 'filter',
+  view: 'list' | 'show' | 'new' | 'edit' | 'filter',
   order?: ReadonlyArray<string>,
 ): PropertyJSON[] => {
   if (order) {
@@ -36,9 +36,12 @@ export const visibleRecordProperties = (
           property !== undefined && !isToManyReferenceProperty(property),
       )
   }
-  return properties.filter((property) =>
-    property.visibility[view] && !isToManyReferenceProperty(property),
-  )
+  return properties.filter((property) => {
+    const isVisible = view === 'new'
+      ? (property.visibility.new ?? property.visibility.edit)
+      : property.visibility[view]
+    return isVisible && !isToManyReferenceProperty(property)
+  })
 }
 
 const relatedKey = (related: RelatedResource): string =>

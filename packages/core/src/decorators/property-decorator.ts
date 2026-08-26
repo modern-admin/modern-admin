@@ -16,7 +16,7 @@ const humanize = (path: string): string =>
     .replace(/([a-z])([A-Z])/g, '$1 $2')
     .replace(/^./, (c) => c.toUpperCase())
 
-const VIEWS = ['list', 'show', 'edit', 'filter'] as const
+const VIEWS = ['list', 'show', 'new', 'edit', 'filter'] as const
 type View = (typeof VIEWS)[number]
 
 export interface PropertyJSON {
@@ -153,8 +153,12 @@ export class PropertyDecorator {
       const flag = v[view as keyof typeof v]
       if (typeof flag === 'boolean') return flag
     }
+    // `new` is additive and backwards compatible: existing resources that
+    // only configure `edit` keep the same creation-form visibility until they
+    // opt into a distinct verdict.
+    if (view === 'new' && v && typeof v.edit === 'boolean') return v.edit
     // Default fallbacks per view type.
-    if (view === 'edit') return !this.property.isId() && this.property.isVisible()
+    if (view === 'new' || view === 'edit') return !this.property.isId() && this.property.isVisible()
     if (view === 'filter') return this.property.isVisible() && !this.property.isId()
     return this.property.isVisible()
   }

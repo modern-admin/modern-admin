@@ -14,6 +14,10 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
   Form,
   Kbd,
   Tooltip,
@@ -142,13 +146,18 @@ export function ResourceEditPage({
   const { t, locale } = useI18n()
   const notify = useNotify()
   const dialogs = useDialogs()
+  const isNew = !recordId
 
   const editable = React.useMemo<PropertyJSON[]>(
-    () =>
-      resource
-        ? visibleRecordProperties(resource.properties, 'edit', resource.propertyOrder?.edit).filter((p) => !p.isDisabled)
-        : [],
-    [resource],
+    () => {
+      if (!resource) return []
+      const view = isNew ? 'new' : 'edit'
+      const order = isNew
+        ? (resource.propertyOrder?.new ?? resource.propertyOrder?.edit)
+        : resource.propertyOrder?.edit
+      return visibleRecordProperties(resource.properties, view, order).filter((p) => !p.isDisabled)
+    },
+    [isNew, resource],
   )
 
   // The validation schema needs to consult the live form values so it can
@@ -182,8 +191,6 @@ export function ResourceEditPage({
   // Track which recordId has already been hydrated so background refetches
   // don't overwrite user edits after the initial load.
   const hydratedRecordIdRef = React.useRef<string | undefined>(undefined)
-
-  const isNew = !recordId
 
   // localStorage key for the per-resource new-record draft. We persist the
   // form snapshot here whenever the user has typed anything but not yet
@@ -477,7 +484,10 @@ export function ResourceEditPage({
       if (form.formState.isSubmitting || isHydrating) return
       void form.handleSubmit(onSubmit, onInvalid)()
     },
-    { description: isNew ? t('common:create') : t('common:save') },
+    {
+      enabled: editable.length > 0,
+      description: isNew ? t('common:create') : t('common:save'),
+    },
   )
 
   if (!resource) return <div className="p-6">{t('common:loading')}</div>
@@ -554,7 +564,7 @@ export function ResourceEditPage({
               : t('common:editRecord', { name: resource.name, id: recordId ?? '' })}
           </CardTitle>
           <div className="flex shrink-0 gap-2">
-            {aiFillEnabled && (
+            {aiFillEnabled && editable.length > 0 && (
               <Button
                 type="button"
                 variant="outline"
@@ -594,20 +604,31 @@ export function ResourceEditPage({
         <Form {...form}>
           <form id="edit-record-form" onSubmit={form.handleSubmit(onSubmit, onInvalid)}>
             <CardContent className="gap-4 pb-6 [column-fill:_balance] md:columns-2">
-              {editable.map((property) => (
-                <ConditionalField
-                  key={property.path}
-                  control={form.control}
-                  property={property}
-                >
-                  <RecordFormField
+              {editable.length === 0 ? (
+                <Empty className="md:[column-span:_all]">
+                  <EmptyHeader>
+                    <EmptyMedia>
+                      <AlertCircle aria-hidden="true" />
+                    </EmptyMedia>
+                    <EmptyTitle>{t('errors:noEditableProperties')}</EmptyTitle>
+                  </EmptyHeader>
+                </Empty>
+              ) : (
+                editable.map((property) => (
+                  <ConditionalField
+                    key={property.path}
                     control={form.control}
                     property={property}
-                    disabled={form.formState.isSubmitting}
-                    resourceId={resourceId}
-                  />
-                </ConditionalField>
-              ))}
+                  >
+                    <RecordFormField
+                      control={form.control}
+                      property={property}
+                      disabled={form.formState.isSubmitting}
+                      resourceId={resourceId}
+                    />
+                  </ConditionalField>
+                ))
+              )}
             </CardContent>
           </form>
         </Form>
@@ -623,55 +644,57 @@ export function ResourceEditPage({
           onFilled={applyAiFillValues}
         />
       )}
-      <div className="sticky bottom-0 -mb-px z-20 -mx-2 border-t border-border bg-card px-2 py-3 pr-14 sm:-mx-6 sm:px-6 sm:pr-16">
-        <div className="flex items-center justify-between">
-          <div>
-            {submitError && (
-              <span className="text-sm text-destructive">{submitError}</span>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() =>
-                navigate(
-                  isNew
-                    ? { name: 'list', resourceId }
-                    : { name: 'show', resourceId, recordId: recordId! },
-                )
-              }
-              aria-label={t('common:cancel')}
-            >
-              <X className="size-4" />
-              <span className="hidden sm:inline">{t('common:cancel')}</span>
-            </Button>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  type="submit"
-                  form="edit-record-form"
-                  disabled={form.formState.isSubmitting || isHydrating}
-                  aria-label={isNew ? t('common:create') : t('common:save')}
-                >
-                  {isNew ? <Plus className="size-4" /> : <Save className="size-4" />}
-                  <span className="hidden sm:inline">
-                    {isNew ? t('common:create') : t('common:save')}
+      {editable.length > 0 && (
+        <div className="sticky bottom-0 -mb-px z-20 -mx-2 border-t border-border bg-card px-2 py-3 pr-14 sm:-mx-6 sm:px-6 sm:pr-16">
+          <div className="flex items-center justify-between">
+            <div>
+              {submitError && (
+                <span className="text-sm text-destructive">{submitError}</span>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() =>
+                  navigate(
+                    isNew
+                      ? { name: 'list', resourceId }
+                      : { name: 'show', resourceId, recordId: recordId! },
+                  )
+                }
+                aria-label={t('common:cancel')}
+              >
+                <X className="size-4" />
+                <span className="hidden sm:inline">{t('common:cancel')}</span>
+              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="submit"
+                    form="edit-record-form"
+                    disabled={form.formState.isSubmitting || isHydrating}
+                    aria-label={isNew ? t('common:create') : t('common:save')}
+                  >
+                    {isNew ? <Plus className="size-4" /> : <Save className="size-4" />}
+                    <span className="hidden sm:inline">
+                      {isNew ? t('common:create') : t('common:save')}
+                    </span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent className="flex items-center gap-1.5">
+                  <span>{isNew ? t('common:create') : t('common:save')}</span>
+                  <span className="inline-flex items-center gap-0.5">
+                    <Kbd>{modLabel}</Kbd>
+                    <span className="text-muted-foreground">+</span>
+                    <Kbd>S</Kbd>
                   </span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent className="flex items-center gap-1.5">
-                <span>{isNew ? t('common:create') : t('common:save')}</span>
-                <span className="inline-flex items-center gap-0.5">
-                  <Kbd>{modLabel}</Kbd>
-                  <span className="text-muted-foreground">+</span>
-                  <Kbd>S</Kbd>
-                </span>
-              </TooltipContent>
-            </Tooltip>
+                </TooltipContent>
+              </Tooltip>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
