@@ -42,7 +42,7 @@ describe('ApiStockMediaGenerationProvider', () => {
     expect(first.map((model) => model.id)).toEqual(['flux'])
     expect(first[0]?.type).toBe('image')
     expect(first[0]?.priceMultiplier).toEqual({ param: 'count', catalogValue: 2 })
-    expect(provider.allowedFileHosts).toEqual(['storage.api-stock.com'])
+    expect(provider.allowedFileHosts).toEqual(['storage.api-stock.com', 'aitohumanize.com'])
     expect(second).toBe(first)
     expect(calls).toBe(1)
   })

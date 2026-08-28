@@ -130,7 +130,9 @@ export class ApiStockMediaGenerationProvider implements IMediaGenerationProvider
   readonly id = 'api-stock'
   readonly displayName = 'API Stock'
   readonly apiKeyUrl = 'https://api-stock.com'
-  readonly allowedFileHosts = ['storage.api-stock.com'] as const
+  // Finalized media is served from the API Stock storage host and its
+  // `fileN.aitohumanize.com` CDN. Hosts can add more via `allowedDownloadHosts`.
+  readonly allowedFileHosts = ['storage.api-stock.com', 'aitohumanize.com'] as const
 
   private readonly baseUrl: string
   private readonly fetchImpl: typeof globalThis.fetch
@@ -168,7 +170,7 @@ export class ApiStockMediaGenerationProvider implements IMediaGenerationProvider
       body: JSON.stringify({
         model: input.model,
         input: input.input,
-        webhook: input.webhookUrl,
+        ...(input.webhookUrl ? { webhook: input.webhookUrl } : {}),
       }),
     })
     return toResult(apiStockTaskResponseZ.parse(response))

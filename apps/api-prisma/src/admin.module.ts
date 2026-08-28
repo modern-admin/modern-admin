@@ -187,7 +187,14 @@ const apiKeyService = buildApiKeyService(authProvider)
     ModernAdminGraphqlModule.forRoot({
       extensions: [uploadGraphqlExtension()],
     }),
-    ModernAdminRealtimeModule.forRoot({ bus: realtimeBus }),
+    ModernAdminRealtimeModule.forRoot({
+      bus: realtimeBus,
+      // Same source of truth as HTTP CORS (`WEB_ORIGIN`), so the realtime
+      // origin allowlist can't silently drift from it — a split-port dev
+      // setup (SPA :3000/:5173, API :3001) is cross-origin and would
+      // otherwise fail the fail-closed handshake gate with 403.
+      origins: process.env.WEB_ORIGIN?.split(',').map((o) => o.trim()).filter(Boolean),
+    }),
   ],
 })
 export class AdminModule {

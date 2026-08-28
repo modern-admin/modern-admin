@@ -8,7 +8,9 @@ import {
   Inject,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
+  type OnApplicationBootstrap,
   PreconditionFailedException,
   ServiceUnavailableException,
 } from '@nestjs/common'
@@ -37,6 +39,13 @@ export const MEDIA_GENERATION_TASK_KIND = 'media-generation'
 const MEDIA_GENERATION_RESOURCE_ID = '__media_generation__'
 const DEFAULT_MAX_FILES = 8
 const DEFAULT_MAX_DOWNLOAD_BYTES = 100 * 1024 * 1024
+const DEFAULT_POLL_INTERVAL_MS = 3_000
+const DEFAULT_MAX_POLL_MS = 10 * 60 * 1000
+
+const isTerminalStatus = (status: AiTask['status']): boolean =>
+  status === 'succeeded' || status === 'failed' || status === 'cancelled'
+
+const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
 
 interface CreateTaskInput {
   requestId: string
@@ -54,6 +63,9 @@ interface MediaTarget {
   targetProperty: string
   mediaTypes: MediaGenerationFileType[]
 }
+
+const isTruthyEnv = (value: string | undefined): boolean =>
+  value !== undefined && ['1', 'true', 'yes', 'on', 'debug'].includes(value.toLowerCase())
 
 const maskKey = (value: string | undefined): string | null => {
   if (!value) return null
@@ -78,11 +90,42 @@ const fileExtension = (url: string, mimeType: string): string => {
 }
 
 @Injectable()
-export class MediaGenerationService {
+export class MediaGenerationService implements OnApplicationBootstrap {
+  private readonly logger = new Logger(MediaGenerationService.name)
+
   constructor(
     @Inject(MODERN_ADMIN) private readonly admin: ModernAdmin,
     @Inject(MODERN_ADMIN_OPTIONS) private readonly options: ModernAdminModuleOptions,
   ) {}
+
+  /**
+   * Re-arm polling for webhook-less tasks left `running` when the process last
+   * stopped. The poll loop lives in memory, so a restart (frequent in dev with
+   * `--watch`) would otherwise freeze those tasks forever. No-op when webhooks
+   * are configured or polling is disallowed (production).
+   */
+  async onApplicationBootstrap(): Promise<void> {
+    if (!this.options.mediaGeneration || !this.options.aiTaskStore) return
+    if (this.config.webhookBaseUrl || !this.isPollingAllowed()) return
+    let tasks: AiTask[]
+    try {
+      tasks = await this.options.aiTaskStore.list({
+        kind: MEDIA_GENERATION_TASK_KIND,
+        status: ['pending', 'running'],
+      })
+    } catch (error) {
+      this.logger.warn(`Media generation resume failed: ${safeError(error)}`)
+      return
+    }
+    let resumed = 0
+    for (const task of tasks) {
+      const providerTaskId = outputOf(task).providerTaskId
+      if (!providerTaskId) continue
+      this.schedulePolling(task.id, providerTaskId)
+      resumed++
+    }
+    if (resumed > 0) this.logger.log(`Resumed media generation polling for ${resumed} task(s)`)
+  }
 
   async getSettings(currentAdmin?: CurrentAdmin): Promise<MediaGenerationPublicSettings> {
     const stored = await this.loadSettings()
@@ -119,6 +162,7 @@ export class MediaGenerationService {
 
   async createTask(input: CreateTaskInput, currentAdmin?: CurrentAdmin): Promise<MediaGenerationTask> {
     this.assertGenerateAllowed(currentAdmin)
+    this.assertGenerationTransport()
     const settings = await this.loadSettings()
     if (!(settings.enabled ?? this.config.enabled ?? true)) {
       throw new ForbiddenException('Media generation is disabled')
@@ -159,12 +203,20 @@ export class MediaGenerationService {
     const claimed = await taskStore.claim(task.id)
     if (!claimed) return this.assertTaskOwner(task, currentAdmin)
 
+    if (this.isDebugEnabled()) {
+      this.logger.debug(
+        `Media generation request → provider=${this.config.provider.id} task=${task.id} ` +
+          `model=${input.model} input=${JSON.stringify(input.input)}`,
+      )
+    }
+
+    const webhookUrl = this.buildWebhookUrl(task.id)
     try {
       const result = await this.config.provider.create(
         {
           model: input.model,
           input: input.input,
-          webhookUrl: this.buildWebhookUrl(task.id),
+          ...(webhookUrl ? { webhookUrl } : {}),
         },
         { apiKey },
       )
@@ -185,6 +237,7 @@ export class MediaGenerationService {
         return finalized as MediaGenerationTask
       }
       await this.publishTask(updated)
+      if (!webhookUrl) this.schedulePolling(task.id, result.externalTaskId)
       return updated as MediaGenerationTask
     } catch (error) {
       const failed = await taskStore.updateStatus(task.id, {
@@ -353,6 +406,10 @@ export class MediaGenerationService {
     const config = this.options.mediaGeneration
     if (!config) throw new ServiceUnavailableException('Media generation is not configured')
     return config
+  }
+
+  private isDebugEnabled(): boolean {
+    return this.config.debug ?? isTruthyEnv(process.env.MEDIA_GENERATION_DEBUG)
   }
 
   private requireTaskStore(): IAiTaskStore {
@@ -526,9 +583,19 @@ export class MediaGenerationService {
     }
   }
 
-  private buildWebhookUrl(taskId: string): string {
+  /** Polling is a local-development convenience only; production must use webhooks. */
+  private isPollingAllowed(): boolean {
+    return process.env.NODE_ENV !== 'production'
+  }
+
+  private assertGenerationTransport(): void {
+    if (this.config.webhookBaseUrl || this.isPollingAllowed()) return
+    throw new PreconditionFailedException('Media generation webhookBaseUrl is not configured')
+  }
+
+  private buildWebhookUrl(taskId: string): string | undefined {
     const base = this.config.webhookBaseUrl?.replace(/\/$/, '')
-    if (!base) throw new PreconditionFailedException('Media generation webhookBaseUrl is not configured')
+    if (!base) return undefined
     let url: URL
     try {
       url = new URL(base)
@@ -595,6 +662,49 @@ export class MediaGenerationService {
       fileCount: result.files.length,
     })
     await this.publishTask(updated)
+  }
+
+  /**
+   * Poll the provider until a webhook-less task finishes. Runs detached from the
+   * request so `createTask` returns immediately; failures are logged, not thrown.
+   */
+  private schedulePolling(taskId: string, providerTaskId: string): void {
+    void this.pollUntilFinished(taskId, providerTaskId).catch((error) => {
+      this.logger.warn(`Media generation polling failed for task ${taskId}: ${safeError(error)}`)
+    })
+  }
+
+  private async pollUntilFinished(taskId: string, providerTaskId: string): Promise<void> {
+    const store = this.requireTaskStore()
+    const intervalMs = Math.max(500, this.config.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS)
+    const deadline = Date.now() + Math.max(intervalMs, this.config.maxPollMs ?? DEFAULT_MAX_POLL_MS)
+    while (Date.now() < deadline) {
+      await delay(intervalMs)
+      const task = await store.get(taskId)
+      if (!task || task.kind !== MEDIA_GENERATION_TASK_KIND || isTerminalStatus(task.status)) return
+      const result = await this.config.provider.getStatus(providerTaskId, {
+        apiKey: await this.requireApiKey(),
+      })
+      if (result.externalTaskId !== providerTaskId) {
+        throw new BadGatewayException('Provider returned a mismatched task id')
+      }
+      if (result.status === 'finished' || result.status === 'failed' || result.status === 'expired') {
+        // Re-read: the user may have cancelled while getStatus was in flight.
+        const current = await store.get(taskId)
+        if (!current || isTerminalStatus(current.status)) return
+        await this.applyProviderResult(current, result)
+        return
+      }
+    }
+    const task = await store.get(taskId)
+    if (!task || isTerminalStatus(task.status)) return
+    const failed = await store.updateStatus(taskId, {
+      status: 'failed',
+      progress: 100,
+      error: 'Media generation timed out',
+    })
+    await store.appendEvent(taskId, 'error', { message: 'Media generation polling timed out' })
+    await this.publishTask(failed)
   }
 
   private async publishTask(task: AiTask): Promise<void> {

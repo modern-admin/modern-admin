@@ -1,10 +1,10 @@
 import * as React from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { estimateMediaGenerationPrice, uuidv7, type MediaGenerationCatalogModel, type MediaGenerationCatalogParam, type MediaGenerationFileType } from '@modern-admin/core'
-import { Badge, Button, Checkbox, Input, Label, Textarea } from '@modern-admin/ui'
+import { Badge, Button, Checkbox, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from '@modern-admin/ui'
 import { Download, Loader2, RefreshCw, Sparkles, Square, Upload } from 'lucide-react'
 import type { ActionComponentProps } from '../types.js'
-import type { MediaGenerationTask } from '../client.js'
+import { parseApiError, type MediaGenerationTask } from '../client.js'
 import { useAdminClient } from '../provider.js'
 import { useFeatures } from '../hooks.js'
 import { useI18n } from '../i18n.js'
@@ -18,6 +18,10 @@ export interface MediaGenerationFormProps {
   target?: { resourceId: string; recordId: string; actionName: string }
   onApplied?: () => void
 }
+
+// Radix `Select` forbids an empty-string item value, so an optional param's
+// "unset" choice rides a sentinel that maps back to '' on change.
+const NO_VALUE = '__none__'
 
 const terminal = (task: MediaGenerationTask | undefined): boolean =>
   Boolean(task && ['succeeded', 'failed', 'cancelled'].includes(task.status))
@@ -141,9 +145,7 @@ export function MediaGenerationForm({
       setSelectedFile(0)
       notify.success({ message: t('mediaGeneration:task.submitted') })
     },
-    onError: (error) => notify.error({
-      message: error instanceof Error ? error.message : String(error),
-    }),
+    onError: (error) => notify.error({ message: parseApiError(error).message }),
   })
 
   const cancel = useMutation({
@@ -164,9 +166,7 @@ export function MediaGenerationForm({
       notify.success({ message: t('mediaGeneration:apply.success') })
       onApplied?.()
     },
-    onError: (error) => notify.error({
-      message: error instanceof Error ? error.message : String(error),
-    }),
+    onError: (error) => notify.error({ message: parseApiError(error).message }),
   })
 
   const currentTask = task.data
@@ -183,26 +183,29 @@ export function MediaGenerationForm({
     return <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" />{t('common:loading')}</div>
   }
   if (catalog.error) {
-    return <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">{catalog.error instanceof Error ? catalog.error.message : String(catalog.error)}</div>
+    return <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">{parseApiError(catalog.error).message}</div>
   }
 
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
         <Label htmlFor="media-generation-model">{t('mediaGeneration:field.model')}</Label>
-        <select
-          id="media-generation-model"
-          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+        <Select
           value={modelId}
           disabled={create.isPending || Boolean(taskId && !terminal(currentTask))}
-          onChange={(event) => setModelId(event.target.value)}
+          onValueChange={setModelId}
         >
-          {models.map((candidate) => (
-            <option key={candidate.id} value={candidate.id}>
-              {candidate.name}{candidate.priceFrom ? ` · $${candidate.priceFrom}` : ''}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger id="media-generation-model" className="h-10">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {models.map((candidate) => (
+              <SelectItem key={candidate.id} value={candidate.id}>
+                {candidate.name}{candidate.priceFrom ? ` · $${candidate.priceFrom}` : ''}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         {model?.description && <p className="text-xs text-muted-foreground">{model.description}</p>}
         {estimatedPrice && (
           <p className="text-xs font-medium text-muted-foreground">
@@ -322,6 +325,7 @@ function DynamicParam({
   disabled: boolean
   onChange(value: unknown): void
 }): React.ReactElement {
+  const { t } = useI18n()
   const id = `media-generation-${param.name}`
   const fullWidth = param.multiline || param.isPrompt || param.isMedia
   return (
@@ -330,16 +334,28 @@ function DynamicParam({
       {param.kind === 'boolean' ? (
         <div className="flex h-10 items-center"><Checkbox id={id} checked={Boolean(value)} disabled={disabled} onCheckedChange={(checked) => onChange(checked === true)} /></div>
       ) : param.options?.length ? (
-        <select id={id} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={displayValue(value)} disabled={disabled} onChange={(event) => onChange(event.target.value)}>
-          {!param.required && <option value="" />}
-          {param.options.map((option) => <option key={String(option.value)} value={String(option.value)}>{option.label}</option>)}
-        </select>
+        <Select
+          value={displayValue(value) || (param.required ? undefined : NO_VALUE)}
+          disabled={disabled}
+          onValueChange={(next) => onChange(next === NO_VALUE ? '' : next)}
+        >
+          <SelectTrigger id={id} className="h-10">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {!param.required && <SelectItem value={NO_VALUE}>{t('common:none')}</SelectItem>}
+            {param.options.map((option) => (
+              <SelectItem key={String(option.value)} value={String(option.value)}>{option.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       ) : param.multiline || param.isPrompt || param.isArray ? (
         <Textarea id={id} rows={param.isPrompt ? 5 : 3} value={displayValue(value)} disabled={disabled} onChange={(event) => onChange(event.target.value)} />
       ) : (
         <Input id={id} type={param.kind === 'number' ? 'number' : 'text'} min={param.minimum} max={param.maximum} value={displayValue(value)} disabled={disabled} onChange={(event) => onChange(event.target.value)} />
       )}
       {param.description && <p className="text-xs text-muted-foreground">{param.description}</p>}
+      {param.isArray && <p className="text-xs text-muted-foreground">{t('mediaGeneration:field.arrayHint')}</p>}
     </div>
   )
 }

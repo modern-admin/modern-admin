@@ -9,10 +9,19 @@ export interface MediaGenerationOptions {
   enabled?: boolean
   /** Seed credential from the environment. A key saved in Settings takes precedence. */
   apiKey?: string
-  /** Public HTTPS origin used to build per-task API Stock callback URLs. */
+  /**
+   * Public HTTPS origin used to build per-task API Stock callback URLs. When
+   * omitted, the provider is submitted without a webhook and the server polls
+   * `getStatus` until the task finishes (useful for local development where no
+   * public callback URL is available).
+   */
   webhookBaseUrl?: string
   /** At least 32 characters. Used to derive a different callback token for every local task. */
   webhookSecret?: string
+  /** Interval between `getStatus` polls when no webhook is configured. Defaults to 3s. */
+  pollIntervalMs?: number
+  /** Overall deadline for polling a webhook-less task before it is failed. Defaults to 10min. */
+  maxPollMs?: number
   allowedModels?: string[]
   allowedMediaTypes?: MediaGenerationFileType[]
   maxFiles?: number
@@ -23,6 +32,8 @@ export interface MediaGenerationOptions {
   monthlyBudgetUsdPerUser?: number
   generateRoles?: string[]
   manageRoles?: string[]
+  /** Log the model and prompt sent to the provider. Falls back to `MEDIA_GENERATION_DEBUG`. */
+  debug?: boolean
 }
 
 export interface MediaGenerationStoredSettings {

@@ -343,21 +343,32 @@ export class AiAssistantService {
     })
     await taskStore.updateStatus(data.taskId, { status: 'running', progress: 30 })
 
+    const systemPrompt = this.buildSystemPrompt(
+      settings,
+      built.descriptors,
+      built.sqlResources,
+      Boolean(rawQueryForRequest),
+      data.clientContext,
+    )
+    const promptMessages = data.messages.map((message) => ({
+      role: message.role,
+      content: message.content,
+    }))
+    if (debug) {
+      this.logger.debug(
+        `AI assistant task ${data.taskId} prompt → ` +
+        `model=${settings.model ?? this.llmProvider.defaultModel} ` +
+        `system=${JSON.stringify(systemPrompt)} ` +
+        `messages=${JSON.stringify(promptMessages)}`,
+      )
+    }
+
     try {
       const result = await this.llmProvider.generate({
         apiKey: settings.apiKey,
         model: settings.model ?? this.llmProvider.defaultModel,
-        system: this.buildSystemPrompt(
-          settings,
-          built.descriptors,
-          built.sqlResources,
-          Boolean(rawQueryForRequest),
-          data.clientContext,
-        ),
-        messages: data.messages.map((message) => ({
-          role: message.role,
-          content: message.content,
-        })),
+        system: systemPrompt,
+        messages: promptMessages,
         tools: built.tools,
         maxSteps: this.options.aiAssistant?.maxSteps ?? 8,
         appName: this.options.aiAssistant?.appName ?? 'Modern Admin',

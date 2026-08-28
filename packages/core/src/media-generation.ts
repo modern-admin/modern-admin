@@ -108,7 +108,12 @@ export type MediaGenerationResult = z.infer<typeof mediaGenerationResultZ>
 export interface MediaGenerationCreateInput {
   model: string
   input: Record<string, unknown>
-  webhookUrl: string
+  /**
+   * Public HTTPS callback the provider should notify on completion. Omitted
+   * when no `webhookBaseUrl` is configured, in which case the server falls back
+   * to polling `getStatus`.
+   */
+  webhookUrl?: string
 }
 
 export interface MediaGenerationProviderRequestOptions {

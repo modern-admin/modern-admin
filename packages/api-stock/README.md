@@ -40,9 +40,9 @@ not poll API Stock. The React client combines private WebSocket invalidation
 with bounded REST polling while a generation is active.
 
 Finalized files are imported only from the provider's HTTPS host allowlist
-(`storage.api-stock.com` for this adapter), and every redirect is checked before
-it is followed. Custom providers must expose `allowedFileHosts` or the host must
-set `allowedDownloadHosts` explicitly.
+(`storage.api-stock.com` and the `aitohumanize.com` CDN for this adapter), and
+every redirect is checked before it is followed. Custom providers must expose
+`allowedFileHosts`, or the host can widen it with `allowedDownloadHosts`.
 
 Users can create an API key at [api-stock.com](https://api-stock.com). The same
 link is available in Modern Admin's media generation settings. The credential

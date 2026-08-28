@@ -95,13 +95,30 @@ export class ApiStockLlmProvider implements ILlmProvider {
       toolCalls: Array<{ toolName: string }>
       toolResults: Array<{ toolName?: string; output: unknown }>
     }>
-    const result = await generate({
-      model: apiStock.chatModel(input.model),
-      system: input.system,
-      messages: input.messages,
-      tools: input.tools,
-      stopWhen: stepCountIs(input.maxSteps),
-    })
+    let result: Awaited<ReturnType<typeof generate>>
+    try {
+      result = await generate({
+        model: apiStock.chatModel(input.model),
+        system: input.system,
+        messages: input.messages,
+        tools: input.tools,
+        stopWhen: stepCountIs(input.maxSteps),
+      })
+    } catch (error) {
+      // API Stock sits behind Cloudflare. Gateway failures — most notably 524
+      // (origin timeout after ~100s when the provider is slow/overloaded) —
+      // arrive as an HTML page, which the OpenAI-compatible provider surfaces
+      // as an `AI_APICallError` with an EMPTY message. Re-throw with the real
+      // status so the task's stored error is diagnosable instead of blank.
+      const apiError = error as { statusCode?: number; message?: string }
+      if (apiError && typeof apiError.statusCode === 'number' && !apiError.message?.trim()) {
+        const hint = apiError.statusCode === 524
+          ? ' (upstream gateway timeout — the provider is slow or overloaded, retry later)'
+          : ''
+        throw new Error(`API Stock request failed with HTTP ${apiError.statusCode}${hint}`, { cause: error })
+      }
+      throw error
+    }
     return {
       text: result.text,
       toolCalls: result.toolCalls.map((call) => ({ toolName: call.toolName })),

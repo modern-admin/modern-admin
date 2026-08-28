@@ -334,21 +334,6 @@ export function buildAiAssistantTools({
   const descriptors: BuiltAiAssistantTools['descriptors'] = []
   const resourceIds: string[] = []
   const sqlResources: AiAssistantSqlResource[] = []
-  const seenNames = new Set<string>()
-
-  const claimName = (resourceId: string, prefix: 'list' | 'show' | 'search'): string | null => {
-    const base = sanitizeToolName(resourceId)
-    if (!base) return null
-    const name = `${prefix}_${base}`
-    if (seenNames.has(name)) {
-      if (debug) logger.debug(
-        `Skipping duplicate AI tool "${name}" — resource id "${resourceId}" collides with another resource after sanitization`,
-      )
-      return null
-    }
-    seenNames.add(name)
-    return name
-  }
 
   const candidates: ResourceCandidate[] = []
   for (const resource of admin.resources) {
@@ -377,138 +362,137 @@ export function buildAiAssistantTools({
     }
   }
 
+  const allowedActions = new Map<string, Set<'list' | 'show' | 'search'>>()
   for (const candidate of pickResourceCandidates(candidates, debug)) {
     const { resourceId, actionNames } = candidate
-    let registered = false
-
-    if (actionNames.has('list')) {
-      const name = claimName(resourceId, 'list')
-      if (name) {
-        tools[name] = tool({
-          description: `List records of resource "${resourceId}". Supports paging, sorting, and exact-match filters.`,
-          inputSchema: z.object({
-            page: z.number().int().positive().optional(),
-            perPage: z.number().int().positive().max(maxRecordsPerTool).optional(),
-            sortBy: z.string().optional(),
-            direction: z.enum(['asc', 'desc']).optional(),
-            filters: z.record(z.string(), filterValueZ).optional(),
-          }),
-          execute: async ({ page, perPage, sortBy, direction, filters }) => {
-            const result = await admin.invoke(
-              {
-                params: { resourceId, action: 'list' },
-                method: 'get',
-                query: {
-                  ...(page !== undefined ? { page } : {}),
-                  ...(perPage !== undefined ? { perPage } : {}),
-                  ...(sortBy ? { sortBy } : {}),
-                  ...(direction ? { direction } : {}),
-                  ...(filters
-                    ? Object.fromEntries(
-                      Object.entries(filters).map(([key, value]) => [`filters.${key}`, value]),
-                    )
-                    : {}),
-                },
-              },
-              currentAdmin,
-            ) as { records?: RecordJSON[]; meta?: { total?: number } }
-            const records = (result.records ?? [])
-              .slice(0, maxRecordsPerTool)
-              .map((record) => summarizeRecord(record, maxFieldsPerRecord))
-            return {
-              resourceId,
-              action: 'list' as const,
-              summary: `listed ${records.length} ${resourceId}`,
-              total: result.meta?.total ?? records.length,
-              records,
-              citations: records.map((record) => ({
-                resourceId,
-                recordId: record.id,
-                label: record.title,
-              })),
-            }
-          },
-        })
-        descriptors.push({ name, resourceId, action: 'list' })
-        registered = true
-      }
+    const actions = (['list', 'show', 'search'] as const).filter((action) => actionNames.has(action))
+    if (actions.length > 0) {
+      allowedActions.set(resourceId, new Set(actions))
+      for (const action of actions) descriptors.push({ name: 'query_resource', resourceId, action })
+      resourceIds.push(resourceId)
     }
-
-    if (actionNames.has('show')) {
-      const name = claimName(resourceId, 'show')
-      if (name) {
-        tools[name] = tool({
-          description: `Show a single record by id from resource "${resourceId}".`,
-          inputSchema: z.object({
-            recordId: z.string().min(1),
-          }),
-          execute: async ({ recordId }) => {
-            const result = await admin.invoke(
-              {
-                params: { resourceId, recordId, action: 'show' },
-                method: 'get',
-              },
-              currentAdmin,
-            ) as { record?: RecordJSON }
-            const record = result.record ? summarizeRecord(result.record, maxFieldsPerRecord) : null
-            return {
-              resourceId,
-              action: 'show' as const,
-              summary: record
-                ? `showed ${resourceId}#${record.id}`
-                : `no record returned for ${resourceId}#${recordId}`,
-              record,
-              citations: record
-                ? [{ resourceId, recordId: record.id, label: record.title }]
-                : [],
-            }
-          },
-        })
-        descriptors.push({ name, resourceId, action: 'show' })
-        registered = true
-      }
-    }
-
-    if (actionNames.has('search')) {
-      const name = claimName(resourceId, 'search')
-      if (name) {
-        tools[name] = tool({
-          description: `Search records in resource "${resourceId}" by free-text query.`,
-          inputSchema: z.object({
-            query: z.string().min(1),
-          }),
-          execute: async ({ query }) => {
-            const result = await admin.invoke(
-              {
-                params: { resourceId, action: 'search' },
-                method: 'get',
-                query: { q: query },
-              },
-              currentAdmin,
-            ) as { records?: RecordJSON[] }
-            const records = (result.records ?? [])
-              .slice(0, maxRecordsPerTool)
-              .map((record) => summarizeRecord(record, maxFieldsPerRecord))
-            return {
-              resourceId,
-              action: 'search' as const,
-              summary: `searched ${resourceId}: ${records.length} results`,
-              records,
-              citations: records.map((record) => ({
-                resourceId,
-                recordId: record.id,
-                label: record.title,
-              })),
-            }
-          },
-        })
-        descriptors.push({ name, resourceId, action: 'search' })
-        registered = true
-      }
-    }
-
-    if (registered) resourceIds.push(resourceId)
     sqlResources.push(buildSqlResource(candidate))
+  }
+
+  // A single parameterized read tool replaces the per-resource
+  // list/show/search tools. Collapsing ~3×N tools into one keeps the request
+  // payload small: a large tool list combined with the schema-hint system
+  // prompt pushes some OpenAI-compatible providers (e.g. API Stock behind
+  // Cloudflare) past their gateway timeout. Valid `resourceId`/`action` pairs
+  // are advertised in the "Available resources and actions" system-prompt line.
+  if (allowedActions.size > 0) {
+    const runList = async (
+      resourceId: string,
+      opts: {
+        page?: number
+        perPage?: number
+        sortBy?: string
+        direction?: 'asc' | 'desc'
+        filters?: Record<string, string | number | boolean>
+      },
+    ) => {
+      const result = await admin.invoke(
+        {
+          params: { resourceId, action: 'list' },
+          method: 'get',
+          query: {
+            ...(opts.page !== undefined ? { page: opts.page } : {}),
+            ...(opts.perPage !== undefined ? { perPage: opts.perPage } : {}),
+            ...(opts.sortBy ? { sortBy: opts.sortBy } : {}),
+            ...(opts.direction ? { direction: opts.direction } : {}),
+            ...(opts.filters
+              ? Object.fromEntries(
+                Object.entries(opts.filters).map(([key, value]) => [`filters.${key}`, value]),
+              )
+              : {}),
+          },
+        },
+        currentAdmin,
+      ) as { records?: RecordJSON[]; meta?: { total?: number } }
+      const records = (result.records ?? [])
+        .slice(0, maxRecordsPerTool)
+        .map((record) => summarizeRecord(record, maxFieldsPerRecord))
+      return {
+        resourceId,
+        action: 'list' as const,
+        summary: `listed ${records.length} ${resourceId}`,
+        total: result.meta?.total ?? records.length,
+        records,
+        citations: records.map((record) => ({ resourceId, recordId: record.id, label: record.title })),
+      }
+    }
+
+    const runShow = async (resourceId: string, recordId: string) => {
+      const result = await admin.invoke(
+        { params: { resourceId, recordId, action: 'show' }, method: 'get' },
+        currentAdmin,
+      ) as { record?: RecordJSON }
+      const record = result.record ? summarizeRecord(result.record, maxFieldsPerRecord) : null
+      return {
+        resourceId,
+        action: 'show' as const,
+        summary: record
+          ? `showed ${resourceId}#${record.id}`
+          : `no record returned for ${resourceId}#${recordId}`,
+        record,
+        citations: record ? [{ resourceId, recordId: record.id, label: record.title }] : [],
+      }
+    }
+
+    const runSearch = async (resourceId: string, query: string) => {
+      const result = await admin.invoke(
+        { params: { resourceId, action: 'search' }, method: 'get', query: { q: query } },
+        currentAdmin,
+      ) as { records?: RecordJSON[] }
+      const records = (result.records ?? [])
+        .slice(0, maxRecordsPerTool)
+        .map((record) => summarizeRecord(record, maxFieldsPerRecord))
+      return {
+        resourceId,
+        action: 'search' as const,
+        summary: `searched ${resourceId}: ${records.length} results`,
+        records,
+        citations: records.map((record) => ({ resourceId, recordId: record.id, label: record.title })),
+      }
+    }
+
+    tools['query_resource'] = tool({
+      description:
+        'Read records from an admin resource. Set `resourceId` to one of the resources named in ' +
+        'the "Available resources and actions" line and `action` to one it supports:\n' +
+        '- action="list": page, sort, and exact-match filter records;\n' +
+        '- action="show": fetch one record (requires `recordId`);\n' +
+        '- action="search": free-text search (requires `query`).',
+      inputSchema: z.object({
+        resourceId: z.string().min(1).describe('Resource id from "Available resources and actions"'),
+        action: z.enum(['list', 'show', 'search']),
+        recordId: z.string().optional().describe('Record primary key; required when action="show"'),
+        query: z.string().optional().describe('Free-text query; required when action="search"'),
+        page: z.number().int().positive().optional(),
+        perPage: z.number().int().positive().max(maxRecordsPerTool).optional(),
+        sortBy: z.string().optional(),
+        direction: z.enum(['asc', 'desc']).optional(),
+        filters: z.record(z.string(), filterValueZ).optional(),
+      }),
+      execute: async ({ resourceId, action, recordId, query, page, perPage, sortBy, direction, filters }) => {
+        const allowed = allowedActions.get(resourceId)
+        if (!allowed) {
+          return { error: `Unknown resource "${resourceId}". Use one from "Available resources and actions".`, citations: [] }
+        }
+        if (!allowed.has(action)) {
+          return { error: `Resource "${resourceId}" does not support action "${action}". Supported: ${[...allowed].join(', ')}.`, citations: [] }
+        }
+        if (action === 'show') {
+          if (!recordId) return { error: 'action="show" requires "recordId".', citations: [] }
+          return runShow(resourceId, recordId)
+        }
+        if (action === 'search') {
+          if (!query) return { error: 'action="search" requires "query".', citations: [] }
+          return runSearch(resourceId, query)
+        }
+        return runList(resourceId, { page, perPage, sortBy, direction, filters })
+      },
+    })
   }
 
   if (rawQuery) {
