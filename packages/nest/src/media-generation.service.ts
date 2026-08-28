@@ -93,6 +93,15 @@ const fileExtension = (url: string, mimeType: string): string => {
 export class MediaGenerationService implements OnApplicationBootstrap {
   private readonly logger = new Logger(MediaGenerationService.name)
 
+  /**
+   * Per-task apply serialization within this process. Two overlapping apply
+   * requests for the same task would otherwise both pass the `output.applied`
+   * guard and upload/edit twice; chaining them makes the second observe the
+   * first's `applied` marker. (A cross-process double-apply of the same task by
+   * the same admin is not a realistic path, so an in-memory chain suffices.)
+   */
+  private readonly applyChains = new Map<string, Promise<MediaGenerationTask>>()
+
   constructor(
     @Inject(MODERN_ADMIN) private readonly admin: ModernAdmin,
     @Inject(MODERN_ADMIN_OPTIONS) private readonly options: ModernAdminModuleOptions,
@@ -186,7 +195,10 @@ export class MediaGenerationService implements OnApplicationBootstrap {
     const existing = await taskStore.getByIdempotencyKey?.(idempotencyKey)
     if (existing) return this.assertTaskOwner(existing, currentAdmin)
     const estimatedCostUsd = estimateMediaGenerationPrice(model, input.input)
-    await this.assertMonthlyBudget(estimatedCostUsd, userId)
+    // Reserve first, then check the budget: enqueueing records this task's
+    // estimated cost so a concurrent request for the same user sums it in and
+    // cannot slip past a stale total. A rejected reservation is failed below so
+    // its cost is excluded from future sums.
     const task = await taskStore.enqueue({
       kind: MEDIA_GENERATION_TASK_KIND,
       idempotencyKey,
@@ -200,6 +212,12 @@ export class MediaGenerationService implements OnApplicationBootstrap {
         ...(target ? { target } : {}),
       },
     })
+    try {
+      await this.assertMonthlyBudget(estimatedCostUsd, userId, task.id)
+    } catch (error) {
+      await taskStore.updateStatus(task.id, { status: 'failed', progress: 100, error: safeError(error) })
+      throw error
+    }
     const claimed = await taskStore.claim(task.id)
     if (!claimed) return this.assertTaskOwner(task, currentAdmin)
 
@@ -305,6 +323,22 @@ export class MediaGenerationService implements OnApplicationBootstrap {
   }
 
   async applyResult(
+    taskId: string,
+    input: { fileIndex: number; replaceExisting?: boolean },
+    currentAdmin?: CurrentAdmin,
+  ): Promise<MediaGenerationTask> {
+    const prior = this.applyChains.get(taskId)
+    const next = (prior ? prior.catch(() => undefined) : Promise.resolve())
+      .then(() => this.applyResultLocked(taskId, input, currentAdmin))
+    this.applyChains.set(taskId, next)
+    try {
+      return await next
+    } finally {
+      if (this.applyChains.get(taskId) === next) this.applyChains.delete(taskId)
+    }
+  }
+
+  private async applyResultLocked(
     taskId: string,
     input: { fileIndex: number; replaceExisting?: boolean },
     currentAdmin?: CurrentAdmin,
@@ -445,6 +479,7 @@ export class MediaGenerationService implements OnApplicationBootstrap {
   private async assertMonthlyBudget(
     estimatedCostUsd: number | null,
     userId: string | undefined,
+    reservationTaskId: string,
   ): Promise<void> {
     const budget = this.config.monthlyBudgetUsdPerUser
     if (budget === undefined) return
@@ -468,7 +503,13 @@ export class MediaGenerationService implements OnApplicationBootstrap {
       const cost = Number(task.input.estimatedCostUsd)
       return Number.isFinite(cost) && cost > 0 ? total + cost : total
     }, 0)
-    if (spent + estimatedCostUsd > budget) {
+    // The reservation is normally already in `tasks`, so its cost is part of
+    // `spent`. Add it explicitly only if a not-yet-visible read missed it, so
+    // the projection is correct on both strongly- and eventually-consistent
+    // stores without ever double-counting.
+    const reservationCounted = tasks.some((task) => task.id === reservationTaskId)
+    const projected = reservationCounted ? spent : spent + estimatedCostUsd
+    if (projected > budget) {
       throw new ForbiddenException('Media generation monthly budget would be exceeded')
     }
   }
@@ -639,6 +680,13 @@ export class MediaGenerationService implements OnApplicationBootstrap {
     if (result.files.length > maxFiles) {
       throw new BadGatewayException(`Provider returned more than ${maxFiles} files`)
     }
+    // Re-read under the latest state: a cancel may have landed while the
+    // provider status request was in flight (webhook path especially). Never
+    // resurrect a task that already reached a terminal status.
+    const current = await store.get(task.id)
+    if (!current || current.kind !== MEDIA_GENERATION_TASK_KIND || isTerminalStatus(current.status)) {
+      return
+    }
     let status: AiTask['status'] = 'running'
     let progress = result.status === 'processing' ? 50 : 20
     let error: string | undefined
@@ -651,13 +699,13 @@ export class MediaGenerationService implements OnApplicationBootstrap {
       progress = 100
       error = result.error ?? `Provider task ${result.status}`
     }
-    const updated = await store.updateStatus(task.id, {
+    const updated = await store.updateStatus(current.id, {
       status,
       progress,
-      output: { ...outputOf(task), ...this.resultOutput(result) },
+      output: { ...outputOf(current), ...this.resultOutput(result) },
       ...(error ? { error } : {}),
     })
-    await store.appendEvent(task.id, 'provider-status', {
+    await store.appendEvent(current.id, 'provider-status', {
       status: result.status,
       fileCount: result.files.length,
     })

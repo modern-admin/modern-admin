@@ -270,4 +270,46 @@ describe('MediaGenerationService', () => {
     )).rejects.toThrow('monthly budget')
     expect(provider.creates).toHaveLength(1)
   })
+
+  it('does not exceed the monthly budget under concurrent requests', async () => {
+    const { provider, aiTaskStore, service } = setup(0.15)
+    const currentAdmin = { id: 'admin-1', role: 'admin' }
+
+    const results = await Promise.allSettled([
+      service.createTask({ requestId: 'c-1', model: 'flux', input: { prompt: 'A' } }, currentAdmin),
+      service.createTask({ requestId: 'c-2', model: 'flux', input: { prompt: 'B' } }, currentAdmin),
+    ])
+
+    // Only one 0.10 request fits under the 0.15 cap — the reservation must stop
+    // both concurrent requests from submitting a paid provider call.
+    expect(provider.creates.length).toBeLessThanOrEqual(1)
+    expect(results.some((r) => r.status === 'rejected')).toBe(true)
+
+    const tasks = await aiTaskStore.list({ kind: MEDIA_GENERATION_TASK_KIND, userId: 'admin-1' })
+    const reserved = tasks
+      .filter((task) => task.status !== 'failed')
+      .reduce((sum, task) => sum + Number(task.input.estimatedCostUsd ?? 0), 0)
+    expect(reserved).toBeLessThanOrEqual(0.15)
+  })
+
+  it('keeps a task cancelled when the user stops waiting during a webhook finalize', async () => {
+    const { provider, service } = setup()
+    const currentAdmin = { id: 'admin-1', role: 'admin' }
+    const task = await service.createTask(
+      { requestId: 'wh-cancel-1', model: 'flux', input: { prompt: 'A cup' } },
+      currentAdmin,
+    )
+    const callback = new URL(provider.creates[0]!.webhookUrl!)
+    const token = callback.pathname.split('/').at(-1)!
+
+    // Cancel while the in-flight getStatus resolves, then let the webhook finalize.
+    provider.beforeStatus = async () => {
+      await service.cancelTask(task.id, currentAdmin)
+    }
+    await service.processWebhook(task.id, token, 'provider-task-1')
+
+    const seen = await service.getTask(task.id, currentAdmin)
+    expect(seen.status).toBe('cancelled')
+    expect(seen.output?.files ?? []).toEqual([])
+  })
 })
