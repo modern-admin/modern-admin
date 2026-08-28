@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/queue",
-  "version": "0.6.0",
+  "version": "0.9.0",
   "description": "BullMQ-based queue + cron module for Modern Admin (NestJS).",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/queue#readme",
   "keywords": [
@@ -49,6 +49,9 @@
     "typecheck": "tsc --noEmit",
     "test": "bun test",
     "lint": "eslint ."
+  },
+  "dependencies": {
+    "@modern-admin/core": "workspace:^"
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",

@@ -17,3 +17,16 @@ export {
   type CronHandler,
   type CronTaskDefinition,
 } from './cron'
+
+export {
+  RetentionModule,
+  RetentionService,
+  RETENTION_OPTIONS,
+  DEFAULT_RETENTION_CRON,
+  SYSTEM_RETENTION_TASK,
+  type AuditLogRetentionTarget,
+  type HistoryRetentionTarget,
+  type PrunableStore,
+  type RetentionModuleOptions,
+  type RetentionRunResult,
+} from './retention'

@@ -12,6 +12,7 @@ import { ConsoleLogger, type ILogger } from '../ports'
 /** Applied by `IQueryableLogStore.list` when the caller passes no `limit`. */
 const DEFAULT_LOG_LIST_LIMIT = 50
 import type {
+  ActionLogRetention,
   IAiTaskStore,
   ICacheStore,
   IConfigStore,
@@ -83,6 +84,33 @@ export class MemoryLogStore implements IQueryableLogStore {
     // truncate in production.
     result = result.slice(0, filter.limit ?? DEFAULT_LOG_LIST_LIMIT)
     return result
+  }
+  async prune(retention: ActionLogRetention): Promise<number> {
+    const { keepLast, keepDays } = retention
+    if (keepLast === undefined && keepDays === undefined) return 0
+
+    const doomed = new Set<ActionLogEntry>()
+    if (keepDays !== undefined) {
+      const cutoff = Date.now() - Math.max(0, keepDays) * 24 * 60 * 60 * 1000
+      for (const entry of this.entries) {
+        if (entry.at < cutoff) doomed.add(entry)
+      }
+    }
+
+    if (keepLast !== undefined) {
+      const keep = Math.max(0, Math.trunc(keepLast))
+      const newestFirst = this.entries.slice().sort((a, b) => {
+        if (a.at !== b.at) return b.at - a.at
+        return String(b.id ?? '').localeCompare(String(a.id ?? ''))
+      })
+      for (const entry of newestFirst.slice(keep)) doomed.add(entry)
+    }
+
+    if (doomed.size === 0) return 0
+    const kept = this.entries.filter((entry) => !doomed.has(entry))
+    this.entries.length = 0
+    this.entries.push(...kept)
+    return doomed.size
   }
   clear(): void { this.entries.length = 0 }
 }
@@ -328,8 +356,13 @@ export class MemoryAiTaskStore implements IAiTaskStore {
   public readonly eventLog: AiTaskEvent[] = []
 
   async enqueue(input: AiTaskInput): Promise<AiTask> {
+    if (input.idempotencyKey) {
+      const existing = await this.getByIdempotencyKey(input.idempotencyKey)
+      if (existing) return existing
+    }
     const t: AiTask = {
       id: uuidv7(),
+      ...(input.idempotencyKey !== undefined ? { idempotencyKey: input.idempotencyKey } : {}),
       kind: input.kind,
       ...(input.resourceId !== undefined ? { resourceId: input.resourceId } : {}),
       ...(input.recordId !== undefined ? { recordId: input.recordId } : {}),
@@ -343,12 +376,23 @@ export class MemoryAiTaskStore implements IAiTaskStore {
     this.tasks.push(t)
     return t
   }
+  async claim(id: string): Promise<AiTask | null> {
+    const task = this.tasks.find((candidate) => candidate.id === id)
+    if (!task || task.status !== 'pending') return null
+    return this.updateStatus(id, { status: 'running', progress: 5 })
+  }
   async get(id: string): Promise<AiTask | null> {
     return this.tasks.find((t) => t.id === id) ?? null
+  }
+  async getByIdempotencyKey(idempotencyKey: string): Promise<AiTask | null> {
+    return this.tasks.find((task) => task.idempotencyKey === idempotencyKey) ?? null
   }
   async list(filter: Parameters<IAiTaskStore['list']>[0] = {}): Promise<AiTask[]> {
     let result = this.tasks.slice()
     if (filter.kind) result = result.filter((t) => t.kind === filter.kind)
+    if (filter.idempotencyKey) {
+      result = result.filter((t) => t.idempotencyKey === filter.idempotencyKey)
+    }
     if (filter.status) {
       const list = Array.isArray(filter.status) ? filter.status : [filter.status]
       const set = new Set<AiTaskStatus>(list)
@@ -356,6 +400,9 @@ export class MemoryAiTaskStore implements IAiTaskStore {
     }
     if (filter.userId) result = result.filter((t) => t.userId === filter.userId)
     if (filter.resourceId) result = result.filter((t) => t.resourceId === filter.resourceId)
+    if (filter.createdAfter) {
+      result = result.filter((task) => task.createdAt >= filter.createdAfter!)
+    }
     result.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     if (filter.limit !== undefined) result = result.slice(0, filter.limit)
     return result
@@ -367,11 +414,15 @@ export class MemoryAiTaskStore implements IAiTaskStore {
       progress?: number | null
       output?: Record<string, unknown>
       error?: string
+      expectedStatus?: AiTaskStatus[]
     },
   ): Promise<AiTask> {
     const idx = this.tasks.findIndex((t) => t.id === id)
     if (idx < 0) throw new Error(`AI task not found: ${id}`)
     const prev = this.tasks[idx]!
+    // Conditional write: leave the row untouched when the guard is not met.
+    // The find + assignment run in a single synchronous tick, so this is atomic.
+    if (patch.expectedStatus && !patch.expectedStatus.includes(prev.status)) return prev
     const next: AiTask = {
       ...prev,
       status: patch.status,

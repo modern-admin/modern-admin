@@ -2,7 +2,8 @@
 // rather than re-import so the React bundle doesn't drag in the full core
 // (which references Node-only deps in a few corners).
 
-export type View = 'list' | 'show' | 'edit' | 'filter'
+export type View = 'list' | 'show' | 'new' | 'edit' | 'filter'
+type LegacyView = Exclude<View, 'new'>
 
 /**
  * Mirror of `core` `ShowWhen` — declarative rule that conditionally hides a
@@ -50,7 +51,8 @@ export interface PropertyJSON {
   reference: string | null
   availableValues: Array<{ value: string; label: string }> | null
   components: { list?: string; edit?: string; show?: string; filter?: string } | Record<string, string>
-  visibility: Record<View, boolean>
+  /** `new` is optional so a newer SPA remains compatible with older servers. */
+  visibility: Record<LegacyView, boolean> & Partial<Record<'new', boolean>>
   position: number
   description?: string
   showWhen?: ShowWhenSpec
@@ -95,7 +97,7 @@ export interface ResourceJSON {
    * SPA still renders (falling back to `properties` order filtered by
    * `visibility`) against older API servers that don't emit it.
    */
-  propertyOrder?: Record<View, string[]>
+  propertyOrder?: Record<LegacyView, string[]> & Partial<Record<'new', string[]>>
   actions: ActionDescriptor[]
 }
 
@@ -120,6 +122,7 @@ export interface AdminFeatures {
   webhooks: boolean
   apiKeys: boolean
   aiAssistant: boolean
+  mediaGeneration: boolean
   /** Realtime WS gateway is mounted — the SPA live-invalidates its cache. */
   realtime: boolean
   cache: boolean
@@ -131,6 +134,7 @@ const ALL_FEATURES_OFF: AdminFeatures = {
   webhooks: false,
   apiKeys: false,
   aiAssistant: false,
+  mediaGeneration: false,
   realtime: false,
   cache: false,
 }

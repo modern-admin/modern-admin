@@ -90,11 +90,14 @@ describe('buildAiAssistantTools', () => {
       rawQuery: async () => [],
     })
 
-    expect(Object.keys(built.tools).filter((name) => name.endsWith('_regionalcontent'))).toEqual([
-      'list_regionalcontent',
-      'show_regionalcontent',
-      'search_regionalcontent',
-    ])
+    // list/show/search are consolidated into a single parameterized tool.
+    expect(Object.keys(built.tools)).toContain('query_resource')
+    expect(Object.keys(built.tools).some((name) => /^(list|show|search)_/.test(name))).toBe(false)
+    expect(
+      built.descriptors
+        .filter((d) => d.resourceId === 'regionalContent')
+        .map((d) => d.action),
+    ).toEqual(['list', 'show', 'search'])
     expect(built.resourceIds).toEqual(['regionalContent'])
     expect(built.sqlResources).toEqual([
       {
@@ -106,6 +109,35 @@ describe('buildAiAssistantTools', () => {
         ],
       },
     ])
+  })
+
+  test('query_resource dispatches by action and rejects unknown resources', async () => {
+    const admin = new ModernAdmin({
+      resources: [new TestResource('products', 'product', [{ id: 'p1', name: 'Cup' }])],
+    })
+    const built = buildAiAssistantTools({ admin })
+    const queryTool = built.tools['query_resource'] as unknown as {
+      execute(input: Record<string, unknown>): Promise<{
+        action?: string
+        record?: { id: string } | null
+        records?: Array<{ id: string }>
+        error?: string
+      }>
+    }
+
+    const shown = await queryTool.execute({ resourceId: 'products', action: 'show', recordId: 'p1' })
+    expect(shown.action).toBe('show')
+    expect(shown.record?.id).toBe('p1')
+
+    const listed = await queryTool.execute({ resourceId: 'products', action: 'list' })
+    expect(listed.action).toBe('list')
+    expect(listed.records?.map((r) => r.id)).toEqual(['p1'])
+
+    const unknown = await queryTool.execute({ resourceId: 'nope', action: 'list' })
+    expect(unknown.error).toContain('Unknown resource')
+
+    const missingId = await queryTool.execute({ resourceId: 'products', action: 'show' })
+    expect(missingId.error).toContain('recordId')
   })
 
   test('execute_sql returns JSON-safe rows', async () => {
@@ -128,5 +160,25 @@ describe('buildAiAssistantTools', () => {
       citations: [],
     })
     expect(() => JSON.stringify(result)).not.toThrow()
+  })
+
+  test('opens a media draft without starting a generation request', async () => {
+    const uiActions: import('../src/ai-assistant.types.js').AiUiAction[] = []
+    const built = buildAiAssistantTools({
+      admin: new ModernAdmin({ resources: [] }),
+      mediaGenerationAvailable: true,
+      uiActions,
+    })
+
+    const result = await (built.tools['draft_media_generation'] as unknown as {
+      execute(input: { prompt: string; mediaType: 'image' }): Promise<unknown>
+    }).execute({ prompt: 'A clean product card', mediaType: 'image' })
+
+    expect(result).toMatchObject({ draftOpened: true, paidRequestStarted: false })
+    expect(uiActions).toEqual([{
+      kind: 'open-media-generation',
+      prompt: 'A clean product card',
+      mediaType: 'image',
+    }])
   })
 })

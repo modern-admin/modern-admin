@@ -15,6 +15,7 @@
 import { extname } from 'node:path'
 import { Filter, uuidv7 } from '@modern-admin/core'
 import { uploadFeature, LocalUploadProvider } from '@modern-admin/feature-upload'
+import { mediaGenerationFeature } from '@modern-admin/feature-media-generation'
 import { m2mFeature } from '@modern-admin/feature-m2m'
 import {
   Action,
@@ -73,6 +74,17 @@ const productKeyer = (subdir: string) => (filename: string): string => {
           uploadPath: productKeyer('gallery'),
         },
       },
+    }),
+    mediaGenerationFeature({
+      targetProperty: 'thumbnail',
+      sourceProperties: ['name', 'description', 'category', 'price', 'currencyCode'],
+      promptTemplate:
+        'Create a polished ecommerce product card for {name}. ' +
+        'Product description: {description}. Category: {category}. ' +
+        'Show the product clearly on a clean commercial background. ' +
+        'Do not add a price or text to the image.',
+      mediaTypes: ['image'],
+      nesting: 'Merchandising',
     }),
     // Contrast with posts.tags: same m2m mechanics, but rendered as a
     // compact inline combobox instead of the table-driven dialog. Useful

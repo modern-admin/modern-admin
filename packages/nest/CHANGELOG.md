@@ -1,5 +1,71 @@
 # @modern-admin/nest
 
+## 0.9.0
+
+### Minor Changes
+
+- [#39](https://github.com/modern-admin/modern-admin/pull/39) [`5118d63`](https://github.com/modern-admin/modern-admin/commit/5118d63c9e3db18c7e0ce6202c13ab02833780db) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Consolidate the AI assistant's per-resource `list_<r>` / `show_<r>` /
+  `search_<r>` tools into a single parameterized `query_resource({ resourceId,
+  action, … })` tool. This cuts a 12-resource setup from ~40 tools to ~8, keeping
+  the request payload small enough that OpenAI-compatible providers (notably API
+  Stock behind Cloudflare) no longer time out at their gateway (HTTP 524) when the
+  large tool list is combined with the schema-hint system prompt. Valid
+  resource/action pairs are still advertised in the "Available resources and
+  actions" system-prompt line, and unknown resource/action combinations return a
+  correctable error instead of failing the call.
+
+- [#39](https://github.com/modern-admin/modern-admin/pull/39) [`5118d63`](https://github.com/modern-admin/modern-admin/commit/5118d63c9e3db18c7e0ce6202c13ab02833780db) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Add API Stock as the built-in AI assistant provider and expose a provider-specific API key signup link in assistant settings.
+
+- [#39](https://github.com/modern-admin/modern-admin/pull/39) [`5118d63`](https://github.com/modern-admin/modern-admin/commit/5118d63c9e3db18c7e0ce6202c13ab02833780db) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Add webhook-driven API Stock image and video generation, dynamic model forms, private task updates, explicit paid-request confirmation, upload-backed record application, product-card actions, and AI assistant media drafts.
+
+- [#39](https://github.com/modern-admin/modern-admin/pull/39) [`5118d63`](https://github.com/modern-admin/modern-admin/commit/5118d63c9e3db18c7e0ce6202c13ab02833780db) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Add opt-in debug logging for the model/prompt sent to providers. Media
+  generation logs the provider, model, and input via the `mediaGeneration.debug`
+  option or `MEDIA_GENERATION_DEBUG`; the AI assistant now also logs the system
+  prompt and chat messages sent to the LLM under the existing `aiAssistant.debug`
+  / `AI_ASSISTANT_DEBUG` flag.
+  
+  Also clarify AI assistant failures when API Stock (behind Cloudflare) returns a
+  non-JSON gateway error such as HTTP 524: instead of an empty `AI_APICallError`,
+  the task now fails with an explicit "API Stock request failed with HTTP <status>"
+  message so upstream timeouts are diagnosable.
+
+- [#39](https://github.com/modern-admin/modern-admin/pull/39) [`5118d63`](https://github.com/modern-admin/modern-admin/commit/5118d63c9e3db18c7e0ce6202c13ab02833780db) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Support media generation without a public webhook in local development. When
+  `webhookBaseUrl` is not configured and `NODE_ENV` is not `production`, the
+  server submits the provider request without a webhook and polls `getStatus`
+  until the task finishes, instead of failing with a `412` Precondition Failed.
+  In production the webhook remains mandatory: a missing `webhookBaseUrl` is
+  rejected up front, before any task is created. `MediaGenerationCreateInput.webhookUrl`
+  is now optional. The poll loop re-checks the task status before applying a
+  provider result, so cancelling ("stop waiting") while a `getStatus` request is
+  in flight can no longer resurrect the task into `succeeded`. On startup the
+  service re-arms polling for any webhook-less task still `running`, so a process
+  restart (frequent in local `--watch` dev) no longer freezes it forever.
+
+### Patch Changes
+
+- [#36](https://github.com/modern-admin/modern-admin/pull/36) [`e6d85ae`](https://github.com/modern-admin/modern-admin/commit/e6d85ae69aa955b56f385fa20b451cb3766d3c29) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Close media generation apply/cancel/budget race conditions.
+  
+  - **Apply is serialized per task.** Two overlapping apply requests for the same
+    task could both pass the `output.applied` guard and upload/edit twice; they
+    are chained in-process and the second observes the first's marker.
+  - **Completion never overwrites cancellation.** `IAiTaskStore.updateStatus`
+    gains an optional `expectedStatus` guard so a status write is applied
+    atomically only while the task is still in one of the expected states (a
+    `WHERE status IN (…)` predicate for SQL stores, a synchronous check-and-set
+    in memory). `applyProviderResult` uses it, so a cancel that lands while a
+    provider status request is in flight can no longer resurrect the task as
+    succeeded/failed — including across nodes on the webhook path.
+  - **The monthly budget reserves before it checks, one request at a time.** The
+    task is enqueued with its estimated cost before the budget is summed, and
+    per-user reservations are serialized so concurrent requests near the limit are
+    admitted one-by-one — exactly one is accepted rather than all overspending or
+    all rejecting. A rejected reservation is failed so its cost stops counting.
+- Updated dependencies [[`5118d63`](https://github.com/modern-admin/modern-admin/commit/5118d63c9e3db18c7e0ce6202c13ab02833780db), [`5118d63`](https://github.com/modern-admin/modern-admin/commit/5118d63c9e3db18c7e0ce6202c13ab02833780db), [`5118d63`](https://github.com/modern-admin/modern-admin/commit/5118d63c9e3db18c7e0ce6202c13ab02833780db), [`5118d63`](https://github.com/modern-admin/modern-admin/commit/5118d63c9e3db18c7e0ce6202c13ab02833780db), [`e6d85ae`](https://github.com/modern-admin/modern-admin/commit/e6d85ae69aa955b56f385fa20b451cb3766d3c29), [`5118d63`](https://github.com/modern-admin/modern-admin/commit/5118d63c9e3db18c7e0ce6202c13ab02833780db), [`5118d63`](https://github.com/modern-admin/modern-admin/commit/5118d63c9e3db18c7e0ce6202c13ab02833780db), [`eb83e7a`](https://github.com/modern-admin/modern-admin/commit/eb83e7a9544faef49416d4510a8d21ed6ea6b565)]:
+  - @modern-admin/i18n@0.9.0
+  - @modern-admin/core@0.9.0
+  - @modern-admin/queue@0.9.0
+  - @modern-admin/feature-upload@0.9.0
+
 ## 0.8.0
 
 ### Minor Changes

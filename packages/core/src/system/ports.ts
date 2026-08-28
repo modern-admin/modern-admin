@@ -26,9 +26,27 @@ import type {
 
 // ─── Logs ─────────────────────────────────────────────────────────────────
 
+/**
+ * Retention policy for the append-only action log.
+ *
+ * `keepLast` is global (across every resource/action), unlike history where
+ * the same bound is applied independently to each record.
+ */
+export interface ActionLogRetention {
+  /** Keep at most this many of the newest action-log entries overall. */
+  keepLast?: number
+  /** Drop entries older than this many days (relative to now). */
+  keepDays?: number
+}
+
 /** Action log sink. See `ActionLogEntry` in `./schemas.js`. */
 export interface ILogStore {
   record(entry: ActionLogEntry): void | Promise<void>
+  /**
+   * Enforce a retention policy. Optional for sinks that retain externally
+   * (for example stdout or a hosted log pipeline).
+   */
+  prune?(retention: ActionLogRetention): Promise<number>
 }
 
 /** Optional history-style log readback (not all stores support it). */
@@ -127,17 +145,34 @@ export interface IHistoryStore {
 // ─── AI tasks ─────────────────────────────────────────────────────────────
 
 export interface IAiTaskStore {
+  /**
+   * Enqueue a task. Implementations backed by the shipped schemas return the
+   * existing row when the same `idempotencyKey` is submitted again.
+   */
   enqueue(input: AiTaskInput): Promise<AiTask>
+  /** Atomically transition a pending task to running. Returns null when another worker claimed it. */
+  claim(id: string): Promise<AiTask | null>
   get(id: string): Promise<AiTask | null>
+  getByIdempotencyKey?(idempotencyKey: string): Promise<AiTask | null>
   list(filter?: {
     kind?: string
+    idempotencyKey?: string
     status?: AiTaskStatus | AiTaskStatus[]
     userId?: string
     resourceId?: string
+    createdAfter?: string
     limit?: number
   }): Promise<AiTask[]>
 
-  /** Update task status. `output`/`error` are written when terminal. */
+  /**
+   * Update task status. `output`/`error` are written when terminal.
+   *
+   * When `expectedStatus` is set, the write is applied atomically only if the
+   * task's current status is one of the listed values; otherwise it is a no-op.
+   * Either way the current row is returned, so callers detect a rejected write
+   * by comparing the returned `status` to the one they requested. Use it to
+   * avoid resurrecting a task that was concurrently cancelled/finalized.
+   */
   updateStatus(
     id: string,
     patch: {
@@ -145,6 +180,7 @@ export interface IAiTaskStore {
       progress?: number | null
       output?: Record<string, unknown>
       error?: string
+      expectedStatus?: AiTaskStatus[]
     },
   ): Promise<AiTask>
 

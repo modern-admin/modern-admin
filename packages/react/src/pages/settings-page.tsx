@@ -1,7 +1,6 @@
 // Admin Settings hub. Reachable from the user/profile dropdown menu and
-// rendered by the router for `/settings/<section>`. Currently three
-// sections: `api-keys`, `webhooks`, `ai-assistant`; the layout is built so
-// adding more sections is just a new entry in `SECTIONS` + a switch case.
+// rendered by the router for `/settings/<section>`. The layout is built so
+// adding sections is just a new entry in `BUILT_IN_SECTIONS` + a switch case.
 
 import * as React from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'

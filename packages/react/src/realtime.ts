@@ -9,11 +9,14 @@ import { useQueryClient } from '@tanstack/react-query'
 import { invalidateResourceData } from './hooks.js'
 
 export interface RealtimeWireEvent {
-  kind: 'created' | 'updated' | 'deleted'
+  kind: 'created' | 'updated' | 'deleted' | 'taskUpdated'
   resourceId: string
   recordId?: string
   record?: Record<string, unknown>
   actorId?: string
+  audienceUserId?: string
+  taskId?: string
+  taskStatus?: string
   at: number
 }
 
@@ -38,6 +41,7 @@ export function useRealtimeInvalidation(
   useEffect(() => {
     if (!subscriber) return
     return subscriber((event) => {
+      if (event.kind === 'taskUpdated') return
       invalidateResourceData(queryClient, event.resourceId)
     })
   }, [queryClient, subscriber])

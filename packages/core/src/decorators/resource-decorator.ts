@@ -18,8 +18,8 @@ const DEFAULT_NAVIGATION_ICON = 'Database'
 
 type Navigation = NonNullable<Exclude<ResourceOptions['navigation'], null>>
 
-type View = 'list' | 'show' | 'edit' | 'filter'
-const VIEWS: readonly View[] = ['list', 'show', 'edit', 'filter']
+type View = 'list' | 'show' | 'new' | 'edit' | 'filter'
+const VIEWS: readonly View[] = ['list', 'show', 'new', 'edit', 'filter']
 
 export interface ResourceJSON {
   id: string
@@ -174,7 +174,8 @@ export class ResourceDecorator {
 
   /**
    * Ordered, view-visible properties. When the matching option
-   * (`listProperties`/`showProperties`/`editProperties`/`filterProperties`) is
+   * (`listProperties`/`showProperties`/`newProperties`/`editProperties`/
+   * `filterProperties`) is
    * set it acts as an explicit whitelist + order (AdminJS semantics); otherwise
    * the view-visible properties are sorted by `position()`. Serialised into
    * `ResourceJSON.propertyOrder` and consumed by the SPA — do not inline this
@@ -185,9 +186,11 @@ export class ResourceDecorator {
       ? this.options.listProperties
       : view === 'show'
         ? this.options.showProperties
-        : view === 'edit'
-          ? this.options.editProperties
-          : this.options.filterProperties
+        : view === 'new'
+          ? (this.options.newProperties ?? this.options.editProperties)
+          : view === 'edit'
+            ? this.options.editProperties
+            : this.options.filterProperties
     if (explicit && explicit.length > 0) {
       return explicit
         .map((path) => this.getPropertyByKey(path))

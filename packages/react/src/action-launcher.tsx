@@ -15,6 +15,7 @@ import { useNavigate } from './router.js'
 import { getActionLabel } from './action-menu.js'
 import { ActionComponentHost } from './components/action-component-host.js'
 import type { ActionDescriptor } from './types.js'
+import { useI18n } from './i18n.js'
 
 /** True when the action renders its own UI instead of firing on click. */
 export const hasActionComponent = (action: ActionDescriptor): boolean =>
@@ -43,17 +44,18 @@ export type OpenActionComponent = (
 export const useActionLauncher = (resourceId: string): OpenActionComponent => {
   const dialogs = useDialogs()
   const navigate = useNavigate()
+  const { t } = useI18n()
 
   return React.useCallback(
     (action: ActionDescriptor, options: LaunchActionOptions = {}) => {
       const { recordId, recordIds, onSuccess } = options
       if (action.custom?.showAs === 'dialog') {
         void dialogs.open({
-          className: 'sm:max-w-2xl',
+          className: action.component === 'modern-admin:media-generation' ? 'sm:max-w-4xl' : 'sm:max-w-2xl',
           render: ({ close }) => (
             <>
               <DialogHeader>
-                <DialogTitle>{getActionLabel(action)}</DialogTitle>
+                <DialogTitle>{getActionLabel(action, t)}</DialogTitle>
               </DialogHeader>
               <ActionComponentHost
                 resourceId={resourceId}
@@ -76,6 +78,6 @@ export const useActionLauncher = (resourceId: string): OpenActionComponent => {
         ...(recordIds !== undefined ? { recordIds } : {}),
       })
     },
-    [dialogs, navigate, resourceId],
+    [dialogs, navigate, resourceId, t],
   )
 }

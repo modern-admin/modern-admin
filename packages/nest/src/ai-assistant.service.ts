@@ -48,6 +48,8 @@ export interface AiAssistantPublicSettings {
   enabled: boolean
   configured: boolean
   provider: string
+  providerName: string
+  apiKeyUrl: string | null
   model: string
   maskedApiKey: string | null
   systemPrompt: string
@@ -313,6 +315,7 @@ export class AiAssistantService {
       // the DashboardController PUT gate so the assistant can't overwrite the
       // shared global dashboard for a viewer who couldn't do it via REST.
       dashboardWritable: this.canManageDashboard(data.currentAdmin),
+      mediaGenerationAvailable: this.canDraftMedia(data.currentAdmin),
       uiActions,
     })
 
@@ -340,21 +343,32 @@ export class AiAssistantService {
     })
     await taskStore.updateStatus(data.taskId, { status: 'running', progress: 30 })
 
+    const systemPrompt = this.buildSystemPrompt(
+      settings,
+      built.descriptors,
+      built.sqlResources,
+      Boolean(rawQueryForRequest),
+      data.clientContext,
+    )
+    const promptMessages = data.messages.map((message) => ({
+      role: message.role,
+      content: message.content,
+    }))
+    if (debug) {
+      this.logger.debug(
+        `AI assistant task ${data.taskId} prompt → ` +
+        `model=${settings.model ?? this.llmProvider.defaultModel} ` +
+        `system=${JSON.stringify(systemPrompt)} ` +
+        `messages=${JSON.stringify(promptMessages)}`,
+      )
+    }
+
     try {
       const result = await this.llmProvider.generate({
         apiKey: settings.apiKey,
         model: settings.model ?? this.llmProvider.defaultModel,
-        system: this.buildSystemPrompt(
-          settings,
-          built.descriptors,
-          built.sqlResources,
-          Boolean(rawQueryForRequest),
-          data.clientContext,
-        ),
-        messages: data.messages.map((message) => ({
-          role: message.role,
-          content: message.content,
-        })),
+        system: systemPrompt,
+        messages: promptMessages,
         tools: built.tools,
         maxSteps: this.options.aiAssistant?.maxSteps ?? 8,
         appName: this.options.aiAssistant?.appName ?? 'Modern Admin',
@@ -471,12 +485,14 @@ export class AiAssistantService {
     const raw = await this.requireConfigStore().get('global', null, SETTINGS_KEY)
     if (!raw || typeof raw !== 'object') return defaults
     const stored = raw as AiAssistantStoredSettings
+    const matchesProvider = stored.provider === this.llmProvider.id
     return {
       enabled: stored.enabled ?? defaults.enabled,
       provider: this.llmProvider.id,
-      model: stored.model ?? defaults.model,
-      // stored key takes precedence; fall back to env-seeded key
-      apiKey: stored.apiKey?.trim() || envApiKey,
+      // A key saved for another provider must never be sent to the current
+      // provider. Models are provider-specific too, so reset both together.
+      model: matchesProvider ? (stored.model ?? defaults.model) : defaults.model,
+      apiKey: matchesProvider ? (stored.apiKey?.trim() || envApiKey) : envApiKey,
       systemPrompt: stored.systemPrompt ?? defaults.systemPrompt,
     }
   }
@@ -496,6 +512,8 @@ export class AiAssistantService {
       enabled: settings.enabled ?? true,
       configured: this.llmProvider.isConfigured(apiKey),
       provider: this.llmProvider.id,
+      providerName: this.llmProvider.displayName ?? this.llmProvider.id,
+      apiKeyUrl: this.llmProvider.apiKeyUrl ?? null,
       model: settings.model ?? this.options.aiAssistant?.defaultModel ?? this.llmProvider.defaultModel,
       maskedApiKey: apiKey ? this.maskApiKey(apiKey) : null,
       systemPrompt: settings.systemPrompt ?? '',
@@ -513,6 +531,7 @@ export class AiAssistantService {
     clientContext?: AiClientContext,
   ): string {
     const hasNavigateTool = descriptors.some((d) => d.name === 'navigate_to')
+    const hasMediaDraftTool = descriptors.some((d) => d.name === 'draft_media_generation')
     const lines = [
       'You are the Modern Admin AI assistant.',
       'You answer questions about admin data, build reports, inspect relationships, and explain findings.',
@@ -525,9 +544,15 @@ export class AiAssistantService {
       ...(hasNavigateTool
         ? [
           'UI NAVIGATION is allowed and encouraged. You have a `navigate_to` tool that takes the user to a specific admin page. This is NOT a write operation — it only changes which page is displayed in the browser.',
-          'Call `navigate_to` whenever the user asks to "open", "go to", "show me", "switch to", "перейти", "открой", or otherwise navigate. Supported routes: { name: "home" }, { name: "audit-log" }, { name: "list", resourceId }, { name: "show", resourceId, recordId }, { name: "settings", section? }.',
-          'After calling `navigate_to`, briefly confirm in your text reply that you navigated the user (e.g. "Открыл пост ..."), do not say navigation is unavailable.',
-          'When the user references "this", "current", "сюда", "к нему" etc., resolve the subject from the current pathname (see below) before navigating.',
+          'Call `navigate_to` whenever the user asks to open, go to, show, switch to, or otherwise navigate. Supported routes: { name: "home" }, { name: "audit-log" }, { name: "list", resourceId }, { name: "show", resourceId, recordId }, { name: "settings", section? }.',
+          'After calling `navigate_to`, briefly confirm in the user\'s language that navigation completed; do not say navigation is unavailable.',
+          'When the user uses contextual references such as "this", "current", or their equivalents in another language, resolve the subject from the current pathname before navigating.',
+        ]
+        : []),
+      ...(hasMediaDraftTool
+        ? [
+          'MEDIA DRAFTS are available through `draft_media_generation`. Use it when the user asks to create or generate an image, video, or audio asset.',
+          'The tool only opens a prefilled draft. It does not start a paid request; tell the user to review the model and confirm the cost in the form.',
         ]
         : []),
       ...(clientContext?.pathname
@@ -679,6 +704,12 @@ export class AiAssistantService {
     if (!this.isChatAllowed(currentAdmin)) {
       throw new ForbiddenException('You are not allowed to use AI assistant')
     }
+  }
+
+  private canDraftMedia(currentAdmin?: CurrentAdmin): boolean {
+    const config = this.options.mediaGeneration
+    const role = currentAdmin?.role ? String(currentAdmin.role) : ''
+    return Boolean(config && role && (config.generateRoles ?? ['admin']).includes(role))
   }
 }
 

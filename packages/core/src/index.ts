@@ -19,7 +19,7 @@
 declare const __MODERN_ADMIN_VERSION__: string | undefined
 
 /** Synced from `package.json#version` by `scripts/sync-lock-workspace-versions.ts`. */
-const FALLBACK_VERSION = '0.8.0'
+const FALLBACK_VERSION = '0.9.0'
 
 export const VERSION: string =
   typeof __MODERN_ADMIN_VERSION__ === 'string' ? __MODERN_ADMIN_VERSION__ : FALLBACK_VERSION
@@ -222,6 +222,26 @@ export {
   type RegisterResourcesArgs,
   type RolePermissions,
 } from './modern-admin.js'
+
+// Media generation provider port + wire schemas
+export {
+  mediaGenerationCatalogModelZ,
+  mediaGenerationCatalogParamZ,
+  estimateMediaGenerationPrice,
+  mediaGenerationFileTypeZ,
+  mediaGenerationFileZ,
+  mediaGenerationResultZ,
+  mediaGenerationStatusZ,
+  type IMediaGenerationProvider,
+  type MediaGenerationCatalogModel,
+  type MediaGenerationCatalogParam,
+  type MediaGenerationCreateInput,
+  type MediaGenerationFile,
+  type MediaGenerationFileType,
+  type MediaGenerationProviderRequestOptions,
+  type MediaGenerationResult,
+  type MediaGenerationStatus,
+} from './media-generation.js'
 
 // Dashboard / chart-builder schemas + storage port
 export {

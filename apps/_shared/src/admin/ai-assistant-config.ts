@@ -1,5 +1,5 @@
 // Project-wide defaults for the AI assistant configuration block.
-// The reference app uses the built-in OpenRouter adapter and gates the
+// The reference app uses the built-in API Stock adapter and gates the
 // settings UI behind the `admin` role; only the optional `rawQuery` slot
 // (host SQL executor) and the API key source typically differ.
 
@@ -31,7 +31,7 @@ export interface AiAssistantConfigBase {
 }
 
 export interface BuildAiAssistantConfigOptions {
-  /** Override model id. Defaults to `google/gemini-3.1-flash-lite-preview`. */
+  /** Override model id. Defaults to `gemini-3.5-flash`. */
   defaultModel?: string
   /** Roles allowed to view/edit AI assistant settings. Defaults to `['admin']`. */
   manageRoles?: string[]
@@ -66,9 +66,9 @@ const DEFAULT_EXCLUDED_RESOURCE_IDS = [
 /**
  * Builds an `aiAssistant` config block with the project defaults.
  *
- * - `defaultModel`: `google/gemini-3.1-flash-lite-preview`
+ * - `defaultModel`: `gemini-3.5-flash`
  * - `manageRoles`: `['admin']`
- * - `apiKey` from `process.env.OPENROUTER_API_KEY` when set (UI-stored
+ * - `apiKey` from `process.env.API_STOCK_KEY` when set (UI-stored
  *   value from configStore takes precedence once configured).
  * - `debug` from `AI_ASSISTANT_DEBUG=1`.
  */
@@ -76,7 +76,7 @@ export const buildAiAssistantConfig = (
   options: BuildAiAssistantConfigOptions = {},
 ): AiAssistantConfigBase => {
   const {
-    defaultModel = 'google/gemini-3.1-flash-lite-preview',
+    defaultModel = 'gemini-3.5-flash',
     manageRoles = ['admin'],
     rawQuery,
     overrides = {},
@@ -89,7 +89,7 @@ export const buildAiAssistantConfig = (
     ...(isTruthyEnv(process.env.AI_ASSISTANT_DEBUG)
       ? { debug: true }
       : {}),
-    ...(process.env.OPENROUTER_API_KEY ? { apiKey: process.env.OPENROUTER_API_KEY } : {}),
+    ...(process.env.API_STOCK_KEY ? { apiKey: process.env.API_STOCK_KEY } : {}),
     ...(rawQuery ? { rawQuery } : {}),
     ...overrides,
   }

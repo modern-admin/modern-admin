@@ -399,7 +399,7 @@ export const buildGraphqlSchema = (
     fields: () => ({
       kind: {
         type: new GraphQLNonNull(GraphQLString),
-        description: 'One of "created" | "updated" | "deleted".',
+        description: 'One of "created" | "updated" | "deleted" | "taskUpdated".',
         resolve: (src) => (src as { kind?: string }).kind ?? null,
       },
       resourceId: {

@@ -140,6 +140,7 @@ import {
   ActionMenu,
   ActionMenuItems,
   isActionAllowedForRecord,
+  isActionAllowedForResource,
   visibleRecordActions,
 } from '../action-menu.js'
 import { visibleRecordProperties } from '../relations.js'
@@ -414,13 +415,13 @@ export function ResourceListPage({
       filters: features?.filters ?? true,
       columns: features?.columns ?? true,
       export: features?.export ?? true,
-      create: features?.create ?? true,
+      create: (features?.create ?? true) && isActionAllowedForResource('new', resource),
       bulk: features?.bulk ?? true,
       actions: features?.actions ?? true,
       headerFilters: features?.headerFilters ?? true,
       card: features?.card ?? true,
     }),
-    [features],
+    [features, resource],
   )
 
   // ── URL-driven (or prop-driven) query state ──

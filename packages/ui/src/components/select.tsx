@@ -68,22 +68,24 @@ export const SelectTrigger = React.forwardRef<
 })
 SelectTrigger.displayName = SelectPrimitive.Trigger.displayName
 
+// The scroll chevrons overlay the viewport with absolute positioning instead
+// of taking a layout slot. Radix only mounts them while the list can scroll in
+// that direction, so keeping them out of the flow means the list never grows or
+// jumps when they appear/disappear — and the viewport can keep a tight padding.
 export const SelectScrollUpButton = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.ScrollUpButton>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.ScrollUpButton>
 >(({ className, ...props }, ref) => (
-  // Radix mounts this button after the viewport leaves the first option.
-  // Keep its 24px slot mounted so the list does not grow and jump at that
-  // point; the inner button still appears as intended.
-  <div className="flex h-6 shrink-0">
-    <SelectPrimitive.ScrollUpButton
-      ref={ref}
-      className={cn('flex w-full cursor-default items-center justify-center py-1', className)}
-      {...props}
-    >
-      <ChevronUp className="h-4 w-4" />
-    </SelectPrimitive.ScrollUpButton>
-  </div>
+  <SelectPrimitive.ScrollUpButton
+    ref={ref}
+    className={cn(
+      'absolute inset-x-0 top-0 z-10 flex h-6 cursor-default items-center justify-center bg-popover',
+      className,
+    )}
+    {...props}
+  >
+    <ChevronUp className="h-4 w-4" />
+  </SelectPrimitive.ScrollUpButton>
 ))
 SelectScrollUpButton.displayName = SelectPrimitive.ScrollUpButton.displayName
 
@@ -91,18 +93,16 @@ export const SelectScrollDownButton = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.ScrollDownButton>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.ScrollDownButton>
 >(({ className, ...props }, ref) => (
-  // Radix unmounts this button after the viewport reaches the last option.
-  // Keep its 24px slot mounted so the list does not shrink and jump at that
-  // point; the inner button still disappears as intended.
-  <div className="flex h-6 shrink-0">
-    <SelectPrimitive.ScrollDownButton
-      ref={ref}
-      className={cn('flex w-full cursor-default items-center justify-center py-1', className)}
-      {...props}
-    >
-      <ChevronDown className="h-4 w-4" />
-    </SelectPrimitive.ScrollDownButton>
-  </div>
+  <SelectPrimitive.ScrollDownButton
+    ref={ref}
+    className={cn(
+      'absolute inset-x-0 bottom-0 z-10 flex h-6 cursor-default items-center justify-center bg-popover',
+      className,
+    )}
+    {...props}
+  >
+    <ChevronDown className="h-4 w-4" />
+  </SelectPrimitive.ScrollDownButton>
 ))
 SelectScrollDownButton.displayName = SelectPrimitive.ScrollDownButton.displayName
 

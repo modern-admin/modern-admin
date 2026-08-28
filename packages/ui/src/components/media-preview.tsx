@@ -191,14 +191,31 @@ export function MediaPreview({
   // opening edit on backdrop/dialog click).
   const stopClick = (e: React.MouseEvent) => e.stopPropagation()
 
+  // Split the URL so it truncates in the middle: the head truncates at its end
+  // with an ellipsis while a short tail stays pinned, keeping both the start and
+  // the end (file name / extension) visible. Plain CSS `truncate` only clips the
+  // tail, which hides the most useful part of a media URL.
+  const TAIL = 12
+  const urlHead = url.length > TAIL ? url.slice(0, -TAIL) : url
+  const urlTail = url.length > TAIL ? url.slice(-TAIL) : ''
+
   return (
-    <div className={cn('inline-flex items-center gap-2', className)} onClick={stopClick}>
+    <div
+      className={cn(
+        // With the URL shown, stack it under the trigger and fill the container
+        // so it can shrink to fit; otherwise size to the trigger button.
+        showUrl && url ? 'flex w-full min-w-0 flex-col items-start gap-1' : 'inline-flex items-center gap-2',
+        className,
+      )}
+      onClick={stopClick}
+    >
       <Button
         type="button"
         variant={triggerVariant}
         size={triggerSize}
         onClick={() => setOpen(true)}
         disabled={!url}
+        className="shrink-0"
       >
         <Eye className="size-4" />
         <span>{previewLabel}</span>
@@ -206,10 +223,11 @@ export function MediaPreview({
 
       {showUrl && url ? (
         <span
-          className="max-w-[24rem] truncate text-xs text-muted-foreground"
+          className="flex min-w-0 max-w-full text-xs text-muted-foreground"
           title={url}
         >
-          {url}
+          <span className="truncate">{urlHead}</span>
+          {urlTail ? <span className="shrink-0 whitespace-pre">{urlTail}</span> : null}
         </span>
       ) : null}
 

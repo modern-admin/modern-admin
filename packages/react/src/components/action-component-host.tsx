@@ -26,6 +26,7 @@ import { useI18n } from '../i18n.js'
 import { useNotify } from '../notify.js'
 import { showActionNotice } from '../action-notice.js'
 import type { ActionComponentProps, CustomActionResponse } from '../types.js'
+import { MediaGenerationAction } from './media-generation-form.js'
 
 export interface ActionComponentHostProps {
   resourceId: string
@@ -72,7 +73,11 @@ export function ActionComponentHost({
 
   const action = resource?.actions?.find((a) => a.name === actionName)
   const componentName = action?.component ?? null
-  const Custom = componentName ? components?.get(componentName) : undefined
+  const Custom = componentName === 'modern-admin:media-generation'
+    ? MediaGenerationAction
+    : componentName
+      ? components?.get(componentName)
+      : undefined
 
   // Only prime once we know the action exists and its component resolved —
   // otherwise the page renders an error and the handler must not run.

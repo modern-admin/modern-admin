@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@modern-admin/adapter-prisma": "^{{modernAdminVersion}}",
+    "@modern-admin/api-stock": "^{{modernAdminVersion}}",
     "@modern-admin/auth-better-auth": "^{{modernAdminVersion}}",
     "@modern-admin/cache-redis": "^{{modernAdminVersion}}",
     "@modern-admin/core": "^{{modernAdminVersion}}",

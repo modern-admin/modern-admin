@@ -13,7 +13,8 @@ import {
   DropdownMenuTrigger,
 } from '@modern-admin/ui'
 import { MoreHorizontal, Zap } from 'lucide-react'
-import type { ActionDescriptor, ActionGroup, RecordJSON } from './types.js'
+import type { ActionDescriptor, ActionGroup, RecordJSON, ResourceJSON } from './types.js'
+import { useI18n } from './i18n.js'
 
 interface ActionMenuGroupNode {
   key: string
@@ -47,6 +48,14 @@ export const isActionAllowedForRecord = (
   record: Pick<RecordJSON, 'recordActions'> | undefined,
 ): boolean => !record?.recordActions || record.recordActions.includes(actionName)
 
+/** Whether the server-advertised resource metadata offers an action. */
+export const isActionAllowedForResource = (
+  actionName: string,
+  resource: Pick<ResourceJSON, 'actions'> | undefined,
+): boolean => resource?.actions.some(
+  (action) => action.actionType === 'resource' && action.name === actionName,
+) ?? false
+
 /** Narrow a resource's record actions down to the ones this record offers. */
 export const visibleRecordActions = (
   actions: ActionDescriptor[],
@@ -59,8 +68,14 @@ export const visibleRecordActions = (
 
 /** Display label for an action: the (already localized) `custom.label` set
  *  by the metadata translator, falling back to the raw action name. */
-export const getActionLabel = (action: ActionDescriptor): string =>
-  typeof action.custom?.label === 'string' ? action.custom.label : action.name
+export const getActionLabel = (
+  action: ActionDescriptor,
+  t?: (key: string) => string,
+): string => {
+  if (typeof action.custom?.label === 'string') return action.custom.label
+  if (typeof action.custom?.labelKey === 'string' && t) return t(action.custom.labelKey)
+  return action.name
+}
 
 const buildActionMenuTree = (actions: ActionDescriptor[]): ActionMenuNode[] => {
   const root: ActionMenuNode[] = []
@@ -94,6 +109,7 @@ const buildActionMenuTree = (actions: ActionDescriptor[]): ActionMenuNode[] => {
 const renderNodes = (
   nodes: ActionMenuNode[],
   onAction: (action: ActionDescriptor) => void,
+  t: (key: string) => string,
 ): React.ReactNode =>
   nodes.map((node) => {
     if (node.kind === 'action') {
@@ -102,7 +118,7 @@ const renderNodes = (
           key={node.action.name}
           onSelect={() => onAction(node.action)}
         >
-          <Zap className="size-4" /> {getActionLabel(node.action)}
+          <Zap className="size-4" /> {getActionLabel(node.action, t)}
         </DropdownMenuItem>
       )
     }
@@ -113,7 +129,7 @@ const renderNodes = (
         </DropdownMenuSubTrigger>
         <DropdownMenuPortal>
           <DropdownMenuSubContent>
-            {renderNodes(node.group.items, onAction)}
+            {renderNodes(node.group.items, onAction, t)}
           </DropdownMenuSubContent>
         </DropdownMenuPortal>
       </DropdownMenuSub>
@@ -127,9 +143,10 @@ export function ActionMenuItems({
   actions: ActionDescriptor[]
   onAction(action: ActionDescriptor): void
 }): React.ReactElement | null {
+  const { t } = useI18n()
   const nodes = React.useMemo(() => buildActionMenuTree(actions), [actions])
   if (nodes.length === 0) return null
-  return <>{renderNodes(nodes, onAction)}</>
+  return <>{renderNodes(nodes, onAction, t)}</>
 }
 
 export function ActionMenu({

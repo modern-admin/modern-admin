@@ -13,8 +13,22 @@ export {
   type AiAssistantStoredSettings,
 } from './ai-assistant.service.js'
 export { AiAssistantProcessor } from './ai-assistant.processor.js'
+export { MediaGenerationController, MediaGenerationWebhookController } from './media-generation.controller.js'
+export {
+  MediaGenerationService,
+  MEDIA_GENERATION_SETTINGS_KEY,
+  MEDIA_GENERATION_TASK_KIND,
+} from './media-generation.service.js'
+export type {
+  MediaGenerationOptions,
+  MediaGenerationPublicSettings,
+  MediaGenerationStoredSettings,
+  MediaGenerationTask,
+  MediaGenerationTaskOutput,
+} from './media-generation.types.js'
 export { AI_ASSISTANT_QUEUE, AI_ASSISTANT_CHAT_JOB } from './ai-assistant.constants.js'
 export {
+  ApiStockLlmProvider,
   OpenRouterLlmProvider,
   type ILlmProvider,
   type LlmChatMessage,

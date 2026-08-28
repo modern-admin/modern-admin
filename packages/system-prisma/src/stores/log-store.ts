@@ -1,6 +1,7 @@
 import {
   rowToLogEntry,
   uuidv7,
+  type ActionLogRetention,
   type ActionLogEntry,
   type ILogStore,
   type IQueryableLogStore,
@@ -10,6 +11,7 @@ import type { PrismaDelegate } from '../types.js'
 
 /** Applied when the caller passes no `limit`. Matches `MemoryLogStore`. */
 const DEFAULT_LIST_LIMIT = 50
+const PRUNE_BATCH_SIZE = 1_000
 
 export class PrismaLogStore implements IQueryableLogStore {
   constructor(private readonly delegate: PrismaDelegate<LogRow>) {}
@@ -75,6 +77,43 @@ export class PrismaLogStore implements IQueryableLogStore {
       ...(filter.offset !== undefined ? { skip: filter.offset } : {}),
     })
     return rows.map(rowToLogEntry)
+  }
+
+  /**
+   * Delete action-log entries outside the configured retention bounds.
+   * `keepLast` is global and deletions use an explicit id snapshot so a
+   * concurrent write can never be caught by a broad predicate.
+   */
+  async prune(retention: ActionLogRetention): Promise<number> {
+    let removed = 0
+
+    if (retention.keepDays !== undefined) {
+      const cutoff = new Date(Date.now() - retention.keepDays * 24 * 60 * 60 * 1000)
+      const result = await this.delegate.deleteMany({
+        where: { createdAt: { lt: cutoff } },
+      })
+      removed += result.count
+    }
+
+    if (retention.keepLast !== undefined) {
+      const keep = Math.max(0, Math.trunc(retention.keepLast))
+      while (true) {
+        const obsolete = (await this.delegate.findMany({
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          select: { id: true },
+          ...(keep > 0 ? { skip: keep } : {}),
+          take: PRUNE_BATCH_SIZE,
+        })) as unknown as Array<{ id: string }>
+        if (obsolete.length === 0) break
+
+        const result = await this.delegate.deleteMany({
+          where: { id: { in: obsolete.map((row) => row.id) } },
+        })
+        removed += result.count
+      }
+    }
+
+    return removed
   }
 }
 

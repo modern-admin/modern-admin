@@ -154,6 +154,8 @@ export type AiTaskStatus = z.infer<typeof aiTaskStatusZ>
  */
 export const aiTaskZ = z.object({
   id: z.uuid(),
+  /** Caller-generated key used to make paid or otherwise non-repeatable jobs idempotent. */
+  idempotencyKey: z.string().min(1).max(200).optional(),
   /** Logical task kind, e.g. `summarise`, `classify`, `chat`. */
   kind: z.string().min(1).max(120),
   resourceId: z.string().optional(),
