@@ -1,5 +1,30 @@
 # @modern-admin/i18n
 
+## 0.9.0
+
+### Minor Changes
+
+- [#30](https://github.com/modern-admin/modern-admin/pull/30) [`69f6c5d`](https://github.com/modern-admin/modern-admin/commit/69f6c5d5c8850c1b6bcf314284127d97a9975126) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Add API Stock as the built-in AI assistant provider and expose a provider-specific API key signup link in assistant settings.
+
+- [#30](https://github.com/modern-admin/modern-admin/pull/30) [`69f6c5d`](https://github.com/modern-admin/modern-admin/commit/69f6c5d5c8850c1b6bcf314284127d97a9975126) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Add webhook-driven API Stock image and video generation, dynamic model forms, private task updates, explicit paid-request confirmation, upload-backed record application, product-card actions, and AI assistant media drafts.
+
+### Patch Changes
+
+- [#33](https://github.com/modern-admin/modern-admin/pull/33) [`42d36b0`](https://github.com/modern-admin/modern-admin/commit/42d36b09166f23ad8ac644c4aead2341c13f25b2) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Gate creation UI by the server-advertised `new` action and show a forbidden state for direct creation URLs when the action is unavailable.
+  
+  Add creation-specific property visibility and ordering through `isVisible.new` and `newProperties`, with backwards-compatible fallback to the edit view, and replace empty creation/edit forms with a localized empty state without a submit action.
+
+- [#30](https://github.com/modern-admin/modern-admin/pull/30) [`69f6c5d`](https://github.com/modern-admin/modern-admin/commit/69f6c5d5c8850c1b6bcf314284127d97a9975126) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Hint the separator for array parameters in the media generation form. Fields
+  that accept multiple values (e.g. reference image URLs) now show "Separate
+  values with a comma or a new line." below the description, matching how the
+  input is parsed. Translated in all locales.
+
+- [#30](https://github.com/modern-admin/modern-admin/pull/30) [`69f6c5d`](https://github.com/modern-admin/modern-admin/commit/69f6c5d5c8850c1b6bcf314284127d97a9975126) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Replace the native `<select>` elements in the media generation form (model +
+  enum params) with the Radix `Select` dropdown so they match the rest of the
+  kit and the chevron sits inside the trigger padding instead of jamming against
+  the edge. Adds a `common:none` string for an optional param's "unset" choice
+  (Radix forbids an empty-string item value, so it rides a sentinel).
+
 ## 0.8.0
 
 ### Patch Changes

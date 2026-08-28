@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/api-stock",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "API Stock media-generation provider for Modern Admin.",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/api-stock#readme",
   "keywords": ["modern-admin", "api-stock", "image-generation", "video-generation"],
