@@ -66,4 +66,19 @@ describe('RetentionService', () => {
 
     await expect(definitions[0]!.handler({} as never)).rejects.toThrow('database unavailable')
   })
+
+  it('prunes audit logs even when history pruning fails', async () => {
+    const historyPrune = mock(() => Promise.reject(new Error('history unavailable')))
+    const auditPrune = mock(() => Promise.resolve(3))
+    const { cron, definitions } = fakeCron()
+    const service = new RetentionService({
+      history: { store: { prune: historyPrune }, keepDays: 30 },
+      auditLog: { store: { prune: auditPrune }, keepDays: 365 },
+    }, cron)
+    service.onModuleInit()
+
+    await expect(definitions[0]!.handler({} as never)).rejects.toThrow('history unavailable')
+    expect(historyPrune.mock.calls).toHaveLength(1)
+    expect(auditPrune.mock.calls).toHaveLength(1)
+  })
 })

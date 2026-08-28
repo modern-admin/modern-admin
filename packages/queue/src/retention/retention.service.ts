@@ -39,12 +39,28 @@ export class RetentionService implements OnModuleInit {
   /** Execute every configured retention target. Called by the BullMQ worker. */
   async run(): Promise<RetentionRunResult> {
     const result: RetentionRunResult = {}
+    const failures: unknown[] = []
 
     if (this.options.history && hasBounds(this.options.history)) {
-      result.history = await this.pruneHistory(this.options.history)
+      try {
+        result.history = await this.pruneHistory(this.options.history)
+      } catch (err: unknown) {
+        failures.push(err)
+      }
     }
     if (this.options.auditLog && hasBounds(this.options.auditLog)) {
-      result.auditLog = await this.pruneAuditLog(this.options.auditLog)
+      try {
+        result.auditLog = await this.pruneAuditLog(this.options.auditLog)
+      } catch (err: unknown) {
+        failures.push(err)
+      }
+    }
+
+    if (failures.length === 1) {
+      throw failures[0]
+    }
+    if (failures.length > 1) {
+      throw new AggregateError(failures, 'Multiple retention targets failed')
     }
 
     return result
