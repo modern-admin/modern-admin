@@ -33,6 +33,7 @@ export const pl: LocaleBundle = {
     'auth:loginFailed': 'Nieprawidłowe dane logowania.',
     'errors:notFound': 'Nie znaleziono.',
     'errors:forbidden': 'Brak dostępu do tego zasobu.',
+    'errors:noEditableProperties': 'W tym formularzu nie ma pól możliwych do edycji.',
     'errors:server': 'Coś poszło nie tak. Spróbuj ponownie.',
     'common:resources': 'Zasoby',
     'common:actions': 'Akcje',

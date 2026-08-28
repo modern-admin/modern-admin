@@ -33,6 +33,7 @@ export const fr: LocaleBundle = {
     'auth:loginFailed': 'Identifiants invalides.',
     'errors:notFound': 'Introuvable.',
     'errors:forbidden': 'Accès refusé à cette ressource.',
+    'errors:noEditableProperties': 'Aucun champ modifiable n’est disponible pour ce formulaire.',
     'errors:server': 'Une erreur est survenue. Veuillez réessayer.',
     'common:resources': 'Ressources',
     'common:actions': 'Actions',

@@ -83,6 +83,29 @@ describe('relations helpers', () => {
     ).toEqual(['email'])
   })
 
+  test('new visibility falls back to edit for older server payloads', () => {
+    const properties = [
+      prop({ path: 'editable', visibility: { list: true, show: true, edit: true, filter: true } }),
+      prop({ path: 'readOnly', visibility: { list: true, show: true, edit: false, filter: true } }),
+    ]
+
+    expect(visibleRecordProperties(properties, 'new').map((p) => p.path)).toEqual(['editable'])
+  })
+
+  test('new visibility can opt a creation-only field in', () => {
+    const properties = [
+      prop({
+        path: 'immutableAfterCreate',
+        visibility: { list: true, show: true, new: true, edit: false, filter: true },
+      }),
+    ]
+
+    expect(visibleRecordProperties(properties, 'new').map((p) => p.path)).toEqual([
+      'immutableAfterCreate',
+    ])
+    expect(visibleRecordProperties(properties, 'edit')).toEqual([])
+  })
+
   test('derives related resources from inverse foreign keys', () => {
     const users = resource({
       id: 'users',

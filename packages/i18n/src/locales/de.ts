@@ -33,6 +33,7 @@ export const de: LocaleBundle = {
     'auth:loginFailed': 'Ungültige Zugangsdaten.',
     'errors:notFound': 'Nicht gefunden.',
     'errors:forbidden': 'Kein Zugriff auf diese Ressource.',
+    'errors:noEditableProperties': 'Für dieses Formular sind keine bearbeitbaren Felder verfügbar.',
     'errors:server': 'Etwas ist schiefgelaufen. Bitte erneut versuchen.',
     'common:resources': 'Ressourcen',
     'common:actions': 'Aktionen',

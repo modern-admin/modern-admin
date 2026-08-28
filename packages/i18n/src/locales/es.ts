@@ -33,6 +33,7 @@ export const es: LocaleBundle = {
     'auth:loginFailed': 'Credenciales no válidas.',
     'errors:notFound': 'No encontrado.',
     'errors:forbidden': 'No tienes acceso a este recurso.',
+    'errors:noEditableProperties': 'No hay campos editables disponibles para este formulario.',
     'errors:server': 'Algo salió mal. Inténtalo de nuevo.',
     'common:resources': 'Recursos',
     'common:actions': 'Acciones',

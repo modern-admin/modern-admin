@@ -103,6 +103,8 @@ export const resourceOptionsZ = z.object({
   /** Listing defaults — props & sort. */
   listProperties: z.array(z.string()).optional(),
   showProperties: z.array(z.string()).optional(),
+  /** Creation-form whitelist/order. Falls back to `editProperties`. */
+  newProperties: z.array(z.string()).optional(),
   editProperties: z.array(z.string()).optional(),
   filterProperties: z.array(z.string()).optional(),
   sort: z

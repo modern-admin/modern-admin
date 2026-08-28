@@ -33,6 +33,7 @@ export const ptBR: LocaleBundle = {
     'auth:loginFailed': 'Credenciais inválidas.',
     'errors:notFound': 'Não encontrado.',
     'errors:forbidden': 'Você não tem acesso a este recurso.',
+    'errors:noEditableProperties': 'Não há campos editáveis disponíveis neste formulário.',
     'errors:server': 'Algo deu errado. Tente novamente.',
     'common:resources': 'Recursos',
     'common:actions': 'Ações',

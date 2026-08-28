@@ -33,6 +33,7 @@ export const ja: LocaleBundle = {
     'auth:loginFailed': '認証情報が無効です。',
     'errors:notFound': '見つかりません。',
     'errors:forbidden': 'このリソースへのアクセス権がありません。',
+    'errors:noEditableProperties': 'このフォームで編集できるフィールドはありません。',
     'errors:server': 'エラーが発生しました。再試行してください。',
     'common:resources': 'リソース',
     'common:actions': 'アクション',
