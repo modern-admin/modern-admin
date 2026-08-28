@@ -1,28 +1,5 @@
 # @modern-admin/ui
 
-## 0.9.0
-
-### Patch Changes
-
-- [#30](https://github.com/modern-admin/modern-admin/pull/30) [`69f6c5d`](https://github.com/modern-admin/modern-admin/commit/69f6c5d5c8850c1b6bcf314284127d97a9975126) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Cap `DialogContent` height at the viewport (`max-h-[calc(100dvh-2rem)]`) and
-  scroll overflow instead of clipping it. Tall modals (e.g. the media generation
-  form) previously rendered content below the fold with no way to reach it. The
-  close button is pinned above the scrolled content, and call-sites can still
-  override `max-h`/`overflow`/padding via `className` (command palette, chart
-  builder).
-
-- [#30](https://github.com/modern-admin/modern-admin/pull/30) [`69f6c5d`](https://github.com/modern-admin/modern-admin/commit/69f6c5d5c8850c1b6bcf314284127d97a9975126) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Fix the `MediaPreview` URL text overflowing its container on the show page. The
-  URL now renders on its own line under the "Preview" button, fills the available
-  width, and truncates in the **middle** (`http://…/thumb.png`) so both the origin
-  and the file name stay visible — instead of spilling past narrow columns or
-  clipping only the (most useful) tail. The full URL remains in a `title` tooltip.
-
-- [#30](https://github.com/modern-admin/modern-admin/pull/30) [`69f6c5d`](https://github.com/modern-admin/modern-admin/commit/69f6c5d5c8850c1b6bcf314284127d97a9975126) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Stop the `Select` dropdown from reserving a permanent 24px slot above the first
-  and below the last option. The scroll chevrons are now absolutely positioned
-  overlays that Radix only mounts while the list can scroll, so short lists no
-  longer render large empty gaps and the list still doesn't jump when the buttons
-  appear/disappear mid-scroll.
-
 ## 0.7.0
 
 ### Minor Changes
