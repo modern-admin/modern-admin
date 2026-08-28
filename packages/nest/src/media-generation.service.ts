@@ -103,10 +103,14 @@ export class MediaGenerationService implements OnApplicationBootstrap {
   private readonly applyChains = new Map<string, Promise<MediaGenerationTask>>()
 
   /**
-   * Per-user budget reservation serialization. Concurrent requests for the same
-   * user near the monthly limit are admitted one at a time so each sees the
-   * prior reservation's cost — otherwise they either all read a stale total and
-   * overspend, or all include each other's pending cost and all reject.
+   * Per-user budget reservation serialization. Within one process, concurrent
+   * requests for the same user near the monthly limit are admitted one at a time
+   * so each sees the prior reservation's cost. This is a single-instance
+   * optimization only: across instances sharing a SQL task store there is no
+   * shared lock, so cross-instance concurrency falls back to the reserve-then-
+   * check safety net (see `reserveWithinBudget`). The monthly budget is an
+   * estimated soft cap, so exact multi-instance enforcement — which would need a
+   * distributed lock or a serializable reservation transaction — is out of scope.
    */
   private readonly budgetChains = new Map<string, Promise<unknown>>()
 
@@ -518,9 +522,18 @@ export class MediaGenerationService implements OnApplicationBootstrap {
 
   /**
    * Enqueue a task as a budget reservation, then check the monthly budget.
-   * Reservations for the same user are serialized so concurrent requests near
-   * the limit are admitted one-by-one; a rejected reservation is failed so its
-   * cost stops counting. Serialization is skipped when no budget is configured.
+   *
+   * The reservation is enqueued (recording its estimated cost) *before* the
+   * budget is summed, so a competing request that reads the total afterwards
+   * counts it. This is the cross-instance safety net: it bounds any overspend to
+   * the tasks still in flight when two instances race, and never leaks budget
+   * permanently because a rejected reservation is failed and stops counting.
+   *
+   * On top of that, same-user reservations are serialized *within this process*
+   * so single-instance concurrency admits exactly one contender instead of
+   * over-rejecting. Serialization is skipped when no budget is configured. Exact
+   * enforcement across instances is intentionally not implemented — see the note
+   * on `budgetChains`.
    */
   private async reserveWithinBudget(
     enqueueInput: Parameters<IAiTaskStore['enqueue']>[0],
