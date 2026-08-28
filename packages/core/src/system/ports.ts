@@ -26,9 +26,27 @@ import type {
 
 // ─── Logs ─────────────────────────────────────────────────────────────────
 
+/**
+ * Retention policy for the append-only action log.
+ *
+ * `keepLast` is global (across every resource/action), unlike history where
+ * the same bound is applied independently to each record.
+ */
+export interface ActionLogRetention {
+  /** Keep at most this many of the newest action-log entries overall. */
+  keepLast?: number
+  /** Drop entries older than this many days (relative to now). */
+  keepDays?: number
+}
+
 /** Action log sink. See `ActionLogEntry` in `./schemas.js`. */
 export interface ILogStore {
   record(entry: ActionLogEntry): void | Promise<void>
+  /**
+   * Enforce a retention policy. Optional for sinks that retain externally
+   * (for example stdout or a hosted log pipeline).
+   */
+  prune?(retention: ActionLogRetention): Promise<number>
 }
 
 /** Optional history-style log readback (not all stores support it). */

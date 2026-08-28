@@ -50,6 +50,9 @@
     "test": "bun test",
     "lint": "eslint ."
   },
+  "dependencies": {
+    "@modern-admin/core": "workspace:^"
+  },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
     "@nestjs/bullmq": "^11.0.5",

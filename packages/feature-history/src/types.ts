@@ -20,11 +20,12 @@ export interface HistoryFeatureOptions {
   excludeFields?: string[]
   /**
    * Keep at most this many of the most recent revisions per record.
-   * Applied to the default in-memory store and, when the wired store
-   * implements `prune`, enforced after every append.
+   * Only bounds the feature's automatic in-memory fallback. Persistent-store
+   * retention belongs in `RetentionModule` from `@modern-admin/queue`, where
+   * it runs as a durable BullMQ maintenance task.
    */
   keepLast?: number
-  /** Drop revisions older than this many days. See {@link keepLast}. */
+  /** Bound the automatic in-memory fallback by age. See {@link keepLast}. */
   keepDays?: number
   /**
    * Include secret fields in snapshots. By default properties typed

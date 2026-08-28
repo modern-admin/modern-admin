@@ -149,21 +149,21 @@ describe('historyFeature', () => {
     expect(store.entries[0]!.snapshot).toEqual({ name: 'Alice', pw: 'secret' })
   })
 
-  it('enforces keepLast retention through the after-hook', async () => {
-    const store = new MemoryHistoryStore()
+  it('does not prune persistent stores from the request after-hook', async () => {
+    const prune = mock(() => Promise.resolve(0))
+    const store = Object.assign(new MemoryHistoryStore(), { prune })
     const [hook] = getAfter(
       historyFeature({ store, keepLast: 2 })(emptyOptions).actions,
       'new',
     )
-    for (let i = 0; i < 5; i++) {
-      await hook!(
-        { record: { id: '1', params: { name: `n${i}` } } },
-        fakeRequest(),
-        fakeContext(),
-      )
-    }
-    expect(store.entries).toHaveLength(2)
-    expect(store.entries.map((e) => e.snapshot.name).sort()).toEqual(['n3', 'n4'])
+    await hook!(
+      { record: { id: '1', params: { name: 'Alice' } } },
+      fakeRequest(),
+      fakeContext(),
+    )
+    await Promise.resolve()
+
+    expect(prune).not.toHaveBeenCalled()
   })
 
   it('swallows store failures', async () => {

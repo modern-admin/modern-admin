@@ -153,36 +153,19 @@ function buildEditBeforeHook(options: HistoryFeatureOptions): BeforeHook {
 
 function buildAfterHook(
   actionName: HistoryActionName,
-  options: Required<Pick<HistoryFeatureOptions, 'userIdResolver'>> & HistoryFeatureOptions & {
-    retention: HistoryRetention
-  },
+  options: Required<Pick<HistoryFeatureOptions, 'userIdResolver'>> & HistoryFeatureOptions,
 ): AfterHook {
-  const store = resolveStore(options.store, options.retention)
+  const store = resolveStore(options.store)
   const userExcluded = options.excludeFields ?? []
   const includeSecrets = options.includeSecrets ?? false
-  const retention = options.retention
-  const hasRetention = retention.keepLast !== undefined || retention.keepDays !== undefined
-
-  // Drive retention for stores that support pruning (the default memory
-  // store already self-trims on append via its constructor policy; this
-  // also covers host-supplied database stores that implement `prune`).
-  const enforceRetention = async (): Promise<void> => {
-    if (!hasRetention || typeof store.prune !== 'function') return
-    try {
-      await store.prune(retention)
-    } catch (err) {
-      console.warn('[history] prune failed', err)
-    }
-  }
 
   // Persist off the hot path: the mutation response must not wait on the
-  // history write. `append` + retention run in the background; any failure
-  // is logged, never surfaced (versioning must never break the mutation).
+  // history write. Retention is a separate BullMQ maintenance task provided
+  // by `@modern-admin/queue`; request handlers never run database pruning.
   const persist = (input: Parameters<typeof store.append>[0]): void => {
     void (async () => {
       try {
         await store.append(input)
-        await enforceRetention()
       } catch (err) {
         console.warn('[history] failed to record revision', err)
       }
@@ -279,7 +262,6 @@ export function historyFeature(options: HistoryFeatureOptions = {}): FeatureFn {
   const resolved = {
     ...options,
     store,
-    retention,
     userIdResolver: options.userIdResolver ?? defaultUserIdResolver,
   }
 
