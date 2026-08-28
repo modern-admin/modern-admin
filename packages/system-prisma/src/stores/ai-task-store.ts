@@ -89,6 +89,7 @@ export class PrismaAiTaskStore implements IAiTaskStore {
       progress?: number | null
       output?: Record<string, unknown>
       error?: string
+      expectedStatus?: AiTaskStatus[]
     },
   ): Promise<AiTask> {
     const data: Record<string, unknown> = { status: patch.status }
@@ -102,6 +103,18 @@ export class PrismaAiTaskStore implements IAiTaskStore {
     }
     if (TERMINAL.includes(patch.status)) {
       data['finishedAt'] = new Date()
+    }
+    if (patch.expectedStatus) {
+      // Atomic guarded write: the WHERE clause makes the update a no-op unless
+      // the row is still in an expected status, so a concurrent cancel/finalize
+      // is never overwritten. Return the current row either way.
+      await this.taskDelegate.updateMany({
+        where: { id, status: { in: patch.expectedStatus } },
+        data,
+      })
+      const row = await this.taskDelegate.findUnique({ where: { id } })
+      if (!row) throw new Error(`AI task not found: ${id}`)
+      return rowToTask(row)
     }
     const row = await this.taskDelegate.update({ where: { id }, data })
     return rowToTask(row)

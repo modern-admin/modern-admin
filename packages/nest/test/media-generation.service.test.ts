@@ -280,10 +280,13 @@ describe('MediaGenerationService', () => {
       service.createTask({ requestId: 'c-2', model: 'flux', input: { prompt: 'B' } }, currentAdmin),
     ])
 
-    // Only one 0.10 request fits under the 0.15 cap — the reservation must stop
-    // both concurrent requests from submitting a paid provider call.
-    expect(provider.creates.length).toBeLessThanOrEqual(1)
-    expect(results.some((r) => r.status === 'rejected')).toBe(true)
+    // Exactly one 0.10 request fits under the 0.15 cap: per-user reservation
+    // serialization admits one and rejects the other — never both, never none.
+    expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1)
+    const rejected = results.filter((r) => r.status === 'rejected') as PromiseRejectedResult[]
+    expect(rejected).toHaveLength(1)
+    expect(String(rejected[0]!.reason?.message)).toContain('monthly budget')
+    expect(provider.creates).toHaveLength(1)
 
     const tasks = await aiTaskStore.list({ kind: MEDIA_GENERATION_TASK_KIND, userId: 'admin-1' })
     const reserved = tasks

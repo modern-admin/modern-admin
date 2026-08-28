@@ -102,6 +102,14 @@ export class MediaGenerationService implements OnApplicationBootstrap {
    */
   private readonly applyChains = new Map<string, Promise<MediaGenerationTask>>()
 
+  /**
+   * Per-user budget reservation serialization. Concurrent requests for the same
+   * user near the monthly limit are admitted one at a time so each sees the
+   * prior reservation's cost — otherwise they either all read a stale total and
+   * overspend, or all include each other's pending cost and all reject.
+   */
+  private readonly budgetChains = new Map<string, Promise<unknown>>()
+
   constructor(
     @Inject(MODERN_ADMIN) private readonly admin: ModernAdmin,
     @Inject(MODERN_ADMIN_OPTIONS) private readonly options: ModernAdminModuleOptions,
@@ -195,29 +203,23 @@ export class MediaGenerationService implements OnApplicationBootstrap {
     const existing = await taskStore.getByIdempotencyKey?.(idempotencyKey)
     if (existing) return this.assertTaskOwner(existing, currentAdmin)
     const estimatedCostUsd = estimateMediaGenerationPrice(model, input.input)
-    // Reserve first, then check the budget: enqueueing records this task's
-    // estimated cost so a concurrent request for the same user sums it in and
-    // cannot slip past a stale total. A rejected reservation is failed below so
-    // its cost is excluded from future sums.
-    const task = await taskStore.enqueue({
-      kind: MEDIA_GENERATION_TASK_KIND,
-      idempotencyKey,
-      ...(target ? { resourceId: target.resourceId, recordId: target.recordId } : {}),
-      ...(userId ? { userId } : {}),
-      input: {
-        requestId: input.requestId,
-        model: input.model,
-        generationInput: input.input,
-        ...(estimatedCostUsd !== null ? { estimatedCostUsd } : {}),
-        ...(target ? { target } : {}),
+    const task = await this.reserveWithinBudget(
+      {
+        kind: MEDIA_GENERATION_TASK_KIND,
+        idempotencyKey,
+        ...(target ? { resourceId: target.resourceId, recordId: target.recordId } : {}),
+        ...(userId ? { userId } : {}),
+        input: {
+          requestId: input.requestId,
+          model: input.model,
+          generationInput: input.input,
+          ...(estimatedCostUsd !== null ? { estimatedCostUsd } : {}),
+          ...(target ? { target } : {}),
+        },
       },
-    })
-    try {
-      await this.assertMonthlyBudget(estimatedCostUsd, userId, task.id)
-    } catch (error) {
-      await taskStore.updateStatus(task.id, { status: 'failed', progress: 100, error: safeError(error) })
-      throw error
-    }
+      estimatedCostUsd,
+      userId,
+    )
     const claimed = await taskStore.claim(task.id)
     if (!claimed) return this.assertTaskOwner(task, currentAdmin)
 
@@ -514,6 +516,40 @@ export class MediaGenerationService implements OnApplicationBootstrap {
     }
   }
 
+  /**
+   * Enqueue a task as a budget reservation, then check the monthly budget.
+   * Reservations for the same user are serialized so concurrent requests near
+   * the limit are admitted one-by-one; a rejected reservation is failed so its
+   * cost stops counting. Serialization is skipped when no budget is configured.
+   */
+  private async reserveWithinBudget(
+    enqueueInput: Parameters<IAiTaskStore['enqueue']>[0],
+    estimatedCostUsd: number | null,
+    userId: string | undefined,
+  ): Promise<AiTask> {
+    const store = this.requireTaskStore()
+    const reserve = async (): Promise<AiTask> => {
+      const task = await store.enqueue(enqueueInput)
+      try {
+        await this.assertMonthlyBudget(estimatedCostUsd, userId, task.id)
+      } catch (error) {
+        await store.updateStatus(task.id, { status: 'failed', progress: 100, error: safeError(error) })
+        throw error
+      }
+      return task
+    }
+    if (this.config.monthlyBudgetUsdPerUser === undefined || !userId) return reserve()
+    const prior = this.budgetChains.get(userId) ?? Promise.resolve()
+    const result = prior.then(() => reserve())
+    const tail = result.then(() => undefined, () => undefined)
+    this.budgetChains.set(userId, tail)
+    try {
+      return await result
+    } finally {
+      if (this.budgetChains.get(userId) === tail) this.budgetChains.delete(userId)
+    }
+  }
+
   private toPublicSettings(
     settings: MediaGenerationStoredSettings,
     currentAdmin?: CurrentAdmin,
@@ -704,7 +740,12 @@ export class MediaGenerationService implements OnApplicationBootstrap {
       progress,
       output: { ...outputOf(current), ...this.resultOutput(result) },
       ...(error ? { error } : {}),
+      // Atomic guard: if a cancel lands between the read above and this write,
+      // the store leaves the terminal row untouched and we bail below without
+      // resurrecting or publishing it.
+      expectedStatus: ['pending', 'running'],
     })
+    if (updated.status !== status) return
     await store.appendEvent(current.id, 'provider-status', {
       status: result.status,
       fileCount: result.files.length,
