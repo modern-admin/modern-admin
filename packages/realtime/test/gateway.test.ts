@@ -130,6 +130,7 @@ describe('RealtimeGateway', () => {
       })
       expect(err).toBeUndefined()
       expect(socket.data?.currentAdmin?.id).toBe('admin-1')
+      expect(socket.joined).toContain('modern-admin:user:admin-1')
     })
 
     it('rejects anonymous handshakes (getCurrentUser returns null)', async () => {
@@ -148,6 +149,26 @@ describe('RealtimeGateway', () => {
       // Must not throw when the server exposes no `use`.
       expect(() => gateway.afterInit(bare as never)).not.toThrow()
     })
+  })
+
+  it('sends private task events only to the intended user room', () => {
+    const event: RealtimeEvent = {
+      kind: 'taskUpdated',
+      resourceId: '__media_generation__',
+      recordId: 'task-1',
+      taskId: 'task-1',
+      taskStatus: 'succeeded',
+      audienceUserId: 'admin-1',
+      at: 1700000000000,
+    }
+
+    gateway.broadcast(event)
+
+    expect(server.roomEmits).toEqual([{
+      room: 'modern-admin:user:admin-1',
+      event: REALTIME_EVENT,
+      payload: event,
+    }])
   })
 
   describe('per-principal room gating', () => {

@@ -52,6 +52,7 @@
   },
   "dependencies": {
     "@modern-admin/core": "workspace:^",
+    "@modern-admin/feature-upload": "workspace:^",
     "@modern-admin/i18n": "workspace:^",
     "@modern-admin/queue": "workspace:^",
     "@nestjs/bullmq": "^11.0.5",
@@ -72,6 +73,7 @@
     "typescript": "^7.0.2"
   },
   "peerDependencies": {
+    "@ai-sdk/openai-compatible": "^3.0.35",
     "@openrouter/ai-sdk-provider": "^3.0.0",
     "@scalar/nestjs-api-reference": "^1.2.14",
     "express": "^5.2.1",
@@ -79,6 +81,9 @@
     "ai": "^7.0.66"
   },
   "peerDependenciesMeta": {
+    "@ai-sdk/openai-compatible": {
+      "optional": true
+    },
     "@openrouter/ai-sdk-provider": {
       "optional": true
     },

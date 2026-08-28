@@ -2,7 +2,11 @@
 // pulling axios — the host browser already has fetch, and TanStack Query gives
 // us retry/dedup/caching anyway.
 
-import type { DashboardBlob } from '@modern-admin/core'
+import type {
+  DashboardBlob,
+  MediaGenerationCatalogModel,
+  MediaGenerationFileType,
+} from '@modern-admin/core'
 import type {
   AdminConfig,
   CustomActionResponse,
@@ -147,6 +151,13 @@ export interface IAdminClient {
   sendAiAssistantChat(messages: AiAssistantChatMessage[], requestId?: string, locale?: string, conversationId?: string, clientContext?: AiClientContext): Promise<AiAssistantChatEnqueueResponse>
   listAiAssistantChats(): Promise<AiAssistantChatHistoryItem[]>
   getAiAssistantTask(taskId: string): Promise<AiAssistantTask>
+  getMediaGenerationSettings(): Promise<MediaGenerationSettings>
+  updateMediaGenerationSettings(payload: { enabled: boolean; apiKey?: string }): Promise<MediaGenerationSettings>
+  getMediaGenerationCatalog(): Promise<MediaGenerationCatalogModel[]>
+  createMediaGenerationTask(payload: CreateMediaGenerationTaskInput): Promise<MediaGenerationTask>
+  getMediaGenerationTask(taskId: string): Promise<MediaGenerationTask>
+  cancelMediaGenerationTask(taskId: string): Promise<MediaGenerationTask>
+  applyMediaGenerationTask(taskId: string, payload: { fileIndex: number; replaceExisting?: boolean }): Promise<MediaGenerationTask>
 }
 
 export class AdminClient implements IAdminClient {
@@ -915,6 +926,54 @@ export class AdminClient implements IAdminClient {
     return this.request<AiAssistantTask>(`/admin/api/ai-assistant/tasks/${encodeURIComponent(taskId)}`)
   }
 
+  getMediaGenerationSettings(): Promise<MediaGenerationSettings> {
+    return this.request<MediaGenerationSettings>('/admin/api/media-generation/settings')
+  }
+
+  updateMediaGenerationSettings(payload: {
+    enabled: boolean
+    apiKey?: string
+  }): Promise<MediaGenerationSettings> {
+    return this.request<MediaGenerationSettings>('/admin/api/media-generation/settings', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    })
+  }
+
+  getMediaGenerationCatalog(): Promise<MediaGenerationCatalogModel[]> {
+    return this.request<MediaGenerationCatalogModel[]>('/admin/api/media-generation/catalog')
+  }
+
+  createMediaGenerationTask(payload: CreateMediaGenerationTaskInput): Promise<MediaGenerationTask> {
+    return this.request<MediaGenerationTask>('/admin/api/media-generation/tasks', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  }
+
+  getMediaGenerationTask(taskId: string): Promise<MediaGenerationTask> {
+    return this.request<MediaGenerationTask>(
+      `/admin/api/media-generation/tasks/${encodeURIComponent(taskId)}`,
+    )
+  }
+
+  cancelMediaGenerationTask(taskId: string): Promise<MediaGenerationTask> {
+    return this.request<MediaGenerationTask>(
+      `/admin/api/media-generation/tasks/${encodeURIComponent(taskId)}/cancel`,
+      { method: 'POST' },
+    )
+  }
+
+  applyMediaGenerationTask(
+    taskId: string,
+    payload: { fileIndex: number; replaceExisting?: boolean },
+  ): Promise<MediaGenerationTask> {
+    return this.request<MediaGenerationTask>(
+      `/admin/api/media-generation/tasks/${encodeURIComponent(taskId)}/apply`,
+      { method: 'POST', body: JSON.stringify(payload) },
+    )
+  }
+
 }
 
 // ─── Time-series ──────────────────────────────────────────────────────────
@@ -1126,6 +1185,8 @@ export interface AiAssistantSettings {
   enabled: boolean
   configured: boolean
   provider: string
+  providerName: string
+  apiKeyUrl: string | null
   model: string
   maskedApiKey: string | null
   systemPrompt: string
@@ -1160,6 +1221,7 @@ export type AiNavigateRoute =
 export type AiUiAction =
   | { kind: 'navigate'; route: AiNavigateRoute }
   | { kind: 'refresh'; target: 'dashboard' }
+  | { kind: 'open-media-generation'; prompt: string; mediaType?: 'image' | 'video' | 'music' }
 
 export interface AiAssistantCitation {
   resourceId: string
@@ -1200,6 +1262,58 @@ export interface AiAssistantTask {
     citations?: AiAssistantCitation[]
     toolCalls?: Array<{ toolName: string }>
     uiActions?: AiUiAction[]
+    [key: string]: unknown
+  }
+  error?: string
+  progress: number | null
+  createdAt: string
+  updatedAt: string
+  startedAt?: string
+  finishedAt?: string
+}
+
+export interface MediaGenerationSettings {
+  enabled: boolean
+  configured: boolean
+  provider: string
+  providerName: string
+  apiKeyUrl: string | null
+  maskedApiKey: string | null
+  canManage: boolean
+  canGenerate: boolean
+}
+
+export interface CreateMediaGenerationTaskInput {
+  requestId: string
+  model: string
+  input: Record<string, unknown>
+  resourceId?: string
+  recordId?: string
+  actionName?: string
+}
+
+export interface MediaGenerationTask {
+  id: string
+  kind: string
+  resourceId?: string
+  recordId?: string
+  userId?: string
+  status: 'pending' | 'running' | 'succeeded' | 'failed' | 'cancelled'
+  input: Record<string, unknown>
+  output?: {
+    providerTaskId?: string
+    providerStatus?: string
+    files?: Array<{ url: string; type: MediaGenerationFileType }>
+    providerOutput?: Record<string, unknown>
+    applied?: {
+      fileIndex: number
+      key: string
+      url: string
+      resourceId: string
+      recordId: string
+      property: string
+      appliedAt: string
+    }
     [key: string]: unknown
   }
   error?: string

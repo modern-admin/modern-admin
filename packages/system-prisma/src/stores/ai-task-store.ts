@@ -21,19 +21,27 @@ export class PrismaAiTaskStore implements IAiTaskStore {
   ) {}
 
   async enqueue(input: AiTaskInput): Promise<AiTask> {
-    const row = await this.taskDelegate.create({
-      data: {
-        id: uuidv7(),
-        kind: input.kind,
-        resourceId: input.resourceId ?? null,
-        recordId: input.recordId ?? null,
-        userId: input.userId ?? null,
-        status: 'pending',
-        input: input.input ?? {},
-        progress: null,
-      },
-    })
-    return rowToTask(row)
+    try {
+      const row = await this.taskDelegate.create({
+        data: {
+          id: uuidv7(),
+          idempotencyKey: input.idempotencyKey ?? null,
+          kind: input.kind,
+          resourceId: input.resourceId ?? null,
+          recordId: input.recordId ?? null,
+          userId: input.userId ?? null,
+          status: 'pending',
+          input: input.input ?? {},
+          progress: null,
+        },
+      })
+      return rowToTask(row)
+    } catch (error) {
+      if (!input.idempotencyKey) throw error
+      const existing = await this.getByIdempotencyKey(input.idempotencyKey)
+      if (!existing) throw error
+      return existing
+    }
   }
 
   async get(id: string): Promise<AiTask | null> {
@@ -41,15 +49,31 @@ export class PrismaAiTaskStore implements IAiTaskStore {
     return row ? rowToTask(row) : null
   }
 
+  async claim(id: string): Promise<AiTask | null> {
+    const result = await this.taskDelegate.updateMany({
+      where: { id, status: 'pending' },
+      data: { status: 'running', progress: 5, startedAt: new Date() },
+    })
+    if (result.count === 0) return null
+    return this.get(id)
+  }
+
+  async getByIdempotencyKey(idempotencyKey: string): Promise<AiTask | null> {
+    const row = await this.taskDelegate.findUnique({ where: { idempotencyKey } })
+    return row ? rowToTask(row) : null
+  }
+
   async list(filter: Parameters<IAiTaskStore['list']>[0] = {}): Promise<AiTask[]> {
     const where: Record<string, unknown> = {}
     if (filter.kind) where['kind'] = filter.kind
+    if (filter.idempotencyKey) where['idempotencyKey'] = filter.idempotencyKey
     if (filter.status) {
       const list = Array.isArray(filter.status) ? filter.status : [filter.status]
       where['status'] = { in: list }
     }
     if (filter.userId) where['userId'] = filter.userId
     if (filter.resourceId) where['resourceId'] = filter.resourceId
+    if (filter.createdAfter) where['createdAt'] = { gte: new Date(filter.createdAfter) }
     const rows = await this.taskDelegate.findMany({
       where,
       orderBy: { createdAt: 'desc' },

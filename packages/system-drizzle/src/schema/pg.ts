@@ -29,7 +29,7 @@
  */
 
 import { sql } from 'drizzle-orm'
-import { bigint, boolean, index, integer, jsonb, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core'
+import { bigint, boolean, index, integer, jsonb, pgTable, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 
 // ─── Better Auth ──────────────────────────────────────────────────────────
 
@@ -285,6 +285,7 @@ export const maAiTask = pgTable(
   'ma_ai_task',
   {
     id: uuid('id').primaryKey().defaultRandom(),
+    idempotencyKey: text('idempotency_key'),
     kind: text('kind').notNull(),
     resourceId: text('resource_id'),
     recordId: text('record_id'),
@@ -300,6 +301,7 @@ export const maAiTask = pgTable(
     finishedAt: timestamp('finished_at', { withTimezone: true }),
   },
   (t) => ({
+    idempotencyKeyIdx: uniqueIndex('ma_ai_task_idempotency_key_uq').on(t.idempotencyKey),
     kindStatusIdx: index('ma_ai_task_kind_status_idx').on(t.kind, t.status),
     userIdx: index('ma_ai_task_user_idx').on(t.userId),
     recordIdx: index('ma_ai_task_record_idx').on(t.resourceId, t.recordId),

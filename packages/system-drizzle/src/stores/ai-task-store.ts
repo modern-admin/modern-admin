@@ -10,7 +10,7 @@ import {
   type IAiTaskStore,
   type TaskRow,
 } from '@modern-admin/core'
-import { and, asc, desc, eq, inArray, type SQL } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, inArray, type SQL } from 'drizzle-orm'
 import type { DrizzleLike, SystemTables } from '../types.js'
 
 const TERMINAL: AiTaskStatus[] = ['succeeded', 'failed', 'cancelled']
@@ -23,10 +23,11 @@ export class DrizzleAiTaskStore implements IAiTaskStore {
   ) {}
 
   async enqueue(input: AiTaskInput): Promise<AiTask> {
-    const rows = (await this.db
+    const insert = this.db
       .insert(this.taskTable)
       .values({
         id: uuidv7(),
+        idempotencyKey: input.idempotencyKey ?? null,
         kind: input.kind,
         resourceId: input.resourceId ?? null,
         recordId: input.recordId ?? null,
@@ -35,8 +36,14 @@ export class DrizzleAiTaskStore implements IAiTaskStore {
         input: input.input ?? {},
         progress: null,
       })
-      .returning()) as TaskRow[]
-    return rowToTask(rows[0]!)
+    const query = input.idempotencyKey
+      ? insert.onConflictDoNothing({ target: this.taskTable.idempotencyKey })
+      : insert
+    const rows = (await query.returning()) as TaskRow[]
+    if (rows[0]) return rowToTask(rows[0])
+    const existing = await this.getByIdempotencyKey(input.idempotencyKey!)
+    if (!existing) throw new Error('Failed to enqueue idempotent AI task')
+    return existing
   }
 
   async get(id: string): Promise<AiTask | null> {
@@ -48,15 +55,37 @@ export class DrizzleAiTaskStore implements IAiTaskStore {
     return rows[0] ? rowToTask(rows[0]) : null
   }
 
+  async claim(id: string): Promise<AiTask | null> {
+    const rows = (await this.db
+      .update(this.taskTable)
+      .set({ status: 'running', progress: 5, startedAt: new Date(), updatedAt: new Date() })
+      .where(and(eq(this.taskTable.id, id), eq(this.taskTable.status, 'pending')))
+      .returning()) as TaskRow[]
+    return rows[0] ? rowToTask(rows[0]) : null
+  }
+
+  async getByIdempotencyKey(idempotencyKey: string): Promise<AiTask | null> {
+    const rows = (await this.db
+      .select()
+      .from(this.taskTable)
+      .where(eq(this.taskTable.idempotencyKey, idempotencyKey))
+      .limit(1)) as TaskRow[]
+    return rows[0] ? rowToTask(rows[0]) : null
+  }
+
   async list(filter: Parameters<IAiTaskStore['list']>[0] = {}): Promise<AiTask[]> {
     const conds: SQL[] = []
     if (filter.kind) conds.push(eq(this.taskTable.kind, filter.kind))
+    if (filter.idempotencyKey) conds.push(eq(this.taskTable.idempotencyKey, filter.idempotencyKey))
     if (filter.status) {
       const list = Array.isArray(filter.status) ? filter.status : [filter.status]
       conds.push(inArray(this.taskTable.status, list))
     }
     if (filter.userId) conds.push(eq(this.taskTable.userId, filter.userId))
     if (filter.resourceId) conds.push(eq(this.taskTable.resourceId, filter.resourceId))
+    if (filter.createdAfter) {
+      conds.push(gte(this.taskTable.createdAt, new Date(filter.createdAfter)))
+    }
 
     let q = this.db.select().from(this.taskTable)
     if (conds.length) q = q.where(conds.length === 1 ? conds[0] : and(...conds))

@@ -5,6 +5,9 @@ import {
   Button,
   Card,
   CardContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -36,6 +39,8 @@ import type {
   AiUiAction,
 } from '../client.js'
 import { emitDashboardReload } from '../use-dashboard-charts.js'
+import { useDialogs } from '../dialogs.js'
+import { MediaGenerationForm } from './media-generation-form.js'
 
 interface ChatItem {
   id: string
@@ -79,6 +84,7 @@ export function AiAssistantWidget(): React.ReactElement | null {
   const queryClient = useQueryClient()
   const notify = useNotify()
   const navigate = useNavigate()
+  const dialogs = useDialogs()
   const basepath = useBasepath()
   const { locale, t } = useI18n()
   const [open, setOpen] = React.useState(false)
@@ -185,6 +191,25 @@ export function AiAssistantWidget(): React.ReactElement | null {
         if (action.kind === 'navigate') {
           setOpen(false)
           navigate(action.route)
+          continue
+        }
+        if (action.kind === 'open-media-generation') {
+          setOpen(false)
+          void dialogs.open({
+            className: 'sm:max-w-4xl',
+            render: () => (
+              <div className="space-y-4">
+                <DialogHeader>
+                  <DialogTitle>{t('mediaGeneration:studio.title')}</DialogTitle>
+                  <DialogDescription>{t('mediaGeneration:studio.description')}</DialogDescription>
+                </DialogHeader>
+                <MediaGenerationForm
+                  initialPrompt={action.prompt}
+                  mediaTypes={[action.mediaType ?? 'image']}
+                />
+              </div>
+            ),
+          })
         }
       }
       return
@@ -193,7 +218,7 @@ export function AiAssistantWidget(): React.ReactElement | null {
       notify.error({ message: data.error ?? t('aiAssistant:taskFailed') })
       setActiveTaskId(null)
     }
-  }, [activeTaskId, navigate, notify, queryClient, task.data, t])
+  }, [activeTaskId, dialogs, navigate, notify, queryClient, task.data, t])
 
   // Send a user message immediately (assumes nothing is in flight).
   const sendChat = React.useCallback(

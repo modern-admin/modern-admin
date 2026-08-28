@@ -8,6 +8,7 @@
 import { Module } from '@nestjs/common'
 import { type IAuthProvider } from '@modern-admin/core'
 import { ModernAdminModule } from '@modern-admin/nest'
+import { ApiStockMediaGenerationProvider } from '@modern-admin/api-stock'
 import { PrismaDatabase, PrismaResource } from '@modern-admin/adapter-prisma'
 import { setupPrismaSystem } from '@modern-admin/system-prisma'
 import { BetterAuthProvider } from '@modern-admin/auth-better-auth'
@@ -59,6 +60,19 @@ const cacheProvider = process.env.REDIS_URL
       logStore: system.logStore,
       webhookStore: system.webhookStore,
       aiTaskStore: system.aiTaskStore,
+      mediaGeneration: {
+        provider: new ApiStockMediaGenerationProvider(),
+        ...(process.env.API_STOCK_KEY ? { apiKey: process.env.API_STOCK_KEY } : {}),
+        ...(process.env.MEDIA_GENERATION_WEBHOOK_BASE_URL
+          ? { webhookBaseUrl: process.env.MEDIA_GENERATION_WEBHOOK_BASE_URL }
+          : {}),
+        ...(process.env.MEDIA_GENERATION_WEBHOOK_SECRET
+          ? { webhookSecret: process.env.MEDIA_GENERATION_WEBHOOK_SECRET }
+          : {}),
+        ...(Number(process.env.MEDIA_GENERATION_MONTHLY_BUDGET_USD) > 0
+          ? { monthlyBudgetUsdPerUser: Number(process.env.MEDIA_GENERATION_MONTHLY_BUDGET_USD) }
+          : {}),
+      },
       auth: authProvider,
       ...(cacheProvider ? { cache: cacheProvider } : {}),
     }),

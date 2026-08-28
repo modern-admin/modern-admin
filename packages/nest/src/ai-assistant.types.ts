@@ -23,6 +23,7 @@ export interface AiClientContext {
 export type AiUiAction =
   | { kind: 'navigate'; route: AiNavigateRoute }
   | { kind: 'refresh'; target: 'dashboard' }
+  | { kind: 'open-media-generation'; prompt: string; mediaType?: 'image' | 'video' | 'music' }
 
 /**
  * Allowed navigation targets. Mirrors the safe subset of the frontend

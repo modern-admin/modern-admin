@@ -328,8 +328,13 @@ export class MemoryAiTaskStore implements IAiTaskStore {
   public readonly eventLog: AiTaskEvent[] = []
 
   async enqueue(input: AiTaskInput): Promise<AiTask> {
+    if (input.idempotencyKey) {
+      const existing = await this.getByIdempotencyKey(input.idempotencyKey)
+      if (existing) return existing
+    }
     const t: AiTask = {
       id: uuidv7(),
+      ...(input.idempotencyKey !== undefined ? { idempotencyKey: input.idempotencyKey } : {}),
       kind: input.kind,
       ...(input.resourceId !== undefined ? { resourceId: input.resourceId } : {}),
       ...(input.recordId !== undefined ? { recordId: input.recordId } : {}),
@@ -343,12 +348,23 @@ export class MemoryAiTaskStore implements IAiTaskStore {
     this.tasks.push(t)
     return t
   }
+  async claim(id: string): Promise<AiTask | null> {
+    const task = this.tasks.find((candidate) => candidate.id === id)
+    if (!task || task.status !== 'pending') return null
+    return this.updateStatus(id, { status: 'running', progress: 5 })
+  }
   async get(id: string): Promise<AiTask | null> {
     return this.tasks.find((t) => t.id === id) ?? null
+  }
+  async getByIdempotencyKey(idempotencyKey: string): Promise<AiTask | null> {
+    return this.tasks.find((task) => task.idempotencyKey === idempotencyKey) ?? null
   }
   async list(filter: Parameters<IAiTaskStore['list']>[0] = {}): Promise<AiTask[]> {
     let result = this.tasks.slice()
     if (filter.kind) result = result.filter((t) => t.kind === filter.kind)
+    if (filter.idempotencyKey) {
+      result = result.filter((t) => t.idempotencyKey === filter.idempotencyKey)
+    }
     if (filter.status) {
       const list = Array.isArray(filter.status) ? filter.status : [filter.status]
       const set = new Set<AiTaskStatus>(list)
@@ -356,6 +372,9 @@ export class MemoryAiTaskStore implements IAiTaskStore {
     }
     if (filter.userId) result = result.filter((t) => t.userId === filter.userId)
     if (filter.resourceId) result = result.filter((t) => t.resourceId === filter.resourceId)
+    if (filter.createdAfter) {
+      result = result.filter((task) => task.createdAt >= filter.createdAfter!)
+    }
     result.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     if (filter.limit !== undefined) result = result.slice(0, filter.limit)
     return result

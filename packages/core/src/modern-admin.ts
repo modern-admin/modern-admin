@@ -131,6 +131,8 @@ export interface AdminFeatures {
   apiKeys: boolean
   /** AI assistant floating widget + Settings section. Backed by `aiAssistant` options. */
   aiAssistant: boolean
+  /** API-backed image/video generation, task preview and apply flows. */
+  mediaGeneration: boolean
   /** Realtime WebSocket gateway (`@modern-admin/realtime`). When true the
    *  SPA connects to it and live-invalidates its query cache on mutation
    *  events from other sessions/instances. */
@@ -145,6 +147,7 @@ const ALL_FEATURES_OFF: AdminFeatures = {
   webhooks: false,
   apiKeys: false,
   aiAssistant: false,
+  mediaGeneration: false,
   realtime: false,
   cache: false,
 }

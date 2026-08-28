@@ -223,6 +223,26 @@ export {
   type RolePermissions,
 } from './modern-admin.js'
 
+// Media generation provider port + wire schemas
+export {
+  mediaGenerationCatalogModelZ,
+  mediaGenerationCatalogParamZ,
+  estimateMediaGenerationPrice,
+  mediaGenerationFileTypeZ,
+  mediaGenerationFileZ,
+  mediaGenerationResultZ,
+  mediaGenerationStatusZ,
+  type IMediaGenerationProvider,
+  type MediaGenerationCatalogModel,
+  type MediaGenerationCatalogParam,
+  type MediaGenerationCreateInput,
+  type MediaGenerationFile,
+  type MediaGenerationFileType,
+  type MediaGenerationProviderRequestOptions,
+  type MediaGenerationResult,
+  type MediaGenerationStatus,
+} from './media-generation.js'
+
 // Dashboard / chart-builder schemas + storage port
 export {
   chartVisualisationZ,

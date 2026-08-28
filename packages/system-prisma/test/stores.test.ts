@@ -168,6 +168,25 @@ describe('PrismaAiTaskStore', () => {
     expect(await aiTaskStore.list({ status: 'pending' })).toHaveLength(1)
     expect(await aiTaskStore.list({ status: ['pending', 'running'] })).toHaveLength(2)
   })
+
+  it('deduplicates idempotency keys and atomically claims pending work', async () => {
+    const prisma = fakePrisma()
+    const { aiTaskStore } = setupPrismaSystem(prisma as never)
+    const first = await aiTaskStore.enqueue({
+      kind: 'media-generation',
+      idempotencyKey: 'request-key',
+      input: {},
+    })
+    const duplicate = await aiTaskStore.enqueue({
+      kind: 'media-generation',
+      idempotencyKey: 'request-key',
+      input: {},
+    })
+
+    expect(duplicate.id).toBe(first.id)
+    expect((await aiTaskStore.claim(first.id))?.status).toBe('running')
+    expect(await aiTaskStore.claim(first.id)).toBeNull()
+  })
 })
 
 describe('PrismaCacheStore', () => {

@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Badge, Button, Input, Label, Switch, Textarea } from '@modern-admin/ui'
-import { Bot, KeyRound, Save } from 'lucide-react'
+import { Bot, ExternalLink, KeyRound, Save } from 'lucide-react'
 import { useAdminClient } from '../provider.js'
 import { useNotify } from '../notify.js'
 import { useI18n } from '../i18n.js'
@@ -18,7 +18,7 @@ export function AiAssistantSettingsSection(): React.ReactElement {
   })
   const [form, setForm] = React.useState({
     enabled: true,
-    model: 'google/gemini-3.1-flash-lite-preview',
+    model: '',
     apiKey: '',
     systemPrompt: '',
   })
@@ -67,6 +67,11 @@ export function AiAssistantSettingsSection(): React.ReactElement {
   if (!data) {
     return <div className="py-8 text-sm text-muted-foreground">{t('aiAssistant:settings.empty')}</div>
   }
+  const providerNameKey = `aiAssistant:provider.${data.provider}`
+  const localizedProviderName = t(providerNameKey)
+  const providerName = localizedProviderName === providerNameKey
+    ? data.providerName
+    : localizedProviderName
 
   return (
     <div className="flex flex-col gap-4">
@@ -84,7 +89,7 @@ export function AiAssistantSettingsSection(): React.ReactElement {
             {data.configured ? t('aiAssistant:settings.configured') : t('aiAssistant:settings.apiKeyRequired')}
           </Badge>
           <Badge variant="outline">{t('aiAssistant:settings.readOnly')}</Badge>
-          <Badge variant="outline">{t('aiAssistant:settings.provider', { provider: data.provider })}</Badge>
+          <Badge variant="outline">{t('aiAssistant:settings.provider', { provider: providerName })}</Badge>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -110,7 +115,7 @@ export function AiAssistantSettingsSection(): React.ReactElement {
               value={form.model}
               disabled={!data.canManage || save.isPending}
               onChange={(e) => setForm((prev) => ({ ...prev, model: e.target.value }))}
-              placeholder="google/gemini-3.1-flash-lite-preview"
+              placeholder={data.model}
             />
           </div>
         </div>
@@ -126,11 +131,22 @@ export function AiAssistantSettingsSection(): React.ReactElement {
             value={form.apiKey}
             disabled={!data.canManage || save.isPending}
             onChange={(e) => setForm((prev) => ({ ...prev, apiKey: e.target.value }))}
-            placeholder={data.maskedApiKey ?? 'sk-or-v1-...'}
+            placeholder={data.maskedApiKey ?? t('aiAssistant:settings.apiKeyPlaceholder')}
           />
-          <p className="text-xs text-muted-foreground">
-            {t('aiAssistant:settings.apiKeyHint')}
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+            <p>{t('aiAssistant:settings.apiKeyHint')}</p>
+            {data.apiKeyUrl && (
+              <a
+                href={data.apiKeyUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
+              >
+                {t('aiAssistant:settings.createApiKey', { provider: providerName })}
+                <ExternalLink className="size-3"/>
+              </a>
+            )}
+          </div>
         </div>
 
         <div className="space-y-1.5">

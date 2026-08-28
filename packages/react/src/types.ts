@@ -122,6 +122,7 @@ export interface AdminFeatures {
   webhooks: boolean
   apiKeys: boolean
   aiAssistant: boolean
+  mediaGeneration: boolean
   /** Realtime WS gateway is mounted — the SPA live-invalidates its cache. */
   realtime: boolean
   cache: boolean
@@ -133,6 +134,7 @@ const ALL_FEATURES_OFF: AdminFeatures = {
   webhooks: false,
   apiKeys: false,
   aiAssistant: false,
+  mediaGeneration: false,
   realtime: false,
   cache: false,
 }

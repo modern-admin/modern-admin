@@ -21,12 +21,12 @@ owns framework-wide abstractions and the shared framework-instance token;
 concrete infrastructure remains replaceable at composition roots.
 
 The seven findings from the 2026-07-31 audit have been rechecked against the
-current tree. All now have an explicit substitution seam. OpenRouter and the
-upload transport stack are optional peers, GraphQL no longer depends on the
+current tree. All now have an explicit substitution seam. API Stock, OpenRouter,
+and the upload transport stack use optional peers, GraphQL no longer depends on the
 REST package, and telemetry no longer runs as an unstubbable concrete call from
 Nest bootstrap.
 
-The built-in defaults remain intentionally pragmatic: OpenRouter for LLM calls,
+The built-in defaults remain intentionally pragmatic: API Stock for LLM calls,
 Better Auth-compatible routes in the browser client, BullMQ for background
 jobs, and the bundled Nest upload subpath. Defaults no longer define the
 interfaces consumed by high-level policy.
@@ -88,12 +88,13 @@ the GraphQL transport and resolves identity through core's `IAuthProvider`.
 and step policy to that interface and only reads provider identity/defaults
 through it.
 
-`OpenRouterLlmProvider` is the built-in adapter. It dynamically imports `ai`
-and `@openrouter/ai-sdk-provider` only when generation is requested; both SDKs
-are optional peers of `@modern-admin/nest`. A host can pass any implementation
-through `ModernAdminModuleOptions.aiAssistant.provider` without changing the
-assistant task lifecycle, authorization, tool assembly, citations, or UI
-actions.
+`ApiStockLlmProvider` is the default built-in adapter. It dynamically imports
+`ai` and `@ai-sdk/openai-compatible` only when generation is requested.
+`OpenRouterLlmProvider` remains available as an alternative adapter and loads
+`@openrouter/ai-sdk-provider` on demand. The SDKs are optional peers of
+`@modern-admin/nest`. A host can pass any implementation through
+`ModernAdminModuleOptions.aiAssistant.provider` without changing the assistant
+task lifecycle, authorization, tool assembly, citations, or UI actions.
 
 The stored/public provider field is now a string rather than the former
 single-member `'openrouter'` literal, so alternate providers cross the settings
