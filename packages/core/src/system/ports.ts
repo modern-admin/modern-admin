@@ -146,7 +146,15 @@ export interface IAiTaskStore {
     limit?: number
   }): Promise<AiTask[]>
 
-  /** Update task status. `output`/`error` are written when terminal. */
+  /**
+   * Update task status. `output`/`error` are written when terminal.
+   *
+   * When `expectedStatus` is set, the write is applied atomically only if the
+   * task's current status is one of the listed values; otherwise it is a no-op.
+   * Either way the current row is returned, so callers detect a rejected write
+   * by comparing the returned `status` to the one they requested. Use it to
+   * avoid resurrecting a task that was concurrently cancelled/finalized.
+   */
   updateStatus(
     id: string,
     patch: {
@@ -154,6 +162,7 @@ export interface IAiTaskStore {
       progress?: number | null
       output?: Record<string, unknown>
       error?: string
+      expectedStatus?: AiTaskStatus[]
     },
   ): Promise<AiTask>
 

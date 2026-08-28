@@ -102,6 +102,7 @@ export class DrizzleAiTaskStore implements IAiTaskStore {
       progress?: number | null
       output?: Record<string, unknown>
       error?: string
+      expectedStatus?: AiTaskStatus[]
     },
   ): Promise<AiTask> {
     const data: Record<string, unknown> = { status: patch.status, updatedAt: new Date() }
@@ -121,13 +122,26 @@ export class DrizzleAiTaskStore implements IAiTaskStore {
       data['finishedAt'] = new Date()
     }
 
+    // Atomic guarded write: the status predicate makes the update a no-op unless
+    // the row is still in an expected status, so a concurrent cancel/finalize is
+    // never overwritten. Return the current row either way.
+    const where = patch.expectedStatus
+      ? and(eq(this.taskTable.id, id), inArray(this.taskTable.status, patch.expectedStatus))
+      : eq(this.taskTable.id, id)
     const rows = (await this.db
       .update(this.taskTable)
       .set(data)
-      .where(eq(this.taskTable.id, id))
+      .where(where)
       .returning()) as TaskRow[]
-    if (!rows[0]) throw new Error(`AI task not found: ${id}`)
-    return rowToTask(rows[0])
+    if (rows[0]) return rowToTask(rows[0])
+    // No row matched the guard (or the id is unknown): re-read to distinguish.
+    const current = (await this.db
+      .select()
+      .from(this.taskTable)
+      .where(eq(this.taskTable.id, id))
+      .limit(1)) as TaskRow[]
+    if (!current[0]) throw new Error(`AI task not found: ${id}`)
+    return rowToTask(current[0])
   }
 
   async appendEvent(
