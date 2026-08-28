@@ -414,11 +414,15 @@ export class MemoryAiTaskStore implements IAiTaskStore {
       progress?: number | null
       output?: Record<string, unknown>
       error?: string
+      expectedStatus?: AiTaskStatus[]
     },
   ): Promise<AiTask> {
     const idx = this.tasks.findIndex((t) => t.id === id)
     if (idx < 0) throw new Error(`AI task not found: ${id}`)
     const prev = this.tasks[idx]!
+    // Conditional write: leave the row untouched when the guard is not met.
+    // The find + assignment run in a single synchronous tick, so this is atomic.
+    if (patch.expectedStatus && !patch.expectedStatus.includes(prev.status)) return prev
     const next: AiTask = {
       ...prev,
       status: patch.status,
