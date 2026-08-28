@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/feature-media-generation",
-  "version": "0.9.0",
+  "version": "0.8.0",
   "description": "Configurable record actions for Modern Admin media generation.",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/feature-media-generation#readme",
   "keywords": ["modern-admin", "media-generation", "product-images", "video"],

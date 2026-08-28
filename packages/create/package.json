@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/create",
-  "version": "0.9.0",
+  "version": "0.8.0",
   "description": "CLI for scaffolding Modern Admin services, system schemas, and host-owned custom UI bundles.",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/create#readme",
   "keywords": [
