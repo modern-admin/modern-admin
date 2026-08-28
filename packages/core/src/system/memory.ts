@@ -12,6 +12,7 @@ import { ConsoleLogger, type ILogger } from '../ports'
 /** Applied by `IQueryableLogStore.list` when the caller passes no `limit`. */
 const DEFAULT_LOG_LIST_LIMIT = 50
 import type {
+  ActionLogRetention,
   IAiTaskStore,
   ICacheStore,
   IConfigStore,
@@ -83,6 +84,33 @@ export class MemoryLogStore implements IQueryableLogStore {
     // truncate in production.
     result = result.slice(0, filter.limit ?? DEFAULT_LOG_LIST_LIMIT)
     return result
+  }
+  async prune(retention: ActionLogRetention): Promise<number> {
+    const { keepLast, keepDays } = retention
+    if (keepLast === undefined && keepDays === undefined) return 0
+
+    const doomed = new Set<ActionLogEntry>()
+    if (keepDays !== undefined) {
+      const cutoff = Date.now() - Math.max(0, keepDays) * 24 * 60 * 60 * 1000
+      for (const entry of this.entries) {
+        if (entry.at < cutoff) doomed.add(entry)
+      }
+    }
+
+    if (keepLast !== undefined) {
+      const keep = Math.max(0, Math.trunc(keepLast))
+      const newestFirst = this.entries.slice().sort((a, b) => {
+        if (a.at !== b.at) return b.at - a.at
+        return String(b.id ?? '').localeCompare(String(a.id ?? ''))
+      })
+      for (const entry of newestFirst.slice(keep)) doomed.add(entry)
+    }
+
+    if (doomed.size === 0) return 0
+    const kept = this.entries.filter((entry) => !doomed.has(entry))
+    this.entries.length = 0
+    this.entries.push(...kept)
+    return doomed.size
   }
   clear(): void { this.entries.length = 0 }
 }

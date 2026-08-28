@@ -7,7 +7,7 @@ import {
   DEFAULT_CRON_LOCK_TTL,
   DEFAULT_CRON_WORKER_CONCURRENCY,
 } from './cron.constants.js'
-import type { CronService } from './cron.service.js'
+import { CronService } from './cron.service.js'
 
 @Processor(CRON_QUEUE, { concurrency: DEFAULT_CRON_WORKER_CONCURRENCY })
 export class CronProcessor extends WorkerHost {

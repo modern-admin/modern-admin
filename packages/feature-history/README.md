@@ -20,6 +20,23 @@ bun add @modern-admin/feature-history
 Setup guides, architecture, and usage examples live in the
 [Modern Admin README](https://github.com/modern-admin/modern-admin#readme).
 
+Persistent retention is intentionally not executed from resource action
+hooks. Configure `RetentionModule` from `@modern-admin/queue` to run
+`historyStore.prune()` as a BullMQ cron task:
+
+```ts
+RetentionModule.forRoot({
+  history: {
+    store: system.historyStore,
+    keepDays: 90,
+    keepLast: 100,
+  },
+})
+```
+
+`historyFeature({ keepDays, keepLast })` only bounds its automatic in-memory
+fallback. Database-backed stores must use the queue module.
+
 ## License
 
 [MIT](https://github.com/modern-admin/modern-admin/blob/main/LICENSE) © Modern Admin

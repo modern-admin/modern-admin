@@ -1,8 +1,13 @@
+import 'reflect-metadata'
 import { describe, test, expect, mock, beforeEach } from 'bun:test'
 import type { Job, Queue } from 'bullmq'
 import { CronProcessor } from '../src/cron/cron.processor.js'
-import type { CronService } from '../src/cron/cron.service.js'
-import { CRON_LOCK_PREFIX, DEFAULT_CRON_LOCK_TTL } from '../src/cron/cron.constants.js'
+import { CronService } from '../src/cron/cron.service.js'
+import {
+  CRON_LOCK_PREFIX,
+  CRON_QUEUE,
+  DEFAULT_CRON_LOCK_TTL,
+} from '../src/cron/cron.constants.js'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -40,6 +45,15 @@ const buildProcessor = (overrides?: {
 // ── basic dispatch ────────────────────────────────────────────────────────────
 
 describe('CronProcessor › process', () => {
+  test('uses a BullMQ-compatible queue name', () => {
+    expect(CRON_QUEUE).not.toContain(':')
+  })
+
+  test('emits the runtime type required for Nest dependency injection', () => {
+    const parameterTypes = Reflect.getMetadata('design:paramtypes', CronProcessor) as unknown[]
+    expect(parameterTypes[0]).toBe(CronService)
+  })
+
   test('calls registered handler and returns its result', async () => {
     const handler = mock(() => Promise.resolve('result'))
     const { processor } = buildProcessor({ getHandler: () => handler })

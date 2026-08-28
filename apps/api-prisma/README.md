@@ -18,6 +18,20 @@ Playwright e2e suite (`apps/e2e/`) drives every spec against it.
   instead of stdout, demonstrating how feature plugins pick up a real
   persistent store.
 
+History and audit-log retention run through the BullMQ maintenance queue.
+Deletion is disabled until at least one bound is configured:
+
+```sh
+HISTORY_RETENTION_DAYS=90
+HISTORY_RETENTION_KEEP_LAST=100
+AUDIT_LOG_RETENTION_DAYS=365
+AUDIT_LOG_RETENTION_KEEP_LAST=100000
+SYSTEM_RETENTION_CRON="0 3 * * *"
+```
+
+`SYSTEM_RETENTION_CRON` defaults to daily at 03:00 UTC. History `keepLast`
+is per record; audit-log `keepLast` is global.
+
 ## Setup
 
 ```bash

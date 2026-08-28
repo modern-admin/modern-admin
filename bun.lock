@@ -427,6 +427,9 @@
     "packages/queue": {
       "name": "@modern-admin/queue",
       "version": "0.6.0",
+      "dependencies": {
+        "@modern-admin/core": "workspace:^",
+      },
       "devDependencies": {
         "@modern-admin/tsconfig": "workspace:*",
         "@nestjs/bullmq": "^11.0.5",

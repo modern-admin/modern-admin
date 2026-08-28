@@ -29,6 +29,7 @@ import { ModernAdminModule } from '@modern-admin/nest'
 import { ApiStockMediaGenerationProvider } from '@modern-admin/api-stock'
 import { PrismaDatabase, PrismaResource } from '@modern-admin/adapter-prisma'
 import { ModernAdminGraphqlModule } from '@modern-admin/graphql'
+import { RetentionModule } from '@modern-admin/queue'
 import { ModernAdminRealtimeModule, RedisRealtimeBus, type RealtimeRedisLike } from '@modern-admin/realtime'
 import { RedisCacheProvider, type RedisCacheOptions } from '@modern-admin/cache-redis'
 import { ModernAdminUploadModule } from '@modern-admin/feature-upload/nest'
@@ -88,6 +89,16 @@ const cacheProvider = buildCache()
 /** System stores shared across the app — backed by Postgres via Prisma. */
 export const system = setupPrismaSystem(prisma)
 
+const retentionBound = (name: string): number | undefined => {
+  const raw = process.env[name]?.trim()
+  if (!raw) return undefined
+  const value = Number(raw)
+  if (!Number.isInteger(value) || value < 0) {
+    throw new Error(`${name} must be a non-negative integer`)
+  }
+  return value
+}
+
 // Wire the audit-log sink used by Better Auth's `session.create.after`
 // hook. Must run AFTER `setupPrismaSystem()` (which builds the store) and
 // BEFORE any login attempt — admin-module construction is the natural
@@ -102,6 +113,21 @@ const apiKeyService = buildApiKeyService(authProvider)
   imports: [
     // Single-instance demo — ack the in-process pending-registry constraint.
     ModernAdminUploadModule.forRoot({ acknowledgeSingleInstance: true }),
+    RetentionModule.forRoot({
+      ...(process.env.SYSTEM_RETENTION_CRON
+        ? { cron: process.env.SYSTEM_RETENTION_CRON }
+        : {}),
+      history: {
+        store: system.historyStore,
+        keepDays: retentionBound('HISTORY_RETENTION_DAYS'),
+        keepLast: retentionBound('HISTORY_RETENTION_KEEP_LAST'),
+      },
+      auditLog: {
+        store: system.logStore,
+        keepDays: retentionBound('AUDIT_LOG_RETENTION_DAYS'),
+        keepLast: retentionBound('AUDIT_LOG_RETENTION_KEEP_LAST'),
+      },
+    }),
     ModernAdminModule.forRoot({
       global: true,
       adapters: [{

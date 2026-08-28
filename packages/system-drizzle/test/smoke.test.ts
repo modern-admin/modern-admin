@@ -99,6 +99,25 @@ describe('DrizzleLogStore.record', () => {
   })
 })
 
+describe('Drizzle retention stores', () => {
+  it('issues bounded deletes for action-log age retention', async () => {
+    const { calls, db } = fakeDb()
+    const { logStore } = setupDrizzleSystem(db, systemTables)
+
+    expect(await logStore.prune({ keepDays: 30 })).toBe(0)
+    expect(calls.some((call) => call.method === 'delete')).toBe(true)
+    expect(calls.some((call) => call.method === 'returning')).toBe(true)
+  })
+
+  it('groups history by record for keepLast retention', async () => {
+    const { calls, db } = fakeDb()
+    const { historyStore } = setupDrizzleSystem(db, systemTables)
+
+    expect(await historyStore.prune({ keepLast: 10 })).toBe(0)
+    expect(calls.some((call) => call.method === 'groupBy')).toBe(true)
+  })
+})
+
 describe('DrizzleConfigStore.set', () => {
   it('uses insert + onConflictDoUpdate for upsert semantics', async () => {
     const { calls, db } = fakeDb()

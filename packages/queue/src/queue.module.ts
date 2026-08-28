@@ -2,6 +2,10 @@ import { type DynamicModule, Module } from '@nestjs/common'
 import { BullModule } from '@nestjs/bullmq'
 import type { QueueModuleOptions, QueueRootOptions } from './queue.types.js'
 
+export const normalizeQueueConnection = (
+  connection: QueueRootOptions['connection'],
+): object => typeof connection === 'string' ? { url: connection } : connection
+
 /**
  * BullMQ integration module for modern-admin NestJS applications.
  *
@@ -30,7 +34,7 @@ export class QueueModule {
       global: true,
       imports: [
         BullModule.forRoot({
-          connection: options.connection as object,
+          connection: normalizeQueueConnection(options.connection),
           defaultJobOptions: options.defaultJobOptions,
         }),
       ],
@@ -65,7 +69,7 @@ export class QueueModule {
           useFactory: async (...args: unknown[]) => {
             const resolved = await opts.useFactory(...args)
             return {
-              connection: resolved.connection as object,
+              connection: normalizeQueueConnection(resolved.connection),
               defaultJobOptions: resolved.defaultJobOptions,
             }
           },
