@@ -1,5 +1,37 @@
 # @modern-admin/system-prisma
 
+## 0.9.0
+
+### Minor Changes
+
+- [#39](https://github.com/modern-admin/modern-admin/pull/39) [`5118d63`](https://github.com/modern-admin/modern-admin/commit/5118d63c9e3db18c7e0ce6202c13ab02833780db) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Add webhook-driven API Stock image and video generation, dynamic model forms, private task updates, explicit paid-request confirmation, upload-backed record application, product-card actions, and AI assistant media drafts.
+
+- [#38](https://github.com/modern-admin/modern-admin/pull/38) [`eb83e7a`](https://github.com/modern-admin/modern-admin/commit/eb83e7a9544faef49416d4510a8d21ed6ea6b565) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Move persistent history pruning out of action hooks and into a BullMQ-backed
+  retention cron task. Add equivalent `keepDays`/global `keepLast` retention for
+  action logs, including memory, Prisma, and Drizzle store implementations.
+
+### Patch Changes
+
+- [#36](https://github.com/modern-admin/modern-admin/pull/36) [`e6d85ae`](https://github.com/modern-admin/modern-admin/commit/e6d85ae69aa955b56f385fa20b451cb3766d3c29) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Close media generation apply/cancel/budget race conditions.
+  
+  - **Apply is serialized per task.** Two overlapping apply requests for the same
+    task could both pass the `output.applied` guard and upload/edit twice; they
+    are chained in-process and the second observes the first's marker.
+  - **Completion never overwrites cancellation.** `IAiTaskStore.updateStatus`
+    gains an optional `expectedStatus` guard so a status write is applied
+    atomically only while the task is still in one of the expected states (a
+    `WHERE status IN (…)` predicate for SQL stores, a synchronous check-and-set
+    in memory). `applyProviderResult` uses it, so a cancel that lands while a
+    provider status request is in flight can no longer resurrect the task as
+    succeeded/failed — including across nodes on the webhook path.
+  - **The monthly budget reserves before it checks, one request at a time.** The
+    task is enqueued with its estimated cost before the budget is summed, and
+    per-user reservations are serialized so concurrent requests near the limit are
+    admitted one-by-one — exactly one is accepted rather than all overspending or
+    all rejecting. A rejected reservation is failed so its cost stops counting.
+- Updated dependencies [[`5118d63`](https://github.com/modern-admin/modern-admin/commit/5118d63c9e3db18c7e0ce6202c13ab02833780db), [`5118d63`](https://github.com/modern-admin/modern-admin/commit/5118d63c9e3db18c7e0ce6202c13ab02833780db), [`e6d85ae`](https://github.com/modern-admin/modern-admin/commit/e6d85ae69aa955b56f385fa20b451cb3766d3c29), [`5118d63`](https://github.com/modern-admin/modern-admin/commit/5118d63c9e3db18c7e0ce6202c13ab02833780db), [`eb83e7a`](https://github.com/modern-admin/modern-admin/commit/eb83e7a9544faef49416d4510a8d21ed6ea6b565)]:
+  - @modern-admin/core@0.9.0
+
 ## 0.8.0
 
 ### Patch Changes
