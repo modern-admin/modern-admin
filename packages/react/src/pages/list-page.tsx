@@ -873,12 +873,14 @@ export function ResourceListPage({
   const selectedIds = React.useMemo(() => Object.keys(rowSelection), [rowSelection])
   const selectedCount = selectedIds.length
   // An empty result set has two flavours. When there are NO active filters the
-  // resource is genuinely empty, so we swap the whole toolbar for a "create your
-  // first record" empty state. When filters ARE active the resource may well
-  // hold records — the current filters just match none — so we must KEEP the
-  // toolbar (and its filter button) reachable, otherwise the user is stranded
-  // with no way to relax the filters. This bites the related-records embed,
-  // where a filter that matches nothing would otherwise hide the filter button.
+  // resource is genuinely empty, so we replace the table controls with a
+  // "create your first record" empty state while retaining controls that act on
+  // the resource itself (refresh and custom resource actions). When filters ARE
+  // active the resource may well hold records — the current filters just match
+  // none — so we must KEEP the toolbar (and its filter button) reachable,
+  // otherwise the user is stranded with no way to relax the filters. This bites
+  // the related-records embed, where a filter that matches nothing would
+  // otherwise hide the filter button.
   const isEmpty = !records.isPending && !records.isError && total === 0
   const hasActiveFilters = columnFilters.length > 0
   const showStandaloneEmptyState = isEmpty && !hasActiveFilters
@@ -940,11 +942,13 @@ export function ResourceListPage({
   }
 
   const showCustomResourceActions = f.actions && customResourceActions.length > 0
+  const showListControls = !showStandaloneEmptyState
   const hasToolbarActions =
-    !showStandaloneEmptyState &&
-    (f.refresh || f.filters || f.columns || f.export || f.create || showCustomResourceActions)
+    f.refresh ||
+    showCustomResourceActions ||
+    (showListControls && (f.filters || f.columns || f.export || f.create))
   const hasHeader =
-    f.title || hasToolbarActions || (!showStandaloneEmptyState && visible.some((p) => p.isSortable))
+    f.title || hasToolbarActions || (showListControls && visible.some((p) => p.isSortable))
 
   // CardHeader/Content add their own padding. When `card: false` we're embedded
   // inside another container that already provides spacing, so use a bare div
@@ -958,12 +962,12 @@ export function ResourceListPage({
 
   const inner = (
     <>
-      {/* The trigger + panel normally live together inside the toolbar (see
-          `FilterControl`), which keeps the open/close state out of this
-          component so toggling doesn't re-render the whole list body. The
-          toolbar is suppressed in the standalone empty state, so mount a
+      {/* The trigger + panel normally live together inside the list controls
+          (see `FilterControl`), which keeps the open/close state out of this
+          component so toggling doesn't re-render the whole list body. Those
+          controls are suppressed in the standalone empty state, so mount a
           trigger-less instance here to keep the `F` hotkey working. */}
-      {f.filters && !hasToolbarActions && (
+      {f.filters && !showListControls && (
         <FilterControl
           showTrigger={false}
           properties={filterable}
@@ -999,7 +1003,7 @@ export function ResourceListPage({
                   </TooltipContent>
                 </Tooltip>
               )}
-              {f.filters && (
+              {showListControls && f.filters && (
                 <FilterControl
                   showTrigger
                   properties={filterable}
@@ -1009,8 +1013,10 @@ export function ResourceListPage({
                   t={t}
                 />
               )}
-              {f.columns && <ColumnVisibilityMenu table={table} properties={visible} t={t} />}
-              {f.export && (
+              {showListControls && f.columns && (
+                <ColumnVisibilityMenu table={table} properties={visible} t={t} />
+              )}
+              {showListControls && f.export && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -1058,7 +1064,7 @@ export function ResourceListPage({
                   }
                 />
               )}
-              {f.create && (
+              {showListControls && f.create && (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button size="sm" onClick={() => navigate({ name: 'new', resourceId })}>
@@ -1075,7 +1081,7 @@ export function ResourceListPage({
             </div>
           )}
           {/* Mobile-only sort selector — desktop uses column header clicks */}
-          {visible.some((p) => p.isSortable) && (
+          {showListControls && visible.some((p) => p.isSortable) && (
             <div className="flex w-full items-center gap-2 sm:hidden">
               <ArrowUpDown className="size-4 shrink-0 text-muted-foreground" />
               <Select

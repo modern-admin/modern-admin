@@ -45,6 +45,40 @@ async function readPriceSpan(request: APIRequestContext): Promise<PriceSpan> {
 }
 
 test.describe('Resource-action UI — products.bulkRepriceUi', () => {
+  test('an empty resource keeps refresh and resource actions in the toolbar', async ({ page }) => {
+    const listPath = '/admin/api/resources/products/actions/list'
+    await page.route(`**${listPath}*`, async (route) => {
+      await route.fulfill({
+        json: { records: [], meta: { total: 0, page: 1, perPage: 20 } },
+      })
+    })
+
+    await page.goto('/resources/products')
+    await expect(page.getByRole('heading', { name: /products/i }).first()).toBeVisible({
+      timeout: 15_000,
+    })
+    await expect(page.getByText(/no records/i)).toBeVisible()
+
+    const refresh = page.getByRole('button', { name: /^refresh$/i })
+    await expect(refresh).toBeVisible()
+    await expect(page.getByRole('button', { name: /^actions$/i })).toBeVisible()
+
+    // Table-specific controls stay out of the first-record empty state, and
+    // Create is rendered only once inside that state rather than duplicated
+    // in the toolbar.
+    await expect(page.getByRole('button', { name: /^filters$/i })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: /^columns$/i })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: /^export$/i })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: /^new$/i })).toHaveCount(1)
+
+    const refreshRequest = page.waitForRequest(
+      (request) =>
+        request.url().includes(listPath) && request.headers()['cache-control'] === 'no-cache',
+    )
+    await refresh.click()
+    await refreshRequest
+  })
+
   test('the toolbar action opens its component page, primes it, and submits', async ({
     page,
     request,
