@@ -93,9 +93,11 @@ const wait = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(
 
 const serializeForCompare = (value: unknown): string | null => {
   try {
-    return JSON.stringify(value, (_key, val: unknown) =>
-      typeof val === 'bigint' ? val.toString() : val,
-    ) ?? null
+    return (
+      JSON.stringify(value, (_key, val: unknown) =>
+        typeof val === 'bigint' ? val.toString() : val,
+      ) ?? null
+    )
   } catch {
     return null
   }
@@ -108,11 +110,15 @@ export const recordsTag = (resourceId: string): string => `records:${resourceId}
 export const rolePermissionsTag = (roleName?: string): string =>
   roleName ? `role-perms:${roleName}` : 'role-perms'
 
-const metricIdentity = (key: string, tags: readonly string[]): { namespace: string; resourceId?: string } => {
+const metricIdentity = (
+  key: string,
+  tags: readonly string[],
+): { namespace: string; resourceId?: string } => {
   const segments = key.split(':')
-  const namespace = segments[0] === CACHE_KEY_VERSION ? (segments[1] ?? 'unknown') : (segments[0] ?? 'unknown')
-  const resourceTag = tags.find((tag) =>
-    tag.startsWith('list:') || tag.startsWith('record:') || tag.startsWith('records:'),
+  const namespace =
+    segments[0] === CACHE_KEY_VERSION ? (segments[1] ?? 'unknown') : (segments[0] ?? 'unknown')
+  const resourceTag = tags.find(
+    (tag) => tag.startsWith('list:') || tag.startsWith('record:') || tag.startsWith('records:'),
   )
   const resourceId = resourceTag?.split(':')[1]
   return { namespace, ...(resourceId ? { resourceId } : {}) }
@@ -121,10 +127,9 @@ const metricIdentity = (key: string, tags: readonly string[]): { namespace: stri
 const sameSnapshot = (a: EpochSnapshot | null, b: EpochSnapshot | null): boolean => {
   if (a === null || b === null) return a === b
   if (a.tags.length !== b.tags.length) return false
-  return a.tags.every((tag, index) =>
-    tag === b.tags[index] &&
-    a.local[tag] === b.local[tag] &&
-    a.external[tag] === b.external[tag],
+  return a.tags.every(
+    (tag, index) =>
+      tag === b.tags[index] && a.local[tag] === b.local[tag] && a.external[tag] === b.external[tag],
   )
 }
 
@@ -146,7 +151,10 @@ export class CacheRuntime {
   private disposed = false
   readonly instanceId = uuidv7()
 
-  constructor(public readonly cache: ICacheProvider, options: CacheRuntimeOptions = {}) {
+  constructor(
+    public readonly cache: ICacheProvider,
+    options: CacheRuntimeOptions = {},
+  ) {
     this.logger = options.logger ?? new ConsoleLogger()
     this.jitterRatio = Math.max(0, options.jitterRatio ?? 0.1)
     this.invalidationAttempts = Math.max(1, options.invalidationAttempts ?? 3)
@@ -157,7 +165,10 @@ export class CacheRuntime {
       this.metricsTimer = setInterval(() => {
         const delta = this.stats(true)
         if (delta.entries.length > 0 || delta.dirtyTags.length > 0) {
-          this.logger.info('[modern-admin] cache metrics', delta as unknown as Record<string, unknown>)
+          this.logger.info(
+            '[modern-admin] cache metrics',
+            delta as unknown as Record<string, unknown>,
+          )
         }
       }, metricsLogIntervalMs)
       this.metricsTimer.unref?.()
@@ -205,7 +216,10 @@ export class CacheRuntime {
     return snapshot.tags.every((tag) => snapshot.local[tag] === this.localEpoch(tag))
   }
 
-  private async safeGet<T>(key: string, counters: CacheMetricCounters): Promise<{ ok: boolean; value: T | null }> {
+  private async safeGet<T>(
+    key: string,
+    counters: CacheMetricCounters,
+  ): Promise<{ ok: boolean; value: T | null }> {
     try {
       return { ok: true, value: await this.cache.get<T>(key) }
     } catch (error) {
@@ -226,7 +240,12 @@ export class CacheRuntime {
     counters: CacheMetricCounters,
   ): Promise<void> {
     const tags = snapshot?.tags ?? Array.from(new Set(options.tags ?? [])).sort()
-    if (!options.enabled || snapshot === null || this.hasDirtyTag(tags) || !this.localSnapshotStillCurrent(snapshot)) {
+    if (
+      !options.enabled ||
+      snapshot === null ||
+      this.hasDirtyTag(tags) ||
+      !this.localSnapshotStillCurrent(snapshot)
+    ) {
       counters.skippedWrites++
       return
     }
@@ -285,10 +304,13 @@ export class CacheRuntime {
       try {
         acquired = await this.cache.acquireLock(key, token, options.lockTtlMs ?? 5_000)
       } catch (error) {
-        this.logger.warn('[modern-admin] cache lock failed; computing without distributed coalescing', {
-          error: error instanceof Error ? error.message : String(error),
-          key,
-        })
+        this.logger.warn(
+          '[modern-admin] cache lock failed; computing without distributed coalescing',
+          {
+            error: error instanceof Error ? error.message : String(error),
+            key,
+          },
+        )
       }
       if (acquired === false) {
         counters.lockWaits++
@@ -297,7 +319,12 @@ export class CacheRuntime {
         if (afterWait && !this.hasDirtyTag(afterWait.tags)) {
           const cached = await this.safeGet<T>(key, counters)
           const afterRead = cached.ok ? await this.snapshot(afterWait.tags) : null
-          if (cached.ok && cached.value !== null && cached.value !== undefined && sameSnapshot(afterWait, afterRead)) {
+          if (
+            cached.ok &&
+            cached.value !== null &&
+            cached.value !== undefined &&
+            sameSnapshot(afterWait, afterRead)
+          ) {
             counters.hits++
             return cached.value
           }
@@ -381,9 +408,11 @@ export class CacheRuntime {
     const promise = this.fetchAndStore(key, options, fetch, snapshot, counters)
     const entry: InFlightEntry<T> = { snapshot, promise }
     this.inFlight.set(key, entry as InFlightEntry<unknown>)
-    void promise.finally(() => {
-      if (this.inFlight.get(key) === entry) this.inFlight.delete(key)
-    }).catch(() => {})
+    void promise
+      .finally(() => {
+        if (this.inFlight.get(key) === entry) this.inFlight.delete(key)
+      })
+      .catch(() => {})
     return promise
   }
 
@@ -396,9 +425,10 @@ export class CacheRuntime {
     options.onStatus?.('revalidated')
     const tags = options.tags ?? []
     const beforeRead = options.enabled ? await this.snapshot(tags) : null
-    const previous = options.enabled && beforeRead
-      ? await this.safeGet<T>(key, counters)
-      : { ok: false, value: null }
+    const previous =
+      options.enabled && beforeRead
+        ? await this.safeGet<T>(key, counters)
+        : { ok: false, value: null }
     const started = Date.now()
     let value: T
     try {

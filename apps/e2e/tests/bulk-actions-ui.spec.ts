@@ -54,17 +54,11 @@ async function createUnpublishedPost(
   return { id: String(body.record.id), title }
 }
 
-async function deletePostSilently(
-  request: APIRequestContext,
-  id: string,
-): Promise<void> {
+async function deletePostSilently(request: APIRequestContext, id: string): Promise<void> {
   await request.delete(adminApi(`/resources/posts/records/${id}/actions/delete`))
 }
 
-async function readPostPublished(
-  request: APIRequestContext,
-  id: string,
-): Promise<boolean> {
+async function readPostPublished(request: APIRequestContext, id: string): Promise<boolean> {
   const res = await request.get(adminApi(`/resources/posts/records/${id}/actions/show`))
   expect(res.ok()).toBeTruthy()
   return Boolean((await res.json()).record.params.published)
@@ -99,9 +93,9 @@ test.describe('Bulk-action UI — posts.publishMany', () => {
       // freshest fixtures at the top of page 1 regardless of how many
       // seed rows already exist. `perPage=200` is the server cap.
       await page.goto('/resources/posts?perPage=200&sortBy=id&direction=desc')
-      await expect(
-        page.getByRole('heading', { name: /posts/i }).first(),
-      ).toBeVisible({ timeout: 15_000 })
+      await expect(page.getByRole('heading', { name: /posts/i }).first()).toBeVisible({
+        timeout: 15_000,
+      })
 
       for (const fix of fixtures) {
         await selectRowByCell(page, fix.title)
@@ -112,7 +106,10 @@ test.describe('Bulk-action UI — posts.publishMany', () => {
 
       // The custom-actions dropdown is the only ActionMenu mounted in the
       // bulk bar — its trigger is labelled "Actions" via i18n.
-      await page.getByRole('button', { name: /^actions$/i }).first().click()
+      await page
+        .getByRole('button', { name: /^actions$/i })
+        .first()
+        .click()
 
       // Wait for the publishMany POST while clicking the menu item.
       const publishPromise = page.waitForResponse(
@@ -120,14 +117,9 @@ test.describe('Bulk-action UI — posts.publishMany', () => {
           res.url().includes('/admin/api/resources/posts/actions/publishMany') &&
           res.request().method() === 'POST',
       )
-      await page
-        .getByRole('menuitem', { name: /publish selected/i })
-        .click()
+      await page.getByRole('menuitem', { name: /publish selected/i }).click()
       const publishRes = await publishPromise
-      expect(
-        publishRes.ok(),
-        `publishMany request failed: ${await publishRes.text()}`,
-      ).toBeTruthy()
+      expect(publishRes.ok(), `publishMany request failed: ${await publishRes.text()}`).toBeTruthy()
 
       // After the bulk action settles the bar clears (rowSelection reset
       // by the onSuccess handler), so the counter disappears.
@@ -144,10 +136,7 @@ test.describe('Bulk-action UI — posts.publishMany', () => {
     }
   })
 
-  test('Clear selection button empties the bulk bar', async ({
-    page,
-    request,
-  }) => {
+  test('Clear selection button empties the bulk bar', async ({ page, request }) => {
     const authorId = await firstAuthorId(request)
     const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
     const fix = await createUnpublishedPost(request, authorId, `clear-${suffix}`)
@@ -156,9 +145,9 @@ test.describe('Bulk-action UI — posts.publishMany', () => {
       // freshest fixtures at the top of page 1 regardless of how many
       // seed rows already exist. `perPage=200` is the server cap.
       await page.goto('/resources/posts?perPage=200&sortBy=id&direction=desc')
-      await expect(
-        page.getByRole('heading', { name: /posts/i }).first(),
-      ).toBeVisible({ timeout: 15_000 })
+      await expect(page.getByRole('heading', { name: /posts/i }).first()).toBeVisible({
+        timeout: 15_000,
+      })
 
       await selectRowByCell(page, fix.title)
       await expect(page.getByText(/^1 selected$/i)).toBeVisible()

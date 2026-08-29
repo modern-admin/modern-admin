@@ -54,10 +54,7 @@ export const AlertDialogHeader = ({
   className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>): React.ReactElement => (
-  <div
-    className={cn('flex flex-col gap-2 text-center sm:text-left', className)}
-    {...props}
-  />
+  <div className={cn('flex flex-col gap-2 text-center sm:text-left', className)} {...props} />
 )
 AlertDialogHeader.displayName = 'AlertDialogHeader'
 

@@ -14,7 +14,9 @@ export const actionOptionsZ = z
   .object({
     isVisible: z.union([z.boolean(), z.unknown()]).optional(),
     isAccessible: z.union([z.boolean(), z.unknown()]).optional(),
-    nesting: z.union([z.string(), actionGroupZ, z.array(z.union([z.string(), actionGroupZ]))]).optional(),
+    nesting: z
+      .union([z.string(), actionGroupZ, z.array(z.union([z.string(), actionGroupZ]))])
+      .optional(),
     guard: z.string().optional(),
     component: z.union([z.string(), z.null()]).optional(),
     // No top-level `label`: action titles are resolved client-side from

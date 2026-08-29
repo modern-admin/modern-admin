@@ -105,7 +105,9 @@ describe('uploadFeature() — property configuration', () => {
   it('stores urlTemplate in custom data', () => {
     const feature = uploadFeature({ properties: { avatar: { provider: makeProvider() } } })
     const result = feature(emptyOptions)
-    expect(result.properties?.avatar?.custom?.uploadUrlTemplate).toBe('https://cdn.example.com/{key}')
+    expect(result.properties?.avatar?.custom?.uploadUrlTemplate).toBe(
+      'https://cdn.example.com/{key}',
+    )
   })
 
   it('stores null urlTemplate when provider returns undefined', () => {
@@ -116,7 +118,9 @@ describe('uploadFeature() — property configuration', () => {
 
   it('stores mimeTypes and maxSize', () => {
     const feature = uploadFeature({
-      properties: { avatar: { provider: makeProvider(), mimeTypes: ['image/*'], maxSize: 5_000_000 } },
+      properties: {
+        avatar: { provider: makeProvider(), mimeTypes: ['image/*'], maxSize: 5_000_000 },
+      },
     })
     const result = feature(emptyOptions)
     expect(result.properties?.avatar?.custom?.uploadMimeTypes).toEqual(['image/*'])
@@ -152,7 +156,9 @@ describe('uploadFeature() — uploadPath', () => {
 
   it('stores uploadPath in the registry', () => {
     const uploadPath = (filename: string) => `avatars/${filename}`
-    const feature = uploadFeature({ properties: { avatar: { provider: makeProvider(), uploadPath } } })
+    const feature = uploadFeature({
+      properties: { avatar: { provider: makeProvider(), uploadPath } },
+    })
     const result = feature(emptyOptions)
     const id = result.properties?.avatar?.custom?.uploadProviderId as string
     expect(UploadProviderRegistry.get(id)?.uploadPath).toBe(uploadPath)
@@ -212,16 +218,24 @@ describe('uploadFeature() — hook chaining', () => {
 
   it('existing hooks run before the upload hook', async () => {
     const order: string[] = []
-    const existingHook = async (res: unknown) => { order.push('existing'); return res }
+    const existingHook = async (res: unknown) => {
+      order.push('existing')
+      return res
+    }
     const incoming: ResourceOptions = {
       actions: { edit: { after: existingHook } as ActionOptions },
     }
-    const provider = makeProvider({ delete: mock(async () => { order.push('delete') }) })
+    const provider = makeProvider({
+      delete: mock(async () => {
+        order.push('delete')
+      }),
+    })
     const feature = uploadFeature({ properties: { avatar: { provider } } })
     const result = feature(incoming)
 
-
-    const hooks = (result.actions?.['edit'] as any).after as Array<(r: unknown, q: unknown, c: unknown) => Promise<unknown>>
+    const hooks = (result.actions?.['edit'] as any).after as Array<
+      (r: unknown, q: unknown, c: unknown) => Promise<unknown>
+    >
     const fakeResponse = { record: { params: { avatar: 'new.jpg' } } }
     const fakeRecord = makeRecord({ avatar: 'old.jpg' })
     for (const hook of hooks) {
@@ -242,7 +256,6 @@ describe('uploadFeature() — delete hook', () => {
     const feature = uploadFeature({ properties: { avatar: { provider } } })
     const result = feature(emptyOptions)
 
-
     type HookFn = (r: unknown, q: unknown, c: unknown) => Promise<unknown>
     const deleteHook = ((result.actions?.['delete'] as any).after as HookFn[])[0]!
 
@@ -255,27 +268,30 @@ describe('uploadFeature() — delete hook', () => {
     const feature = uploadFeature({ properties: { avatar: { provider } } })
     const result = feature(emptyOptions)
 
-
     type HookFn = (r: unknown, q: unknown, c: unknown) => Promise<unknown>
     const deleteHook = ((result.actions?.['delete'] as any).after as HookFn[])[0]!
 
-    await expect(deleteHook({}, {}, { record: makeRecord({ avatar: null }) })).resolves.toBeDefined()
+    await expect(
+      deleteHook({}, {}, { record: makeRecord({ avatar: null }) }),
+    ).resolves.toBeDefined()
     expect(provider.delete).not.toHaveBeenCalled()
   })
 
   it('swallows provider errors so the action response is returned', async () => {
     const provider = makeProvider({
-      delete: mock(async () => { throw new Error('S3 unavailable') }),
+      delete: mock(async () => {
+        throw new Error('S3 unavailable')
+      }),
     })
     const feature = uploadFeature({ properties: { avatar: { provider } } })
     const result = feature(emptyOptions)
 
-
     type HookFn = (r: unknown, q: unknown, c: unknown) => Promise<unknown>
     const deleteHook = ((result.actions?.['delete'] as any).after as HookFn[])[0]!
     const fakeResponse = { notice: { message: 'deleted', type: 'success' } }
-    await expect(deleteHook(fakeResponse, {}, { record: makeRecord({ avatar: 'key.jpg' }) }))
-      .resolves.toEqual(fakeResponse)
+    await expect(
+      deleteHook(fakeResponse, {}, { record: makeRecord({ avatar: 'key.jpg' }) }),
+    ).resolves.toEqual(fakeResponse)
   })
 })
 
@@ -290,11 +306,14 @@ describe('uploadFeature() — edit hook', () => {
     const feature = uploadFeature({ properties: { avatar: { provider } } })
     const result = feature(emptyOptions)
 
-
     type HookFn = (r: unknown, q: unknown, c: unknown) => Promise<unknown>
     const editHook = ((result.actions?.['edit'] as any).after as HookFn[])[0]!
 
-    await editHook({ record: { params: { avatar: 'new-key.jpg' } } }, {}, { record: makeRecord({ avatar: 'old-key.jpg' }) })
+    await editHook(
+      { record: { params: { avatar: 'new-key.jpg' } } },
+      {},
+      { record: makeRecord({ avatar: 'old-key.jpg' }) },
+    )
     expect(provider.delete).toHaveBeenCalledWith('old-key.jpg')
   })
 
@@ -303,11 +322,14 @@ describe('uploadFeature() — edit hook', () => {
     const feature = uploadFeature({ properties: { avatar: { provider } } })
     const result = feature(emptyOptions)
 
-
     type HookFn = (r: unknown, q: unknown, c: unknown) => Promise<unknown>
     const editHook = ((result.actions?.['edit'] as any).after as HookFn[])[0]!
 
-    await editHook({ record: { params: { avatar: 'same-key.jpg' } } }, {}, { record: makeRecord({ avatar: 'same-key.jpg' }) })
+    await editHook(
+      { record: { params: { avatar: 'same-key.jpg' } } },
+      {},
+      { record: makeRecord({ avatar: 'same-key.jpg' }) },
+    )
     expect(provider.delete).not.toHaveBeenCalled()
   })
 
@@ -316,11 +338,19 @@ describe('uploadFeature() — edit hook', () => {
     const feature = uploadFeature({ properties: { avatar: { provider } } })
     const result = feature(emptyOptions)
 
-
     type HookFn = (r: unknown, q: unknown, c: unknown) => Promise<unknown>
     const editHook = ((result.actions?.['edit'] as any).after as HookFn[])[0]!
 
-    const response = { record: { id: '1', params: { avatar: 'new.jpg' }, title: 'foo', errors: {}, baseError: null, populated: {} } }
+    const response = {
+      record: {
+        id: '1',
+        params: { avatar: 'new.jpg' },
+        title: 'foo',
+        errors: {},
+        baseError: null,
+        populated: {},
+      },
+    }
     const returned = await editHook(response, {}, { record: makeRecord({ avatar: 'old.jpg' }) })
     expect(returned).toBe(response)
   })
@@ -333,7 +363,10 @@ describe('LocalUploadProvider — optional key parameter', () => {
     const { LocalUploadProvider } = await import('../src/providers/local.js')
     // Spy on writeFile via a temp dir approach.
     // We just verify the key is returned as-is.
-    const provider = new LocalUploadProvider({ uploadDir: '/tmp/ma-test-uploads', baseUrl: '/uploads' })
+    const provider = new LocalUploadProvider({
+      uploadDir: '/tmp/ma-test-uploads',
+      baseUrl: '/uploads',
+    })
     const file: UploadedFile = {
       originalName: 'test.jpg',
       mimeType: 'image/jpeg',
@@ -346,7 +379,10 @@ describe('LocalUploadProvider — optional key parameter', () => {
 
   it('auto-generates a key when none is provided', async () => {
     const { LocalUploadProvider } = await import('../src/providers/local.js')
-    const provider = new LocalUploadProvider({ uploadDir: '/tmp/ma-test-uploads', baseUrl: '/uploads' })
+    const provider = new LocalUploadProvider({
+      uploadDir: '/tmp/ma-test-uploads',
+      baseUrl: '/uploads',
+    })
     const file: UploadedFile = {
       originalName: 'photo.png',
       mimeType: 'image/png',
@@ -597,7 +633,9 @@ describe('PendingUploadsRegistry', () => {
 
   it('cancel() swallows provider errors', async () => {
     const provider = makeProvider({
-      delete: mock(async () => { throw new Error('storage down') }),
+      delete: mock(async () => {
+        throw new Error('storage down')
+      }),
     })
     UploadProviderRegistry.register('p1', { provider })
     PendingUploadsRegistry.track('k.jpg', 'p1', 60_000)

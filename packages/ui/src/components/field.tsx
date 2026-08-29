@@ -31,8 +31,7 @@ const fieldVariants = cva('group/field flex w-full', {
 })
 
 export interface FieldProps
-  extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof fieldVariants> {
+  extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof fieldVariants> {
   /** Render with a custom element via Radix Slot. */
   asChild?: boolean
 }
@@ -115,16 +114,17 @@ export const FieldGroup = React.forwardRef<HTMLDivElement, React.HTMLAttributes<
 )
 FieldGroup.displayName = 'FieldGroup'
 
-export const FieldSet = React.forwardRef<HTMLFieldSetElement, React.FieldsetHTMLAttributes<HTMLFieldSetElement>>(
-  ({ className, ...props }, ref) => (
-    <fieldset
-      ref={ref}
-      data-slot="field-set"
-      className={cn('flex flex-col gap-4 rounded-lg border border-border p-4', className)}
-      {...props}
-    />
-  ),
-)
+export const FieldSet = React.forwardRef<
+  HTMLFieldSetElement,
+  React.FieldsetHTMLAttributes<HTMLFieldSetElement>
+>(({ className, ...props }, ref) => (
+  <fieldset
+    ref={ref}
+    data-slot="field-set"
+    className={cn('flex flex-col gap-4 rounded-lg border border-border p-4', className)}
+    {...props}
+  />
+))
 FieldSet.displayName = 'FieldSet'
 
 export const FieldLegend = React.forwardRef<
@@ -140,18 +140,19 @@ export const FieldLegend = React.forwardRef<
 ))
 FieldLegend.displayName = 'FieldLegend'
 
-export const FieldSeparator = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <div
-      ref={ref}
-      data-slot="field-separator"
-      role="separator"
-      aria-orientation="horizontal"
-      className={cn('h-px w-full bg-border', className)}
-      {...props}
-    />
-  ),
-)
+export const FieldSeparator = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    data-slot="field-separator"
+    role="separator"
+    aria-orientation="horizontal"
+    className={cn('h-px w-full bg-border', className)}
+    {...props}
+  />
+))
 FieldSeparator.displayName = 'FieldSeparator'
 
 /** Wrapper for label + description + control + error stacked vertically. */

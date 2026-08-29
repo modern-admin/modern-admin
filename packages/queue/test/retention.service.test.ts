@@ -2,7 +2,10 @@ import { describe, expect, it, mock } from 'bun:test'
 import type { ActionLogRetention, HistoryRetention } from '@modern-admin/core'
 import type { CronTaskDefinition } from '../src/cron/cron.types.js'
 import type { CronService } from '../src/cron/cron.service.js'
-import { DEFAULT_RETENTION_CRON, SYSTEM_RETENTION_TASK } from '../src/retention/retention.constants.js'
+import {
+  DEFAULT_RETENTION_CRON,
+  SYSTEM_RETENTION_TASK,
+} from '../src/retention/retention.constants.js'
 import { RetentionService } from '../src/retention/retention.service.js'
 
 const fakeCron = () => {
@@ -18,10 +21,13 @@ describe('RetentionService', () => {
     const historyPrune = mock((_retention: HistoryRetention) => Promise.resolve(4))
     const auditPrune = mock((_retention: ActionLogRetention) => Promise.resolve(7))
     const { cron, definitions } = fakeCron()
-    const service = new RetentionService({
-      history: { store: { prune: historyPrune }, keepDays: 30, keepLast: 10 },
-      auditLog: { store: { prune: auditPrune }, keepDays: 365 },
-    }, cron)
+    const service = new RetentionService(
+      {
+        history: { store: { prune: historyPrune }, keepDays: 30, keepLast: 10 },
+        auditLog: { store: { prune: auditPrune }, keepDays: 365 },
+      },
+      cron,
+    )
 
     service.onModuleInit()
 
@@ -45,9 +51,12 @@ describe('RetentionService', () => {
 
   it('does not schedule a job without retention bounds', () => {
     const { cron, definitions } = fakeCron()
-    const service = new RetentionService({
-      history: { store: { prune: mock(() => Promise.resolve(0)) } },
-    }, cron)
+    const service = new RetentionService(
+      {
+        history: { store: { prune: mock(() => Promise.resolve(0)) } },
+      },
+      cron,
+    )
 
     service.onModuleInit()
 
@@ -56,12 +65,15 @@ describe('RetentionService', () => {
 
   it('propagates store failures so BullMQ can retry the job', async () => {
     const { cron, definitions } = fakeCron()
-    const service = new RetentionService({
-      history: {
-        store: { prune: mock(() => Promise.reject(new Error('database unavailable'))) },
-        keepDays: 30,
+    const service = new RetentionService(
+      {
+        history: {
+          store: { prune: mock(() => Promise.reject(new Error('database unavailable'))) },
+          keepDays: 30,
+        },
       },
-    }, cron)
+      cron,
+    )
     service.onModuleInit()
 
     await expect(definitions[0]!.handler({} as never)).rejects.toThrow('database unavailable')
@@ -71,10 +83,13 @@ describe('RetentionService', () => {
     const historyPrune = mock(() => Promise.reject(new Error('history unavailable')))
     const auditPrune = mock(() => Promise.resolve(3))
     const { cron, definitions } = fakeCron()
-    const service = new RetentionService({
-      history: { store: { prune: historyPrune }, keepDays: 30 },
-      auditLog: { store: { prune: auditPrune }, keepDays: 365 },
-    }, cron)
+    const service = new RetentionService(
+      {
+        history: { store: { prune: historyPrune }, keepDays: 30 },
+        auditLog: { store: { prune: auditPrune }, keepDays: 365 },
+      },
+      cron,
+    )
     service.onModuleInit()
 
     await expect(definitions[0]!.handler({} as never)).rejects.toThrow('history unavailable')

@@ -36,9 +36,7 @@ async function gql<T = Record<string, unknown>>(
 }
 
 test.describe('GraphQL mutations — customers', () => {
-  test('createCustomers → updateCustomers → deleteCustomers round-trip', async ({
-    request,
-  }) => {
+  test('createCustomers → updateCustomers → deleteCustomers round-trip', async ({ request }) => {
     const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
     const email = `gql-${suffix}@example.com`
     const name = `GQL Test ${suffix}`
@@ -102,10 +100,7 @@ test.describe('GraphQL mutations — customers', () => {
   }) => {
     // Email + name are required. Omitting them must surface a validation
     // error in the GraphQL `errors` array — NOT a 500 from the controller.
-    const body = await gql(
-      request,
-      `mutation { createCustomers(input: { tier: "free" }) { id } }`,
-    )
+    const body = await gql(request, `mutation { createCustomers(input: { tier: "free" }) { id } }`)
     expect(body.errors, 'expected validation error').toBeDefined()
     expect(body.data).toBeFalsy()
   })
@@ -117,10 +112,13 @@ test.describe('GraphQL mutations — customers', () => {
     // (see `attachReferenceResolvers` in schema-builder.ts). The reference
     // resolver runs through a per-request DataLoader so resolving N posts
     // costs a single batched fetch against the referenced resource.
-    const body = await gql<{ postsList: Array<{ id: string; title: string; authorIdRef: { id: string; email: string } | null }> }>(
-      request,
-      `{ postsList(limit: 10) { id title authorIdRef { id email } } }`,
-    )
+    const body = await gql<{
+      postsList: Array<{
+        id: string
+        title: string
+        authorIdRef: { id: string; email: string } | null
+      }>
+    }>(request, `{ postsList(limit: 10) { id title authorIdRef { id email } } }`)
     expect(body.errors, JSON.stringify(body.errors)).toBeUndefined()
     const posts = body.data!.postsList
     expect(posts.length).toBeGreaterThan(0)

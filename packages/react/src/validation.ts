@@ -28,8 +28,7 @@ export type Translator = (key: string, params?: Record<string, unknown>) => stri
 /** Email pattern: deliberately loose, matches Better Auth / common usage. */
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const URL_RE = /^https?:\/\/.+/i
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 const isBlank = (v: unknown): boolean =>
   v === undefined || v === null || (typeof v === 'string' && v.trim() === '')
@@ -76,26 +75,29 @@ function numberSchema(p: PropertyJSON, t: Translator, integer = false): ZodType 
   // Validate at the unknown layer because Zod 4's z.number() rejects NaN
   // before our refinement can produce a localized message. We coerce here,
   // then assert the type ourselves so all error paths flow through superRefine.
-  return z.unknown().superRefine((raw, ctx) => {
-    if (isBlank(raw)) {
-      if (p.isRequired) {
-        ctx.addIssue({ code: 'custom', message: t('validation:required', { label }) })
+  return z
+    .unknown()
+    .superRefine((raw, ctx) => {
+      if (isBlank(raw)) {
+        if (p.isRequired) {
+          ctx.addIssue({ code: 'custom', message: t('validation:required', { label }) })
+        }
+        return
       }
-      return
-    }
-    const value = typeof raw === 'number' ? raw : Number(raw)
-    if (!Number.isFinite(value)) {
-      ctx.addIssue({ code: 'custom', message: t('validation:invalidNumber', { label }) })
-      return
-    }
-    if (integer && !Number.isInteger(value)) {
-      ctx.addIssue({ code: 'custom', message: t('validation:invalidInteger', { label }) })
-    }
-  }).transform((raw) => {
-    if (isBlank(raw)) return null
-    const n = typeof raw === 'number' ? raw : Number(raw)
-    return Number.isFinite(n) ? n : null
-  })
+      const value = typeof raw === 'number' ? raw : Number(raw)
+      if (!Number.isFinite(value)) {
+        ctx.addIssue({ code: 'custom', message: t('validation:invalidNumber', { label }) })
+        return
+      }
+      if (integer && !Number.isInteger(value)) {
+        ctx.addIssue({ code: 'custom', message: t('validation:invalidInteger', { label }) })
+      }
+    })
+    .transform((raw) => {
+      if (isBlank(raw)) return null
+      const n = typeof raw === 'number' ? raw : Number(raw)
+      return Number.isFinite(n) ? n : null
+    })
 }
 
 /** Boolean validator; missing value → false (HTML default for unchecked). */
@@ -269,37 +271,37 @@ function buildPropertySchemaInner(p: PropertyJSON, t: Translator): ZodType {
     return p.isArray ? multiReferenceSchema(p, t) : referenceSchema(p, t)
   }
   switch (p.type) {
-  case 'boolean':
-    return booleanSchema(p, t)
-  case 'number':
-  case 'float':
-  case 'currency':
-  case 'money':
-    return numberSchema(p, t, false)
-  case 'integer':
-    return numberSchema(p, t, true)
-  case 'date':
-  case 'datetime':
-  case 'datetime-local':
-    return dateSchema(p, t)
-  case 'email':
-    return stringSchema(p, t, 'email')
-  case 'url':
-    return stringSchema(p, t, 'url')
-  case 'uuid':
-    return stringSchema(p, t, 'uuid')
-  case 'json':
-    return jsonSchema(p, t)
-  case 'string':
-  case 'text':
-  case 'textarea':
-  case 'password':
-  case 'richtext':
-  case 'color':
-  case 'file':
-    return fileSchema(p, t)
-  default:
-    return stringSchema(p, t)
+    case 'boolean':
+      return booleanSchema(p, t)
+    case 'number':
+    case 'float':
+    case 'currency':
+    case 'money':
+      return numberSchema(p, t, false)
+    case 'integer':
+      return numberSchema(p, t, true)
+    case 'date':
+    case 'datetime':
+    case 'datetime-local':
+      return dateSchema(p, t)
+    case 'email':
+      return stringSchema(p, t, 'email')
+    case 'url':
+      return stringSchema(p, t, 'url')
+    case 'uuid':
+      return stringSchema(p, t, 'uuid')
+    case 'json':
+      return jsonSchema(p, t)
+    case 'string':
+    case 'text':
+    case 'textarea':
+    case 'password':
+    case 'richtext':
+    case 'color':
+    case 'file':
+      return fileSchema(p, t)
+    default:
+      return stringSchema(p, t)
   }
 }
 

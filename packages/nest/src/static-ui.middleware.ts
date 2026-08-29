@@ -15,13 +15,7 @@
  * `themeCss`, `faviconUrl`, `headHtml`, and `staticFiles` below.
  */
 
-import {
-  Inject,
-  Injectable,
-  Logger,
-  type NestMiddleware,
-  Optional,
-} from '@nestjs/common'
+import { Inject, Injectable, Logger, type NestMiddleware, Optional } from '@nestjs/common'
 import type { NextFunction, Request, Response } from 'express'
 import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs'
 import { extname, join, normalize, resolve } from 'node:path'
@@ -56,9 +50,7 @@ export type ModernAdminRuntimeConfigFactory<TConfig = ModernAdminUiRuntimeConfig
 ) => TConfig | Promise<TConfig>
 
 /** Request-aware factory for extra `<head>` markup (e.g. per-tenant theming). */
-export type ModernAdminHeadHtmlFactory = (
-  req: AdminHttpRequest,
-) => string | Promise<string>
+export type ModernAdminHeadHtmlFactory = (req: AdminHttpRequest) => string | Promise<string>
 
 export interface ModernAdminStaticUiOptions<TConfig = ModernAdminUiRuntimeConfig> {
   /**
@@ -172,9 +164,7 @@ const PRECOMPRESSED_VARIANTS = [
   { encoding: 'gzip', suffix: '.gz' },
 ] as const
 
-export const MODERN_ADMIN_STATIC_UI_OPTIONS = Symbol(
-  'MODERN_ADMIN_STATIC_UI_OPTIONS',
-)
+export const MODERN_ADMIN_STATIC_UI_OPTIONS = Symbol('MODERN_ADMIN_STATIC_UI_OPTIONS')
 
 @Injectable()
 export class ModernAdminStaticUiMiddleware implements NestMiddleware {
@@ -191,9 +181,7 @@ export class ModernAdminStaticUiMiddleware implements NestMiddleware {
     private readonly options: ModernAdminStaticUiOptions = {},
   ) {
     this.mountPath = assertMountPath(options.path ?? DEFAULT_PATH)
-    this.standaloneDir = resolveStandaloneDir(
-      options.webPackage ?? DEFAULT_WEB_PACKAGE,
-    )
+    this.standaloneDir = resolveStandaloneDir(options.webPackage ?? DEFAULT_WEB_PACKAGE)
     this.staticFiles = normalizeStaticFiles(options.staticFiles)
     this.htmlTemplate = this.loadHtmlTemplate()
   }
@@ -253,12 +241,7 @@ export class ModernAdminStaticUiMiddleware implements NestMiddleware {
    * when the client accepts it — the standalone JS is an order of
    * magnitude smaller over the wire.
    */
-  private sendFile(
-    req: Request,
-    res: Response,
-    filePath: string,
-    cacheControl: string,
-  ): void {
+  private sendFile(req: Request, res: Response, filePath: string, cacheControl: string): void {
     const mime = MIME_TYPES[extname(filePath).toLowerCase()] ?? 'application/octet-stream'
     res.setHeader('Content-Type', mime)
     res.setHeader('Cache-Control', cacheControl)
@@ -314,10 +297,7 @@ export class ModernAdminStaticUiMiddleware implements NestMiddleware {
     if (title) {
       // Replacer function, not a replacement string: `$&`, "$`" and `$'` in
       // a company name would otherwise be expanded and corrupt the shell.
-      html = html.replace(
-        /<title>[^<]*<\/title>/,
-        () => `<title>${escapeHtml(title)}</title>`,
-      )
+      html = html.replace(/<title>[^<]*<\/title>/, () => `<title>${escapeHtml(title)}</title>`)
     }
     html = appendToHead(html, PRE_PAINT_SCRIPT, { prepend: true })
     if (this.options.themeCss) {
@@ -427,9 +407,7 @@ function stripPrefix(url: string, prefix: string): string {
   return url
 }
 
-function normalizeStaticFiles(
-  files: Record<string, string> | undefined,
-): Map<string, string> {
+function normalizeStaticFiles(files: Record<string, string> | undefined): Map<string, string> {
   const map = new Map<string, string>()
   for (const [urlPath, filePath] of Object.entries(files ?? {})) {
     const key = urlPath.startsWith('/') ? urlPath : `/${urlPath}`
@@ -472,11 +450,7 @@ const HEAD_CLOSE = /<\/head\s*>/i
  * ahead of `<!doctype html>`, which drops the whole page into quirks mode —
  * a far worse outcome than a pre-paint script running slightly later.
  */
-function appendToHead(
-  html: string,
-  markup: string,
-  opts: { prepend?: boolean } = {},
-): string {
+function appendToHead(html: string, markup: string, opts: { prepend?: boolean } = {}): string {
   if (opts.prepend && HEAD_OPEN.test(html)) {
     return html.replace(HEAD_OPEN, (tag) => `${tag}${markup}`)
   }
@@ -490,9 +464,7 @@ function appendToHead(
 }
 
 function replaceOrAppendToHead(html: string, pattern: RegExp, markup: string): string {
-  return pattern.test(html)
-    ? html.replace(pattern, () => markup)
-    : appendToHead(html, markup)
+  return pattern.test(html) ? html.replace(pattern, () => markup) : appendToHead(html, markup)
 }
 
 function escapeHtml(text: string): string {

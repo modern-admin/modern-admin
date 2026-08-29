@@ -1,15 +1,6 @@
-import {
-  type BaseDatabase,
-  BaseResource,
-} from '../adapters'
-import {
-  ResourceDecorator,
-  type ResourceOptions,
-} from '../decorators'
-import {
-  NoDatabaseAdapterError,
-  NoResourceAdapterError,
-} from '../errors'
+import { type BaseDatabase, BaseResource } from '../adapters'
+import { ResourceDecorator, type ResourceOptions } from '../decorators'
+import { NoDatabaseAdapterError, NoResourceAdapterError } from '../errors'
 import { ConsoleLogger, type ILogger } from '../ports'
 import { deepMerge, RESOURCE_OPTIONS_ARRAY_STRATEGIES } from '../utils/merge-options.js'
 
@@ -26,14 +17,12 @@ import { deepMerge, RESOURCE_OPTIONS_ARRAY_STRATEGIES } from '../utils/merge-opt
  * check, so the static type is not load-bearing here.
  */
 export interface DatabaseClass {
-
   new (db: any): BaseDatabase
   isAdapterFor(db: unknown): boolean
 }
 
 /** Concrete constructor + statics contract for a resource adapter class. */
 export interface ResourceClass {
-
   new (raw: any): BaseResource
   isAdapterFor(raw: unknown): boolean
 }
@@ -132,17 +121,21 @@ export class ResourcesFactory {
 
       log.warn(
         `[modern-admin] Registered ${dbIds.length} resource(s) from \`databases:\` ` +
-        `(ids: ${dbIds.join(', ')}) and ${optIds.length} from \`resources:\`/\`@AdminResource\` ` +
-        `(ids: ${optIds.join(', ')}) with no id overlap. If your @AdminResource ` +
-        `registrations remap to logical ids, the \`databases:\` entries will register ` +
-        `a second, parallel set of resources under raw model names — usually a bug ` +
-        `(duplicates in dropdowns, dashboards). Remove \`databases:\` to register ` +
-        `resources only via @AdminResource, or align ids if you intend both.`,
+          `(ids: ${dbIds.join(', ')}) and ${optIds.length} from \`resources:\`/\`@AdminResource\` ` +
+          `(ids: ${optIds.join(', ')}) with no id overlap. If your @AdminResource ` +
+          `registrations remap to logical ids, the \`databases:\` entries will register ` +
+          `a second, parallel set of resources under raw model names — usually a bug ` +
+          `(duplicates in dropdowns, dashboards). Remove \`databases:\` to register ` +
+          `resources only via @AdminResource, or align ids if you intend both.`,
       )
     }
 
     const merged = [
-      ...fromDatabases.map((resource) => ({ resource, options: {} as ResourceOptions, features: [] as FeatureFn[] })),
+      ...fromDatabases.map((resource) => ({
+        resource,
+        options: {} as ResourceOptions,
+        features: [] as FeatureFn[],
+      })),
       ...fromOptions,
     ]
     return ResourcesFactory.decorate(merged, plugins)

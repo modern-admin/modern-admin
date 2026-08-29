@@ -96,10 +96,7 @@ describe('ModernAdminCacheInterceptor — principal scoping', () => {
 
     const adminHandler = handlerReturning({ records: ['full payload'] })
     const adminBody = await firstValueFrom(
-      interceptor.intercept(
-        httpContext(listReq({ id: 'a1', role: 'admin' })),
-        adminHandler,
-      ),
+      interceptor.intercept(httpContext(listReq({ id: 'a1', role: 'admin' })), adminHandler),
     )
     expect(adminBody).toEqual({ records: ['full payload'] })
 
@@ -107,10 +104,7 @@ describe('ModernAdminCacheInterceptor — principal scoping', () => {
     // admin's cached body — the handler must run again for their scope.
     const viewerHandler = handlerReturning({ records: ['redacted payload'] })
     const viewerBody = await firstValueFrom(
-      interceptor.intercept(
-        httpContext(listReq({ id: 'v1', role: 'viewer' })),
-        viewerHandler,
-      ),
+      interceptor.intercept(httpContext(listReq({ id: 'v1', role: 'viewer' })), viewerHandler),
     )
     expect(viewerHandler.calls).toBe(1)
     expect(viewerBody).toEqual({ records: ['redacted payload'] })
@@ -142,14 +136,18 @@ describe('ModernAdminCacheInterceptor — principal scoping', () => {
     const admin = new ModernAdmin({
       adapters: [adapter as never],
       cache,
-      resources: [{
-        resource: { name: 'users', rows: [{ id: '1', name: 'Ann' }] },
-        options: {
-          properties: {
-            name: { isAccessible: ({ currentAdmin }: PropertyContext) => currentAdmin?.id === 'a1' },
+      resources: [
+        {
+          resource: { name: 'users', rows: [{ id: '1', name: 'Ann' }] },
+          options: {
+            properties: {
+              name: {
+                isAccessible: ({ currentAdmin }: PropertyContext) => currentAdmin?.id === 'a1',
+              },
+            },
           },
         },
-      }],
+      ],
     })
     const interceptor = new ModernAdminCacheInterceptor(admin, new Reflector())
     const principal = { id: 'a1', role: 'admin' }
@@ -157,9 +155,9 @@ describe('ModernAdminCacheInterceptor — principal scoping', () => {
       interceptor.intercept(httpContext(listReq(principal)), handlerReturning({ records: [1] })),
     )
     const second = handlerReturning({ records: [2] })
-    await expect(firstValueFrom(
-      interceptor.intercept(httpContext(listReq(principal)), second),
-    )).resolves.toEqual({ records: [2] })
+    await expect(
+      firstValueFrom(interceptor.intercept(httpContext(listReq(principal)), second)),
+    ).resolves.toEqual({ records: [2] })
     expect(second.calls).toBe(1)
     expect(cache.keys).toEqual([])
   })
@@ -167,10 +165,12 @@ describe('ModernAdminCacheInterceptor — principal scoping', () => {
   test('role revocation invalidates HTTP responses before they can bypass authorization', async () => {
     const cache = new InspectableCache()
     const admin = new ModernAdmin({
-      databases: [[
-        { name: 'users', rows: [{ id: '1', name: 'Ann' }] },
-        { name: 'roles', rows: [{ id: 'editor', permissions: { users: ['list'] } }] },
-      ] satisfies FakeTable[]],
+      databases: [
+        [
+          { name: 'users', rows: [{ id: '1', name: 'Ann' }] },
+          { name: 'roles', rows: [{ id: 'editor', permissions: { users: ['list'] } }] },
+        ] satisfies FakeTable[],
+      ],
       adapters: [adapter as never],
       cache,
       rolesResourceId: 'roles',
@@ -181,11 +181,7 @@ describe('ModernAdminCacheInterceptor — principal scoping', () => {
       interceptor.intercept(httpContext(listReq(principal)), handlerReturning({ records: [1] })),
     )
     const key = 'v1:nest:GET:/admin/api/resources/users:user:a1'
-    expect(cache.tagsByKey.get(key)).toEqual([
-      'list:users',
-      'role-perms',
-      'role-perms:editor',
-    ])
+    expect(cache.tagsByKey.get(key)).toEqual(['list:users', 'role-perms', 'role-perms:editor'])
 
     await admin.invalidateRolePermissionsCache()
     const second = handlerReturning({ records: [2] })
@@ -201,9 +197,7 @@ describe('ModernAdminCacheInterceptor — principal scoping', () => {
       interceptor.intercept(httpContext(listReq(principal)), handlerReturning({ records: [1] })),
     )
     const next = handlerReturning({ records: ['never used'] })
-    const body = await firstValueFrom(
-      interceptor.intercept(httpContext(listReq(principal)), next),
-    )
+    const body = await firstValueFrom(interceptor.intercept(httpContext(listReq(principal)), next))
     expect(next.calls).toBe(0)
     expect(body).toEqual({ records: [1] })
   })
@@ -239,9 +233,7 @@ describe('ModernAdminCacheInterceptor — principal scoping', () => {
     NoHttpCache()(primeAction)
 
     const first = handlerReturning({ templates: ['welcome'] })
-    await firstValueFrom(
-      interceptor.intercept(httpContext(listReq(), primeAction), first),
-    )
+    await firstValueFrom(interceptor.intercept(httpContext(listReq(), primeAction), first))
     const second = handlerReturning({ templates: ['changed'] })
     const body = await firstValueFrom(
       interceptor.intercept(httpContext(listReq(), primeAction), second),
@@ -283,9 +275,7 @@ describe('ModernAdminCacheInterceptor — principal scoping', () => {
     expect(body).toEqual({ records: [1, 2] })
     // …and the entry now holds the fresh body, so the next plain GET hits it.
     const next = handlerReturning({ records: ['never used'] })
-    const cached = await firstValueFrom(
-      interceptor.intercept(httpContext(listReq()), next),
-    )
+    const cached = await firstValueFrom(interceptor.intercept(httpContext(listReq()), next))
     expect(next.calls).toBe(0)
     expect(cached).toEqual({ records: [1, 2] })
   })
@@ -346,8 +336,9 @@ describe('ModernAdminCacheInterceptor — principal scoping', () => {
 
 describe('canonicalHttpUrl', () => {
   test('normalises query parameter order and keeps repeated value order', () => {
-    expect(canonicalHttpUrl('/admin/api/resources/users?perPage=20&page=1'))
-      .toBe('/admin/api/resources/users?page=1&perPage=20')
+    expect(canonicalHttpUrl('/admin/api/resources/users?perPage=20&page=1')).toBe(
+      '/admin/api/resources/users?page=1&perPage=20',
+    )
     expect(canonicalHttpUrl('/x?tag=b&tag=a')).toBe('/x?tag=b&tag=a')
   })
 })

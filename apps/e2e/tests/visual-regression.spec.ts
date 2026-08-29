@@ -153,9 +153,9 @@ test.describe('Visual regression — apps/web', () => {
     await page.goto('/settings')
     // `/settings` redirects to the API keys section (see settings.spec.ts).
     // The card heading is the most reliable "section loaded" signal.
-    await expect(
-      page.getByRole('heading', { name: 'API keys', exact: true }),
-    ).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('heading', { name: 'API keys', exact: true })).toBeVisible({
+      timeout: 15_000,
+    })
     await stabilize(page)
     await expect(page).toHaveScreenshot('settings.png', {
       fullPage: true,

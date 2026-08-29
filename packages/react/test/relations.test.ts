@@ -35,18 +35,26 @@ const resource = (overrides: Partial<ResourceJSON>): ResourceJSON => ({
 
 describe('relations helpers', () => {
   test('detects virtual to-many reference fields', () => {
-    expect(isToManyReferenceProperty(prop({
-      path: 'posts',
-      type: 'reference',
-      isArray: true,
-      reference: 'posts',
-    }))).toBe(true)
-    expect(isToManyReferenceProperty(prop({
-      path: 'tags',
-      type: 'm2m',
-      isArray: true,
-      reference: 'tags',
-    }))).toBe(false)
+    expect(
+      isToManyReferenceProperty(
+        prop({
+          path: 'posts',
+          type: 'reference',
+          isArray: true,
+          reference: 'posts',
+        }),
+      ),
+    ).toBe(true)
+    expect(
+      isToManyReferenceProperty(
+        prop({
+          path: 'tags',
+          type: 'm2m',
+          isArray: true,
+          reference: 'tags',
+        }),
+      ),
+    ).toBe(false)
   })
 
   test('hides virtual to-many reference fields from record properties', () => {
@@ -111,7 +119,13 @@ describe('relations helpers', () => {
       id: 'users',
       properties: [
         prop({ path: 'email', label: 'Email' }),
-        prop({ path: 'posts', label: 'Posts', type: 'reference', isArray: true, reference: 'posts' }),
+        prop({
+          path: 'posts',
+          label: 'Posts',
+          type: 'reference',
+          isArray: true,
+          reference: 'posts',
+        }),
       ],
     })
     const posts = resource({

@@ -31,11 +31,11 @@ weaknesses:
 ## Stack
 
 | Layer        | Choice                                            |
-|--------------|---------------------------------------------------|
+| ------------ | ------------------------------------------------- |
 | Runtime / pm | [Bun](https://bun.com)                            |
 | Frontend     | Vite 8 + React 19 + TanStack Router 1.x           |
 | UI           | shadcn/ui, Tailwind CSS 4 (CSS-first), Recharts 3 |
-| Backend      | NestJS 11+ (REST + GraphQL + WebSocket + OpenAPI) |
+| Backend      | NestJS 12+ (REST + GraphQL + WebSocket + OpenAPI) |
 | ORMs         | Prisma 7+, Drizzle 0.45+                          |
 | Auth         | Better Auth 1.7+ (cookies + API keys)             |
 | Cache        | Redis (backend) + TanStack Query 5 (frontend)     |
@@ -157,7 +157,7 @@ alongside resource names, useful during development.
 
 ## Getting started
 
-Prerequisites: **Bun ≥ 1.3**, **Node 20+**, **Docker** for the dev databases.
+Prerequisites: **Bun ≥ 1.4**, **Node 20+**, **Docker** for the dev databases.
 
 ```bash
 # Install all workspaces
@@ -213,9 +213,11 @@ Full documentation lives at **<https://docs.modernadminpro.com/docs/getting-star
   `@modern-admin/react/styles.css` and add one `@source` for their own files.
   `border` requires an explicit color in Tailwind 4 — pair with
   `border-border`.
-- TypeScript 7 carries the stricter TypeScript 6 checks forward: use
-  `as unknown as T` for variance/abstract constructor casts. ESLint and DTS
-  tooling temporarily use the side-by-side TypeScript 6 JavaScript API.
+- TypeScript 7 (native compiler) carries the stricter TypeScript 6 checks
+  forward: use `as unknown as T` for variance/abstract constructor casts. The
+  same `tsc` handles both `--noEmit` typecheck and `-p` build emit, but tooling
+  that needs the TS JavaScript API (unplugin-dts, in the web build) uses the
+  side-by-side `@typescript/typescript6` dev dependency — keep it installed.
 - React 19: use `import type { ReactElement } from 'react'` instead of
   `JSX.Element`.
 - Mobile-first UI: base classes target small viewports, `sm:`/`md:`/`lg:`

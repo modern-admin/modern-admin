@@ -67,10 +67,7 @@ export interface AdminAuthPaths {
   signOut: string
 }
 
-export type AdminFetch = (
-  input: RequestInfo | URL,
-  init?: RequestInit,
-) => Promise<Response>
+export type AdminFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
 
 const defaultStorage = (): Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | null => {
   if (typeof window === 'undefined') return null
@@ -108,56 +105,154 @@ export interface IAdminClient {
   getAuthUiProps(): Promise<AuthUiProps>
   loginSocial(provider: string, callbackUrl?: string): Promise<void>
   logout(): Promise<void>
-  list(resourceId: string, query?: ListQuery, options?: { refresh?: boolean }): Promise<ListResponse>
+  list(
+    resourceId: string,
+    query?: ListQuery,
+    options?: { refresh?: boolean },
+  ): Promise<ListResponse>
   show(resourceId: string, recordId: string): Promise<RecordResponse>
   create(resourceId: string, payload: Record<string, unknown>): Promise<RecordResponse>
-  update(resourceId: string, recordId: string, payload: Record<string, unknown>): Promise<RecordResponse>
+  update(
+    resourceId: string,
+    recordId: string,
+    payload: Record<string, unknown>,
+  ): Promise<RecordResponse>
   delete(resourceId: string, recordId: string): Promise<void>
   bulkDelete(resourceId: string, recordIds: ReadonlyArray<string>): Promise<unknown>
-  distinctValues(resourceId: string, field: string, options?: { search?: string; limit?: number }): Promise<{ values: string[]; hasMore: boolean }>
+  distinctValues(
+    resourceId: string,
+    field: string,
+    options?: { search?: string; limit?: number },
+  ): Promise<{ values: string[]; hasMore: boolean }>
   search(resourceId: string, query: string): Promise<ListResponse>
-  globalSearch(query: string, perResourceLimit?: number, options?: { signal?: AbortSignal }): Promise<GlobalSearchResponse>
-  fetchRecordAction(resourceId: string, recordId: string, actionName: string, query?: Record<string, string>): Promise<CustomActionResponse>
-  fetchResourceAction(resourceId: string, actionName: string, query?: Record<string, string>): Promise<CustomActionResponse>
-  invokeRecordAction(resourceId: string, recordId: string, actionName: string, payload?: Record<string, unknown>): Promise<CustomActionResponse>
-  invokeBulkAction(resourceId: string, actionName: string, recordIds: ReadonlyArray<string>, payload?: Record<string, unknown>): Promise<CustomActionResponse>
-  invokeResourceAction(resourceId: string, actionName: string, payload?: Record<string, unknown>): Promise<CustomActionResponse>
+  globalSearch(
+    query: string,
+    perResourceLimit?: number,
+    options?: { signal?: AbortSignal },
+  ): Promise<GlobalSearchResponse>
+  fetchRecordAction(
+    resourceId: string,
+    recordId: string,
+    actionName: string,
+    query?: Record<string, string>,
+  ): Promise<CustomActionResponse>
+  fetchResourceAction(
+    resourceId: string,
+    actionName: string,
+    query?: Record<string, string>,
+  ): Promise<CustomActionResponse>
+  invokeRecordAction(
+    resourceId: string,
+    recordId: string,
+    actionName: string,
+    payload?: Record<string, unknown>,
+  ): Promise<CustomActionResponse>
+  invokeBulkAction(
+    resourceId: string,
+    actionName: string,
+    recordIds: ReadonlyArray<string>,
+    payload?: Record<string, unknown>,
+  ): Promise<CustomActionResponse>
+  invokeResourceAction(
+    resourceId: string,
+    actionName: string,
+    payload?: Record<string, unknown>,
+  ): Promise<CustomActionResponse>
   timeseries(query: TimeSeriesQuery): Promise<TimeSeriesResponse>
-  listHistory(resourceId: string, recordId: string, query?: { limit?: number; offset?: number }): Promise<HistoryListResponse>
-  getHistoryRevision(resourceId: string, recordId: string, revisionId: string): Promise<HistoryRevisionResponse>
-  revertHistoryRevision(resourceId: string, recordId: string, revisionId: string, body?: { reason?: string }): Promise<RecordResponse>
+  listHistory(
+    resourceId: string,
+    recordId: string,
+    query?: { limit?: number; offset?: number },
+  ): Promise<HistoryListResponse>
+  getHistoryRevision(
+    resourceId: string,
+    recordId: string,
+    revisionId: string,
+  ): Promise<HistoryRevisionResponse>
+  revertHistoryRevision(
+    resourceId: string,
+    recordId: string,
+    revisionId: string,
+    body?: { reason?: string },
+  ): Promise<RecordResponse>
   listAuditLog(query?: AuditLogQuery): Promise<AuditLogResponse>
-  uploadFile(resourceId: string, field: string, file: File, options?: UploadFileOptions): Promise<UploadedFileInfo>
-  uploadFiles(resourceId: string, field: string, files: ReadonlyArray<File>, options?: UploadFilesOptions): Promise<UploadedFileInfo[]>
+  uploadFile(
+    resourceId: string,
+    field: string,
+    file: File,
+    options?: UploadFileOptions,
+  ): Promise<UploadedFileInfo>
+  uploadFiles(
+    resourceId: string,
+    field: string,
+    files: ReadonlyArray<File>,
+    options?: UploadFilesOptions,
+  ): Promise<UploadedFileInfo[]>
   loadDashboard(): Promise<{ dashboard: DashboardBlob }>
   saveDashboard(dashboard: DashboardBlob): Promise<{ ok: boolean }>
   cacheStats(): Promise<CacheStatsResponse>
   resetCacheStats(): Promise<CacheStatsResponse>
   invalidateResourceCache(resourceId: string): Promise<{ ok: true }>
   listApiKeys(): Promise<{ keys: ApiKeyRecord[] }>
-  createApiKey(payload: { name: string; permissions: Record<string, string[]>; expiresInDays?: number | null }): Promise<{ key: string; record: ApiKeyRecord }>
-  updateApiKey(id: string, payload: { name?: string; enabled?: boolean; permissions?: Record<string, string[]>; expiresInDays?: number | null }): Promise<{ record: ApiKeyRecord }>
+  createApiKey(payload: {
+    name: string
+    permissions: Record<string, string[]>
+    expiresInDays?: number | null
+  }): Promise<{ key: string; record: ApiKeyRecord }>
+  updateApiKey(
+    id: string,
+    payload: {
+      name?: string
+      enabled?: boolean
+      permissions?: Record<string, string[]>
+      expiresInDays?: number | null
+    },
+  ): Promise<{ record: ApiKeyRecord }>
   deleteApiKey(id: string): Promise<{ success: true }>
   listWebhooks(): Promise<{ webhooks: WebhookRecord[] }>
   createWebhook(payload: WebhookInput): Promise<{ webhook: WebhookRecord }>
   updateWebhook(id: string, payload: Partial<WebhookInput>): Promise<{ webhook: WebhookRecord }>
   deleteWebhook(id: string): Promise<{ success: true }>
-  listWebhookDeliveries(id: string, limit?: number): Promise<{ deliveries: WebhookDeliveryRecord[] }>
+  listWebhookDeliveries(
+    id: string,
+    limit?: number,
+  ): Promise<{ deliveries: WebhookDeliveryRecord[] }>
   testWebhook(id: string): Promise<{ success: true }>
   cancelUpload(resourceId: string, field: string, key: string): Promise<void>
-  aiFillFromImage(resourceId: string, file: File, options?: { signal?: AbortSignal }): Promise<AiFillResponse>
+  aiFillFromImage(
+    resourceId: string,
+    file: File,
+    options?: { signal?: AbortSignal },
+  ): Promise<AiFillResponse>
   getAiAssistantSettings(): Promise<AiAssistantSettings>
-  updateAiAssistantSettings(payload: { enabled: boolean; model: string; apiKey?: string; systemPrompt?: string }): Promise<AiAssistantSettings>
-  sendAiAssistantChat(messages: AiAssistantChatMessage[], requestId?: string, locale?: string, conversationId?: string, clientContext?: AiClientContext): Promise<AiAssistantChatEnqueueResponse>
+  updateAiAssistantSettings(payload: {
+    enabled: boolean
+    model: string
+    apiKey?: string
+    systemPrompt?: string
+  }): Promise<AiAssistantSettings>
+  sendAiAssistantChat(
+    messages: AiAssistantChatMessage[],
+    requestId?: string,
+    locale?: string,
+    conversationId?: string,
+    clientContext?: AiClientContext,
+  ): Promise<AiAssistantChatEnqueueResponse>
   listAiAssistantChats(): Promise<AiAssistantChatHistoryItem[]>
   getAiAssistantTask(taskId: string): Promise<AiAssistantTask>
   getMediaGenerationSettings(): Promise<MediaGenerationSettings>
-  updateMediaGenerationSettings(payload: { enabled: boolean; apiKey?: string }): Promise<MediaGenerationSettings>
+  updateMediaGenerationSettings(payload: {
+    enabled: boolean
+    apiKey?: string
+  }): Promise<MediaGenerationSettings>
   getMediaGenerationCatalog(): Promise<MediaGenerationCatalogModel[]>
   createMediaGenerationTask(payload: CreateMediaGenerationTaskInput): Promise<MediaGenerationTask>
   getMediaGenerationTask(taskId: string): Promise<MediaGenerationTask>
   cancelMediaGenerationTask(taskId: string): Promise<MediaGenerationTask>
-  applyMediaGenerationTask(taskId: string, payload: { fileIndex: number; replaceExisting?: boolean }): Promise<MediaGenerationTask>
+  applyMediaGenerationTask(
+    taskId: string,
+    payload: { fileIndex: number; replaceExisting?: boolean },
+  ): Promise<MediaGenerationTask>
 }
 
 export class AdminClient implements IAdminClient {
@@ -186,13 +281,12 @@ export class AdminClient implements IAdminClient {
     this.socialSignInPath = opts.authPaths?.socialSignIn ?? `${this.authBasePath}/sign-in/social`
     this.signOutPath = opts.authPaths?.signOut ?? `${this.authBasePath}/sign-out`
     this.fetchImpl = opts.fetchImpl ?? ((input, init) => globalThis.fetch(input, init))
-    this.storage = opts.storage === undefined
-      ? defaultStorage()
-      : opts.storage
-    this.getCurrentUrl = opts.getCurrentUrl
-      ?? (() => (typeof window === 'undefined' ? '/' : window.location.href))
-    this.navigate = opts.navigate
-      ?? ((url) => {
+    this.storage = opts.storage === undefined ? defaultStorage() : opts.storage
+    this.getCurrentUrl =
+      opts.getCurrentUrl ?? (() => (typeof window === 'undefined' ? '/' : window.location.href))
+    this.navigate =
+      opts.navigate ??
+      ((url) => {
         if (typeof window !== 'undefined') window.location.href = url
       })
   }
@@ -221,7 +315,11 @@ export class AdminClient implements IAdminClient {
     return (await res.json()) as T
   }
 
-  private async request<T>(path: string, init: RequestInit = {}, allowDemoRestore = true): Promise<T> {
+  private async request<T>(
+    path: string,
+    init: RequestInit = {},
+    allowDemoRestore = true,
+  ): Promise<T> {
     try {
       return await this.requestOnce<T>(path, init)
     } catch (err) {
@@ -319,13 +417,10 @@ export class AdminClient implements IAdminClient {
    *  after the provider redirects back. */
   async loginSocial(provider: string, callbackUrl?: string): Promise<void> {
     const resolved = callbackUrl ?? this.getCurrentUrl()
-    const data = await this.requestOnce<{ url?: string }>(
-      this.socialSignInPath,
-      {
-        method: 'POST',
-        body: JSON.stringify({ provider, callbackURL: resolved }),
-      },
-    )
+    const data = await this.requestOnce<{ url?: string }>(this.socialSignInPath, {
+      method: 'POST',
+      body: JSON.stringify({ provider, callbackURL: resolved }),
+    })
     if (data.url) this.navigate(data.url)
   }
 
@@ -357,9 +452,7 @@ export class AdminClient implements IAdminClient {
   ): Promise<ListResponse> {
     return this.request<ListResponse>(
       `/admin/api/resources/${encodeURIComponent(resourceId)}/actions/list${buildQuery(query)}`,
-      options?.refresh
-        ? { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } }
-        : {},
+      options?.refresh ? { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } } : {},
     )
   }
 
@@ -763,18 +856,17 @@ export class AdminClient implements IAdminClient {
       expiresInDays?: number | null
     },
   ): Promise<{ record: ApiKeyRecord }> {
-    return this.request<{ record: ApiKeyRecord }>(
-      `/admin/api/api-keys/${encodeURIComponent(id)}`,
-      { method: 'PATCH', body: JSON.stringify(payload) },
-    )
+    return this.request<{ record: ApiKeyRecord }>(`/admin/api/api-keys/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    })
   }
 
   /** Permanently revoke (delete) an API key. */
   deleteApiKey(id: string): Promise<{ success: true }> {
-    return this.request<{ success: true }>(
-      `/admin/api/api-keys/${encodeURIComponent(id)}`,
-      { method: 'DELETE' },
-    )
+    return this.request<{ success: true }>(`/admin/api/api-keys/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    })
   }
 
   listWebhooks(): Promise<{ webhooks: WebhookRecord[] }> {
@@ -796,10 +888,9 @@ export class AdminClient implements IAdminClient {
   }
 
   deleteWebhook(id: string): Promise<{ success: true }> {
-    return this.request<{ success: true }>(
-      `/admin/api/webhooks/${encodeURIComponent(id)}`,
-      { method: 'DELETE' },
-    )
+    return this.request<{ success: true }>(`/admin/api/webhooks/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    })
   }
 
   listWebhookDeliveries(id: string, limit = 50): Promise<{ deliveries: WebhookDeliveryRecord[] }> {
@@ -809,10 +900,10 @@ export class AdminClient implements IAdminClient {
   }
 
   testWebhook(id: string): Promise<{ success: true }> {
-    return this.request<{ success: true }>(
-      `/admin/api/webhooks/${encodeURIComponent(id)}/test`,
-      { method: 'POST', body: '{}' },
-    )
+    return this.request<{ success: true }>(`/admin/api/webhooks/${encodeURIComponent(id)}/test`, {
+      method: 'POST',
+      body: '{}',
+    })
   }
 
   /**
@@ -873,9 +964,7 @@ export class AdminClient implements IAdminClient {
       return await doFetch()
     } catch (err) {
       const canRestore =
-        err instanceof AdminApiError &&
-        err.status === 401 &&
-        !options.signal?.aborted
+        err instanceof AdminApiError && err.status === 401 && !options.signal?.aborted
       if (!canRestore) throw err
       const restored = await this.restoreDemoSession()
       if (!restored) throw err
@@ -923,7 +1012,9 @@ export class AdminClient implements IAdminClient {
   }
 
   async getAiAssistantTask(taskId: string): Promise<AiAssistantTask> {
-    return this.request<AiAssistantTask>(`/admin/api/ai-assistant/tasks/${encodeURIComponent(taskId)}`)
+    return this.request<AiAssistantTask>(
+      `/admin/api/ai-assistant/tasks/${encodeURIComponent(taskId)}`,
+    )
   }
 
   getMediaGenerationSettings(): Promise<MediaGenerationSettings> {
@@ -973,7 +1064,6 @@ export class AdminClient implements IAdminClient {
       { method: 'POST', body: JSON.stringify(payload) },
     )
   }
-
 }
 
 // ─── Time-series ──────────────────────────────────────────────────────────

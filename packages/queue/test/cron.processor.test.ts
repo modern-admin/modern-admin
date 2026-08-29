@@ -3,16 +3,12 @@ import { describe, test, expect, mock, beforeEach } from 'bun:test'
 import type { Job, Queue } from 'bullmq'
 import { CronProcessor } from '../src/cron/cron.processor.js'
 import { CronService } from '../src/cron/cron.service.js'
-import {
-  CRON_LOCK_PREFIX,
-  CRON_QUEUE,
-  DEFAULT_CRON_LOCK_TTL,
-} from '../src/cron/cron.constants.js'
+import { CRON_LOCK_PREFIX, CRON_QUEUE, DEFAULT_CRON_LOCK_TTL } from '../src/cron/cron.constants.js'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 const makeJob = (name: string, data: unknown = {}, id = 'test-job-id'): Job =>
-  ({ name, data, id } as unknown as Job)
+  ({ name, data, id }) as unknown as Job
 
 type MockRedis = {
   runCommand: ReturnType<typeof mock>
@@ -101,13 +97,7 @@ describe('CronProcessor › skipIfRunning lock', () => {
     const result = await processor.process(makeJob('locked-task'))
     expect(redis.runCommand.mock.calls[0]).toEqual([
       'set',
-      [
-        `${CRON_LOCK_PREFIX}locked-task`,
-        'test-job-id',
-        'EX',
-        DEFAULT_CRON_LOCK_TTL,
-        'NX',
-      ],
+      [`${CRON_LOCK_PREFIX}locked-task`, 'test-job-id', 'EX', DEFAULT_CRON_LOCK_TTL, 'NX'],
     ])
     expect(result).toBe('locked-result')
   })
@@ -132,12 +122,16 @@ describe('CronProcessor › skipIfRunning lock', () => {
   })
 
   test('does not acquire lock for tasks without skipIfRunning', async () => {
-    const { processor: p, redis: r, cronService } = buildProcessor({
+    const {
+      processor: p,
+      redis: r,
+      cronService,
+    } = buildProcessor({
       getHandler: () => mock(() => Promise.resolve('no-lock')),
       shouldSkipIfRunning: () => false,
     })
-    ;(cronService as unknown as { shouldSkipIfRunning: () => boolean }).shouldSkipIfRunning =
-      () => false
+    ;(cronService as unknown as { shouldSkipIfRunning: () => boolean }).shouldSkipIfRunning = () =>
+      false
     const result = await p.process(makeJob('normal-task'))
     expect(r.runCommand.mock.calls).toHaveLength(0)
     expect(result).toBe('no-lock')

@@ -146,7 +146,6 @@ function ToolbarButton({
   )
 }
 
-
 export function RichtextEditor({
   value,
   onChange,
@@ -242,9 +241,7 @@ export function RichtextEditor({
       editable: !disabled,
       editorProps: {
         attributes: {
-          class: cn(
-            proseContentClass,
-          ),
+          class: cn(proseContentClass),
           // Empty strings would be emitted as real (dangling) attributes, so
           // only set what the caller actually supplied.
           ...(ariaLabelledBy ? { 'aria-labelledby': ariaLabelledBy } : {}),
@@ -591,12 +588,7 @@ export function RichtextEditor({
           )}
         />
       ) : effectiveMode === 'split' ? (
-        <div
-          className={cn(
-            'flex w-full',
-            fullscreen ? 'min-h-0 flex-1' : 'min-h-[160px]',
-          )}
-        >
+        <div className={cn('flex w-full', fullscreen ? 'min-h-0 flex-1' : 'min-h-[160px]')}>
           <Textarea
             value={value}
             onChange={(e) => onChange(e.target.value)}
@@ -611,10 +603,7 @@ export function RichtextEditor({
           />
           {/* Central divider — explicit fixed-width vertical bar so it's
               clearly visible against both panes' backgrounds. */}
-          <div
-            aria-hidden
-            className="w-px shrink-0 self-stretch bg-border"
-          />
+          <div aria-hidden className="w-px shrink-0 self-stretch bg-border" />
           <EditorContent
             editor={editor}
             className={cn(

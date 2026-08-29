@@ -4,6 +4,6 @@
  * bundle: import the framework entry point, then point the scanner at your
  * own sources so classes used only by your custom components survive.
  */
-@import "@modern-admin/react/styles.css";
+@import '@modern-admin/react/styles.css';
 
 @source "./**/*.{ts,tsx}";

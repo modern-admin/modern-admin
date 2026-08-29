@@ -6,6 +6,7 @@ a prioritised work plan. Update this file when a row moves from gap → done.
 ## Current coverage
 
 ### API project (`projects: ['api']`)
+
 - `api.spec.ts` — REST CRUD on customers, config, list pagination, FK exposure
 - `caching-api.spec.ts` — `x-cache` MISS→HIT cycle, mutation invalidation, split-tag (edit A leaves B's `show` cache intact), concurrent dedup
 - `custom-actions-api.spec.ts` — `@Action` (record / bulk / resource) on posts + products
@@ -18,6 +19,7 @@ a prioritised work plan. Update this file when a row moves from gap → done.
 - `timeseries-api.spec.ts` — chart time-series with FK `groupByLabelResource` label resolution; verifies `titleProperty` override is honoured over heuristic column detection
 
 ### Browser project (`projects: ['chromium']`)
+
 - `bulk-actions-ui.spec.ts` — multi-row select + Actions dropdown → `publishMany`, Clear selection
 - `draft-autosave.spec.ts` — localStorage draft persistence + Undo toast
 - `edit-page.spec.ts` — hydration, PATCH on save, required-field validation
@@ -47,12 +49,12 @@ a prioritised work plan. Update this file when a row moves from gap → done.
 
 ## 🔴 Critical gaps — feature plugins shipped but un-tested e2e
 
-| Plugin | Missing coverage | UI surface |
-|---|---|---|
-| ~~`feature-upload`~~ | ✅ covered by `forms-upload-ui.spec.ts` | — |
-| ~~`feature-history` (UI)~~ | ✅ covered by `history-ui.spec.ts` | — |
-| ~~`feature-password`~~ | ✅ covered by `feature-password-ui.spec.ts` | — |
-| ~~`feature-json-by-key`~~ | ✅ covered by `feature-json-by-key-ui.spec.ts` | — |
+| Plugin                     | Missing coverage                               | UI surface |
+| -------------------------- | ---------------------------------------------- | ---------- |
+| ~~`feature-upload`~~       | ✅ covered by `forms-upload-ui.spec.ts`        | —          |
+| ~~`feature-history` (UI)~~ | ✅ covered by `history-ui.spec.ts`             | —          |
+| ~~`feature-password`~~     | ✅ covered by `feature-password-ui.spec.ts`    | —          |
+| ~~`feature-json-by-key`~~  | ✅ covered by `feature-json-by-key-ui.spec.ts` | —          |
 
 Pro feature plugins (`@modern-admin-pro/feature-ai-fill`, `feature-logging`,
 `feature-webhooks`) are covered by Playwright specs in the separate Pro
@@ -60,31 +62,31 @@ monorepo (`modern-admin-pro/apps/e2e/`) — not exercised here.
 
 ## 🟠 Important — core UI flows without coverage
 
-| Area | What to test |
-|---|---|
-| ~~CSV / JSON export~~ | ✅ covered by `export-ui.spec.ts` |
-| ~~Bulk actions UI~~ | ✅ covered by `bulk-actions-ui.spec.ts` |
-| ~~Related records tabs~~ | ✅ covered by `related-records-ui.spec.ts` |
-| AI Assistant | floating "AI" button → chat, send prompt with mocked model, see reply |
-| Dashboard | Add chart / Add group / configure / drag-drop reorder |
-| Settings → API keys | create key, copy, use in `Authorization: Bearer`, revoke |
-| Auth flows | logout, 401 redirect, session expiry, change password |
-| Permissions / RBAC | roles resource, `isAccessible` action gates |
-| Notifications / Toasts | assert toasts on success / error paths |
-| Confirm dialogs | custom (non-delete) confirm scenarios |
-| Keyboard shortcuts | `Ctrl+E` on show-page → edit, and other hotkeys |
+| Area                     | What to test                                                          |
+| ------------------------ | --------------------------------------------------------------------- |
+| ~~CSV / JSON export~~    | ✅ covered by `export-ui.spec.ts`                                     |
+| ~~Bulk actions UI~~      | ✅ covered by `bulk-actions-ui.spec.ts`                               |
+| ~~Related records tabs~~ | ✅ covered by `related-records-ui.spec.ts`                            |
+| AI Assistant             | floating "AI" button → chat, send prompt with mocked model, see reply |
+| Dashboard                | Add chart / Add group / configure / drag-drop reorder                 |
+| Settings → API keys      | create key, copy, use in `Authorization: Bearer`, revoke              |
+| Auth flows               | logout, 401 redirect, session expiry, change password                 |
+| Permissions / RBAC       | roles resource, `isAccessible` action gates                           |
+| Notifications / Toasts   | assert toasts on success / error paths                                |
+| Confirm dialogs          | custom (non-delete) confirm scenarios                                 |
+| Keyboard shortcuts       | `Ctrl+E` on show-page → edit, and other hotkeys                       |
 
 ## 🟡 Desirable — cross-cutting
 
-| Item | Why |
-|---|---|
+| Item                                  | Why                                                                                                                                       |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | ~~Run UI tests against `api-prisma`~~ | ✅ done — the entire suite now drives `apps/api-prisma` (Prisma 7 + Postgres). The legacy `apps/api` (in-memory adapter) has been removed |
-| Run UI tests against `api-drizzle` | Same logic — drizzle backend lives, no UI ever drives it |
-| WebSocket realtime | open two tabs, mutate in one → second tab updates live (`packages/realtime`) |
-| Cache invalidation via Redis pub/sub | 2 API processes, mutation in one → cache invalidates in the other |
-| ~~i18n runtime language switch~~ | ✅ covered by `i18n-ui.spec.ts` (en↔ru, localStorage persistence) |
-| Theme toggle | dark / light switch |
-| Mobile sidebar drawer | interactive open / close on narrow viewport |
+| Run UI tests against `api-drizzle`    | Same logic — drizzle backend lives, no UI ever drives it                                                                                  |
+| WebSocket realtime                    | open two tabs, mutate in one → second tab updates live (`packages/realtime`)                                                              |
+| Cache invalidation via Redis pub/sub  | 2 API processes, mutation in one → cache invalidates in the other                                                                         |
+| ~~i18n runtime language switch~~      | ✅ covered by `i18n-ui.spec.ts` (en↔ru, localStorage persistence)                                                                         |
+| Theme toggle                          | dark / light switch                                                                                                                       |
+| Mobile sidebar drawer                 | interactive open / close on narrow viewport                                                                                               |
 
 ## 🟢 Low-priority / nice-to-have
 
@@ -105,7 +107,7 @@ Cheapest-first, highest-impact-first:
 4. ~~**`bulk-actions-ui.spec.ts`**~~ ✅ done — `publishMany` via UI, Clear selection
 5. ~~**`related-records-ui.spec.ts`**~~ ✅ done — Posts/Comments tabs, switch, paginate
 6. **`settings-api-keys.spec.ts`** — create API key, use in `Authorization:
-   Bearer`, revoke
+Bearer`, revoke
 7. **`ai-assistant.spec.ts`** — open chat, send prompt against mocked model,
    verify reply
 

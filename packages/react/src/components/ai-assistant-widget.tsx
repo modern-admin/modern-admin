@@ -60,7 +60,7 @@ const MAX_QUEUE = 5
 
 const messagesFromTask = (task: AiAssistantTask, fallbackText: string): ChatItem[] => {
   const inputMessages = Array.isArray(task.input?.messages)
-    ? task.input.messages as AiAssistantChatMessage[]
+    ? (task.input.messages as AiAssistantChatMessage[])
     : []
   const items: ChatItem[] = inputMessages.map((message, index) => ({
     id: `${task.id}-input-${index}`,
@@ -295,9 +295,7 @@ export function AiAssistantWidget(): React.ReactElement | null {
 
   const configured = settings.data.configured
   const isThinking =
-    isProcessing ||
-    task.data?.status === 'running' ||
-    task.data?.status === 'pending'
+    isProcessing || task.data?.status === 'running' || task.data?.status === 'pending'
   const progress = typeof task.data?.progress === 'number' ? task.data.progress : null
   const sendDisabled = input.trim().length === 0 || (isProcessing && queueFull)
 
@@ -352,7 +350,9 @@ export function AiAssistantWidget(): React.ReactElement | null {
                           <DropdownMenuItem disabled>{t('common:loading')}</DropdownMenuItem>
                         )}
                         {!history.isLoading && (history.data?.length ?? 0) === 0 && (
-                          <DropdownMenuItem disabled>{t('aiAssistant:history.empty')}</DropdownMenuItem>
+                          <DropdownMenuItem disabled>
+                            {t('aiAssistant:history.empty')}
+                          </DropdownMenuItem>
                         )}
                         {history.data?.map((item) => (
                           <DropdownMenuItem
@@ -362,7 +362,9 @@ export function AiAssistantWidget(): React.ReactElement | null {
                               void selectChat(item)
                             }}
                           >
-                            <span className="line-clamp-1 w-full text-sm font-medium">{item.title}</span>
+                            <span className="line-clamp-1 w-full text-sm font-medium">
+                              {item.title}
+                            </span>
                             <span className="text-xs text-muted-foreground">
                               {new Intl.DateTimeFormat(locale, {
                                 dateStyle: 'short',
@@ -385,12 +387,7 @@ export function AiAssistantWidget(): React.ReactElement | null {
                   </>
                 )}
                 <SheetClose asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label={t('common:close')}
-                  >
+                  <Button type="button" variant="ghost" size="icon" aria-label={t('common:close')}>
                     <X className="size-4" />
                   </Button>
                 </SheetClose>
@@ -401,9 +398,7 @@ export function AiAssistantWidget(): React.ReactElement | null {
           {!configured ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4 text-center">
               <div className="space-y-2">
-                <div className="text-lg font-semibold">
-                  {t('aiAssistant:notConfigured.title')}
-                </div>
+                <div className="text-lg font-semibold">{t('aiAssistant:notConfigured.title')}</div>
                 <div className="text-sm text-muted-foreground">
                   {t('aiAssistant:notConfigured.description')}
                 </div>
@@ -440,12 +435,16 @@ export function AiAssistantWidget(): React.ReactElement | null {
                   {messages.map((message) => (
                     <div
                       key={message.id}
-                      className={message.role === 'user' ? 'flex justify-end' : 'flex justify-start'}
+                      className={
+                        message.role === 'user' ? 'flex justify-end' : 'flex justify-start'
+                      }
                     >
                       <div
-                        className={message.role === 'user'
-                          ? 'max-w-[85%] rounded-2xl bg-primary px-4 py-3 text-sm text-primary-foreground'
-                          : 'max-w-[85%] rounded-2xl border border-border bg-card px-4 py-3 text-sm'}
+                        className={
+                          message.role === 'user'
+                            ? 'max-w-[85%] rounded-2xl bg-primary px-4 py-3 text-sm text-primary-foreground'
+                            : 'max-w-[85%] rounded-2xl border border-border bg-card px-4 py-3 text-sm'
+                        }
                       >
                         {message.role === 'assistant' ? (
                           <RichtextRender
@@ -531,9 +530,7 @@ export function AiAssistantWidget(): React.ReactElement | null {
                           variant="ghost"
                           size="icon"
                           className="size-6 shrink-0"
-                          onClick={() =>
-                            setQueue((q) => q.filter((entry) => entry.id !== item.id))
-                          }
+                          onClick={() => setQueue((q) => q.filter((entry) => entry.id !== item.id))}
                           aria-label={t('aiAssistant:queue.cancel')}
                         >
                           <X className="size-3.5" />

@@ -25,7 +25,11 @@ import { MODERN_ADMIN, MODERN_ADMIN_OPTIONS } from './tokens.js'
 import type { ModernAdminModuleOptions } from './module.js'
 import { defaultLlmProvider, type ILlmProvider } from './llm-provider.js'
 import { translateServerMessage as translate } from './server-i18n.js'
-import { type AiAssistantCitation, type AiAssistantSqlResource, buildAiAssistantTools } from './ai-assistant-tools.js'
+import {
+  type AiAssistantCitation,
+  type AiAssistantSqlResource,
+  buildAiAssistantTools,
+} from './ai-assistant-tools.js'
 import { AI_ASSISTANT_CHAT_JOB, AI_ASSISTANT_QUEUE } from './ai-assistant.constants.js'
 import type {
   AiAssistantChatJobData,
@@ -104,8 +108,7 @@ export class AiAssistantService {
     @Inject(MODERN_ADMIN) private readonly admin: ModernAdmin,
     @Inject(MODERN_ADMIN_OPTIONS) private readonly options: ModernAdminModuleOptions,
     @Optional() @InjectQueue(AI_ASSISTANT_QUEUE) private readonly queue?: Queue,
-  ) {
-  }
+  ) {}
 
   private get llmProvider(): ILlmProvider {
     return this.options.aiAssistant?.provider ?? defaultLlmProvider
@@ -126,12 +129,12 @@ export class AiAssistantService {
       enabled: input.enabled,
       provider: this.llmProvider.id,
       model: input.model,
-      apiKey: input.apiKey !== undefined
-        ? input.apiKey.trim() || current.apiKey || ''
-        : (current.apiKey ?? ''),
-      systemPrompt: input.systemPrompt !== undefined
-        ? input.systemPrompt.trim()
-        : (current.systemPrompt ?? ''),
+      apiKey:
+        input.apiKey !== undefined
+          ? input.apiKey.trim() || current.apiKey || ''
+          : (current.apiKey ?? ''),
+      systemPrompt:
+        input.systemPrompt !== undefined ? input.systemPrompt.trim() : (current.systemPrompt ?? ''),
     }
     await this.requireConfigStore().set('global', null, SETTINGS_KEY, next)
     return this.toPublicSettings(next, currentAdmin)
@@ -221,9 +224,8 @@ export class AiAssistantService {
     })
     const grouped = new Map<string, AiTask>()
     for (const task of tasks) {
-      const conversationId = typeof task.input?.conversationId === 'string'
-        ? task.input.conversationId
-        : task.id
+      const conversationId =
+        typeof task.input?.conversationId === 'string' ? task.input.conversationId : task.id
       const current = grouped.get(conversationId)
       if (!current || task.updatedAt > current.updatedAt) grouped.set(conversationId, task)
     }
@@ -322,7 +324,7 @@ export class AiAssistantService {
     if (debug) {
       this.logger.debug(
         `AI assistant task ${data.taskId} built ${Object.keys(built.tools).length} tool(s): ` +
-        Object.keys(built.tools).join(', '),
+          Object.keys(built.tools).join(', '),
       )
       await taskStore.appendEvent(data.taskId, 'log', {
         level: 'debug',
@@ -357,9 +359,9 @@ export class AiAssistantService {
     if (debug) {
       this.logger.debug(
         `AI assistant task ${data.taskId} prompt → ` +
-        `model=${settings.model ?? this.llmProvider.defaultModel} ` +
-        `system=${JSON.stringify(systemPrompt)} ` +
-        `messages=${JSON.stringify(promptMessages)}`,
+          `model=${settings.model ?? this.llmProvider.defaultModel} ` +
+          `system=${JSON.stringify(systemPrompt)} ` +
+          `messages=${JSON.stringify(promptMessages)}`,
       )
     }
 
@@ -372,19 +374,15 @@ export class AiAssistantService {
         tools: built.tools,
         maxSteps: this.options.aiAssistant?.maxSteps ?? 8,
         appName: this.options.aiAssistant?.appName ?? 'Modern Admin',
-        ...(this.options.aiAssistant?.appUrl
-          ? { appUrl: this.options.aiAssistant.appUrl }
-          : {}),
+        ...(this.options.aiAssistant?.appUrl ? { appUrl: this.options.aiAssistant.appUrl } : {}),
         ...(data.locale ? { locale: data.locale } : {}),
-        ...(this.options.serverLocales
-          ? { serverLocales: this.options.serverLocales }
-          : {}),
+        ...(this.options.serverLocales ? { serverLocales: this.options.serverLocales } : {}),
       })
 
       if (debug) {
         this.logger.debug(
           `AI assistant task ${data.taskId} completed generation; ` +
-          `toolCalls=${result.toolCalls.length}, textLength=${result.text.length}`,
+            `toolCalls=${result.toolCalls.length}, textLength=${result.text.length}`,
         )
       }
       const citations = result.toolResults.flatMap((toolResult) => {
@@ -392,11 +390,9 @@ export class AiAssistantService {
         return value?.citations ?? []
       })
       const output: AiAssistantTaskOutput = {
-        text: result.text.trim() || summarizeToolResults(
-          result.toolResults,
-          data.locale,
-          this.options.serverLocales,
-        ),
+        text:
+          result.text.trim() ||
+          summarizeToolResults(result.toolResults, data.locale, this.options.serverLocales),
         citations: dedupeCitations(citations),
         toolCalls: result.toolCalls,
         uiActions: dedupeUiActions(uiActions),
@@ -492,7 +488,7 @@ export class AiAssistantService {
       // A key saved for another provider must never be sent to the current
       // provider. Models are provider-specific too, so reset both together.
       model: matchesProvider ? (stored.model ?? defaults.model) : defaults.model,
-      apiKey: matchesProvider ? (stored.apiKey?.trim() || envApiKey) : envApiKey,
+      apiKey: matchesProvider ? stored.apiKey?.trim() || envApiKey : envApiKey,
       systemPrompt: stored.systemPrompt ?? defaults.systemPrompt,
     }
   }
@@ -514,7 +510,8 @@ export class AiAssistantService {
       provider: this.llmProvider.id,
       providerName: this.llmProvider.displayName ?? this.llmProvider.id,
       apiKeyUrl: this.llmProvider.apiKeyUrl ?? null,
-      model: settings.model ?? this.options.aiAssistant?.defaultModel ?? this.llmProvider.defaultModel,
+      model:
+        settings.model ?? this.options.aiAssistant?.defaultModel ?? this.llmProvider.defaultModel,
       maskedApiKey: apiKey ? this.maskApiKey(apiKey) : null,
       systemPrompt: settings.systemPrompt ?? '',
       canManage: this.canManage(currentAdmin),
@@ -543,38 +540,38 @@ export class AiAssistantService {
       'IMPORTANT: After using tools, you MUST always write a final text answer summarising what you found. Never leave your reply empty — even if the answer is just a list of record titles.',
       ...(hasNavigateTool
         ? [
-          'UI NAVIGATION is allowed and encouraged. You have a `navigate_to` tool that takes the user to a specific admin page. This is NOT a write operation — it only changes which page is displayed in the browser.',
-          'Call `navigate_to` whenever the user asks to open, go to, show, switch to, or otherwise navigate. Supported routes: { name: "home" }, { name: "audit-log" }, { name: "list", resourceId }, { name: "show", resourceId, recordId }, { name: "settings", section? }.',
-          'After calling `navigate_to`, briefly confirm in the user\'s language that navigation completed; do not say navigation is unavailable.',
-          'When the user uses contextual references such as "this", "current", or their equivalents in another language, resolve the subject from the current pathname before navigating.',
-        ]
+            'UI NAVIGATION is allowed and encouraged. You have a `navigate_to` tool that takes the user to a specific admin page. This is NOT a write operation — it only changes which page is displayed in the browser.',
+            'Call `navigate_to` whenever the user asks to open, go to, show, switch to, or otherwise navigate. Supported routes: { name: "home" }, { name: "audit-log" }, { name: "list", resourceId }, { name: "show", resourceId, recordId }, { name: "settings", section? }.',
+            "After calling `navigate_to`, briefly confirm in the user's language that navigation completed; do not say navigation is unavailable.",
+            'When the user uses contextual references such as "this", "current", or their equivalents in another language, resolve the subject from the current pathname before navigating.',
+          ]
         : []),
       ...(hasMediaDraftTool
         ? [
-          'MEDIA DRAFTS are available through `draft_media_generation`. Use it when the user asks to create or generate an image, video, or audio asset.',
-          'The tool only opens a prefilled draft. It does not start a paid request; tell the user to review the model and confirm the cost in the form.',
-        ]
+            'MEDIA DRAFTS are available through `draft_media_generation`. Use it when the user asks to create or generate an image, video, or audio asset.',
+            'The tool only opens a prefilled draft. It does not start a paid request; tell the user to review the model and confirm the cost in the form.',
+          ]
         : []),
       ...(clientContext?.pathname
         ? [
-          `The user is currently viewing the admin page at path "${clientContext.pathname}". Use this to ground references like "this post" or "the current record". Path formats: "/resources/<resourceId>" is a list page; "/resources/<resourceId>/<recordId>" is a record's detail (show) page; "/resources/<resourceId>/<recordId>/edit" is its edit page; "/resources/<resourceId>/new" is the create page. When the path contains a <recordId> segment, treat that resource and record as the implicit subject of the conversation.`,
-        ]
+            `The user is currently viewing the admin page at path "${clientContext.pathname}". Use this to ground references like "this post" or "the current record". Path formats: "/resources/<resourceId>" is a list page; "/resources/<resourceId>/<recordId>" is a record's detail (show) page; "/resources/<resourceId>/<recordId>/edit" is its edit page; "/resources/<resourceId>/new" is the create page. When the path contains a <recordId> segment, treat that resource and record as the implicit subject of the conversation.`,
+          ]
         : []),
       ...(sqlToolAvailable
         ? [
-          'You have access to the `execute_sql` tool for aggregation, counting, grouping, and JOIN queries.',
-          'Prefer `execute_sql` over multiple list calls when the question involves counting, ranking, or comparing across records.',
-          'When preparing the `query` argument for `execute_sql`, act as a PostgreSQL SQL query generator.',
-          'The `query` argument MUST contain only one raw SELECT statement. No explanations, no markdown, no comments unless the fallback below is required.',
-          'Use only tables and columns from the SQL schema hints below. If the requested table or column does not exist, call `execute_sql` with: SELECT 1 WHERE FALSE; -- requested column/table does not exist',
-          'Write every table name exactly as shown in SQL schema hints and wrap it in double quotes, for example "post" or "regional_content".',
-          'Write every column name exactly as shown in SQL schema hints and wrap it in double quotes, for example "authorId" or "postId".',
-          'For aliases, prefer short quoted aliases and qualify columns as "alias"."columnName".',
-          'Use true/false for boolean values, not 1/0.',
-          'Use ILIKE for case-insensitive text search.',
-          'Always end SQL queries with a semicolon.',
-          'Do not use SQLite/MySQL introspection such as PRAGMA or pragma_table_info.',
-        ]
+            'You have access to the `execute_sql` tool for aggregation, counting, grouping, and JOIN queries.',
+            'Prefer `execute_sql` over multiple list calls when the question involves counting, ranking, or comparing across records.',
+            'When preparing the `query` argument for `execute_sql`, act as a PostgreSQL SQL query generator.',
+            'The `query` argument MUST contain only one raw SELECT statement. No explanations, no markdown, no comments unless the fallback below is required.',
+            'Use only tables and columns from the SQL schema hints below. If the requested table or column does not exist, call `execute_sql` with: SELECT 1 WHERE FALSE; -- requested column/table does not exist',
+            'Write every table name exactly as shown in SQL schema hints and wrap it in double quotes, for example "post" or "regional_content".',
+            'Write every column name exactly as shown in SQL schema hints and wrap it in double quotes, for example "authorId" or "postId".',
+            'For aliases, prefer short quoted aliases and qualify columns as "alias"."columnName".',
+            'Use true/false for boolean values, not 1/0.',
+            'Use ILIKE for case-insensitive text search.',
+            'Always end SQL queries with a semicolon.',
+            'Do not use SQLite/MySQL introspection such as PRAGMA or pragma_table_info.',
+          ]
         : []),
     ]
     const grouped = new Map<string, Array<'list' | 'show' | 'search'>>()
@@ -605,7 +602,9 @@ export class AiAssistantService {
           })
           .join(', ')
         const suffix = resource.columns.length > 32 ? ', ...' : ''
-        lines.push(`- resource "${resource.resourceId}" uses SQL table "${resource.tableName}" with columns: ${columns}${suffix}`)
+        lines.push(
+          `- resource "${resource.resourceId}" uses SQL table "${resource.tableName}" with columns: ${columns}${suffix}`,
+        )
       }
     }
     if (settings.systemPrompt?.trim()) {
@@ -615,8 +614,7 @@ export class AiAssistantService {
   }
 
   private isDebugEnabled(): boolean {
-    return this.options.aiAssistant?.debug ??
-      isTruthyEnv(process.env.AI_ASSISTANT_DEBUG)
+    return this.options.aiAssistant?.debug ?? isTruthyEnv(process.env.AI_ASSISTANT_DEBUG)
   }
 
   private maskApiKey(apiKey: string): string {
@@ -739,9 +737,11 @@ const dedupeUiActions = (actions: AiUiAction[]): AiUiAction[] => {
 
 const titleFromTask = (task: AiTask): string => {
   const messages = Array.isArray(task.input?.messages)
-    ? task.input.messages as Array<{ role?: unknown; content?: unknown }>
+    ? (task.input.messages as Array<{ role?: unknown; content?: unknown }>)
     : []
-  const firstUser = messages.find((message) => message.role === 'user' && typeof message.content === 'string')
+  const firstUser = messages.find(
+    (message) => message.role === 'user' && typeof message.content === 'string',
+  )
   const title = typeof firstUser?.content === 'string' ? firstUser.content.trim() : ''
   return title.length > 80 ? `${title.slice(0, 77)}...` : title || task.id
 }
@@ -752,14 +752,20 @@ const summarizeToolResults = (
   serverLocales: ModernAdminModuleOptions['serverLocales'],
 ): string => {
   const lastSuccessful = [...toolResults].reverse().find((toolResult) => {
-    const output = toolResult.output as { rows?: unknown[]; records?: unknown[]; error?: unknown } | undefined
+    const output = toolResult.output as
+      { rows?: unknown[]; records?: unknown[]; error?: unknown } | undefined
     return output && !output.error && (Array.isArray(output.rows) || Array.isArray(output.records))
   })
   if (!lastSuccessful) {
     return translate(locale, 'aiAssistant:fallback.noToolResult', undefined, serverLocales)
   }
 
-  const output = lastSuccessful.output as { rows?: unknown[]; records?: unknown[]; rowCount?: number; total?: number }
+  const output = lastSuccessful.output as {
+    rows?: unknown[]
+    records?: unknown[]
+    rowCount?: number
+    total?: number
+  }
   const rows = output.rows ?? output.records ?? []
   if (rows.length === 0) {
     return translate(locale, 'aiAssistant:fallback.noRows', undefined, serverLocales)

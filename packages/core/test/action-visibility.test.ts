@@ -109,9 +109,7 @@ describe('per-record isVisible', () => {
 
   test('built-in record actions are reported as available', async () => {
     const records = await listRecords(buildAdmin())
-    expect(records[0]?.recordActions).toEqual(
-      expect.arrayContaining(['show', 'edit', 'delete']),
-    )
+    expect(records[0]?.recordActions).toEqual(expect.arrayContaining(['show', 'edit', 'delete']))
   })
 
   test('resource- and bulk-scoped actions never leak into recordActions', async () => {

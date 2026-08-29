@@ -16,10 +16,7 @@ export {
 } from './module.js'
 export { ModernAdminGraphqlSchemaHolder } from './schema-holder.js'
 export { GraphqlSubscriptionServer } from './subscription-server.js'
-export {
-  createRealtimeAsyncIterator,
-  type SubscriptionFilter,
-} from './subscription-iterator.js'
+export { createRealtimeAsyncIterator, type SubscriptionFilter } from './subscription-iterator.js'
 export { GRAPHQL_SCHEMA, GRAPHQL_OPTIONS, GRAPHQL_REALTIME_BUS } from './tokens.js'
 export { GraphQLUpload, type UploadValue } from './scalars.js'
 export {

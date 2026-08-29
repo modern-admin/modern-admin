@@ -31,15 +31,7 @@ import {
   type HookMeta,
 } from './decorators.js'
 
-const BUILT_IN_NAMES = new Set([
-  'list',
-  'show',
-  'new',
-  'edit',
-  'delete',
-  'bulkDelete',
-  'search',
-])
+const BUILT_IN_NAMES = new Set(['list', 'show', 'new', 'edit', 'delete', 'bulkDelete', 'search'])
 
 /** Pairing returned by the scanner so bootstrap can wire each controller. */
 export interface ScannedController {
@@ -48,10 +40,7 @@ export interface ScannedController {
 }
 
 /** Build the typed AdminActionContext from a raw core (request, ctx) pair. */
-const toAdminContext = (
-  request: ActionRequest,
-  core: ActionContext,
-): AdminActionContext => ({
+const toAdminContext = (request: ActionRequest, core: ActionContext): AdminActionContext => ({
   admin: core.admin,
   resource: core.resource,
   ...(core.record !== undefined ? { record: core.record } : {}),
@@ -81,10 +70,7 @@ export class AdminControllerScanner {
     // host-level `controllers` declaration).
     const seen = new Set<unknown>()
     const wrappers: InstanceWrapper[] = []
-    for (const w of [
-      ...this.discovery.getProviders(),
-      ...this.discovery.getControllers(),
-    ]) {
+    for (const w of [...this.discovery.getProviders(), ...this.discovery.getControllers()]) {
       const t = w.metatype as object | undefined
       if (t == null || !Reflect.hasMetadata(ADMIN_RESOURCE_META, t)) continue
       if (seen.has(t)) continue
@@ -103,8 +89,7 @@ export class AdminControllerScanner {
       )
     }
     const meta = Reflect.getMetadata(ADMIN_RESOURCE_META, ctor) as AdminResourceMeta
-    const actionsMeta: ActionMeta[] =
-      Reflect.getMetadata(ADMIN_ACTIONS_META, ctor) ?? []
+    const actionsMeta: ActionMeta[] = Reflect.getMetadata(ADMIN_ACTIONS_META, ctor) ?? []
     const hooksMeta: HookMeta[] = Reflect.getMetadata(ADMIN_HOOKS_META, ctor) ?? []
 
     const overrideMethods = this.findOverriddenMethods(instance)
@@ -184,7 +169,9 @@ export class AdminControllerScanner {
     instance: AdminController,
     methodName: string,
   ): (req: ActionRequest, ctx: ActionContext) => Promise<ActionResponse> {
-    const fn = (instance as unknown as Record<string, (ctx: AdminActionContext) => unknown>)[methodName]
+    const fn = (instance as unknown as Record<string, (ctx: AdminActionContext) => unknown>)[
+      methodName
+    ]
     if (typeof fn !== 'function') {
       throw new Error(`[modern-admin/nest] method ${methodName} not found on controller`)
     }
@@ -197,8 +184,7 @@ export class AdminControllerScanner {
 
   private wrapBefore(instance: AdminController, methodName: string): Before {
     const fn = (instance as unknown as Record<string, unknown>)[methodName] as
-      | ((ctx: AdminActionContext) => unknown)
-      | undefined
+      ((ctx: AdminActionContext) => unknown) | undefined
     if (typeof fn !== 'function') {
       throw new Error(`[modern-admin/nest] hook method ${methodName} not found on controller`)
     }
@@ -213,13 +199,9 @@ export class AdminControllerScanner {
     }
   }
 
-  private wrapAfter(
-    instance: AdminController,
-    methodName: string,
-  ): After<ActionResponse> {
+  private wrapAfter(instance: AdminController, methodName: string): After<ActionResponse> {
     const fn = (instance as unknown as Record<string, unknown>)[methodName] as
-      | ((ctx: AdminActionContext, res: ActionResponse) => unknown)
-      | undefined
+      ((ctx: AdminActionContext, res: ActionResponse) => unknown) | undefined
     if (typeof fn !== 'function') {
       throw new Error(`[modern-admin/nest] hook method ${methodName} not found on controller`)
     }

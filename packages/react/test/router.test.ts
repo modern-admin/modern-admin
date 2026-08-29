@@ -38,9 +38,9 @@ describe('buildHref', () => {
   })
 
   test('resource-scoped custom action', () => {
-    expect(
-      buildHref({ name: 'action', resourceId: 'users', actionName: 'sendMassPush' }),
-    ).toBe('/resources/users/actions/sendMassPush')
+    expect(buildHref({ name: 'action', resourceId: 'users', actionName: 'sendMassPush' })).toBe(
+      '/resources/users/actions/sendMassPush',
+    )
   })
 
   test('record-scoped custom action', () => {

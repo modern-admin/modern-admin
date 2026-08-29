@@ -58,7 +58,15 @@ describe('invalidateResourceData', () => {
     const globalSearch = ['modern-admin', 'global-search', 'ann']
     const timeseries = ['modern-admin', 'timeseries', { resource: 'orders' }]
     const auditLog = ['modern-admin', 'audit-log', null]
-    for (const key of [usersList, ordersList, productsList, suggestions, globalSearch, timeseries, auditLog]) {
+    for (const key of [
+      usersList,
+      ordersList,
+      productsList,
+      suggestions,
+      globalSearch,
+      timeseries,
+      auditLog,
+    ]) {
       seed(qc, key)
     }
 

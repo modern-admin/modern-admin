@@ -32,10 +32,7 @@ export class RetentionModule {
     return {
       module: RetentionModule,
       imports: [CronModule],
-      providers: [
-        { provide: RETENTION_OPTIONS, useValue: options },
-        RetentionService,
-      ],
+      providers: [{ provide: RETENTION_OPTIONS, useValue: options }, RetentionService],
       exports: [RetentionService],
     }
   }

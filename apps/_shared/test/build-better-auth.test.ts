@@ -102,7 +102,12 @@ describe('buildBetterAuth', () => {
     const { config } = buildBetterAuth({ database: makeDatabase() })
     const after = config.databaseHooks!.session!.create!.after!
     // Should resolve without throwing even though no store is set.
-    await expect(after({ userId: 'u-1', id: 's-1' } as unknown as Parameters<typeof after>[0], {} as unknown as Parameters<typeof after>[1])).resolves.toBeUndefined()
+    await expect(
+      after(
+        { userId: 'u-1', id: 's-1' } as unknown as Parameters<typeof after>[0],
+        {} as unknown as Parameters<typeof after>[1],
+      ),
+    ).resolves.toBeUndefined()
   })
 
   test('audit hook swallows store errors so logins are never blocked', async () => {
@@ -116,7 +121,12 @@ describe('buildBetterAuth', () => {
     })
     const { config } = buildBetterAuth({ database: makeDatabase() })
     const after = config.databaseHooks!.session!.create!.after!
-    await expect(after({ userId: 'u-1', id: 's-1' } as unknown as Parameters<typeof after>[0], {} as unknown as Parameters<typeof after>[1])).resolves.toBeUndefined()
+    await expect(
+      after(
+        { userId: 'u-1', id: 's-1' } as unknown as Parameters<typeof after>[0],
+        {} as unknown as Parameters<typeof after>[1],
+      ),
+    ).resolves.toBeUndefined()
   })
 
   test('allowlistOnly: false leaves sign-up enabled and no user.create.before hook', () => {
@@ -131,9 +141,12 @@ describe('buildBetterAuth', () => {
     expect(config.emailAndPassword?.disableSignUp).toBe(true)
     expect(config.account?.accountLinking?.enabled).toBe(true)
     const before = config.databaseHooks!.user!.create!.before!
-    await expect(before({ email: 'unknown@example.com' } as unknown as Parameters<typeof before>[0], {} as unknown as Parameters<typeof before>[1])).rejects.toThrow(
-      /Sign-up is disabled/,
-    )
+    await expect(
+      before(
+        { email: 'unknown@example.com' } as unknown as Parameters<typeof before>[0],
+        {} as unknown as Parameters<typeof before>[1],
+      ),
+    ).rejects.toThrow(/Sign-up is disabled/)
   })
 
   test('allowlistOnly defaults trustedProviders to every active social provider', () => {

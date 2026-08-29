@@ -2,12 +2,7 @@ import { RecordNotFoundError } from '../../errors'
 import { recordTag, recordsTag } from '../cache-runtime.js'
 import { recordCacheKey } from '../cache-keys.js'
 import { resolveResourceCacheConfig } from '../../decorators/cache-config.js'
-import type {
-  Action,
-  ActionContext,
-  ActionRequest,
-  RecordActionResponse,
-} from '../action.js'
+import type { Action, ActionContext, ActionRequest, RecordActionResponse } from '../action.js'
 
 const handler = async (
   request: ActionRequest,

@@ -36,7 +36,7 @@ const authProvider = new BetterAuthProvider({ auth }) satisfies IAuthProvider
 // multiplex pub/sub on a command connection), so we create two.
 const cacheProvider = process.env.REDIS_URL
   ? new RedisCacheProvider({
-      client:     new Redis(process.env.REDIS_URL),
+      client: new Redis(process.env.REDIS_URL),
       subscriber: new Redis(process.env.REDIS_URL),
     })
   : undefined
@@ -45,10 +45,12 @@ const cacheProvider = process.env.REDIS_URL
   imports: [
     ModernAdminModule.forRoot({
       global: true,
-      adapters: [{
-        Database: PrismaDatabase,
-        Resource: PrismaResource,
-      }],
+      adapters: [
+        {
+          Database: PrismaDatabase,
+          Resource: PrismaResource,
+        },
+      ],
       databases: [{ client: prisma, dmmf }],
       branding: { companyName: '{{name}}' },
       // Resolve admin permissions against `ma_role` rows. Seed at least

@@ -39,10 +39,7 @@ async function createProduct(
   return { id: String(body.record.id), name }
 }
 
-async function deleteProductSilently(
-  request: APIRequestContext,
-  id: string,
-): Promise<void> {
+async function deleteProductSilently(request: APIRequestContext, id: string): Promise<void> {
   // Best-effort cleanup — `delete` returns 404 if the row was already wiped
   // by the test body, which is fine.
   await request.delete(adminApi(`/resources/products/records/${id}/actions/delete`))
@@ -97,9 +94,8 @@ test.describe('Form UI — custom color-picker component', () => {
 
       const patchPromise = page.waitForResponse(
         (res) =>
-          res.url().includes(
-            `/admin/api/resources/products/records/${product.id}/actions/edit`,
-          ) && res.request().method() === 'PATCH',
+          res.url().includes(`/admin/api/resources/products/records/${product.id}/actions/edit`) &&
+          res.request().method() === 'PATCH',
       )
       await page.getByRole('button', { name: /^save$/i }).click()
       const patchRes = await patchPromise
@@ -111,10 +107,7 @@ test.describe('Form UI — custom color-picker component', () => {
     }
   })
 
-  test('show page renders the custom color-swatch component', async ({
-    page,
-    request,
-  }) => {
+  test('show page renders the custom color-swatch component', async ({ page, request }) => {
     const accent = '#22c55e'
     const product = await createProduct(request, { accentColor: accent })
     try {
@@ -149,9 +142,8 @@ test.describe('Form UI — boolean Switch editor', () => {
 
       const patchPromise = page.waitForResponse(
         (res) =>
-          res.url().includes(
-            `/admin/api/resources/products/records/${product.id}/actions/edit`,
-          ) && res.request().method() === 'PATCH',
+          res.url().includes(`/admin/api/resources/products/records/${product.id}/actions/edit`) &&
+          res.request().method() === 'PATCH',
       )
       await page.getByRole('button', { name: /^save$/i }).click()
       const patchRes = await patchPromise
@@ -165,10 +157,7 @@ test.describe('Form UI — boolean Switch editor', () => {
 })
 
 test.describe('Form UI — m2m combobox picker (products.tags)', () => {
-  test('picking a tag chip adds it to the relation on Save', async ({
-    page,
-    request,
-  }) => {
+  test('picking a tag chip adds it to the relation on Save', async ({ page, request }) => {
     const tag = await firstTag(request)
     const product = await createProduct(request)
     try {
@@ -193,9 +182,12 @@ test.describe('Form UI — m2m combobox picker (products.tags)', () => {
       await searchInput.fill(tag.title)
 
       // Tag titles render as "<title> <id>" — match by title prefix.
-      const option = page.locator('[cmdk-item]').filter({
-        hasText: new RegExp(tag.title, 'i'),
-      }).first()
+      const option = page
+        .locator('[cmdk-item]')
+        .filter({
+          hasText: new RegExp(tag.title, 'i'),
+        })
+        .first()
       await expect(option).toBeVisible({ timeout: 10_000 })
       await option.click()
 
@@ -205,11 +197,13 @@ test.describe('Form UI — m2m combobox picker (products.tags)', () => {
 
       const patchPromise = page.waitForResponse(
         (res) =>
-          res.url().includes(
-            `/admin/api/resources/products/records/${product.id}/actions/edit`,
-          ) && res.request().method() === 'PATCH',
+          res.url().includes(`/admin/api/resources/products/records/${product.id}/actions/edit`) &&
+          res.request().method() === 'PATCH',
       )
-      await page.getByRole('button', { name: /^save$/i }).first().click()
+      await page
+        .getByRole('button', { name: /^save$/i })
+        .first()
+        .click()
       const patchRes = await patchPromise
       expect(patchRes.ok(), `PATCH failed: ${await patchRes.text()}`).toBeTruthy()
       const patchBody = await patchRes.json()
@@ -224,10 +218,7 @@ test.describe('Form UI — m2m combobox picker (products.tags)', () => {
     }
   })
 
-  test('chip remove button clears the relation on Save', async ({
-    page,
-    request,
-  }) => {
+  test('chip remove button clears the relation on Save', async ({ page, request }) => {
     const tag = await firstTag(request)
     // Pre-seed the relation through the API so we know exactly one tag
     // is attached at the start; the chip-remove flow is what the test
@@ -248,11 +239,13 @@ test.describe('Form UI — m2m combobox picker (products.tags)', () => {
 
       const patchPromise = page.waitForResponse(
         (res) =>
-          res.url().includes(
-            `/admin/api/resources/products/records/${product.id}/actions/edit`,
-          ) && res.request().method() === 'PATCH',
+          res.url().includes(`/admin/api/resources/products/records/${product.id}/actions/edit`) &&
+          res.request().method() === 'PATCH',
       )
-      await page.getByRole('button', { name: /^save$/i }).first().click()
+      await page
+        .getByRole('button', { name: /^save$/i })
+        .first()
+        .click()
       const patchRes = await patchPromise
       expect(patchRes.ok(), `PATCH failed: ${await patchRes.text()}`).toBeTruthy()
       const patchBody = await patchRes.json()

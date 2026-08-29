@@ -5,16 +5,11 @@ const schemaDir = './prisma'
 const outputFile = './src/generated/prisma/schema.prisma'
 
 export const getMergedSchemaContent = async () => {
-  const files = fs
-    .readdirSync(schemaDir)
-    .filter((file) => file.endsWith('.prisma'))
+  const files = fs.readdirSync(schemaDir).filter((file) => file.endsWith('.prisma'))
 
   let combinedContent = ''
 
-  const mainSchema = fs.readFileSync(
-    path.join(schemaDir, './schema.prisma'),
-    'utf8',
-  )
+  const mainSchema = fs.readFileSync(path.join(schemaDir, './schema.prisma'), 'utf8')
   combinedContent += mainSchema + '\n\n'
 
   files.forEach((file) => {

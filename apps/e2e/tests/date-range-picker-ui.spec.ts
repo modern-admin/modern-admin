@@ -17,13 +17,33 @@ import { expect, test, type Locator, type Page } from '@playwright/test'
 test.use({ viewport: { width: 500, height: 900 } })
 
 const MONTHS_LONG = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
 ] as const
 
 const MONTHS_SHORT = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
 ] as const
 
 /** Trigger button — uniquely identified by the lucide CalendarRange icon
@@ -55,10 +75,7 @@ function yearDropdown(page: Page): Locator {
 async function pickMonth(page: Page, monthName: string): Promise<void> {
   await monthDropdown(page).click()
   // shadcn Select renders options as role="option" inside role="listbox".
-  await page
-    .getByRole('listbox')
-    .getByRole('option', { name: monthName, exact: true })
-    .click()
+  await page.getByRole('listbox').getByRole('option', { name: monthName, exact: true }).click()
 }
 
 async function pickYear(page: Page, year: number): Promise<void> {
@@ -74,9 +91,11 @@ async function pickYear(page: Page, year: number): Promise<void> {
  *  numeric label as text. We filter on the cell to skip outside (next/prev
  *  month) duplicates. */
 async function pickDay(page: Page, day: number): Promise<void> {
-  const cells = popover(page).getByRole('gridcell').filter({
-    hasNotText: /day-outside/i,
-  })
+  const cells = popover(page)
+    .getByRole('gridcell')
+    .filter({
+      hasNotText: /day-outside/i,
+    })
   // The currently-displayed month renders its days as cells whose inner
   // button's text equals the day number exactly. Outside-month duplicates
   // are wrapped with the `outside` className that we excluded above but
@@ -110,32 +129,20 @@ test.describe('DateRangeInput — open / close / placeholder', () => {
     await gotoAuditLog(page)
     await expect(trigger(page)).toContainText('Select date range')
     // No inline X when there is no value.
-    await expect(
-      trigger(page).locator('[aria-label="Clear"]'),
-    ).toHaveCount(0)
+    await expect(trigger(page).locator('[aria-label="Clear"]')).toHaveCount(0)
   })
 
-  test('clicking trigger opens the popover with calendar + footer', async ({
-    page,
-  }) => {
+  test('clicking trigger opens the popover with calendar + footer', async ({ page }) => {
     await gotoAuditLog(page)
     await openPicker(page)
     // Apply + Clear footer buttons present.
-    await expect(
-      popover(page).getByRole('button', { name: /^Apply$/ }),
-    ).toBeVisible()
-    await expect(
-      popover(page).getByRole('button', { name: /^Clear$/ }),
-    ).toBeVisible()
+    await expect(popover(page).getByRole('button', { name: /^Apply$/ })).toBeVisible()
+    await expect(popover(page).getByRole('button', { name: /^Clear$/ })).toBeVisible()
     // Apply is disabled while pending is empty.
-    await expect(
-      popover(page).getByRole('button', { name: /^Apply$/ }),
-    ).toBeDisabled()
+    await expect(popover(page).getByRole('button', { name: /^Apply$/ })).toBeDisabled()
   })
 
-  test('Escape discards in-progress selection without committing', async ({
-    page,
-  }) => {
+  test('Escape discards in-progress selection without committing', async ({ page }) => {
     await gotoAuditLog(page)
     await openPicker(page)
     await pickDay(page, 10)
@@ -148,9 +155,7 @@ test.describe('DateRangeInput — open / close / placeholder', () => {
 })
 
 test.describe('DateRangeInput — Apply / Clear / inline X', () => {
-  test('Apply commits a complete range and sends from/to to the API', async ({
-    page,
-  }) => {
+  test('Apply commits a complete range and sends from/to to the API', async ({ page }) => {
     await gotoAuditLog(page)
 
     // Navigate to a deterministic past month so the seeded audit-log will
@@ -168,7 +173,9 @@ test.describe('DateRangeInput — Apply / Clear / inline X', () => {
 
     await pickDay(page, 10)
     await pickDay(page, 20)
-    await popover(page).getByRole('button', { name: /^Apply$/ }).click()
+    await popover(page)
+      .getByRole('button', { name: /^Apply$/ })
+      .click()
 
     await expect(popover(page)).toBeHidden()
     await expect(trigger(page)).toContainText('Mar 10, 2020 – Mar 20, 2020')
@@ -176,9 +183,7 @@ test.describe('DateRangeInput — Apply / Clear / inline X', () => {
     await requestPromise
   })
 
-  test('a single calendar click commits as a one-day range', async ({
-    page,
-  }) => {
+  test('a single calendar click commits as a one-day range', async ({ page }) => {
     // react-day-picker's range mode initialises the very first click as
     // `{ from: day, to: day }` — a one-day range — so Apply commits both
     // ends to the same date. (A true "from-only" partial range is only
@@ -190,14 +195,14 @@ test.describe('DateRangeInput — Apply / Clear / inline X', () => {
     await pickMonth(page, 'June')
     await pickDay(page, 5)
 
-    await popover(page).getByRole('button', { name: /^Apply$/ }).click()
+    await popover(page)
+      .getByRole('button', { name: /^Apply$/ })
+      .click()
     await expect(popover(page)).toBeHidden()
     await expect(trigger(page)).toContainText('Jun 5, 2021 – Jun 5, 2021')
   })
 
-  test('Clear button inside popover empties the range and closes', async ({
-    page,
-  }) => {
+  test('Clear button inside popover empties the range and closes', async ({ page }) => {
     await gotoAuditLog(page)
 
     // Seed a committed range first.
@@ -206,12 +211,16 @@ test.describe('DateRangeInput — Apply / Clear / inline X', () => {
     await pickMonth(page, 'May')
     await pickDay(page, 1)
     await pickDay(page, 7)
-    await popover(page).getByRole('button', { name: /^Apply$/ }).click()
+    await popover(page)
+      .getByRole('button', { name: /^Apply$/ })
+      .click()
     await expect(trigger(page)).toContainText('May 1, 2022 – May 7, 2022')
 
     // Now Clear via the popover.
     await openPicker(page)
-    await popover(page).getByRole('button', { name: /^Clear$/ }).click()
+    await popover(page)
+      .getByRole('button', { name: /^Clear$/ })
+      .click()
     await expect(popover(page)).toBeHidden()
     await expect(trigger(page)).toContainText('Select date range')
   })
@@ -224,7 +233,9 @@ test.describe('DateRangeInput — Apply / Clear / inline X', () => {
     await pickMonth(page, 'July')
     await pickDay(page, 3)
     await pickDay(page, 9)
-    await popover(page).getByRole('button', { name: /^Apply$/ }).click()
+    await popover(page)
+      .getByRole('button', { name: /^Apply$/ })
+      .click()
     await expect(trigger(page)).toContainText('Jul 3, 2022 – Jul 9, 2022')
 
     const inlineX = trigger(page).locator('[aria-label="Clear"]')
@@ -258,9 +269,7 @@ test.describe('DateRangeInput — no autocommit / re-open behaviour', () => {
     // The popover must still be open (no auto-close, no auto-commit).
     await expect(popover(page)).toBeVisible()
     // Apply becomes enabled now that there is a `from`.
-    await expect(
-      popover(page).getByRole('button', { name: /^Apply$/ }),
-    ).toBeEnabled()
+    await expect(popover(page).getByRole('button', { name: /^Apply$/ })).toBeEnabled()
 
     // Give react-query a beat — but no audit-log request should fire because
     // `from`/`to` props on the parent haven't moved.
@@ -278,15 +287,15 @@ test.describe('DateRangeInput — no autocommit / re-open behaviour', () => {
     await pickMonth(page, 'August')
     await pickDay(page, 4)
     await pickDay(page, 10)
-    await popover(page).getByRole('button', { name: /^Apply$/ }).click()
+    await popover(page)
+      .getByRole('button', { name: /^Apply$/ })
+      .click()
     await expect(popover(page)).toBeHidden()
 
     // Reopen — calendar should remember the range so Apply is immediately
     // enabled and the days are marked selected.
     await openPicker(page)
-    await expect(
-      popover(page).getByRole('button', { name: /^Apply$/ }),
-    ).toBeEnabled()
+    await expect(popover(page).getByRole('button', { name: /^Apply$/ })).toBeEnabled()
 
     // The August 2023 caption is shown (month dropdown reads "August",
     // year dropdown reads "2023"). The shadcn SelectValue renders the
@@ -310,7 +319,9 @@ test.describe('DateRangeInput — no autocommit / re-open behaviour', () => {
     await pickMonth(page, 'November')
     await pickDay(page, 2)
     await pickDay(page, 9)
-    await popover(page).getByRole('button', { name: /^Apply$/ }).click()
+    await popover(page)
+      .getByRole('button', { name: /^Apply$/ })
+      .click()
     await expect(popover(page)).toBeHidden()
 
     // Clear via the inline X.
@@ -343,12 +354,12 @@ test.describe('DateRangeInput — month / year dropdown navigation', () => {
     // We probe by clicking a day — picking 15 must commit as YYYY-01-15
     // where YYYY is the unchanged year.
     await pickDay(page, 15)
-    await popover(page).getByRole('button', { name: /^Apply$/ }).click()
+    await popover(page)
+      .getByRole('button', { name: /^Apply$/ })
+      .click()
 
     const yearNum = Number(beforeYear)
-    await expect(trigger(page)).toContainText(
-      `Jan 15, ${yearNum}`,
-    )
+    await expect(trigger(page)).toContainText(`Jan 15, ${yearNum}`)
   })
 
   test('year dropdown alone changes the visible year', async ({ page }) => {
@@ -365,15 +376,13 @@ test.describe('DateRangeInput — month / year dropdown navigation', () => {
     await expect(monthDropdown(page)).toContainText(MONTHS_LONG[monthIdx]!)
 
     await pickDay(page, 8)
-    await popover(page).getByRole('button', { name: /^Apply$/ }).click()
-    await expect(trigger(page)).toContainText(
-      `${MONTHS_SHORT[monthIdx]} 8, 2019`,
-    )
+    await popover(page)
+      .getByRole('button', { name: /^Apply$/ })
+      .click()
+    await expect(trigger(page)).toContainText(`${MONTHS_SHORT[monthIdx]} 8, 2019`)
   })
 
-  test('changing both month and year navigates to an arbitrary far date', async ({
-    page,
-  }) => {
+  test('changing both month and year navigates to an arbitrary far date', async ({ page }) => {
     await gotoAuditLog(page)
     await openPicker(page)
 
@@ -385,13 +394,13 @@ test.describe('DateRangeInput — month / year dropdown navigation', () => {
     // Within the same month: just click the second day.
     await pickDay(page, 25)
 
-    await popover(page).getByRole('button', { name: /^Apply$/ }).click()
+    await popover(page)
+      .getByRole('button', { name: /^Apply$/ })
+      .click()
     await expect(trigger(page)).toContainText('Jan 5, 2010 – Jan 25, 2010')
   })
 
-  test('changing month/year then year/month across-month range', async ({
-    page,
-  }) => {
+  test('changing month/year then year/month across-month range', async ({ page }) => {
     await gotoAuditLog(page)
     await openPicker(page)
 
@@ -404,7 +413,9 @@ test.describe('DateRangeInput — month / year dropdown navigation', () => {
     await pickMonth(page, 'April')
     await pickDay(page, 3)
 
-    await popover(page).getByRole('button', { name: /^Apply$/ }).click()
+    await popover(page)
+      .getByRole('button', { name: /^Apply$/ })
+      .click()
     await expect(trigger(page)).toContainText('Feb 14, 2015 – Apr 3, 2015')
 
     // And the value round-trips through to the audit-log query string.
@@ -430,26 +441,17 @@ test.describe('DateRangeInput — two-panel layout (wide viewport)', () => {
   test.use({ viewport: { width: 1280, height: 800 } })
 
   /** Left panel dropdowns (first two comboboxes in the popover). */
-  const leftMonthDD = (page: Page): Locator =>
-    popover(page).getByRole('combobox').nth(0)
-  const leftYearDD = (page: Page): Locator =>
-    popover(page).getByRole('combobox').nth(1)
+  const leftMonthDD = (page: Page): Locator => popover(page).getByRole('combobox').nth(0)
+  const leftYearDD = (page: Page): Locator => popover(page).getByRole('combobox').nth(1)
   /** Right panel dropdowns. */
-  const rightMonthDD = (page: Page): Locator =>
-    popover(page).getByRole('combobox').nth(2)
-  const rightYearDD = (page: Page): Locator =>
-    popover(page).getByRole('combobox').nth(3)
+  const rightMonthDD = (page: Page): Locator => popover(page).getByRole('combobox').nth(2)
+  const rightYearDD = (page: Page): Locator => popover(page).getByRole('combobox').nth(3)
 
   async function pickInListbox(page: Page, name: string): Promise<void> {
-    await page
-      .getByRole('listbox')
-      .getByRole('option', { name, exact: true })
-      .click()
+    await page.getByRole('listbox').getByRole('option', { name, exact: true }).click()
   }
 
-  test('renders two independent panels with four dropdowns', async ({
-    page,
-  }) => {
+  test('renders two independent panels with four dropdowns', async ({ page }) => {
     await gotoAuditLog(page)
     await openPicker(page)
     await expect(popover(page).getByRole('combobox')).toHaveCount(4)
@@ -462,9 +464,7 @@ test.describe('DateRangeInput — two-panel layout (wide viewport)', () => {
     expect(leftMonth).not.toBe(rightMonth)
   })
 
-  test('changing right panel month does NOT change left panel', async ({
-    page,
-  }) => {
+  test('changing right panel month does NOT change left panel', async ({ page }) => {
     await gotoAuditLog(page)
     await openPicker(page)
 
@@ -482,9 +482,7 @@ test.describe('DateRangeInput — two-panel layout (wide viewport)', () => {
     await expect(rightMonthDD(page)).toContainText('December')
   })
 
-  test('changing right panel year does NOT change left panel', async ({
-    page,
-  }) => {
+  test('changing right panel year does NOT change left panel', async ({ page }) => {
     await gotoAuditLog(page)
     await openPicker(page)
 
@@ -502,9 +500,7 @@ test.describe('DateRangeInput — two-panel layout (wide viewport)', () => {
     await expect(rightYearDD(page)).toContainText(targetYear)
   })
 
-  test('changing left panel month does NOT change right panel', async ({
-    page,
-  }) => {
+  test('changing left panel month does NOT change right panel', async ({ page }) => {
     await gotoAuditLog(page)
     await openPicker(page)
 
@@ -520,9 +516,7 @@ test.describe('DateRangeInput — two-panel layout (wide viewport)', () => {
     await expect(leftMonthDD(page)).toContainText('January')
   })
 
-  test('right panel year dropdown excludes years before the left panel', async ({
-    page,
-  }) => {
+  test('right panel year dropdown excludes years before the left panel', async ({ page }) => {
     // Default state: left = current month, right = current month + 1.
     // The right's `startMonth` is bound to leftMonth, so its year
     // dropdown must hide every year strictly before the left's.
@@ -541,15 +535,11 @@ test.describe('DateRangeInput — two-panel layout (wide viewport)', () => {
       listbox.getByRole('option', { name: String(leftYear - 1), exact: true }),
     ).toHaveCount(0)
     // leftYear itself IS offered (boundary inclusive: same month allowed).
-    await expect(
-      listbox.getByRole('option', { name: String(leftYear), exact: true }),
-    ).toBeVisible()
+    await expect(listbox.getByRole('option', { name: String(leftYear), exact: true })).toBeVisible()
     await page.keyboard.press('Escape')
   })
 
-  test('left panel year dropdown excludes years after the right panel', async ({
-    page,
-  }) => {
+  test('left panel year dropdown excludes years after the right panel', async ({ page }) => {
     // Symmetric to the previous test: left's `endMonth` is bound to
     // rightMonth, so its year dropdown must hide every year strictly
     // after the right's.
@@ -620,9 +610,7 @@ test.describe('DateRangeInput — two-panel layout (wide viewport)', () => {
     await page.keyboard.press('Escape')
   })
 
-  test('after pushing right forward, the left can then advance past today', async ({
-    page,
-  }) => {
+  test('after pushing right forward, the left can then advance past today', async ({ page }) => {
     // End-to-end proof that the constraint composes: pushing the right
     // panel forward unlocks the left's upper bound, after which the left
     // can move past today's year — and pushing the left to the same
@@ -680,18 +668,12 @@ test.describe('DateRangeInput — two-panel layout (wide viewport)', () => {
     const leftGrid = grids.nth(0)
     const rightGrid = grids.nth(1)
 
-    await leftGrid
-      .locator('td:not(.day-outside)')
-      .locator('button:text-is("10")')
-      .first()
-      .click()
-    await rightGrid
-      .locator('td:not(.day-outside)')
-      .locator('button:text-is("20")')
-      .first()
-      .click()
+    await leftGrid.locator('td:not(.day-outside)').locator('button:text-is("10")').first().click()
+    await rightGrid.locator('td:not(.day-outside)').locator('button:text-is("20")').first().click()
 
-    await popover(page).getByRole('button', { name: /^Apply$/ }).click()
+    await popover(page)
+      .getByRole('button', { name: /^Apply$/ })
+      .click()
     await expect(popover(page)).toBeHidden()
     await expect(trigger(page)).toContainText('Mar 10, 2015 – May 20, 2015')
   })

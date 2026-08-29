@@ -19,7 +19,7 @@
  * `dist/` in the published package. Tailwind ignores a glob that matches
  * nothing, so the inapplicable one is a no-op rather than an error.
  */
-@import "@modern-admin/ui/styles.css";
+@import '@modern-admin/ui/styles.css';
 
 @source "./**/*.{ts,tsx}";
 @source "../src/**/*.{ts,tsx}";

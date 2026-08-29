@@ -98,7 +98,10 @@ function buildNavGroups(resources: ResourceJSON[]): {
     }
   }
 
-  const groups: NavGroup[] = Array.from(groupMap.entries()).map(([label, rs]) => ({ label, resources: rs }))
+  const groups: NavGroup[] = Array.from(groupMap.entries()).map(([label, rs]) => ({
+    label,
+    resources: rs,
+  }))
   return { groups, ungrouped }
 }
 
@@ -120,12 +123,17 @@ function saveCollapsedGroups(collapsed: Set<string>): void {
   if (typeof localStorage === 'undefined') return
   try {
     localStorage.setItem(SIDEBAR_GROUPS_KEY, JSON.stringify([...collapsed]))
-  } catch { /* quota / private mode — ignore */ }
+  } catch {
+    /* quota / private mode — ignore */
+  }
 }
 
 function isResourceActive(route: ReturnType<typeof useRoute>, resourceId: string): boolean {
   return (
-    (route.name === 'list' || route.name === 'show' || route.name === 'edit' || route.name === 'new') &&
+    (route.name === 'list' ||
+      route.name === 'show' ||
+      route.name === 'edit' ||
+      route.name === 'new') &&
     'resourceId' in route &&
     route.resourceId === resourceId
   )
@@ -150,9 +158,7 @@ function ResourceMenuItem({
           <NavIcon name={resource.navigation?.icon} />
           <span className="min-w-0 flex-1 truncate">
             {resource.name}
-            {withId && (
-              <span className="ml-0.5 text-xs opacity-60"> ({resource.id})</span>
-            )}
+            {withId && <span className="ml-0.5 text-xs opacity-60"> ({resource.id})</span>}
           </span>
         </Link>
       </SidebarMenuButton>
@@ -209,7 +215,14 @@ function BrandLogo({
   className: string
 }): React.ReactElement {
   if (brand?.logoUrl) {
-    return <img src={brand.logoUrl} alt="" aria-hidden="true" className={cn(className, 'object-contain')} />
+    return (
+      <img
+        src={brand.logoUrl}
+        alt=""
+        aria-hidden="true"
+        className={cn(className, 'object-contain')}
+      />
+    )
   }
   return <Database className={className} aria-hidden="true" />
 }
@@ -254,7 +267,10 @@ function AppSidebar({
   return (
     <Sidebar
       collapsible="icon"
-      labels={{ sidebarTitle: t('common:sidebarTitle'), navigationMenu: t('common:sidebarNavigation') }}
+      labels={{
+        sidebarTitle: t('common:sidebarTitle'),
+        navigationMenu: t('common:sidebarNavigation'),
+      }}
     >
       <SidebarHeader className="h-12 flex-row items-center gap-2 border-b border-border px-3 py-0 sm:h-14 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
         <BrandLogo brand={brand} className="size-4 shrink-0 text-primary" />
@@ -294,17 +310,16 @@ function AppSidebar({
               </SidebarMenuItem>
             )}
             {getSidebarExtensions()
-              .filter((ext) => !ext.featureGate || !!(features as unknown as Record<string, unknown>)[ext.featureGate])
+              .filter(
+                (ext) =>
+                  !ext.featureGate ||
+                  !!(features as unknown as Record<string, unknown>)[ext.featureGate],
+              )
               .map((ext) => {
-                const extActive =
-                  route.name === 'extension' && route.key === ext.extensionKey
+                const extActive = route.name === 'extension' && route.key === ext.extensionKey
                 return (
                   <SidebarMenuItem key={ext.key}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={extActive}
-                      tooltip={ext.label}
-                    >
+                    <SidebarMenuButton asChild isActive={extActive} tooltip={ext.label}>
                       <Link to={{ name: 'extension', key: ext.extensionKey }}>
                         <ext.icon />
                         <span>{ext.label}</span>
@@ -377,19 +392,17 @@ function UserMenu({ user }: { user: CurrentUser }): React.ReactElement {
   // First section advertised by the backend — the entry in the user menu
   // jumps straight there. When every section is disabled (no api-keys,
   // no webhooks, no ai-assistant) the Settings entry is hidden entirely.
-  const firstSettingsSection: 'api-keys' | 'webhooks' | 'ai-assistant' | null =
-    features.apiKeys ? 'api-keys'
-      : features.webhooks ? 'webhooks'
-        : features.aiAssistant ? 'ai-assistant'
-          : null
+  const firstSettingsSection: 'api-keys' | 'webhooks' | 'ai-assistant' | null = features.apiKeys
+    ? 'api-keys'
+    : features.webhooks
+      ? 'webhooks'
+      : features.aiAssistant
+        ? 'ai-assistant'
+        : null
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          className="h-9 gap-2 px-2"
-          aria-label={display}
-        >
+        <Button variant="ghost" className="h-9 gap-2 px-2" aria-label={display}>
           <Avatar className="size-7">
             {user.avatarUrl && <AvatarImage src={user.avatarUrl} alt={display} />}
             <AvatarFallback className="text-xs">{initials}</AvatarFallback>
@@ -450,11 +463,7 @@ function UserMenu({ user }: { user: CurrentUser }): React.ReactElement {
 /** Header trigger that opens the cross-resource command palette. Renders
  *  as a full-width "search" button on desktop (with a ⌘K hint) and collapses
  *  to an icon-only button on mobile. */
-function GlobalSearchTrigger({
-  onOpen,
-}: {
-  onOpen(): void
-}): React.ReactElement {
+function GlobalSearchTrigger({ onOpen }: { onOpen(): void }): React.ReactElement {
   const { t } = useI18n()
   // Detect macOS so the keyboard hint reads ⌘K vs Ctrl+K. Falls back to
   // platform-agnostic mod key on SSR / unknown UAs.
@@ -472,9 +481,7 @@ function GlobalSearchTrigger({
         className="hidden h-9 w-full max-w-xs justify-start gap-2 px-3 text-muted-foreground sm:inline-flex"
       >
         <Search className="size-4" />
-        <span className="flex-1 truncate text-left text-sm">
-          {t('globalSearch:trigger')}
-        </span>
+        <span className="flex-1 truncate text-left text-sm">{t('globalSearch:trigger')}</span>
         <kbd className="pointer-events-none ml-2 inline-flex h-5 select-none items-center gap-0.5 rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium">
           {isMac ? <span aria-hidden="true">⌘</span> : <span aria-hidden="true">Ctrl</span>}
           <span aria-hidden="true">K</span>
@@ -584,9 +591,7 @@ function FullscreenSpinner({ brand }: { brand?: AdminBrand } = {}): React.ReactE
         <span className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 ring-1 ring-primary/20">
           <BrandLogo brand={brand} className="size-6 text-primary" />
         </span>
-        <span className="text-xl font-semibold tracking-tight">
-          {appName}
-        </span>
+        <span className="text-xl font-semibold tracking-tight">{appName}</span>
       </div>
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Loader2 className="size-4 animate-spin" aria-hidden="true" />
@@ -688,7 +693,11 @@ export function AdminApp({
   const brandLogoUrl = brand?.logoUrl
   const Layout = React.useMemo(
     () =>
-      function ConfiguredShellLayout({ children }: { children: React.ReactNode }): React.ReactElement {
+      function ConfiguredShellLayout({
+        children,
+      }: {
+        children: React.ReactNode
+      }): React.ReactElement {
         return (
           <ShellLayout
             showSidebarResourceIds={showIds}

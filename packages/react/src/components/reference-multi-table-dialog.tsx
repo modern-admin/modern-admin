@@ -53,10 +53,7 @@ export function ReferenceMultiTableDialog({
   const client = useAdminClient()
   const resource = useResource(referenceResourceId)
 
-  const committedIds = React.useMemo(
-    () => (value ?? []).map(String),
-    [value],
-  )
+  const committedIds = React.useMemo(() => (value ?? []).map(String), [value])
 
   const [open, setOpen] = React.useState(false)
   // Staged selection inside the dialog. Reset to committed value each time
@@ -117,7 +114,9 @@ export function ReferenceMultiTableDialog({
         <div className="flex flex-wrap gap-1">
           {chips.map((c) => (
             <Badge key={c.id} variant="secondary" className="gap-1 pr-1">
-              <span className="truncate" title={c.label}>{c.label}</span>
+              <span className="truncate" title={c.label}>
+                {c.label}
+              </span>
               <button
                 type="button"
                 aria-label={t('common:removeItem', { title: c.label })}

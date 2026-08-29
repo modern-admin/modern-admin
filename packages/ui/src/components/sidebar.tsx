@@ -180,7 +180,15 @@ const defaultSidebarLabels: Required<SidebarLabels> = {
 
 export const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
   (
-    { side = 'left', variant = 'sidebar', collapsible = 'offcanvas', className, children, labels, ...props },
+    {
+      side = 'left',
+      variant = 'sidebar',
+      collapsible = 'offcanvas',
+      className,
+      children,
+      labels,
+      ...props
+    },
     ref,
   ) => {
     const l = { ...defaultSidebarLabels, ...labels }
@@ -303,49 +311,47 @@ export interface SidebarRailProps extends React.ButtonHTMLAttributes<HTMLButtonE
   toggleSidebarLabel?: string
 }
 
-export const SidebarRail = React.forwardRef<
-  HTMLButtonElement,
-  SidebarRailProps
->(({ className, toggleSidebarLabel = 'Toggle sidebar', ...props }, ref) => {
-  const { toggleSidebar } = useSidebar()
-  return (
-    <button
+export const SidebarRail = React.forwardRef<HTMLButtonElement, SidebarRailProps>(
+  ({ className, toggleSidebarLabel = 'Toggle sidebar', ...props }, ref) => {
+    const { toggleSidebar } = useSidebar()
+    return (
+      <button
+        ref={ref}
+        type="button"
+        data-sidebar="rail"
+        aria-label={toggleSidebarLabel}
+        tabIndex={-1}
+        onClick={toggleSidebar}
+        title={toggleSidebarLabel}
+        className={cn(
+          'absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] hover:after:bg-border group-data-[side=left]:-right-4 group-data-[side=right]:left-0 sm:flex',
+          '[[data-side=left]_&]:cursor-w-resize [[data-side=right]_&]:cursor-e-resize',
+          '[[data-side=left][data-state=collapsed]_&]:cursor-e-resize [[data-side=right][data-state=collapsed]_&]:cursor-w-resize',
+          'group-data-[collapsible=offcanvas]:translate-x-0 group-data-[collapsible=offcanvas]:after:left-full group-data-[collapsible=offcanvas]:hover:bg-card',
+          '[[data-side=left][data-collapsible=offcanvas]_&]:-right-2',
+          '[[data-side=right][data-collapsible=offcanvas]_&]:-left-2',
+          className,
+        )}
+        {...props}
+      />
+    )
+  },
+)
+SidebarRail.displayName = 'SidebarRail'
+
+export const SidebarInset = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <main
       ref={ref}
-      type="button"
-      data-sidebar="rail"
-      aria-label={toggleSidebarLabel}
-      tabIndex={-1}
-      onClick={toggleSidebar}
-      title={toggleSidebarLabel}
       className={cn(
-        'absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] hover:after:bg-border group-data-[side=left]:-right-4 group-data-[side=right]:left-0 sm:flex',
-        '[[data-side=left]_&]:cursor-w-resize [[data-side=right]_&]:cursor-e-resize',
-        '[[data-side=left][data-state=collapsed]_&]:cursor-e-resize [[data-side=right][data-state=collapsed]_&]:cursor-w-resize',
-        'group-data-[collapsible=offcanvas]:translate-x-0 group-data-[collapsible=offcanvas]:after:left-full group-data-[collapsible=offcanvas]:hover:bg-card',
-        '[[data-side=left][data-collapsible=offcanvas]_&]:-right-2',
-        '[[data-side=right][data-collapsible=offcanvas]_&]:-left-2',
+        'relative flex min-h-svh flex-1 flex-col bg-background',
+        'peer-data-[variant=inset]:min-h-[calc(100svh-theme(spacing.4))] md:peer-data-[variant=inset]:m-2 md:peer-data-[state=collapsed]:peer-data-[variant=inset]:ml-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow',
         className,
       )}
       {...props}
     />
-  )
-})
-SidebarRail.displayName = 'SidebarRail'
-
-export const SidebarInset = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <main
-    ref={ref}
-    className={cn(
-      'relative flex min-h-svh flex-1 flex-col bg-background',
-      'peer-data-[variant=inset]:min-h-[calc(100svh-theme(spacing.4))] md:peer-data-[variant=inset]:m-2 md:peer-data-[state=collapsed]:peer-data-[variant=inset]:ml-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow',
-      className,
-    )}
-    {...props}
-  />
-))
+  ),
+)
 SidebarInset.displayName = 'SidebarInset'
 
 export const SidebarInput = React.forwardRef<
@@ -480,16 +486,17 @@ export const SidebarGroupContent = React.forwardRef<
 ))
 SidebarGroupContent.displayName = 'SidebarGroupContent'
 
-export const SidebarMenu = React.forwardRef<HTMLUListElement, React.HTMLAttributes<HTMLUListElement>>(
-  ({ className, ...props }, ref) => (
-    <ul
-      ref={ref}
-      data-sidebar="menu"
-      className={cn('flex w-full min-w-0 flex-col gap-1', className)}
-      {...props}
-    />
-  ),
-)
+export const SidebarMenu = React.forwardRef<
+  HTMLUListElement,
+  React.HTMLAttributes<HTMLUListElement>
+>(({ className, ...props }, ref) => (
+  <ul
+    ref={ref}
+    data-sidebar="menu"
+    className={cn('flex w-full min-w-0 flex-col gap-1', className)}
+    {...props}
+  />
+))
 SidebarMenu.displayName = 'SidebarMenu'
 
 export const SidebarMenuItem = React.forwardRef<HTMLLIElement, React.HTMLAttributes<HTMLLIElement>>(
@@ -524,7 +531,8 @@ const sidebarMenuButtonVariants = cva(
 )
 
 export interface SidebarMenuButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+  extends
+    React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof sidebarMenuButtonVariants> {
   asChild?: boolean
   isActive?: boolean
@@ -550,7 +558,12 @@ export const SidebarMenuButton = React.forwardRef<HTMLButtonElement, SidebarMenu
     return (
       <Tooltip>
         <TooltipTrigger asChild>{button}</TooltipTrigger>
-        <TooltipContent side="right" align="center" hidden={state !== 'collapsed' || isMobile} {...tooltipProps} />
+        <TooltipContent
+          side="right"
+          align="center"
+          hidden={state !== 'collapsed' || isMobile}
+          {...tooltipProps}
+        />
       </Tooltip>
     )
   },
@@ -634,25 +647,27 @@ export const SidebarMenuSkeleton = React.forwardRef<
 })
 SidebarMenuSkeleton.displayName = 'SidebarMenuSkeleton'
 
-export const SidebarMenuSub = React.forwardRef<HTMLUListElement, React.HTMLAttributes<HTMLUListElement>>(
-  ({ className, ...props }, ref) => (
-    <ul
-      ref={ref}
-      data-sidebar="menu-sub"
-      className={cn(
-        'mx-3.5 flex min-w-0 translate-x-px flex-col gap-1 border-l border-border px-2.5 py-0.5',
-        'group-data-[collapsible=icon]:hidden',
-        className,
-      )}
-      {...props}
-    />
-  ),
-)
+export const SidebarMenuSub = React.forwardRef<
+  HTMLUListElement,
+  React.HTMLAttributes<HTMLUListElement>
+>(({ className, ...props }, ref) => (
+  <ul
+    ref={ref}
+    data-sidebar="menu-sub"
+    className={cn(
+      'mx-3.5 flex min-w-0 translate-x-px flex-col gap-1 border-l border-border px-2.5 py-0.5',
+      'group-data-[collapsible=icon]:hidden',
+      className,
+    )}
+    {...props}
+  />
+))
 SidebarMenuSub.displayName = 'SidebarMenuSub'
 
-export const SidebarMenuSubItem = React.forwardRef<HTMLLIElement, React.HTMLAttributes<HTMLLIElement>>(
-  ({ ...props }, ref) => <li ref={ref} {...props} />,
-)
+export const SidebarMenuSubItem = React.forwardRef<
+  HTMLLIElement,
+  React.HTMLAttributes<HTMLLIElement>
+>(({ ...props }, ref) => <li ref={ref} {...props} />)
 SidebarMenuSubItem.displayName = 'SidebarMenuSubItem'
 
 export const SidebarMenuSubButton = React.forwardRef<

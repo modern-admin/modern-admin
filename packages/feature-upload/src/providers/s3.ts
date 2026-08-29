@@ -80,7 +80,6 @@ export interface S3UploadOptions {
 }
 
 export class S3UploadProvider implements IUploadProvider {
-
   private _client: any = null
 
   constructor(
@@ -90,7 +89,6 @@ export class S3UploadProvider implements IUploadProvider {
 
     private readonly injectedClient?: any,
   ) {}
-
 
   private async client(): Promise<any> {
     if (this.injectedClient) return this.injectedClient
@@ -125,9 +123,7 @@ export class S3UploadProvider implements IUploadProvider {
     // legitimately contain `/` separators (prefixes), but never `..` or a
     // leading slash.
     if (key !== undefined && isUnsafeKey(key)) {
-      throw new Error(
-        `[modern-admin/feature-upload] refusing to upload with unsafe key "${key}"`,
-      )
+      throw new Error(`[modern-admin/feature-upload] refusing to upload with unsafe key "${key}"`)
     }
     const c = await this.client()
     const ext = extname(file.originalName)
@@ -138,7 +134,9 @@ export class S3UploadProvider implements IUploadProvider {
     // Fall back to PutObjectCommand if lib-storage is not installed.
     try {
       const libStorage = await import('@aws-sdk/lib-storage' as string)
-      const Upload = (libStorage as { Upload: new (i: Record<string, unknown>) => { done(): Promise<unknown> } }).Upload
+      const Upload = (
+        libStorage as { Upload: new (i: Record<string, unknown>) => { done(): Promise<unknown> } }
+      ).Upload
       const input: Record<string, unknown> = {
         Bucket: this.options.bucket,
         Key: resolvedKey,
@@ -150,10 +148,14 @@ export class S3UploadProvider implements IUploadProvider {
       await uploader.done()
     } catch (err) {
       // lib-storage not installed — fall back to PutObjectCommand.
-      if ((err as { code?: string }).code === 'ERR_MODULE_NOT_FOUND' ||
-          String(err).includes('Cannot find module')) {
+      if (
+        (err as { code?: string }).code === 'ERR_MODULE_NOT_FOUND' ||
+        String(err).includes('Cannot find module')
+      ) {
         const sdk = await import('@aws-sdk/client-s3' as string)
-        const PutObjectCommand = (sdk as { PutObjectCommand: new (i: Record<string, unknown>) => unknown }).PutObjectCommand
+        const PutObjectCommand = (
+          sdk as { PutObjectCommand: new (i: Record<string, unknown>) => unknown }
+        ).PutObjectCommand
         const input: Record<string, unknown> = {
           Bucket: this.options.bucket,
           Key: resolvedKey,
@@ -190,7 +192,9 @@ export class S3UploadProvider implements IUploadProvider {
     try {
       const sdk = await import('@aws-sdk/client-s3' as string)
       const c = await this.client()
-      const DeleteObjectCommand = (sdk as { DeleteObjectCommand: new (i: Record<string, unknown>) => unknown }).DeleteObjectCommand
+      const DeleteObjectCommand = (
+        sdk as { DeleteObjectCommand: new (i: Record<string, unknown>) => unknown }
+      ).DeleteObjectCommand
       await (c as { send: (cmd: unknown) => Promise<void> }).send(
         new DeleteObjectCommand({ Bucket: this.options.bucket, Key: key }),
       )
@@ -222,17 +226,19 @@ export class S3UploadProvider implements IUploadProvider {
     }
     const sdk = await import('@aws-sdk/client-s3' as string)
     const c = await this.client()
-    const GetObjectCommand = (sdk as { GetObjectCommand: new (i: Record<string, unknown>) => unknown }).GetObjectCommand
+    const GetObjectCommand = (
+      sdk as { GetObjectCommand: new (i: Record<string, unknown>) => unknown }
+    ).GetObjectCommand
     const expiresIn =
-      typeof this.options.signed === 'object'
-        ? (this.options.signed.expiresIn ?? 3600)
-        : 3600
+      typeof this.options.signed === 'object' ? (this.options.signed.expiresIn ?? 3600) : 3600
 
-    return (getSignedUrl as (
-      client: unknown,
-      command: unknown,
-      opts: { expiresIn: number },
-    ) => Promise<string>)(c, new GetObjectCommand({ Bucket: this.options.bucket, Key: key }), { expiresIn })
+    return (
+      getSignedUrl as (
+        client: unknown,
+        command: unknown,
+        opts: { expiresIn: number },
+      ) => Promise<string>
+    )(c, new GetObjectCommand({ Bucket: this.options.bucket, Key: key }), { expiresIn })
   }
 
   private publicBaseUrl(): string {

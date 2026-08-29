@@ -103,10 +103,14 @@ const defaultUserIdResolver = (admin: CurrentAdmin | undefined): string | undefi
   return id === undefined || id === null ? undefined : String(id)
 }
 
-const responseRecord = (response: ActionResponse): {
-  id?: string
-  params?: Record<string, unknown>
-} | undefined => (response as { record?: { id?: string; params?: Record<string, unknown> } }).record
+const responseRecord = (
+  response: ActionResponse,
+):
+  | {
+      id?: string
+      params?: Record<string, unknown>
+    }
+  | undefined => (response as { record?: { id?: string; params?: Record<string, unknown> } }).record
 
 /**
  * `edit.before` runs *before* the mutation and snapshots the current
@@ -202,12 +206,13 @@ function buildAfterHook(
       if (!record?.id || !record.params) return response
 
       const after = omitFields(record.params, excluded)
-      const before = actionName === 'edit'
-        ? (ctx.__modernAdminHistoryEditBefore
+      const before =
+        actionName === 'edit'
+          ? (ctx.__modernAdminHistoryEditBefore ??
             // Fallback path: `ctx.record.params` is flat, so unflatten to
             // match the nested shape used by `after` (see edit.before).
-            ?? (ctx.record?.params ? unflatten(omitFields(ctx.record.params, excluded)) : {}))
-        : {}
+            (ctx.record?.params ? unflatten(omitFields(ctx.record.params, excluded)) : {}))
+          : {}
       const op: HistoryOp = actionName === 'new' ? 'create' : 'update'
       persist({
         resourceId,
@@ -267,8 +272,7 @@ export function historyFeature(options: HistoryFeatureOptions = {}): FeatureFn {
 
   return (resourceOptions: ResourceOptions): ResourceOptions => {
     const existingActions = resourceOptions.actions as
-      | Record<string, Record<string, unknown>>
-      | undefined
+      Record<string, Record<string, unknown>> | undefined
     const overrides: Record<string, Record<string, unknown>> = {}
 
     for (const name of actions) {

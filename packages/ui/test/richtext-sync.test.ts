@@ -80,9 +80,9 @@ describe('shouldSyncToEditor', () => {
     // while the editor is already in markdown mode, corrupting the content.
     expect(
       shouldSyncToEditor(
-        'Hello **world**',                       // editor: markdown content
-        '<p>Hello <strong>world</strong></p>',   // value: still old HTML
-        true,                                    // pendingFormatChange = true
+        'Hello **world**', // editor: markdown content
+        '<p>Hello <strong>world</strong></p>', // value: still old HTML
+        true, // pendingFormatChange = true
       ),
     ).toBe(false)
   })
@@ -127,10 +127,10 @@ describe('shouldSyncToEditor', () => {
   test('returns false when value matches lastEmitted (echo of our own onChange)', () => {
     expect(
       shouldSyncToEditor(
-        '<p>hello world</p>',  // editor: ahead, user just typed " world"
-        '<p>hello</p>',        // value: stale echo of an earlier onChange
+        '<p>hello world</p>', // editor: ahead, user just typed " world"
+        '<p>hello</p>', // value: stale echo of an earlier onChange
         false,
-        '<p>hello</p>',        // lastEmitted: matches value → it's our echo
+        '<p>hello</p>', // lastEmitted: matches value → it's our echo
       ),
     ).toBe(false)
   })
@@ -141,10 +141,10 @@ describe('shouldSyncToEditor', () => {
     // has already moved past it.
     expect(
       shouldSyncToEditor(
-        '<p>hello</p>',          // editor: still has our last emit
-        '<p>RESET</p>',          // value: external reset
+        '<p>hello</p>', // editor: still has our last emit
+        '<p>RESET</p>', // value: external reset
         false,
-        '<p>hello</p>',          // lastEmitted: what we sent before the reset
+        '<p>hello</p>', // lastEmitted: what we sent before the reset
       ),
     ).toBe(true)
   })
@@ -158,9 +158,7 @@ describe('shouldSyncToEditor', () => {
   test('pendingFormatChange wins over lastEmitted (format switch is special)', () => {
     // Even if value happens to match lastEmitted during a format switch,
     // we must not run the diff at all — pendingFormatChange short-circuits.
-    expect(
-      shouldSyncToEditor('Hello', '<p>Hello</p>', true, '<p>Hello</p>'),
-    ).toBe(false)
+    expect(shouldSyncToEditor('Hello', '<p>Hello</p>', true, '<p>Hello</p>')).toBe(false)
   })
 })
 
@@ -213,8 +211,8 @@ describe('format switch lifecycle (pure simulation)', () => {
   type EditorState = { html: string; md: string }
   const read =
     (state: EditorState) =>
-      (fmt: RichtextFormat): string =>
-        fmt === 'html' ? state.html : state.md
+    (fmt: RichtextFormat): string =>
+      fmt === 'html' ? state.html : state.md
 
   test('no corruption occurs across the full html→md switch sequence', () => {
     const editor: EditorState = {
@@ -232,7 +230,7 @@ describe('format switch lifecycle (pure simulation)', () => {
     const valueB = '<p>Hello <strong>world</strong></p>' // stale
     const syncB = shouldSyncToEditor(editorContentB, valueB, pending)
     expect(syncB).toBe(false) // guard prevents the spurious setContent call
-    pending = false            // flag cleared after effect runs
+    pending = false // flag cleared after effect runs
 
     // ── Frame C: parent catches up ────────────────────────────────────────
     // activeFormat = 'markdown', value = 'Hello **world**'

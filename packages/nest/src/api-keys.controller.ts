@@ -63,10 +63,7 @@ interface ApiKeyCreatedRow extends ApiKeyRowLike {
   key: string
 }
 
-type ApiKeyListResult =
-  | ApiKeyRowLike[]
-  | { keys: ApiKeyRowLike[] }
-  | { apiKeys: ApiKeyRowLike[] }
+type ApiKeyListResult = ApiKeyRowLike[] | { keys: ApiKeyRowLike[] } | { apiKeys: ApiKeyRowLike[] }
 
 /**
  * Transport-agnostic surface the controller depends on. The host app
@@ -77,7 +74,11 @@ type ApiKeyListResult =
 export interface IApiKeyService {
   list(headers: Headers): Promise<ApiKeyListResult>
   create(
-    body: { name: string; expiresIn: number | null | undefined; permissions: Record<string, string[]> },
+    body: {
+      name: string
+      expiresIn: number | null | undefined
+      permissions: Record<string, string[]>
+    },
     headers: Headers,
   ): Promise<ApiKeyCreatedRow>
   update(
@@ -207,7 +208,9 @@ export class ApiKeysController {
           keyId: id,
           ...(parsed.data.name !== undefined ? { name: parsed.data.name } : {}),
           ...(parsed.data.enabled !== undefined ? { enabled: parsed.data.enabled } : {}),
-          ...(parsed.data.permissions !== undefined ? { permissions: parsed.data.permissions } : {}),
+          ...(parsed.data.permissions !== undefined
+            ? { permissions: parsed.data.permissions }
+            : {}),
           ...(parsed.data.expiresInDays === undefined
             ? {}
             : parsed.data.expiresInDays === null
@@ -247,9 +250,7 @@ export class ApiKeysController {
 
   private requireService(): IApiKeyService {
     if (!this.service) {
-      throw new NotImplementedException(
-        'API key management is not enabled on this auth provider',
-      )
+      throw new NotImplementedException('API key management is not enabled on this auth provider')
     }
     return this.service
   }

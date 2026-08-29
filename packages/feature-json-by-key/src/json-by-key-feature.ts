@@ -148,15 +148,18 @@ export function jsonByKeyFeature(options: JsonByKeyFeatureOptions): FeatureFn {
         // injected automatically — the underlying registry expects only
         // `(filename) => string`.
         const wrapped = userPath
-          ? (filename: string): string =>
-            userPath(filename, { key, property: sourceProperty })
+          ? (filename: string): string => userPath(filename, { key, property: sourceProperty })
           : undefined
         fileChild = {
           provider,
           ...(wrapped ? { uploadPath: wrapped } : {}),
           isArray: propConfig.child.isArray ?? false,
-          ...(propConfig.child.upload?.mimeTypes ? { mimeTypes: propConfig.child.upload.mimeTypes } : {}),
-          ...(propConfig.child.upload?.maxSize != null ? { maxSize: propConfig.child.upload.maxSize } : {}),
+          ...(propConfig.child.upload?.mimeTypes
+            ? { mimeTypes: propConfig.child.upload.mimeTypes }
+            : {}),
+          ...(propConfig.child.upload?.maxSize != null
+            ? { maxSize: propConfig.child.upload.maxSize }
+            : {}),
           urlTemplate: provider.urlTemplate?.() ?? null,
           fallbackId: `up_${uuidv7().replace(/-/g, '')}`,
         }
@@ -221,11 +224,11 @@ export function jsonByKeyFeature(options: JsonByKeyFeatureOptions): FeatureFn {
         }
         const fileCustom = virtual.fileChild
           ? {
-            uploadProviderId: providerIdByVirtual.get(virtual.virtualPath),
-            uploadUrlTemplate: virtual.fileChild.urlTemplate,
-            uploadMimeTypes: childMime,
-            uploadMaxSize: childMaxSize,
-          }
+              uploadProviderId: providerIdByVirtual.get(virtual.virtualPath),
+              uploadUrlTemplate: virtual.fileChild.urlTemplate,
+              uploadMimeTypes: childMime,
+              uploadMaxSize: childMaxSize,
+            }
           : {}
         propOverrides[virtual.virtualPath] = {
           type: child.type ?? 'string',

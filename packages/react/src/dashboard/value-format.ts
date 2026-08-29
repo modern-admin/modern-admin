@@ -16,27 +16,28 @@ export function applyTransform(
   let out = value
   for (const s of steps) {
     switch (s.op) {
-    case 'divide':
-      if (s.value !== 0) out /= s.value
-      break
-    case 'multiply':
-      out *= s.value
-      break
-    case 'add':
-      out += s.value
-      break
-    case 'subtract':
-      out -= s.value
-      break
+      case 'divide':
+        if (s.value !== 0) out /= s.value
+        break
+      case 'multiply':
+        out *= s.value
+        break
+      case 'add':
+        out += s.value
+        break
+      case 'subtract':
+        out -= s.value
+        break
     }
   }
   return out
 }
 
 /** Apply the transform pipeline to every point of every series. */
-export function transformSeries<
-  S extends { points: ReadonlyArray<{ value: number }> },
->(series: ReadonlyArray<S>, steps: ReadonlyArray<ChartTransformStep> | undefined): S[] {
+export function transformSeries<S extends { points: ReadonlyArray<{ value: number }> }>(
+  series: ReadonlyArray<S>,
+  steps: ReadonlyArray<ChartTransformStep> | undefined,
+): S[] {
   if (!steps || steps.length === 0) return [...series]
   return series.map((s) => ({
     ...s,
@@ -75,10 +76,7 @@ export function makeAxisFormatter(
   return wrap(nf, format)
 }
 
-function intlOptions(
-  format: ChartFormat | undefined,
-  axis: boolean,
-): Intl.NumberFormatOptions {
+function intlOptions(format: ChartFormat | undefined, axis: boolean): Intl.NumberFormatOptions {
   const opts: Intl.NumberFormatOptions = {}
   if (format?.style === 'currency') {
     opts.style = 'currency'
@@ -96,10 +94,7 @@ function intlOptions(
   return opts
 }
 
-function wrap(
-  nf: Intl.NumberFormat,
-  format: ChartFormat | undefined,
-): (n: number) => string {
+function wrap(nf: Intl.NumberFormat, format: ChartFormat | undefined): (n: number) => string {
   const prefix = format?.prefix ?? ''
   const suffix = format?.suffix ?? ''
   return (n: number): string => {

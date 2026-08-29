@@ -117,11 +117,11 @@ export function DialogsProvider({ children }: DialogsProviderProps): React.React
     const push = <T,>(
       build: (id: number, resolve: (value: T | undefined) => void) => DialogEntry,
     ): Promise<T | undefined> =>
-        new Promise<T | undefined>((resolve) => {
-          const id = nextId++
-          const entry = build(id, resolve)
-          setEntries((prev) => [...prev, entry])
-        })
+      new Promise<T | undefined>((resolve) => {
+        const id = nextId++
+        const entry = build(id, resolve)
+        setEntries((prev) => [...prev, entry])
+      })
 
     return {
       confirm: (opts = {}) =>
@@ -162,9 +162,11 @@ export function DialogsProvider({ children }: DialogsProviderProps): React.React
           // guarded action, not just deletion. Delete call-sites pass their own
           // `title` / `confirmLabel`.
           const title =
-            entry.opts.title ?? t(entry.opts.destructive ? 'common:confirmDelete' : 'common:confirmAction')
+            entry.opts.title ??
+            t(entry.opts.destructive ? 'common:confirmDelete' : 'common:confirmAction')
           const confirmLabel =
-            entry.opts.confirmLabel ?? t(entry.opts.destructive ? 'common:delete' : 'common:confirm')
+            entry.opts.confirmLabel ??
+            t(entry.opts.destructive ? 'common:delete' : 'common:confirm')
           const cancelLabel = entry.opts.cancelLabel ?? t('common:cancel')
           return (
             <AlertDialog

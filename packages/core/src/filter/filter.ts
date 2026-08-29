@@ -27,22 +27,22 @@ export const MATCHING_PATTERNS = {
  * - `in`     — value is one of (comma-separated list → multi-select)
  */
 export type FilterOperator =
-  | 'eq'
-  | 'neq'
-  | 'co'
-  | 'nco'
-  | 'sw'
-  | 'ew'
-  | 'empty'
-  | 'nempty'
-  | 'in'
-  | 'gt'
-  | 'lt'
-  | 'between'
+  'eq' | 'neq' | 'co' | 'nco' | 'sw' | 'ew' | 'empty' | 'nempty' | 'in' | 'gt' | 'lt' | 'between'
 
 /** Set of recognised operator prefixes. Used to disambiguate `op:value`. */
 export const FILTER_OPERATORS: ReadonlySet<string> = new Set<FilterOperator>([
-  'eq', 'neq', 'co', 'nco', 'sw', 'ew', 'empty', 'nempty', 'in', 'gt', 'lt', 'between',
+  'eq',
+  'neq',
+  'co',
+  'nco',
+  'sw',
+  'ew',
+  'empty',
+  'nempty',
+  'in',
+  'gt',
+  'lt',
+  'between',
 ])
 
 /**
@@ -57,7 +57,10 @@ export const FILTER_OPERATORS: ReadonlySet<string> = new Set<FilterOperator>([
  * - `'empty:'`       → `{ operator: 'empty', value: '' }`
  * - `'john'`         → `{ operator: null, value: 'john' }`
  */
-export function parseOperatorValue(raw: string): { operator: FilterOperator | null; value: string } {
+export function parseOperatorValue(raw: string): {
+  operator: FilterOperator | null
+  value: string
+} {
   const colonIdx = raw.indexOf(':')
   if (colonIdx === -1) return { operator: null, value: raw }
   const prefix = raw.slice(0, colonIdx)
@@ -68,12 +71,7 @@ export function parseOperatorValue(raw: string): { operator: FilterOperator | nu
 }
 
 export type FilterValue =
-  | string
-  | number
-  | boolean
-  | null
-  | { from?: string; to?: string }
-  | Array<string | number>
+  string | number | boolean | null | { from?: string; to?: string } | Array<string | number>
 
 export interface FilterElement {
   path: string
@@ -94,7 +92,10 @@ export type RawFilters = Record<string, unknown>
 export class Filter {
   public readonly filters: Record<string, FilterElement>
 
-  constructor(rawFilters: RawFilters | undefined, public readonly resource: BaseResource) {
+  constructor(
+    rawFilters: RawFilters | undefined,
+    public readonly resource: BaseResource,
+  ) {
     const flat = flatten(rawFilters ?? {})
     // Allow `field~~from` / `field~~to` ranges by un-flattening with our separator.
     const ranged: Record<string, FilterValue> = {}
@@ -154,10 +155,7 @@ export class Filter {
     return this.filters[path] ?? null
   }
 
-  reduce<T>(
-    callback: (memo: T, element: FilterElement) => T,
-    initial: T,
-  ): T {
+  reduce<T>(callback: (memo: T, element: FilterElement) => T, initial: T): T {
     return Object.values(this.filters).reduce(callback, initial)
   }
 

@@ -1,12 +1,4 @@
-import {
-  BadRequestException,
-  Controller,
-  Get,
-  Inject,
-  Query,
-  Req,
-  UseGuards,
-} from '@nestjs/common'
+import { BadRequestException, Controller, Get, Inject, Query, Req, UseGuards } from '@nestjs/common'
 import { ApiCookieAuth, ApiTags } from '@nestjs/swagger'
 import {
   ForbiddenError,

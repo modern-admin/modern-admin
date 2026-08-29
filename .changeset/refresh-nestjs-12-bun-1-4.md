@@ -35,6 +35,4 @@ consumers must move to NestJS 12 as well. Also on bun 1.4 (`@types/bun` 1.4).
 Other lines bumped to current stable: Prisma 7.10, BullMQ 6.3, better-auth
 1.7.2, Zod 4.5, jose 6.2, TanStack Query/Router/Table, lucide-react 1.37,
 react-hook-form 7.86, TipTap 3.30.5, Vite 8.2.2, and the AI SDK (`ai` 7.0.84).
-TypeScript stays on the 6.x compatibility layer (typescript-eslint has no
-stable TS 7 support yet) and Prisma stays on the 7.x stable line (8.0 is still
-a release candidate).
+Prisma stays on the 7.x stable line (8.0 is still a release candidate).

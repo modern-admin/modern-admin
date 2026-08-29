@@ -30,10 +30,7 @@ async function createCustomer(
   return { id: String(body.record.id), name, email }
 }
 
-async function deleteCustomerSilently(
-  request: APIRequestContext,
-  id: string,
-): Promise<void> {
+async function deleteCustomerSilently(request: APIRequestContext, id: string): Promise<void> {
   await request.delete(adminApi(`/resources/customers/records/${id}/actions/delete`))
 }
 
@@ -61,9 +58,7 @@ async function gotoCustomersSinglePage(page: Page): Promise<void> {
 // ─── Sorting ──────────────────────────────────────────────────────────────────
 
 test.describe('List page — sorting', () => {
-  test('clicking the Name header cycles asc → desc and updates the URL', async ({
-    page,
-  }) => {
+  test('clicking the Name header cycles asc → desc and updates the URL', async ({ page }) => {
     await gotoCustomers(page)
 
     // The column header for "Name" contains a sort-button with that label.
@@ -84,9 +79,7 @@ test.describe('List page — sorting', () => {
     await expect(page).not.toHaveURL(/sortBy=name/, { timeout: 5_000 })
   })
 
-  test('sorted rows are reflected in the table (first cell changes)', async ({
-    page,
-  }) => {
+  test('sorted rows are reflected in the table (first cell changes)', async ({ page }) => {
     await gotoCustomers(page)
 
     // Capture the first name cell before sorting.
@@ -111,9 +104,7 @@ test.describe('List page — sorting', () => {
 // ─── Per-page selector ────────────────────────────────────────────────────────
 
 test.describe('List page — per-page selector', () => {
-  test('changing rows-per-page to 10 updates URL and shows ≤ 10 rows', async ({
-    page,
-  }) => {
+  test('changing rows-per-page to 10 updates URL and shows ≤ 10 rows', async ({ page }) => {
     await gotoCustomers(page)
 
     // On desktop (1280 × 800) the "Rows per page" label and its select are
@@ -132,9 +123,7 @@ test.describe('List page — per-page selector', () => {
     await expect(page.locator('tbody tr')).toHaveCount(10, { timeout: 5_000 })
   })
 
-  test('changing rows-per-page to 50 shows all 30+ seeded rows on one page', async ({
-    page,
-  }) => {
+  test('changing rows-per-page to 50 shows all 30+ seeded rows on one page', async ({ page }) => {
     await gotoCustomers(page)
 
     const perPageCombo = page
@@ -157,9 +146,7 @@ test.describe('List page — per-page selector', () => {
 // ─── Column visibility ────────────────────────────────────────────────────────
 
 test.describe('List page — column visibility', () => {
-  test('unchecking Email in the Columns menu removes the column header', async ({
-    page,
-  }) => {
+  test('unchecking Email in the Columns menu removes the column header', async ({ page }) => {
     await gotoCustomers(page)
 
     // Email column is visible by default.
@@ -177,9 +164,9 @@ test.describe('List page — column visibility', () => {
     await page.keyboard.press('Escape')
 
     // Email column header must be gone.
-    await expect(
-      page.getByRole('columnheader', { name: /\bEmail\b/ }),
-    ).toBeHidden({ timeout: 5_000 })
+    await expect(page.getByRole('columnheader', { name: /\bEmail\b/ })).toBeHidden({
+      timeout: 5_000,
+    })
   })
 
   test('re-checking a hidden column restores it', async ({ page }) => {
@@ -191,27 +178,24 @@ test.describe('List page — column visibility', () => {
     await columnsBtn.click()
     await page.getByRole('menuitemcheckbox', { name: /^Full name$/i }).click()
     await page.keyboard.press('Escape')
-    await expect(
-      page.getByRole('columnheader', { name: /\bFull name\b/i }),
-    ).toBeHidden({ timeout: 5_000 })
+    await expect(page.getByRole('columnheader', { name: /\bFull name\b/i })).toBeHidden({
+      timeout: 5_000,
+    })
 
     // Show "Name" again.
     await columnsBtn.click()
     await page.getByRole('menuitemcheckbox', { name: /^Full name$/i }).click()
     await page.keyboard.press('Escape')
-    await expect(
-      page.getByRole('columnheader', { name: /\bFull name\b/i }),
-    ).toBeVisible({ timeout: 5_000 })
+    await expect(page.getByRole('columnheader', { name: /\bFull name\b/i })).toBeVisible({
+      timeout: 5_000,
+    })
   })
 })
 
 // ─── Bulk delete ──────────────────────────────────────────────────────────────
 
 test.describe('List page — bulk delete', () => {
-  test('selects rows, confirms bulk delete and removes records', async ({
-    page,
-    request,
-  }) => {
+  test('selects rows, confirms bulk delete and removes records', async ({ page, request }) => {
     const c1 = await createCustomer(request)
     const c2 = await createCustomer(request)
 
@@ -231,9 +215,7 @@ test.describe('List page — bulk delete', () => {
 
       // Click the per-row "Select row" checkboxes.
       for (const name of [c1.name, c2.name]) {
-        const row = page
-          .locator('tbody tr')
-          .filter({ has: page.getByRole('cell', { name }) })
+        const row = page.locator('tbody tr').filter({ has: page.getByRole('cell', { name }) })
         await row.getByRole('checkbox', { name: /Select row/i }).click()
       }
 
@@ -254,16 +236,12 @@ test.describe('List page — bulk delete', () => {
       await expect(confirmDialog).toBeHidden({ timeout: 10_000 })
 
       // Both rows must disappear from the current page view.
-      await expect(
-        page.getByRole('cell', { name: c1.name }),
-      ).toBeHidden({ timeout: 10_000 })
+      await expect(page.getByRole('cell', { name: c1.name })).toBeHidden({ timeout: 10_000 })
       await expect(page.getByRole('cell', { name: c2.name })).toBeHidden()
 
       // Server-side: both records must return 404.
       for (const id of [c1.id, c2.id]) {
-        const res = await request.get(
-          adminApi(`/resources/customers/records/${id}/actions/show`),
-        )
+        const res = await request.get(adminApi(`/resources/customers/records/${id}/actions/show`))
         expect(res.status()).toBe(404)
       }
     } finally {

@@ -20,7 +20,16 @@
 // i18n-unaware by design: all visible strings are passed via `labels`.
 
 import * as React from 'react'
-import { addMonths, format, isSameMonth, isValid, parse, parseISO, startOfMonth, type Locale } from 'date-fns'
+import {
+  addMonths,
+  format,
+  isSameMonth,
+  isValid,
+  parse,
+  parseISO,
+  startOfMonth,
+  type Locale,
+} from 'date-fns'
 import { CalendarRange, X } from 'lucide-react'
 import type { DateRange } from 'react-day-picker'
 import { cn } from '../lib/utils.js'
@@ -88,7 +97,7 @@ export function DateRangeInput({
   React.useEffect(() => {
     const f = parseDate(from)
     const t = parseDate(to)
-    setPending(f ?? t ? { from: f, to: t } : undefined)
+    setPending((f ?? t) ? { from: f, to: t } : undefined)
   }, [from, to])
 
   // Number of calendar months — 1 on narrow, 2 on wide viewports.
@@ -133,9 +142,7 @@ export function DateRangeInput({
       // always lands the user on the months they were last looking at —
       // independently for the left and right panels.
       const left = startOfMonth(f ?? new Date())
-      const right = t && !isSameMonth(left, t)
-        ? startOfMonth(t)
-        : addMonths(left, 1)
+      const right = t && !isSameMonth(left, t) ? startOfMonth(t) : addMonths(left, 1)
       setLeftMonth(left)
       setRightMonth(right)
     } else {
@@ -143,7 +150,7 @@ export function DateRangeInput({
       // selection and revert to the last committed values.
       const f = parseDate(from)
       const t = parseDate(to)
-      setPending(f ?? t ? { from: f, to: t } : undefined)
+      setPending((f ?? t) ? { from: f, to: t } : undefined)
     }
     setOpen(next)
   }
@@ -174,10 +181,7 @@ export function DateRangeInput({
   // Commit whatever is pending (at minimum a start date) and close.
   const handleApply = (): void => {
     if (pending?.from) {
-      onChange(
-        format(pending.from, DATE_FMT),
-        pending.to ? format(pending.to, DATE_FMT) : '',
-      )
+      onChange(format(pending.from, DATE_FMT), pending.to ? format(pending.to, DATE_FMT) : '')
     }
     setOpen(false)
   }
@@ -202,9 +206,9 @@ export function DateRangeInput({
 
   const displayText = hasValue
     ? [
-      fromDate ? format(fromDate, DISPLAY_FMT, { locale }) : '…',
-      toDate ? format(toDate, DISPLAY_FMT, { locale }) : '…',
-    ].join(' – ')
+        fromDate ? format(fromDate, DISPLAY_FMT, { locale }) : '…',
+        toDate ? format(toDate, DISPLAY_FMT, { locale }) : '…',
+      ].join(' – ')
     : null
 
   return (
@@ -221,9 +225,7 @@ export function DateRangeInput({
           )}
         >
           <CalendarRange className="size-4 shrink-0 opacity-60" />
-          <span className="flex-1 truncate text-left text-sm">
-            {displayText ?? placeholder}
-          </span>
+          <span className="flex-1 truncate text-left text-sm">{displayText ?? placeholder}</span>
           {hasValue && (
             <span
               role="button"

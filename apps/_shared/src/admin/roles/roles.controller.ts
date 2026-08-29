@@ -15,12 +15,7 @@
 // flagged `isBuiltin: true` — the controller blocks delete on those
 // rows so the panel always has a working super-user role.
 
-import {
-  AdminController,
-  AdminResource,
-  Before,
-  type AdminActionContext,
-} from '@modern-admin/nest'
+import { AdminController, AdminResource, Before, type AdminActionContext } from '@modern-admin/nest'
 import { ValidationError } from '@modern-admin/core'
 import { adminSource } from '../source-registry.js'
 import type { RoleRow } from '../types.js'
@@ -35,7 +30,10 @@ import type { RoleRow } from '../types.js'
     permissions: { type: 'json' },
     // `isBuiltin` is set on seed and never editable through the panel —
     // hide it from create/edit forms; surface it in list/show as a badge.
-    isBuiltin: { type: 'boolean', isVisible: { list: true, show: true, edit: false, filter: true } },
+    isBuiltin: {
+      type: 'boolean',
+      isVisible: { list: true, show: true, edit: false, filter: true },
+    },
     createdAt: { type: 'datetime' },
     updatedAt: { type: 'datetime' },
   },

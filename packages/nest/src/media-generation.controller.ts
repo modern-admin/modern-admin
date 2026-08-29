@@ -1,13 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Post,
-  Put,
-  Req,
-  UseGuards,
-} from '@nestjs/common'
+import { Body, Controller, Get, Param, Post, Put, Req, UseGuards } from '@nestjs/common'
 import { ApiCookieAuth, ApiTags } from '@nestjs/swagger'
 import { z } from 'zod'
 import type { CurrentAdmin } from '@modern-admin/core'
@@ -75,18 +66,16 @@ export class MediaGenerationController {
   }
 
   @Post('tasks/:taskId/apply')
-  applyResult(
-    @Param('taskId') taskId: string,
-    @Body() body: unknown,
-    @Req() req: AdminRequest,
-  ) {
+  applyResult(@Param('taskId') taskId: string, @Body() body: unknown, @Req() req: AdminRequest) {
     return this.service.applyResult(taskId, applyBodyZ.parse(body), req.currentAdmin)
   }
 }
 
-const webhookBodyZ = z.object({
-  data: z.object({ taskId: z.string().min(1) }),
-}).passthrough()
+const webhookBodyZ = z
+  .object({
+    data: z.object({ taskId: z.string().min(1) }),
+  })
+  .passthrough()
 
 /** Public callback surface. Per-task HMAC tokens replace session authentication. */
 @ApiTags('Admin / Media Generation Webhook')
@@ -95,11 +84,7 @@ export class MediaGenerationWebhookController {
   constructor(private readonly service: MediaGenerationService) {}
 
   @Post(':taskId/:token')
-  receive(
-    @Param('taskId') taskId: string,
-    @Param('token') token: string,
-    @Body() body: unknown,
-  ) {
+  receive(@Param('taskId') taskId: string, @Param('token') token: string, @Body() body: unknown) {
     const parsed = webhookBodyZ.parse(body)
     return this.service.processWebhook(taskId, token, parsed.data.taskId)
   }

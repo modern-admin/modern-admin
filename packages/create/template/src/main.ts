@@ -9,7 +9,9 @@ import { auth } from './auth.js'
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule)
 
-  const origins = process.env.WEB_ORIGIN?.split(',').map((s) => s.trim()).filter(Boolean)
+  const origins = process.env.WEB_ORIGIN?.split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
   app.enableCors({
     origin: origins && origins.length > 0 ? origins : true,
     credentials: true,

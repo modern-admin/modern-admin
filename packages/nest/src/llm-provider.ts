@@ -69,10 +69,7 @@ export class ApiStockLlmProvider implements ILlmProvider {
     }
     let modules: [typeof import('ai'), typeof import('@ai-sdk/openai-compatible')]
     try {
-      modules = await Promise.all([
-        import('ai'),
-        import('@ai-sdk/openai-compatible'),
-      ])
+      modules = await Promise.all([import('ai'), import('@ai-sdk/openai-compatible')])
     } catch (cause) {
       throw new Error(
         translateServerMessage(
@@ -112,10 +109,13 @@ export class ApiStockLlmProvider implements ILlmProvider {
       // status so the task's stored error is diagnosable instead of blank.
       const apiError = error as { statusCode?: number; message?: string }
       if (apiError && typeof apiError.statusCode === 'number' && !apiError.message?.trim()) {
-        const hint = apiError.statusCode === 524
-          ? ' (upstream gateway timeout — the provider is slow or overloaded, retry later)'
-          : ''
-        throw new Error(`API Stock request failed with HTTP ${apiError.statusCode}${hint}`, { cause: error })
+        const hint =
+          apiError.statusCode === 524
+            ? ' (upstream gateway timeout — the provider is slow or overloaded, retry later)'
+            : ''
+        throw new Error(`API Stock request failed with HTTP ${apiError.statusCode}${hint}`, {
+          cause: error,
+        })
       }
       throw error
     }
@@ -156,10 +156,7 @@ export class OpenRouterLlmProvider implements ILlmProvider {
     }
     let modules: [typeof import('ai'), typeof import('@openrouter/ai-sdk-provider')]
     try {
-      modules = await Promise.all([
-        import('ai'),
-        import('@openrouter/ai-sdk-provider'),
-      ])
+      modules = await Promise.all([import('ai'), import('@openrouter/ai-sdk-provider')])
     } catch (cause) {
       throw new Error(
         translateServerMessage(

@@ -62,9 +62,7 @@ function filterSheet(page: Page) {
  * `apps/web/src/locales/en.json` renames the field to "Internal name".
  */
 function filterField(page: Page, labelText: string) {
-  return filterSheet(page).locator(
-    `xpath=.//label[normalize-space()="${labelText}"]/parent::div`,
-  )
+  return filterSheet(page).locator(`xpath=.//label[normalize-space()="${labelText}"]/parent::div`)
 }
 
 /** Read a `filters[<key>]` URL param. */
@@ -88,7 +86,9 @@ async function openFilters(page: Page): Promise<void> {
 }
 
 async function applyFilters(page: Page): Promise<void> {
-  await filterSheet(page).getByRole('button', { name: /^Apply filters$/i }).click()
+  await filterSheet(page)
+    .getByRole('button', { name: /^Apply filters$/i })
+    .click()
   await expect(filterSheet(page)).toBeHidden({ timeout: 5_000 })
 }
 
@@ -118,9 +118,7 @@ test.describe('Filter — "Is one of" (in) operator: API', () => {
     }
   })
 
-  test('empty `in:` is treated as no filter (consistent across adapters)', async ({
-    request,
-  }) => {
+  test('empty `in:` is treated as no filter (consistent across adapters)', async ({ request }) => {
     // Baseline: total rows in the resource.
     const all = await request.get(adminApi('/resources/customers/actions/list?perPage=200'))
     expect(all.status()).toBe(200)
@@ -141,9 +139,7 @@ test.describe('Filter — "Is one of" (in) operator: API', () => {
 })
 
 test.describe('Filter — "Is one of" (in) operator: UI', () => {
-  test('auto-switches to checkbox picker on low-cardinality string field', async ({
-    page,
-  }) => {
+  test('auto-switches to checkbox picker on low-cardinality string field', async ({ page }) => {
     await openTagsList(page)
     await openFilters(page)
 
@@ -192,10 +188,7 @@ test.describe('Filter — "Is one of" (in) operator: UI', () => {
     await expect(nameField.getByRole('checkbox', { name: 'DevOps' })).toBeVisible()
   })
 
-  test('selecting two values filters the list to that subset', async ({
-    page,
-    request,
-  }) => {
+  test('selecting two values filters the list to that subset', async ({ page, request }) => {
     // Strict-API expectation for the row count after the filter applies.
     const apiBody = await (
       await request.get(
@@ -221,16 +214,13 @@ test.describe('Filter — "Is one of" (in) operator: UI', () => {
 
     // URL carries `in:` prefix + the two selected values. Order matches
     // the click sequence (FilterValuePicker pushes onto `selected`).
-    await expect.poll(() => filterParam(page, 'color'), { timeout: 5_000 })
-      .toBe('in:blue,green')
+    await expect.poll(() => filterParam(page, 'color'), { timeout: 5_000 }).toBe('in:blue,green')
 
     const pageSize = Math.min(50, expectedCount)
     await expect(page.locator('tbody tr')).toHaveCount(pageSize, { timeout: 10_000 })
   })
 
-  test('unchecking the last value clears the filter (no phantom in: in URL)', async ({
-    page,
-  }) => {
+  test('unchecking the last value clears the filter (no phantom in: in URL)', async ({ page }) => {
     // Land directly on a single-value `in` filter so the UI hydrates the
     // picker in "in" mode with one item selected.
     await page.goto('/resources/categories?perPage=50&filters[name]=in:Design')
@@ -256,8 +246,7 @@ test.describe('Filter — "Is one of" (in) operator: UI', () => {
     // After the fix, `encodeFilter('in', '')` returns '' → the filter is
     // dropped from the draft and the URL. Pre-fix the URL would still
     // carry `filters[name]=in:`.
-    await expect.poll(() => filterParam(page, 'name'), { timeout: 5_000 })
-      .toBeNull()
+    await expect.poll(() => filterParam(page, 'name'), { timeout: 5_000 }).toBeNull()
 
     // Row count grows beyond the filtered subset (full list restored).
     await expect

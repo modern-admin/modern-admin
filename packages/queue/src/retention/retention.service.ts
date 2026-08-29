@@ -68,8 +68,8 @@ export class RetentionService implements OnModuleInit {
 
   private hasWork(): boolean {
     return Boolean(
-      (this.options.history && hasBounds(this.options.history))
-      || (this.options.auditLog && hasBounds(this.options.auditLog)),
+      (this.options.history && hasBounds(this.options.history)) ||
+      (this.options.auditLog && hasBounds(this.options.auditLog)),
     )
   }
 

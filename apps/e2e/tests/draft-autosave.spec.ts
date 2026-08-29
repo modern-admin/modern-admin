@@ -68,17 +68,15 @@ test.describe('Draft auto-save — new record form', () => {
 
     // The watch subscription fires synchronously, but localStorage commits
     // happen in the same tick — give the React update a beat to flush.
-    await expect
-      .poll(async () => (await readDraft(page))?.name, { timeout: 5_000 })
-      .toBe(name)
+    await expect.poll(async () => (await readDraft(page))?.name, { timeout: 5_000 }).toBe(name)
   })
 
-  test('restores the draft on revisit and shows a bottom-center toast with Undo', async ({ page }) => {
+  test('restores the draft on revisit and shows a bottom-center toast with Undo', async ({
+    page,
+  }) => {
     const name = `Draft Revisit ${Date.now()}`
     await fieldInput(page, /^Full name/i).fill(name)
-    await expect
-      .poll(async () => (await readDraft(page))?.name, { timeout: 5_000 })
-      .toBe(name)
+    await expect.poll(async () => (await readDraft(page))?.name, { timeout: 5_000 }).toBe(name)
 
     // Navigate away to the resource list — this leaves the draft in storage.
     await page.goto('/resources/customers')
@@ -90,14 +88,18 @@ test.describe('Draft auto-save — new record form', () => {
 
     // The toaster container has `data-sonner-toaster` and a `position`
     // attribute matching the `position` option passed to the toast.
-    const toaster = page.locator('[data-sonner-toaster][data-y-position="bottom"][data-x-position="center"]')
+    const toaster = page.locator(
+      '[data-sonner-toaster][data-y-position="bottom"][data-x-position="center"]',
+    )
     await expect(toaster).toHaveCount(1)
 
     // The toast (rendered into sonner's portal) carries the restored copy
     // plus an Undo action. Scope to the toaster so we don't match the
     // RichTextEditor toolbar's `aria-label="Undo"` button.
     const undoButton = toaster
-      .getByRole('button', { name: /undo|восстан|annuler|annulla|deshacer|desfazer|rückgängig|cofnij|元に戻す/i })
+      .getByRole('button', {
+        name: /undo|восстан|annuler|annulla|deshacer|desfazer|rückgängig|cofnij|元に戻す/i,
+      })
       .first()
     await expect(undoButton).toBeVisible({ timeout: 5_000 })
   })
@@ -105,9 +107,7 @@ test.describe('Draft auto-save — new record form', () => {
   test('Undo action reverts to defaults and clears the draft', async ({ page }) => {
     const name = `Draft Undo ${Date.now()}`
     await fieldInput(page, /^Full name/i).fill(name)
-    await expect
-      .poll(async () => (await readDraft(page))?.name, { timeout: 5_000 })
-      .toBe(name)
+    await expect.poll(async () => (await readDraft(page))?.name, { timeout: 5_000 }).toBe(name)
 
     await page.goto('/resources/customers')
     await gotoNewCustomer(page)
@@ -119,7 +119,9 @@ test.describe('Draft auto-save — new record form', () => {
     // that ships with the form chrome.
     const toaster = page.locator('[data-sonner-toaster]')
     const undoButton = toaster
-      .getByRole('button', { name: /undo|восстан|annuler|annulla|deshacer|desfazer|rückgängig|cofnij|元に戻す/i })
+      .getByRole('button', {
+        name: /undo|восстан|annuler|annulla|deshacer|desfazer|rückgängig|cofnij|元に戻す/i,
+      })
       .first()
     await expect(undoButton).toBeVisible({ timeout: 5_000 })
     await expect(undoButton).toBeEnabled()
@@ -139,9 +141,7 @@ test.describe('Draft auto-save — new record form', () => {
     // protects the form across all subsequent dep changes.
     const name = `Draft Refetch ${Date.now()}`
     await fieldInput(page, /^Full name/i).fill(name)
-    await expect
-      .poll(async () => (await readDraft(page))?.name, { timeout: 5_000 })
-      .toBe(name)
+    await expect.poll(async () => (await readDraft(page))?.name, { timeout: 5_000 }).toBe(name)
 
     // Full reload so we exercise the same restore-on-mount path the user
     // hits when reopening the new-form route.
@@ -171,9 +171,7 @@ test.describe('Draft auto-save — new record form', () => {
 
     await fieldInput(page, /^Full name/i).fill(name)
     await fieldInput(page, /^Email/).fill(email)
-    await expect
-      .poll(async () => (await readDraft(page))?.name, { timeout: 5_000 })
-      .toBe(name)
+    await expect.poll(async () => (await readDraft(page))?.name, { timeout: 5_000 }).toBe(name)
 
     // Submit via the sticky save button at the bottom of the page.
     await page
@@ -190,8 +188,7 @@ test.describe('Draft auto-save — new record form', () => {
     // draft before `onSubmit` had even called `clearDraft()`.
     await page.waitForURL(
       (url) =>
-        /^\/resources\/customers\/[^/]+$/.test(url.pathname) &&
-        !url.pathname.endsWith('/new'),
+        /^\/resources\/customers\/[^/]+$/.test(url.pathname) && !url.pathname.endsWith('/new'),
       { timeout: 15_000 },
     )
     expect(await readDraft(page)).toBeNull()

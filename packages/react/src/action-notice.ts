@@ -12,14 +12,15 @@ type NotifyApi = ReturnType<typeof useNotify>
 
 /** Show a custom action's `notice` as the matching toast. Unrecognised
  *  types fall back to a success toast; a missing notice is a no-op. */
-export function showActionNotice(
-  notify: NotifyApi,
-  notice: CustomActionResponse['notice'],
-): void {
+export function showActionNotice(notify: NotifyApi, notice: CustomActionResponse['notice']): void {
   if (!notice) return
-  const type = notice.type === 'error' ? 'error'
-    : notice.type === 'warning' ? 'warning'
-      : notice.type === 'info' ? 'info'
-        : 'success'
+  const type =
+    notice.type === 'error'
+      ? 'error'
+      : notice.type === 'warning'
+        ? 'warning'
+        : notice.type === 'info'
+          ? 'info'
+          : 'success'
   notify[type]({ message: notice.message })
 }

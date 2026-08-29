@@ -44,10 +44,7 @@ export function MoveChartDialog({
 }: MoveChartDialogProps): React.ReactElement {
   const { t } = useI18n()
 
-  const sorted = React.useMemo(
-    () => [...groups].sort((a, b) => a.order - b.order),
-    [groups],
-  )
+  const sorted = React.useMemo(() => [...groups].sort((a, b) => a.order - b.order), [groups])
 
   // Seed from the chart's current group, or the first group if unset.
   const defaultGroupId = initialGroupId ?? sorted[0]?.id ?? ''
@@ -60,7 +57,12 @@ export function MoveChartDialog({
   }
 
   return (
-    <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
+    >
       <DialogContent closeLabel={t('common:close')} className="w-full max-w-md">
         <DialogHeader>
           <DialogTitle>{t('chart:moveChart')}</DialogTitle>
@@ -74,7 +76,10 @@ export function MoveChartDialog({
             <Button
               variant="outline"
               className="w-full"
-              onClick={() => { onClose(); onCreateGroup() }}
+              onClick={() => {
+                onClose()
+                onCreateGroup()
+              }}
             >
               <FolderPlus className="size-4 mr-2" />
               {t('chart:addGroup')}
@@ -109,7 +114,11 @@ export function MoveChartDialog({
                 step={1}
                 value={order}
                 onChange={(e) =>
-                  setOrder(Number.isFinite(Number(e.target.value)) ? Math.trunc(Number(e.target.value)) : 0)
+                  setOrder(
+                    Number.isFinite(Number(e.target.value))
+                      ? Math.trunc(Number(e.target.value))
+                      : 0,
+                  )
                 }
               />
             </div>
@@ -117,7 +126,9 @@ export function MoveChartDialog({
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>{t('common:cancel')}</Button>
+          <Button variant="outline" onClick={onClose}>
+            {t('common:cancel')}
+          </Button>
           {sorted.length > 0 && (
             <Button onClick={handleSave} disabled={!groupId}>
               {t('chart:moveToGroup')}

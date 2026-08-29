@@ -27,8 +27,14 @@ const adminApi = (path: string): string => `${API_URL}/admin/api${path}`
 // to the label resolver (the controller filters them out).
 const SPECIAL_BUCKETS = new Set(['__total__', '__other__', '__null__'])
 
-interface SeriesPoint { ts: string; value: number }
-interface Series { key: string; points: SeriesPoint[] }
+interface SeriesPoint {
+  ts: string
+  value: number
+}
+interface Series {
+  key: string
+  points: SeriesPoint[]
+}
 interface TimeSeriesResponse {
   series: Series[]
   resolvedLabels?: Record<string, string>
@@ -77,7 +83,10 @@ test.describe('Time-series / chart breakdown — titleProperty label resolution'
       //     fact title equals displayName, not name.
       expect(c.params.displayName).toBeTruthy()
       expect(c.title, `category ${c.id}: title must equal displayName`).toBe(c.params.displayName)
-      expect(c.title, `category ${c.id}: title must NOT equal name (auto-detect fallback)`).not.toBe(c.params.name)
+      expect(
+        c.title,
+        `category ${c.id}: title must NOT equal name (auto-detect fallback)`,
+      ).not.toBe(c.params.name)
     }
 
     // Ask the analytics endpoint to bucket posts by month, broken down by
@@ -134,9 +143,7 @@ test.describe('Time-series / chart breakdown — titleProperty label resolution'
     expect(seenIds.size).toBeGreaterThanOrEqual(1)
   })
 
-  test('without groupByLabelResource the response has no resolvedLabels', async ({
-    request,
-  }) => {
+  test('without groupByLabelResource the response has no resolvedLabels', async ({ request }) => {
     // Drop `groupByLabelResource` from the payload — the controller MUST
     // NOT fabricate label resolution out of nowhere, so the resp must
     // omit `resolvedLabels` entirely.
@@ -163,9 +170,7 @@ test.describe('Time-series / chart breakdown — titleProperty label resolution'
     expect(nonSpecial.length).toBeGreaterThan(0)
   })
 
-  test('unknown groupByLabelResource degrades to raw keys (no 5xx)', async ({
-    request,
-  }) => {
+  test('unknown groupByLabelResource degrades to raw keys (no 5xx)', async ({ request }) => {
     // Robustness: an outdated chart def referencing a deleted resource
     // must not blow up the endpoint — the controller catches and skips
     // label resolution silently.

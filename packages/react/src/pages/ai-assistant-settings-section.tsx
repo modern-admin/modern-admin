@@ -65,13 +65,14 @@ export function AiAssistantSettingsSection(): React.ReactElement {
 
   const data = settings.data
   if (!data) {
-    return <div className="py-8 text-sm text-muted-foreground">{t('aiAssistant:settings.empty')}</div>
+    return (
+      <div className="py-8 text-sm text-muted-foreground">{t('aiAssistant:settings.empty')}</div>
+    )
   }
   const providerNameKey = `aiAssistant:provider.${data.provider}`
   const localizedProviderName = t(providerNameKey)
-  const providerName = localizedProviderName === providerNameKey
-    ? data.providerName
-    : localizedProviderName
+  const providerName =
+    localizedProviderName === providerNameKey ? data.providerName : localizedProviderName
 
   return (
     <div className="flex flex-col gap-4">
@@ -86,10 +87,14 @@ export function AiAssistantSettingsSection(): React.ReactElement {
             {data.enabled ? t('aiAssistant:settings.enabled') : t('aiAssistant:settings.disabled')}
           </Badge>
           <Badge variant={data.configured ? 'secondary' : 'outline'}>
-            {data.configured ? t('aiAssistant:settings.configured') : t('aiAssistant:settings.apiKeyRequired')}
+            {data.configured
+              ? t('aiAssistant:settings.configured')
+              : t('aiAssistant:settings.apiKeyRequired')}
           </Badge>
           <Badge variant="outline">{t('aiAssistant:settings.readOnly')}</Badge>
-          <Badge variant="outline">{t('aiAssistant:settings.provider', { provider: providerName })}</Badge>
+          <Badge variant="outline">
+            {t('aiAssistant:settings.provider', { provider: providerName })}
+          </Badge>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -122,7 +127,7 @@ export function AiAssistantSettingsSection(): React.ReactElement {
 
         <div className="space-y-1.5">
           <Label htmlFor="ai-assistant-api-key" className="flex items-center gap-2">
-            <KeyRound className="size-4"/>
+            <KeyRound className="size-4" />
             {t('aiAssistant:settings.apiKeyLabel')}
           </Label>
           <Input
@@ -143,14 +148,16 @@ export function AiAssistantSettingsSection(): React.ReactElement {
                 className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
               >
                 {t('aiAssistant:settings.createApiKey', { provider: providerName })}
-                <ExternalLink className="size-3"/>
+                <ExternalLink className="size-3" />
               </a>
             )}
           </div>
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="ai-assistant-system-prompt">{t('aiAssistant:settings.systemPromptLabel')}</Label>
+          <Label htmlFor="ai-assistant-system-prompt">
+            {t('aiAssistant:settings.systemPromptLabel')}
+          </Label>
           <Textarea
             id="ai-assistant-system-prompt"
             value={form.systemPrompt}
@@ -172,8 +179,11 @@ export function AiAssistantSettingsSection(): React.ReactElement {
         </div>
 
         <div className="flex justify-end">
-          <Button onClick={() => save.mutate()} disabled={!data.canManage || save.isPending || !form.model.trim()}>
-            <Save className="size-4"/>
+          <Button
+            onClick={() => save.mutate()}
+            disabled={!data.canManage || save.isPending || !form.model.trim()}
+          >
+            <Save className="size-4" />
             {save.isPending ? t('aiAssistant:settings.saving') : t('aiAssistant:settings.save')}
           </Button>
         </div>

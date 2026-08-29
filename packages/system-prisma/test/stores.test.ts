@@ -11,7 +11,13 @@ describe('PrismaLogStore', () => {
     const { logStore } = setupPrismaSystem(prisma as never)
     const now = Date.now()
     await logStore.record({ resourceId: 'users', action: 'new', recordId: '1', at: now })
-    await logStore.record({ resourceId: 'users', action: 'edit', recordId: '1', userId: 'u1', at: now + 1 })
+    await logStore.record({
+      resourceId: 'users',
+      action: 'edit',
+      recordId: '1',
+      userId: 'u1',
+      at: now + 1,
+    })
     await logStore.record({ resourceId: 'posts', action: 'delete', recordId: '9', at: now + 2 })
 
     expect(await logStore.list()).toHaveLength(3)
@@ -104,12 +110,18 @@ describe('PrismaHistoryStore', () => {
     const prisma = fakePrisma()
     const { historyStore } = setupPrismaSystem(prisma as never)
     await historyStore.append({
-      resourceId: 'users', recordId: '1', op: 'create',
+      resourceId: 'users',
+      recordId: '1',
+      op: 'create',
       snapshot: { name: 'A' },
     })
     await historyStore.append({
-      resourceId: 'users', recordId: '1', op: 'update',
-      userId: 'u1', snapshot: { name: 'B' }, snapshotBefore: { name: 'A' },
+      resourceId: 'users',
+      recordId: '1',
+      op: 'update',
+      userId: 'u1',
+      snapshot: { name: 'B' },
+      snapshotBefore: { name: 'A' },
     })
     const list = await historyStore.list('users', '1')
     expect(list).toHaveLength(2)

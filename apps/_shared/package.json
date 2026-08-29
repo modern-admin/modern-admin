@@ -14,8 +14,7 @@
   "scripts": {
     "build": "tsc -b",
     "test": "bun test",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint ."
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@better-auth/api-key": "^1.7.2",

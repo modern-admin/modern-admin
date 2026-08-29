@@ -20,9 +20,7 @@ export interface RealtimeWireEvent {
   at: number
 }
 
-export type RealtimeSubscriber = (
-  handler: (event: RealtimeWireEvent) => void,
-) => () => void
+export type RealtimeSubscriber = (handler: (event: RealtimeWireEvent) => void) => () => void
 
 /**
  * Subscribe to wire events from the host transport and invalidate the
@@ -34,9 +32,7 @@ export type RealtimeSubscriber = (
  * Pass `null`/`undefined` to render the hook inert (e.g. while the
  * backend hasn't advertised `features.realtime` yet).
  */
-export function useRealtimeInvalidation(
-  subscriber: RealtimeSubscriber | null | undefined,
-): void {
+export function useRealtimeInvalidation(subscriber: RealtimeSubscriber | null | undefined): void {
   const queryClient = useQueryClient()
   useEffect(() => {
     if (!subscriber) return

@@ -164,27 +164,22 @@ export class PropertyDecorator {
   }
 
   async isAccessible(context: PropertyContextBase): Promise<boolean> {
-    return resolveFlag(
-      this.options.isAccessible,
-      { ...context, property: this.property },
-      true,
-    )
+    return resolveFlag(this.options.isAccessible, { ...context, property: this.property }, true)
   }
 
   toJSON(): PropertyJSON
   toJSON(context: PropertyContextBase): Promise<PropertyJSON | null>
-  toJSON(
-    context?: PropertyContextBase,
-  ): PropertyJSON | Promise<PropertyJSON | null> {
+  toJSON(context?: PropertyContextBase): PropertyJSON | Promise<PropertyJSON | null> {
     if (context) {
-      return this.isAccessible(context).then((accessible) =>
-        accessible ? this.toJSON() : null,
-      )
+      return this.isAccessible(context).then((accessible) => (accessible ? this.toJSON() : null))
     }
-    const visibility = VIEWS.reduce((acc, view) => {
-      acc[view] = this.isVisibleIn(view)
-      return acc
-    }, {} as Record<View, boolean>)
+    const visibility = VIEWS.reduce(
+      (acc, view) => {
+        acc[view] = this.isVisibleIn(view)
+        return acc
+      },
+      {} as Record<View, boolean>,
+    )
     const json: PropertyJSON = {
       path: this.path(),
       label: this.label(),

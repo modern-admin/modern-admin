@@ -19,9 +19,7 @@ export class ComponentLoader implements IComponentLoader {
 
   add(name: string, loader: ComponentLoaderEntry): this {
     if (this.registry.has(name)) {
-      throw new Error(
-        `Component "${name}" already registered. Use override() to replace it.`,
-      )
+      throw new Error(`Component "${name}" already registered. Use override() to replace it.`)
     }
     this.registry.set(name, loader)
     return this

@@ -42,10 +42,7 @@ export interface DrizzleSystem extends ISystemStores {
  * objects. The host owns the `db` lifecycle; this just wires tables into
  * thin store classes.
  */
-export function setupDrizzleSystem(
-  db: DrizzleLike,
-  tables: SystemTables,
-): DrizzleSystem {
+export function setupDrizzleSystem(db: DrizzleLike, tables: SystemTables): DrizzleSystem {
   return {
     logStore: new DrizzleLogStore(db, tables.maLog),
     webhookStore: new DrizzleWebhookStore(db, tables.maWebhook, tables.maWebhookDelivery),

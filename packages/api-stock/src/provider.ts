@@ -15,61 +15,81 @@ const DEFAULT_BASE_URL = 'https://api.api-stock.com/api/v1'
 const DEFAULT_TIMEOUT_MS = 30_000
 const DEFAULT_CATALOG_TTL_MS = 60_000
 
-const apiStockCatalogParamZ = z.object({
-  name: z.string(),
-  label: z.string(),
-  description: z.string().optional(),
-  kind: z.enum(['string', 'number', 'boolean']),
-  isArray: z.boolean(),
-  required: z.boolean(),
-  default: z.unknown().optional(),
-  options: z.array(z.object({
-    value: z.union([z.string(), z.number()]),
+const apiStockCatalogParamZ = z
+  .object({
+    name: z.string(),
     label: z.string(),
-  })).optional(),
-  minimum: z.number().optional(),
-  maximum: z.number().optional(),
-  maxLength: z.number().optional(),
-  isMedia: z.boolean(),
-  isPrompt: z.boolean(),
-  multiline: z.boolean(),
-  deprecated: z.boolean(),
-}).passthrough()
+    description: z.string().optional(),
+    kind: z.enum(['string', 'number', 'boolean']),
+    isArray: z.boolean(),
+    required: z.boolean(),
+    default: z.unknown().optional(),
+    options: z
+      .array(
+        z.object({
+          value: z.union([z.string(), z.number()]),
+          label: z.string(),
+        }),
+      )
+      .optional(),
+    minimum: z.number().optional(),
+    maximum: z.number().optional(),
+    maxLength: z.number().optional(),
+    isMedia: z.boolean(),
+    isPrompt: z.boolean(),
+    multiline: z.boolean(),
+    deprecated: z.boolean(),
+  })
+  .passthrough()
 
-const apiStockCatalogModelZ = z.object({
-  id: z.string(),
-  group: z.string().nullable().optional(),
-  name: z.string(),
-  description: z.string().nullable().optional(),
-  type: z.string(),
-  kind: z.enum(['media', 'llm']),
-  vendor: z.string().nullable().optional(),
-  tags: z.array(z.string()).default([]),
-  capabilities: z.array(z.string()).default([]),
-  pricing: z.array(z.object({
-    key: z.string(),
-    price: z.string(),
-    isDefault: z.boolean(),
-    dimensions: z.record(z.string(), z.string()).optional(),
-    unitPrice: z.string().optional(),
-  }).passthrough()).default([]),
-  priceMultiplier: z.object({
-    param: z.string(),
-    catalogValue: z.number(),
-  }).optional(),
-  priceFrom: z.string().optional(),
-  params: z.array(apiStockCatalogParamZ).default([]),
-}).passthrough()
+const apiStockCatalogModelZ = z
+  .object({
+    id: z.string(),
+    group: z.string().nullable().optional(),
+    name: z.string(),
+    description: z.string().nullable().optional(),
+    type: z.string(),
+    kind: z.enum(['media', 'llm']),
+    vendor: z.string().nullable().optional(),
+    tags: z.array(z.string()).default([]),
+    capabilities: z.array(z.string()).default([]),
+    pricing: z
+      .array(
+        z
+          .object({
+            key: z.string(),
+            price: z.string(),
+            isDefault: z.boolean(),
+            dimensions: z.record(z.string(), z.string()).optional(),
+            unitPrice: z.string().optional(),
+          })
+          .passthrough(),
+      )
+      .default([]),
+    priceMultiplier: z
+      .object({
+        param: z.string(),
+        catalogValue: z.number(),
+      })
+      .optional(),
+    priceFrom: z.string().optional(),
+    params: z.array(apiStockCatalogParamZ).default([]),
+  })
+  .passthrough()
 
 const apiStockCatalogZ = z.array(apiStockCatalogModelZ)
 
 const apiStockTaskDataZ = z.object({
   taskId: z.string().min(1),
   status: z.enum(['not_started', 'processing', 'finished', 'failed', 'expired']),
-  files: z.array(z.object({
-    fileUrl: z.url(),
-    fileType: z.enum(['image', 'video', 'music']),
-  })).optional(),
+  files: z
+    .array(
+      z.object({
+        fileUrl: z.url(),
+        fileType: z.enum(['image', 'video', 'music']),
+      }),
+    )
+    .optional(),
   output: z.record(z.string(), z.unknown()).nullish(),
   errorMessage: z.string().nullish(),
   createdTime: z.string().optional(),
@@ -110,7 +130,7 @@ const normalizeType = (type: string): MediaGenerationFileType | null => {
 
 const normalizeStatus = (
   status: z.infer<typeof apiStockTaskDataZ>['status'],
-): MediaGenerationStatus => status === 'not_started' ? 'pending' : status
+): MediaGenerationStatus => (status === 'not_started' ? 'pending' : status)
 
 const toResult = (response: z.infer<typeof apiStockTaskResponseZ>): MediaGenerationResult => {
   const data = response.data
@@ -120,7 +140,7 @@ const toResult = (response: z.infer<typeof apiStockTaskResponseZ>): MediaGenerat
     files: (data.files ?? []).map((file) => ({ url: file.fileUrl, type: file.fileType })),
     ...(data.output ? { output: data.output } : {}),
     ...(data.errorMessage ? { error: data.errorMessage } : {}),
-    ...(data.createdTime ?? data.createdAt
+    ...((data.createdTime ?? data.createdAt)
       ? { createdAt: data.createdTime ?? data.createdAt }
       : {}),
   })
@@ -195,20 +215,22 @@ export class ApiStockMediaGenerationProvider implements IMediaGenerationProvider
       if (model.kind !== 'media') return []
       const type = normalizeType(model.type)
       if (!type) return []
-      return [mediaGenerationCatalogModelZ.parse({
-        id: model.id,
-        group: model.group ?? '',
-        name: model.name,
-        ...(model.description ? { description: model.description } : {}),
-        type,
-        ...(model.vendor ? { vendor: model.vendor } : {}),
-        tags: model.tags,
-        capabilities: model.capabilities,
-        pricing: model.pricing,
-        ...(model.priceMultiplier ? { priceMultiplier: model.priceMultiplier } : {}),
-        ...(model.priceFrom ? { priceFrom: model.priceFrom } : {}),
-        params: model.params,
-      })]
+      return [
+        mediaGenerationCatalogModelZ.parse({
+          id: model.id,
+          group: model.group ?? '',
+          name: model.name,
+          ...(model.description ? { description: model.description } : {}),
+          type,
+          ...(model.vendor ? { vendor: model.vendor } : {}),
+          tags: model.tags,
+          capabilities: model.capabilities,
+          pricing: model.pricing,
+          ...(model.priceMultiplier ? { priceMultiplier: model.priceMultiplier } : {}),
+          ...(model.priceFrom ? { priceFrom: model.priceFrom } : {}),
+          params: model.params,
+        }),
+      ]
     })
     this.catalogCache = {
       expiresAt: Date.now() + Math.max(0, this.catalogTtlMs),
@@ -223,9 +245,7 @@ export class ApiStockMediaGenerationProvider implements IMediaGenerationProvider
     init: RequestInit = {},
   ): Promise<unknown> {
     const timeoutSignal = AbortSignal.timeout(this.timeoutMs)
-    const signal = options.signal
-      ? AbortSignal.any([options.signal, timeoutSignal])
-      : timeoutSignal
+    const signal = options.signal ? AbortSignal.any([options.signal, timeoutSignal]) : timeoutSignal
     const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
       ...init,
       signal,

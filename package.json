@@ -24,7 +24,10 @@
     "test": "bun --filter '*' test",
     "e2e": "bun run --cwd apps/e2e e2e",
     "typecheck": "bun run --filter '*' typecheck",
-    "lint": "bun run --filter '*' lint",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "changeset": "changeset",
@@ -34,18 +37,14 @@
   "devDependencies": {
     "@changesets/changelog-github": "^1.0.0",
     "@changesets/cli": "^3.0.1",
-    "@eslint/js": "^10.0.1",
     "@types/bun": "^1.4.0",
-    "@typescript/native": "npm:typescript@^7.0.2",
     "@typescript/typescript6": "npm:typescript@^6.0.3",
-    "eslint": "^10.9.1",
-    "eslint-plugin-react-hooks": "^7.1.1",
-    "globals": "^17.11.0",
-    "typescript": "^6.0.3",
-    "typescript-eslint": "^8.68.0"
+    "oxlint": "^1.80.0",
+    "prettier": "^3.9.6",
+    "typescript": "^7.0.2"
   },
   "engines": {
-    "bun": ">=1.1.0"
+    "bun": ">=1.4.0"
   },
   "patchedDependencies": {
     "unplugin-dts@1.0.3": "patches/unplugin-dts@1.0.3.patch"

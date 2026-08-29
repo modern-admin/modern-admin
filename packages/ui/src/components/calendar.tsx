@@ -6,37 +6,25 @@
 
 import * as React from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import {
-  DayPicker,
-  type DayPickerProps,
-  type DropdownOption,
-} from 'react-day-picker'
+import { DayPicker, type DayPickerProps, type DropdownOption } from 'react-day-picker'
 import 'react-day-picker/style.css'
 import { cn } from '../lib/utils.js'
 import { buttonVariants } from './button.js'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from './select.js'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select.js'
 
 /**
  * Replacement for react-day-picker's native <select> dropdown. Uses the
  * shadcn Select (Radix) so month/year pickers match the rest of the UI and
  * pop above the popover instead of being clipped by it.
  */
-function CalendarDropdown(
-  props: {
-    options?: DropdownOption[]
-    value?: string | number | readonly string[]
-    onChange?: React.ChangeEventHandler<HTMLSelectElement>
-    disabled?: boolean
-    'aria-label'?: string
-    className?: string
-  },
-): React.ReactElement {
+function CalendarDropdown(props: {
+  options?: DropdownOption[]
+  value?: string | number | readonly string[]
+  onChange?: React.ChangeEventHandler<HTMLSelectElement>
+  disabled?: boolean
+  'aria-label'?: string
+  className?: string
+}): React.ReactElement {
   const { options = [], value, onChange, disabled, className } = props
   const ariaLabel = props['aria-label']
   const handleChange = (next: string): void => {
@@ -66,11 +54,7 @@ function CalendarDropdown(
       </SelectTrigger>
       <SelectContent className="max-h-[var(--radix-select-content-available-height)]">
         {options.map((opt) => (
-          <SelectItem
-            key={opt.value}
-            value={String(opt.value)}
-            disabled={opt.disabled}
-          >
+          <SelectItem key={opt.value} value={String(opt.value)} disabled={opt.disabled}>
             {opt.label}
           </SelectItem>
         ))}
@@ -135,8 +119,7 @@ export function Calendar({
         ),
         month_grid: 'w-full border-collapse space-y-1',
         weekdays: 'flex',
-        weekday:
-          'text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]',
+        weekday: 'text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]',
         week: 'flex w-full mt-2',
         // Single rounded button per cell — no cell-level background hacks so
         // hover/focus stays inside the rounded shape (no black corners).
@@ -152,11 +135,9 @@ export function Calendar({
         selected:
           '[&>button]:bg-primary [&>button]:text-primary-foreground [&>button]:hover:bg-primary [&>button]:hover:text-primary-foreground [&>button]:focus:bg-primary [&>button]:focus:text-primary-foreground',
         today: '[&>button]:bg-accent [&>button]:text-accent-foreground',
-        outside:
-          'day-outside text-muted-foreground aria-selected:text-muted-foreground',
+        outside: 'day-outside text-muted-foreground aria-selected:text-muted-foreground',
         disabled: 'text-muted-foreground opacity-50',
-        range_middle:
-          '[&>button]:bg-accent [&>button]:text-accent-foreground',
+        range_middle: '[&>button]:bg-accent [&>button]:text-accent-foreground',
         hidden: 'invisible',
         ...classNames,
       }}

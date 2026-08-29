@@ -50,8 +50,7 @@ const keyHistory = (resourceId: string, recordId: string) =>
   ['modern-admin', resourceId, 'history', recordId] as const
 const keyHistoryRevision = (resourceId: string, recordId: string, revisionId: string) =>
   ['modern-admin', resourceId, 'history', recordId, revisionId] as const
-const keyAuditLog = (query?: AuditLogQuery) =>
-  ['modern-admin', 'audit-log', query ?? null] as const
+const keyAuditLog = (query?: AuditLogQuery) => ['modern-admin', 'audit-log', query ?? null] as const
 const keyActionData = (
   resourceId: string,
   actionName: string,
@@ -79,10 +78,7 @@ const keyActionData = (
  * Mirrors the server-side dependents map in `ModernAdmin` so both cache
  * layers drop the same scopes on a mutation.
  */
-const linkedResourceIds = (
-  config: AdminConfig | undefined,
-  resourceId: string,
-): Set<string> => {
+const linkedResourceIds = (config: AdminConfig | undefined, resourceId: string): Set<string> => {
   const linked = new Set<string>()
   for (const resource of config?.resources ?? []) {
     if (resource.id === resourceId) {
@@ -173,11 +169,19 @@ export const useDistinctValues = (
 ): UseQueryResult<{ values: string[]; hasMore: boolean }> => {
   const client = useAdminClient()
   return useQuery({
-    queryKey: ['modern-admin', resourceId, 'values', field, options?.search ?? '', options?.limit ?? 100] as const,
-    queryFn: () => client.distinctValues(resourceId, field, {
-      search: options?.search,
-      limit: options?.limit,
-    }),
+    queryKey: [
+      'modern-admin',
+      resourceId,
+      'values',
+      field,
+      options?.search ?? '',
+      options?.limit ?? 100,
+    ] as const,
+    queryFn: () =>
+      client.distinctValues(resourceId, field, {
+        search: options?.search,
+        limit: options?.limit,
+      }),
     staleTime: 5 * 60_000, // 5 min cache
     enabled: options?.enabled !== false,
   })
@@ -195,10 +199,7 @@ export const useDistinctValues = (
  */
 const pendingListRefresh = new Set<string>()
 
-export const useRecords = (
-  resourceId: string,
-  query?: ListQuery,
-): UseQueryResult<ListResponse> => {
+export const useRecords = (resourceId: string, query?: ListQuery): UseQueryResult<ListResponse> => {
   const client = useAdminClient()
   const key = keyList(resourceId, query)
   return useQuery({
@@ -225,10 +226,7 @@ export const useRecords = (
  * is a read, so it must not mark half the client cache stale and set off a
  * cascade of refetches.
  */
-export const useRefreshRecords = (
-  resourceId: string,
-  query?: ListQuery,
-): (() => Promise<void>) => {
+export const useRefreshRecords = (resourceId: string, query?: ListQuery): (() => Promise<void>) => {
   const qc = useQueryClient()
   return React.useCallback(async () => {
     const key = keyList(resourceId, query)
@@ -271,11 +269,7 @@ export const useCreateRecord = (
 
 export const useUpdateRecord = (
   resourceId: string,
-): UseMutationResult<
-  RecordResponse,
-  Error,
-  { id: string; payload: Record<string, unknown> }
-> => {
+): UseMutationResult<RecordResponse, Error, { id: string; payload: Record<string, unknown> }> => {
   const client = useAdminClient()
   const qc = useQueryClient()
   return useMutation({
@@ -286,9 +280,7 @@ export const useUpdateRecord = (
   })
 }
 
-export const useDeleteRecord = (
-  resourceId: string,
-): UseMutationResult<void, Error, string> => {
+export const useDeleteRecord = (resourceId: string): UseMutationResult<void, Error, string> => {
   const client = useAdminClient()
   const qc = useQueryClient()
   return useMutation({
@@ -380,11 +372,7 @@ export const useSocialLogin = (): UseMutationResult<void, Error, string> => {
   })
 }
 
-export const useLogin = (): UseMutationResult<
-  void,
-  Error,
-  { email: string; password: string }
-> => {
+export const useLogin = (): UseMutationResult<void, Error, { email: string; password: string }> => {
   const client = useAdminClient()
   const qc = useQueryClient()
   return useMutation({
@@ -463,14 +451,14 @@ export const useActionData = (
       recordId
         ? client.fetchRecordAction(resourceId, recordId, actionName)
         : client.fetchResourceAction(
-          resourceId,
-          actionName,
-          // Bulk actions prime with the selection so the handler sees the
-          // same `context.records` it will get on submit. Bounded by the
-          // list page's server-capped `perPage`, so the query string stays
-          // well inside header limits.
-          recordIds?.length ? { recordIds: recordIds.join(',') } : {},
-        ),
+            resourceId,
+            actionName,
+            // Bulk actions prime with the selection so the handler sees the
+            // same `context.records` it will get on submit. Bounded by the
+            // list page's server-capped `perPage`, so the query string stays
+            // well inside header limits.
+            recordIds?.length ? { recordIds: recordIds.join(',') } : {},
+          ),
     enabled: enabled && Boolean(resourceId) && Boolean(actionName),
     // The handler is user code that may have observable effects; never
     // replay it on window focus or remount without an explicit refetch.
@@ -500,11 +488,16 @@ export const useInvokeBulkAction = (
 
 export const useInvokeResourceAction = (
   resourceId: string,
-): UseMutationResult<CustomActionResponse, Error, { actionName: string; payload?: Record<string, unknown> }> => {
+): UseMutationResult<
+  CustomActionResponse,
+  Error,
+  { actionName: string; payload?: Record<string, unknown> }
+> => {
   const client = useAdminClient()
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ actionName, payload }) => client.invokeResourceAction(resourceId, actionName, payload),
+    mutationFn: ({ actionName, payload }) =>
+      client.invokeResourceAction(resourceId, actionName, payload),
     onSuccess: () => {
       invalidateResourceData(qc, resourceId)
     },
@@ -641,9 +634,7 @@ export const useRevertRevision = (
   })
 }
 
-export const useAuditLog = (
-  query: AuditLogQuery = {},
-): UseQueryResult<AuditLogResponse> => {
+export const useAuditLog = (query: AuditLogQuery = {}): UseQueryResult<AuditLogResponse> => {
   const client = useAdminClient()
   return useQuery({
     queryKey: keyAuditLog(query),
@@ -702,11 +693,7 @@ export const useCacheStats = (): UseQueryResult<CacheStatsResponse> => {
   })
 }
 
-export const useInvalidateResourceCache = (): UseMutationResult<
-  { ok: true },
-  Error,
-  string
-> => {
+export const useInvalidateResourceCache = (): UseMutationResult<{ ok: true }, Error, string> => {
   const client = useAdminClient()
   const qc = useQueryClient()
   return useMutation({

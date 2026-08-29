@@ -106,8 +106,9 @@ export const SelectScrollDownButton = React.forwardRef<
 ))
 SelectScrollDownButton.displayName = SelectPrimitive.ScrollDownButton.displayName
 
-export interface SelectContentProps
-  extends React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content> {
+export interface SelectContentProps extends React.ComponentPropsWithoutRef<
+  typeof SelectPrimitive.Content
+> {
   /** Override the portal target. Defaults to the enclosing Dialog/Sheet
    *  content (so touch-scroll works inside it) or `document.body`. */
   container?: HTMLElement | null

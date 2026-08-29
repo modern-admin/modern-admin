@@ -16,9 +16,8 @@ export class DrizzleConfigStore implements IConfigStore {
   ) {}
 
   private pkCondition(scope: ConfigScope, scopeId: string | null, key: string): SQL {
-    const scopeIdCond = scopeId === null
-      ? isNull(this.table.scopeId)
-      : eq(this.table.scopeId, scopeId)
+    const scopeIdCond =
+      scopeId === null ? isNull(this.table.scopeId) : eq(this.table.scopeId, scopeId)
     return and(eq(this.table.scope, scope), scopeIdCond, eq(this.table.key, key))!
   }
 
@@ -58,9 +57,8 @@ export class DrizzleConfigStore implements IConfigStore {
   }
 
   async list(scope: ConfigScope, scopeId: string | null): Promise<ConfigEntry[]> {
-    const scopeIdCond = scopeId === null
-      ? isNull(this.table.scopeId)
-      : eq(this.table.scopeId, scopeId)
+    const scopeIdCond =
+      scopeId === null ? isNull(this.table.scopeId) : eq(this.table.scopeId, scopeId)
     const rows = (await this.db
       .select()
       .from(this.table)

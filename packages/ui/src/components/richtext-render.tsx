@@ -43,9 +43,6 @@ export function RichtextRender({
   }, [value, format])
 
   return (
-    <div
-      className={cn(proseRenderClass, className)}
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <div className={cn(proseRenderClass, className)} dangerouslySetInnerHTML={{ __html: html }} />
   )
 }

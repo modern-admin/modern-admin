@@ -13,10 +13,7 @@ export {
   type HookKind,
   type HookMeta,
 } from './decorators.js'
-export {
-  AdminControllerScanner,
-  type ScannedController,
-} from './scanner.js'
+export { AdminControllerScanner, type ScannedController } from './scanner.js'
 export {
   type AdminActionContext,
   type ListContext,

@@ -74,11 +74,6 @@ function parseArgs(argv: string[]): { pkgDir: string; dryRun: boolean; tag?: str
   return { pkgDir: resolve(pkgDir), dryRun, tag }
 }
 
-async function readJson<T>(file: string): Promise<T> {
-  const raw = await readFile(file, 'utf8')
-  return JSON.parse(raw) as T
-}
-
 async function writeJson(file: string, data: unknown): Promise<void> {
   await writeFile(file, JSON.stringify(data, null, 2) + '\n', 'utf8')
 }
@@ -165,10 +160,7 @@ async function workspaceVersions(): Promise<Map<string, string>> {
 async function verifyPackedInternalDeps(pkgDir: string, pkg: PackageJson): Promise<void> {
   console.log('  → bun pm pack (verify internal dependency ranges)')
   run(['pm', 'pack', '--quiet'], pkgDir)
-  const tarball = join(
-    pkgDir,
-    `${pkg.name.replace('@', '').replace('/', '-')}-${pkg.version}.tgz`,
-  )
+  const tarball = join(pkgDir, `${pkg.name.replace('@', '').replace('/', '-')}-${pkg.version}.tgz`)
   try {
     const r = spawnSync('tar', ['-xzOf', tarball, 'package/package.json'], {
       encoding: 'utf8',
@@ -233,9 +225,7 @@ async function main(): Promise<void> {
     // which makes local smoke-testing without a token impossible. Route
     // dry-runs through `bun pm pack --dry-run` instead — it operates on
     // the same `files`/manifest rules but never contacts the registry.
-    const args = dryRun
-      ? ['pm', 'pack', '--dry-run']
-      : ['publish']
+    const args = dryRun ? ['pm', 'pack', '--dry-run'] : ['publish']
     if (!dryRun && tag) args.push('--tag', tag)
     if (!dryRun && transformed.publishConfig?.access) {
       args.push('--access', transformed.publishConfig.access)

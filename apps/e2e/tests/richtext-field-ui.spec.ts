@@ -17,9 +17,7 @@ import { expect, test, type APIRequestContext } from '@playwright/test'
 const API_URL = process.env.E2E_API_URL ?? 'http://localhost:3001'
 const adminApi = (path: string): string => `${API_URL}/admin/api${path}`
 
-async function firstPost(
-  request: APIRequestContext,
-): Promise<{ id: string; body: string }> {
+async function firstPost(request: APIRequestContext): Promise<{ id: string; body: string }> {
   const res = await request.get(adminApi('/resources/posts/actions/list?perPage=1'))
   expect(res.ok(), `posts list failed: ${res.status()}`).toBeTruthy()
   const json = await res.json()
@@ -55,10 +53,9 @@ test.describe('Richtext field — posts.body', () => {
     // Land on the list first so we can assert the chunk is NOT pulled there.
     await page.goto('/resources/posts?perPage=25')
     await expect(page.locator('table thead th').first()).toBeVisible({ timeout: 10_000 })
-    expect(
-      heavyChunkRequests,
-      'richtext editor chunk must not load on the list page',
-    ).toHaveLength(0)
+    expect(heavyChunkRequests, 'richtext editor chunk must not load on the list page').toHaveLength(
+      0,
+    )
 
     // Now open the record's edit form — the editor (and its chunk) appears.
     await page.goto(`/resources/posts/${post.id}/edit`)
@@ -101,9 +98,7 @@ test.describe('Richtext field — posts.body', () => {
     expect(patchRes.ok(), `PATCH failed: ${await patchRes.text()}`).toBeTruthy()
 
     // Server-side double-check: the stored HTML contains the marker.
-    const fetched = await request.get(
-      adminApi(`/resources/posts/records/${post.id}/actions/show`),
-    )
+    const fetched = await request.get(adminApi(`/resources/posts/records/${post.id}/actions/show`))
     expect(fetched.ok()).toBeTruthy()
     const fetchedBody = await fetched.json()
     expect(String(fetchedBody.record.params.body)).toContain(marker)

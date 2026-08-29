@@ -86,9 +86,7 @@ export interface IWebhookStore {
   delete(id: string): Promise<void>
 
   /** Append a delivery attempt. Returns the persisted row. */
-  recordDelivery(
-    delivery: Omit<WebhookDelivery, 'id' | 'createdAt'>,
-  ): Promise<WebhookDelivery>
+  recordDelivery(delivery: Omit<WebhookDelivery, 'id' | 'createdAt'>): Promise<WebhookDelivery>
   listDeliveries(webhookId: string, limit?: number): Promise<WebhookDelivery[]>
 }
 
@@ -185,11 +183,7 @@ export interface IAiTaskStore {
   ): Promise<AiTask>
 
   /** Append a streaming event row for real-time UI updates. */
-  appendEvent(
-    taskId: string,
-    type: string,
-    data: Record<string, unknown>,
-  ): Promise<AiTaskEvent>
+  appendEvent(taskId: string, type: string, data: Record<string, unknown>): Promise<AiTaskEvent>
 
   events(taskId: string, sinceId?: string): Promise<AiTaskEvent[]>
 }
@@ -204,11 +198,7 @@ export interface IAiTaskStore {
  */
 export interface ICacheStore {
   get(key: string): Promise<CacheEntry | null>
-  set(
-    key: string,
-    value: unknown,
-    options?: { ttlMs?: number; tags?: string[] },
-  ): Promise<void>
+  set(key: string, value: unknown, options?: { ttlMs?: number; tags?: string[] }): Promise<void>
   delete(key: string): Promise<void>
   /** Invalidate every entry tagged with any of the given tags. */
   invalidateTags(tags: string[]): Promise<number>

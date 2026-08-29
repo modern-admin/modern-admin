@@ -204,7 +204,9 @@ export function MediaPreview({
       className={cn(
         // With the URL shown, stack it under the trigger and fill the container
         // so it can shrink to fit; otherwise size to the trigger button.
-        showUrl && url ? 'flex w-full min-w-0 flex-col items-start gap-1' : 'inline-flex items-center gap-2',
+        showUrl && url
+          ? 'flex w-full min-w-0 flex-col items-start gap-1'
+          : 'inline-flex items-center gap-2',
         className,
       )}
       onClick={stopClick}
@@ -222,10 +224,7 @@ export function MediaPreview({
       </Button>
 
       {showUrl && url ? (
-        <span
-          className="flex min-w-0 max-w-full text-xs text-muted-foreground"
-          title={url}
-        >
+        <span className="flex min-w-0 max-w-full text-xs text-muted-foreground" title={url}>
           <span className="truncate">{urlHead}</span>
           {urlTail ? <span className="shrink-0 whitespace-pre">{urlTail}</span> : null}
         </span>
@@ -252,17 +251,11 @@ export function MediaPreview({
                 className="max-h-[68vh] w-auto max-w-full object-contain"
               />
             ) : kind === 'video' ? (
-              <video
-                src={url}
-                controls
-                className="max-h-[68vh] w-full max-w-full"
-              />
+              <video src={url} controls className="max-h-[68vh] w-full max-w-full" />
             ) : kind === 'audio' ? (
               <audio src={url} controls className="w-full" />
             ) : (
-              <div className="p-6 text-center text-sm text-muted-foreground">
-                {cannotLabel}
-              </div>
+              <div className="p-6 text-center text-sm text-muted-foreground">{cannotLabel}</div>
             )}
           </div>
 
@@ -283,11 +276,15 @@ export function MediaPreview({
               variant="default"
               size="sm"
               disabled={downloading}
-              onClick={() => { void handleDownload() }}
+              onClick={() => {
+                void handleDownload()
+              }}
             >
-              {downloading
-                ? <Loader2 className="size-4 animate-spin" />
-                : <Download className="size-4" />}
+              {downloading ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Download className="size-4" />
+              )}
               <span>{downloadLabel}</span>
             </Button>
           </DialogFooter>

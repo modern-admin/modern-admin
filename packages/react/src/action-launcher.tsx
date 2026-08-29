@@ -36,10 +36,7 @@ export interface LaunchActionOptions {
  * `hasActionComponent(action)` first and fall back to their direct-invoke
  * path when it returns false.
  */
-export type OpenActionComponent = (
-  action: ActionDescriptor,
-  options?: LaunchActionOptions,
-) => void
+export type OpenActionComponent = (action: ActionDescriptor, options?: LaunchActionOptions) => void
 
 export const useActionLauncher = (resourceId: string): OpenActionComponent => {
   const dialogs = useDialogs()
@@ -51,7 +48,8 @@ export const useActionLauncher = (resourceId: string): OpenActionComponent => {
       const { recordId, recordIds, onSuccess } = options
       if (action.custom?.showAs === 'dialog') {
         void dialogs.open({
-          className: action.component === 'modern-admin:media-generation' ? 'sm:max-w-4xl' : 'sm:max-w-2xl',
+          className:
+            action.component === 'modern-admin:media-generation' ? 'sm:max-w-4xl' : 'sm:max-w-2xl',
           render: ({ close }) => (
             <>
               <DialogHeader>

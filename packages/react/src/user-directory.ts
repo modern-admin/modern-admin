@@ -14,9 +14,7 @@ export const USERS_RESOURCE_ID = 'admins'
  *  NOTE: uses the `'user-dir'` segment (not `'show'`) so the cached value
  *  (`RecordJSON | null`) doesn't collide with `useRecord`'s cache which stores
  *  the full `RecordResponse` shape under `['modern-admin', id, 'show', ...]`. */
-export function useUserDirectory(
-  userIds: ReadonlyArray<string>,
-): Map<string, RecordJSON | null> {
+export function useUserDirectory(userIds: ReadonlyArray<string>): Map<string, RecordJSON | null> {
   const client = useAdminClient()
   const queries = useQueries({
     queries: userIds.map((id) => ({
@@ -41,10 +39,7 @@ export function useUserDirectory(
 /** Pick a human-readable label for an admin record. Checks explicit name
  *  fields first — `record.title` may be the id fallback when the resource
  *  has no matching TITLE_COLUMN_NAMES property. */
-export function userLabelOf(
-  record: RecordJSON | null | undefined,
-  fallback: string,
-): string {
+export function userLabelOf(record: RecordJSON | null | undefined, fallback: string): string {
   if (!record) return fallback
   const params = record.params ?? {}
   const candidates = [params.name, params.fullName, params.email, record.title]

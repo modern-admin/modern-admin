@@ -33,8 +33,9 @@ class SearchableDatabase extends BaseDatabase {
     super(tables)
   }
   static override isAdapterFor(db: unknown): boolean {
-    return Array.isArray(db) && db.every(
-      (t) => typeof t === 'object' && t !== null && 'name' in t && 'properties' in t,
+    return (
+      Array.isArray(db) &&
+      db.every((t) => typeof t === 'object' && t !== null && 'name' in t && 'properties' in t)
     )
   }
   override resources(): BaseResource[] {
@@ -49,9 +50,15 @@ class SearchableResource extends BaseResource {
   static override isAdapterFor(raw: unknown): boolean {
     return typeof raw === 'object' && raw !== null && 'rows' in raw && 'properties' in raw
   }
-  override id(): string { return this.table.name }
-  override databaseName(): string { return 'searchable' }
-  override properties(): BaseProperty[] { return this.table.properties }
+  override id(): string {
+    return this.table.name
+  }
+  override databaseName(): string {
+    return 'searchable'
+  }
+  override properties(): BaseProperty[] {
+    return this.table.properties
+  }
 
   private matches(row: SearchableRow, filter: Filter): boolean {
     for (const entry of Object.values(filter.filters)) {
@@ -59,7 +66,12 @@ class SearchableResource extends BaseResource {
       const needle = entry.value
       // Implicit operator (null) on strings → case-insensitive contains.
       if (typeof needle === 'string' && entry.operator === null) {
-        if (!String(cell ?? '').toLowerCase().includes(needle.toLowerCase())) return false
+        if (
+          !String(cell ?? '')
+            .toLowerCase()
+            .includes(needle.toLowerCase())
+        )
+          return false
         continue
       }
       if (Array.isArray(needle)) {
@@ -89,7 +101,10 @@ class SearchableResource extends BaseResource {
     return this.table.rows.filter((r) => set.has(String(r.id))).map((r) => new BaseRecord(r, this))
   }
   override async create(params: ParamsType): Promise<ParamsType> {
-    const row = { ...(params as SearchableRow), id: String((params as SearchableRow).id ?? this.table.rows.length + 1) }
+    const row = {
+      ...(params as SearchableRow),
+      id: String((params as SearchableRow).id ?? this.table.rows.length + 1),
+    }
     this.table.rows.push(row)
     return row
   }
@@ -118,20 +133,22 @@ const searchReq = (resourceId: string, q: string): ActionRequest => ({
 describe('built-in search action — title property', () => {
   test('finds records by case-insensitive substring of `name`', async () => {
     const admin = new ModernAdmin({
-      resources: [{
-        resource: {
-          name: 'people',
-          properties: [
-            new BaseProperty({ path: 'id', isId: true }),
-            new BaseProperty({ path: 'name', type: 'string' }),
-          ],
-          rows: [
-            { id: '1', name: 'Ada Lovelace' },
-            { id: '2', name: 'Alan Turing' },
-            { id: '3', name: 'Grace Hopper' },
-          ],
+      resources: [
+        {
+          resource: {
+            name: 'people',
+            properties: [
+              new BaseProperty({ path: 'id', isId: true }),
+              new BaseProperty({ path: 'name', type: 'string' }),
+            ],
+            rows: [
+              { id: '1', name: 'Ada Lovelace' },
+              { id: '2', name: 'Alan Turing' },
+              { id: '3', name: 'Grace Hopper' },
+            ],
+          },
         },
-      }],
+      ],
       adapters: [adapter],
     })
     const res = await admin.invoke<ListActionResponse>(searchReq('people', 'ada'))
@@ -141,19 +158,21 @@ describe('built-in search action — title property', () => {
 
   test('finds records by `email` substring (title-column heuristic)', async () => {
     const admin = new ModernAdmin({
-      resources: [{
-        resource: {
-          name: 'customers',
-          properties: [
-            new BaseProperty({ path: 'id', isId: true }),
-            new BaseProperty({ path: 'email', type: 'string' }),
-          ],
-          rows: [
-            { id: '1', email: 'ada.lovelace@example.com' },
-            { id: '2', email: 'alan.turing@example.com' },
-          ],
+      resources: [
+        {
+          resource: {
+            name: 'customers',
+            properties: [
+              new BaseProperty({ path: 'id', isId: true }),
+              new BaseProperty({ path: 'email', type: 'string' }),
+            ],
+            rows: [
+              { id: '1', email: 'ada.lovelace@example.com' },
+              { id: '2', email: 'alan.turing@example.com' },
+            ],
+          },
         },
-      }],
+      ],
       adapters: [adapter],
     })
     const res = await admin.invoke<ListActionResponse>(searchReq('customers', 'ada'))
@@ -164,19 +183,21 @@ describe('built-in search action — title property', () => {
 describe('built-in search action — id lookup', () => {
   test('finds a record by exact id', async () => {
     const admin = new ModernAdmin({
-      resources: [{
-        resource: {
-          name: 'items',
-          properties: [
-            new BaseProperty({ path: 'id', isId: true }),
-            new BaseProperty({ path: 'name', type: 'string' }),
-          ],
-          rows: [
-            { id: 'abc-123', name: 'Foo' },
-            { id: 'def-456', name: 'Bar' },
-          ],
+      resources: [
+        {
+          resource: {
+            name: 'items',
+            properties: [
+              new BaseProperty({ path: 'id', isId: true }),
+              new BaseProperty({ path: 'name', type: 'string' }),
+            ],
+            rows: [
+              { id: 'abc-123', name: 'Foo' },
+              { id: 'def-456', name: 'Bar' },
+            ],
+          },
         },
-      }],
+      ],
       adapters: [adapter],
     })
     const res = await admin.invoke<ListActionResponse>(searchReq('items', 'abc-123'))
@@ -185,19 +206,21 @@ describe('built-in search action — id lookup', () => {
 
   test('finds a record by id substring', async () => {
     const admin = new ModernAdmin({
-      resources: [{
-        resource: {
-          name: 'items',
-          properties: [
-            new BaseProperty({ path: 'id', isId: true }),
-            new BaseProperty({ path: 'name', type: 'string' }),
-          ],
-          rows: [
-            { id: 'abc-123-xyz', name: 'Foo' },
-            { id: 'def-456-xyz', name: 'Bar' },
-          ],
+      resources: [
+        {
+          resource: {
+            name: 'items',
+            properties: [
+              new BaseProperty({ path: 'id', isId: true }),
+              new BaseProperty({ path: 'name', type: 'string' }),
+            ],
+            rows: [
+              { id: 'abc-123-xyz', name: 'Foo' },
+              { id: 'def-456-xyz', name: 'Bar' },
+            ],
+          },
         },
-      }],
+      ],
       adapters: [adapter],
     })
     const res = await admin.invoke<ListActionResponse>(searchReq('items', '456'))
@@ -208,23 +231,25 @@ describe('built-in search action — id lookup', () => {
 describe('built-in search action — resources with no default title column', () => {
   test('finds by a custom `titleProperty` override (e.g. `displayName`)', async () => {
     const admin = new ModernAdmin({
-      resources: [{
-        resource: {
-          name: 'accounts',
-          properties: [
-            new BaseProperty({ path: 'id', isId: true }),
-            new BaseProperty({ path: 'displayName', type: 'string' }),
-          ],
-          rows: [
-            { id: '1', displayName: 'Ada Lovelace' },
-            { id: '2', displayName: 'Alan Turing' },
-          ],
+      resources: [
+        {
+          resource: {
+            name: 'accounts',
+            properties: [
+              new BaseProperty({ path: 'id', isId: true }),
+              new BaseProperty({ path: 'displayName', type: 'string' }),
+            ],
+            rows: [
+              { id: '1', displayName: 'Ada Lovelace' },
+              { id: '2', displayName: 'Alan Turing' },
+            ],
+          },
+          options: {
+            id: 'accounts',
+            titleProperty: 'displayName',
+          },
         },
-        options: {
-          id: 'accounts',
-          titleProperty: 'displayName',
-        },
-      }],
+      ],
       adapters: [adapter],
     })
     const res = await admin.invoke<ListActionResponse>(searchReq('accounts', 'ada'))
@@ -235,50 +260,52 @@ describe('built-in search action — resources with no default title column', ()
     // Catalog with `sku` and `description` and zero default-title columns.
     // Users expect to be able to find products by SKU or description text.
     const admin = new ModernAdmin({
-      resources: [{
-        resource: {
-          name: 'products',
-          properties: [
-            new BaseProperty({ path: 'id', isId: true }),
-            new BaseProperty({ path: 'sku', type: 'string' }),
-            new BaseProperty({ path: 'description', type: 'string' }),
-          ],
-          rows: [
-            { id: '1', sku: 'ALPHA-001', description: 'Premium widget' },
-            { id: '2', sku: 'BETA-002',  description: 'Standard widget' },
-            { id: '3', sku: 'GAMMA-003', description: 'Special edition' },
-          ],
+      resources: [
+        {
+          resource: {
+            name: 'products',
+            properties: [
+              new BaseProperty({ path: 'id', isId: true }),
+              new BaseProperty({ path: 'sku', type: 'string' }),
+              new BaseProperty({ path: 'description', type: 'string' }),
+            ],
+            rows: [
+              { id: '1', sku: 'ALPHA-001', description: 'Premium widget' },
+              { id: '2', sku: 'BETA-002', description: 'Standard widget' },
+              { id: '3', sku: 'GAMMA-003', description: 'Special edition' },
+            ],
+          },
         },
-      }],
+      ],
       adapters: [adapter],
     })
     const bySku = await admin.invoke<ListActionResponse>(searchReq('products', 'BETA'))
     expect(bySku.records.map((r) => r.id)).toEqual(['2'])
 
-    const byDescription = await admin.invoke<ListActionResponse>(
-      searchReq('products', 'premium'),
-    )
+    const byDescription = await admin.invoke<ListActionResponse>(searchReq('products', 'premium'))
     expect(byDescription.records.map((r) => r.id)).toEqual(['1'])
   })
 
   test('searches across multiple title-like fields (e.g. firstName + lastName)', async () => {
     // Resources with split human names need to be findable by either part.
     const admin = new ModernAdmin({
-      resources: [{
-        resource: {
-          name: 'people',
-          properties: [
-            new BaseProperty({ path: 'id', isId: true }),
-            new BaseProperty({ path: 'firstName', type: 'string' }),
-            new BaseProperty({ path: 'lastName', type: 'string' }),
-          ],
-          rows: [
-            { id: '1', firstName: 'Ada',   lastName: 'Lovelace' },
-            { id: '2', firstName: 'Alan',  lastName: 'Turing' },
-            { id: '3', firstName: 'Grace', lastName: 'Hopper' },
-          ],
+      resources: [
+        {
+          resource: {
+            name: 'people',
+            properties: [
+              new BaseProperty({ path: 'id', isId: true }),
+              new BaseProperty({ path: 'firstName', type: 'string' }),
+              new BaseProperty({ path: 'lastName', type: 'string' }),
+            ],
+            rows: [
+              { id: '1', firstName: 'Ada', lastName: 'Lovelace' },
+              { id: '2', firstName: 'Alan', lastName: 'Turing' },
+              { id: '3', firstName: 'Grace', lastName: 'Hopper' },
+            ],
+          },
         },
-      }],
+      ],
       adapters: [adapter],
     })
     const byFirst = await admin.invoke<ListActionResponse>(searchReq('people', 'Grace'))
@@ -292,20 +319,22 @@ describe('built-in search action — resources with no default title column', ()
 describe('built-in search action — guards', () => {
   test('does not search password-like fields even when they match', async () => {
     const admin = new ModernAdmin({
-      resources: [{
-        resource: {
-          name: 'admins',
-          properties: [
-            new BaseProperty({ path: 'id', isId: true }),
-            new BaseProperty({ path: 'name', type: 'string' }),
-            new BaseProperty({ path: 'password', type: 'string' }),
-          ],
-          rows: [
-            { id: '1', name: 'Ada', password: 'secret-ada' },
-            { id: '2', name: 'Bob', password: 'secret-bob' },
-          ],
+      resources: [
+        {
+          resource: {
+            name: 'admins',
+            properties: [
+              new BaseProperty({ path: 'id', isId: true }),
+              new BaseProperty({ path: 'name', type: 'string' }),
+              new BaseProperty({ path: 'password', type: 'string' }),
+            ],
+            rows: [
+              { id: '1', name: 'Ada', password: 'secret-ada' },
+              { id: '2', name: 'Bob', password: 'secret-bob' },
+            ],
+          },
         },
-      }],
+      ],
       adapters: [adapter],
     })
     const res = await admin.invoke<ListActionResponse>(searchReq('admins', 'secret'))
@@ -316,18 +345,18 @@ describe('built-in search action — guards', () => {
     // The id "ada" appears both inside the name ("Ada Lovelace") and as
     // a substring of the id ("ada-1"); only one hit should be returned.
     const admin = new ModernAdmin({
-      resources: [{
-        resource: {
-          name: 'people',
-          properties: [
-            new BaseProperty({ path: 'id', isId: true }),
-            new BaseProperty({ path: 'name', type: 'string' }),
-          ],
-          rows: [
-            { id: 'ada-1', name: 'Ada Lovelace' },
-          ],
+      resources: [
+        {
+          resource: {
+            name: 'people',
+            properties: [
+              new BaseProperty({ path: 'id', isId: true }),
+              new BaseProperty({ path: 'name', type: 'string' }),
+            ],
+            rows: [{ id: 'ada-1', name: 'Ada Lovelace' }],
+          },
         },
-      }],
+      ],
       adapters: [adapter],
     })
     const res = await admin.invoke<ListActionResponse>(searchReq('people', 'ada'))
@@ -338,16 +367,18 @@ describe('built-in search action — guards', () => {
   test('empty query returns up to 50 records unfiltered', async () => {
     const rows = Array.from({ length: 75 }, (_, i) => ({ id: String(i + 1), name: `Row ${i + 1}` }))
     const admin = new ModernAdmin({
-      resources: [{
-        resource: {
-          name: 'items',
-          properties: [
-            new BaseProperty({ path: 'id', isId: true }),
-            new BaseProperty({ path: 'name', type: 'string' }),
-          ],
-          rows,
+      resources: [
+        {
+          resource: {
+            name: 'items',
+            properties: [
+              new BaseProperty({ path: 'id', isId: true }),
+              new BaseProperty({ path: 'name', type: 'string' }),
+            ],
+            rows,
+          },
         },
-      }],
+      ],
       adapters: [adapter],
     })
     const res = await admin.invoke<ListActionResponse>(searchReq('items', ''))

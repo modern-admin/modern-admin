@@ -94,12 +94,18 @@ export async function bootstrapApp(options: BootstrapAppOptions): Promise<void> 
     await setupOpenApi(app, opts)
     openApiPaths = {
       json: opts.jsonPath ?? '/admin/api/openapi.json',
-      swagger: opts.swaggerPath === false
-        ? undefined
-        : (typeof opts.swaggerPath === 'string' ? opts.swaggerPath : '/admin/api/docs'),
-      scalar: opts.scalarPath === false || opts.scalar === false
-        ? undefined
-        : (typeof opts.scalarPath === 'string' ? opts.scalarPath : '/admin/api/reference'),
+      swagger:
+        opts.swaggerPath === false
+          ? undefined
+          : typeof opts.swaggerPath === 'string'
+            ? opts.swaggerPath
+            : '/admin/api/docs',
+      scalar:
+        opts.scalarPath === false || opts.scalar === false
+          ? undefined
+          : typeof opts.scalarPath === 'string'
+            ? opts.scalarPath
+            : '/admin/api/reference',
     }
   }
 
@@ -108,19 +114,15 @@ export async function bootstrapApp(options: BootstrapAppOptions): Promise<void> 
 
   if (afterListen) await afterListen(app)
 
-
   console.log(`[${label}] listening on http://localhost:${port}`)
 
   console.log(`[${label}] auth endpoints under /api/auth`)
   if (openApiPaths) {
-
     console.log(`[${label}] OpenAPI JSON  http://localhost:${port}${openApiPaths.json}`)
     if (openApiPaths.swagger) {
-
       console.log(`[${label}] Swagger UI    http://localhost:${port}${openApiPaths.swagger}`)
     }
     if (openApiPaths.scalar) {
-
       console.log(`[${label}] Scalar UI     http://localhost:${port}${openApiPaths.scalar}`)
     }
   }

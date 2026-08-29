@@ -21,21 +21,23 @@ interface AdminRequest {
   currentAdmin?: CurrentAdmin
 }
 
-const queryZ = z.object({
-  resourceId: z.string().min(1).optional(),
-  recordId: z.string().min(1).optional(),
-  userId: z.string().min(1).optional(),
-  actions: z.string().min(1).optional(),
-  from: z.iso.datetime().optional(),
-  to: z.iso.datetime().optional(),
-  limit: z.coerce.number().int().min(1).max(200).optional(),
-  offset: z.coerce.number().int().min(0).optional(),
-  before: z.coerce.number().int().min(0).optional(),
-  beforeId: z.string().min(1).max(128).optional(),
-}).refine((query) => query.beforeId === undefined || query.before !== undefined, {
-  message: '`beforeId` requires `before`',
-  path: ['beforeId'],
-})
+const queryZ = z
+  .object({
+    resourceId: z.string().min(1).optional(),
+    recordId: z.string().min(1).optional(),
+    userId: z.string().min(1).optional(),
+    actions: z.string().min(1).optional(),
+    from: z.iso.datetime().optional(),
+    to: z.iso.datetime().optional(),
+    limit: z.coerce.number().int().min(1).max(200).optional(),
+    offset: z.coerce.number().int().min(0).optional(),
+    before: z.coerce.number().int().min(0).optional(),
+    beforeId: z.string().min(1).max(128).optional(),
+  })
+  .refine((query) => query.beforeId === undefined || query.before !== undefined, {
+    message: '`beforeId` requires `before`',
+    path: ['beforeId'],
+  })
 
 export interface AuditLogResponse {
   events: ActionLogEntry[]
@@ -68,7 +70,12 @@ export class AuditLogController {
       ...(query.recordId ? { recordId: query.recordId } : {}),
       ...(query.userId ? { userId: query.userId } : {}),
       ...(query.actions
-        ? { actions: query.actions.split(',').map((s) => s.trim()).filter(Boolean) }
+        ? {
+            actions: query.actions
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean),
+          }
         : {}),
       ...(query.from ? { from: new Date(query.from) } : {}),
       ...(query.to ? { to: new Date(query.to) } : {}),

@@ -85,10 +85,7 @@ export {
   type PropertyDisplayProps,
   type PropertyEditorProps,
 } from './property-renderer.js'
-export {
-  RecordFormField,
-  type RecordFormFieldProps,
-} from './components/record-form-field.js'
+export { RecordFormField, type RecordFormFieldProps } from './components/record-form-field.js'
 export {
   ReferenceLink,
   ReferenceLinkList,
@@ -178,10 +175,7 @@ export {
   type RealtimeSubscriber,
   type RealtimeWireEvent,
 } from './realtime.js'
-export {
-  createSocketRealtimeSubscriber,
-  type SocketRealtimeOptions,
-} from './realtime-socket.js'
+export { createSocketRealtimeSubscriber, type SocketRealtimeOptions } from './realtime-socket.js'
 export { ResourceActionPage, type ResourceActionPageProps } from './pages/action-page.js'
 export { ResourceListPage } from './pages/list-page.js'
 export { ResourceShowPage } from './pages/show-page.js'

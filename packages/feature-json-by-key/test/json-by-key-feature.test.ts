@@ -29,11 +29,9 @@ const emptyOptions: ResourceOptions = {}
 type AnyHook = (...args: unknown[]) => Promise<unknown> | unknown
 
 const getAfter = (result: ResourceOptions, action: string): AnyHook[] =>
-
   ((result.actions?.[action] as any).after as AnyHook[]) ?? []
 
 const getBefore = (result: ResourceOptions, action: string): AnyHook[] =>
-
   ((result.actions?.[action] as any).before as AnyHook[]) ?? []
 
 // ─── property generation ─────────────────────────────────────────────────────
@@ -518,11 +516,7 @@ describe('jsonByKeyFeature() — file diff & pending confirmation', () => {
     })
     const result = feature(emptyOptions)
     const deleteHook = getAfter(result, 'delete')[0]!
-    await deleteHook(
-      {},
-      {},
-      { record: makeRecord({ previews: { eu: 'a.jpg', us: 'b.jpg' } }) },
-    )
+    await deleteHook({}, {}, { record: makeRecord({ previews: { eu: 'a.jpg', us: 'b.jpg' } }) })
     expect(provider.delete).toHaveBeenCalledWith('a.jpg')
     expect(provider.delete).toHaveBeenCalledWith('b.jpg')
   })

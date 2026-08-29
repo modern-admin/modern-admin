@@ -6,7 +6,10 @@ import { MemoryHistoryStore } from '../src/stores.js'
 
 const emptyOptions: ResourceOptions = {}
 
-type BeforeHook = (request: ActionRequest, context: unknown) => Promise<ActionRequest> | ActionRequest
+type BeforeHook = (
+  request: ActionRequest,
+  context: unknown,
+) => Promise<ActionRequest> | ActionRequest
 type AfterHook = (
   response: ActionResponse,
   request: ActionRequest,
@@ -152,15 +155,8 @@ describe('historyFeature', () => {
   it('does not prune persistent stores from the request after-hook', async () => {
     const prune = mock(() => Promise.resolve(0))
     const store = Object.assign(new MemoryHistoryStore(), { prune })
-    const [hook] = getAfter(
-      historyFeature({ store, keepLast: 2 })(emptyOptions).actions,
-      'new',
-    )
-    await hook!(
-      { record: { id: '1', params: { name: 'Alice' } } },
-      fakeRequest(),
-      fakeContext(),
-    )
+    const [hook] = getAfter(historyFeature({ store, keepLast: 2 })(emptyOptions).actions, 'new')
+    await hook!({ record: { id: '1', params: { name: 'Alice' } } }, fakeRequest(), fakeContext())
     await Promise.resolve()
 
     expect(prune).not.toHaveBeenCalled()
@@ -168,7 +164,9 @@ describe('historyFeature', () => {
 
   it('swallows store failures', async () => {
     const failing = {
-      append: mock(async () => { throw new Error('down') }),
+      append: mock(async () => {
+        throw new Error('down')
+      }),
       list: mock(),
       get: mock(),
       latest: mock(),

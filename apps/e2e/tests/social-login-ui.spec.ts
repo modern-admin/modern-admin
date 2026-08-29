@@ -65,10 +65,7 @@ async function openLoginPage(
   )
   // The initScript runs before any SPA JS on the next navigation, preventing
   // the auto-relogin from firing.
-  await context.addInitScript(
-    ({ key }) => localStorage.removeItem(key),
-    { key: DEMO_SESSION_KEY },
-  )
+  await context.addInitScript(({ key }) => localStorage.removeItem(key), { key: DEMO_SESSION_KEY })
   await context.clearCookies()
   await page.goto('/')
   // Confirm the login screen is rendered (the <h1> holds the app title).
@@ -108,10 +105,9 @@ test.describe('social login — login page without providers', () => {
   test('shows only the email form when providers list is empty', async ({ page, context }) => {
     // No route mock — the real demo API responds with providers: [].
     // Clear the demo-session before navigating so the client cannot auto-relogin.
-    await context.addInitScript(
-      ({ key }) => localStorage.removeItem(key),
-      { key: DEMO_SESSION_KEY },
-    )
+    await context.addInitScript(({ key }) => localStorage.removeItem(key), {
+      key: DEMO_SESSION_KEY,
+    })
     await context.clearCookies()
     await page.goto('/')
 
@@ -176,9 +172,7 @@ test.describe('social login — login page with mocked providers', () => {
     await openLoginPage(page, context, ['mycompany-sso'], false)
 
     // resolveProvider() does id.charAt(0).toUpperCase() + id.slice(1).
-    await expect(
-      page.getByRole('button', { name: 'Continue with Mycompany-sso' }),
-    ).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Continue with Mycompany-sso' })).toBeVisible()
   })
 
   test('clicking a social button POSTs to sign-in/social with correct provider and callbackURL', async ({

@@ -86,7 +86,10 @@ export function RevisionTimeline({
   )
 }
 
-function labelForOp(op: RevisionTimelineItem['op'], labels: Required<RevisionTimelineLabels>): string {
+function labelForOp(
+  op: RevisionTimelineItem['op'],
+  labels: Required<RevisionTimelineLabels>,
+): string {
   if (op === 'create') return labels.create
   if (op === 'delete') return labels.delete
   return labels.update

@@ -40,8 +40,8 @@ export function ChartSeriesColorsDialog({
   onClose,
 }: ChartSeriesColorsDialogProps): React.ReactElement {
   const { t } = useI18n()
-  const [draft, setDraft] = React.useState<Record<string, string | undefined>>(
-    () => Object.fromEntries(items.map((i) => [i.key, i.override])),
+  const [draft, setDraft] = React.useState<Record<string, string | undefined>>(() =>
+    Object.fromEntries(items.map((i) => [i.key, i.override])),
   )
 
   const handleSave = (): void => {
@@ -53,7 +53,12 @@ export function ChartSeriesColorsDialog({
   }
 
   return (
-    <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
+    >
       <DialogContent closeLabel={t('common:close')} className="w-full max-w-lg">
         <DialogHeader>
           <DialogTitle>{t('dashboard:widget.colorsTitle')}</DialogTitle>
@@ -71,9 +76,7 @@ export function ChartSeriesColorsDialog({
               </div>
               <ColorSwatchPicker
                 value={draft[item.key]}
-                onChange={(next) =>
-                  setDraft((prev) => ({ ...prev, [item.key]: next }))
-                }
+                onChange={(next) => setDraft((prev) => ({ ...prev, [item.key]: next }))}
                 presets={CHART_COLOR_PRESETS}
                 labels={{
                   custom: t('dashboard:widget.colorCustom'),
@@ -86,7 +89,9 @@ export function ChartSeriesColorsDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>{t('common:cancel')}</Button>
+          <Button variant="outline" onClick={onClose}>
+            {t('common:cancel')}
+          </Button>
           <Button onClick={handleSave}>{t('common:save')}</Button>
         </DialogFooter>
       </DialogContent>

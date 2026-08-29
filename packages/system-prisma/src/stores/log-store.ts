@@ -53,10 +53,7 @@ export class PrismaLogStore implements IQueryableLogStore {
         // Lexicographic continuation of the `(at, id) DESC` order. Keeping
         // the id in the cursor is essential because `at` has ms precision and
         // many audit entries can legitimately share it.
-        where['OR'] = [
-          { at: { lt: cursorAt } },
-          { at: cursorAt, id: { lt: filter.beforeId } },
-        ]
+        where['OR'] = [{ at: { lt: cursorAt } }, { at: cursorAt, id: { lt: filter.beforeId } }]
       } else {
         // Backwards-compatible timestamp-only cursor for existing callers.
         range['lt'] = cursorAt

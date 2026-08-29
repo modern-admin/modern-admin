@@ -22,8 +22,7 @@ import { expect, test, type APIRequestContext } from '@playwright/test'
 const API_URL = process.env.E2E_API_URL ?? 'http://localhost:3001'
 const adminApi = (path: string): string => `${API_URL}/admin/api${path}`
 
-const uniqueSuffix = (): string =>
-  `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+const uniqueSuffix = (): string => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 
 async function cleanup(
   request: APIRequestContext,
@@ -41,9 +40,7 @@ async function cleanup(
 // ─── Scalars (customers) ────────────────────────────────────────────────────
 
 test.describe('Forms — customers: scalar + enum + date types', () => {
-  test('create with every supported scalar type, then update each one', async ({
-    request,
-  }) => {
+  test('create with every supported scalar type, then update each one', async ({ request }) => {
     const suffix = uniqueSuffix()
     let createdId: string | null = null
     try {
@@ -106,9 +103,7 @@ test.describe('Forms — customers: scalar + enum + date types', () => {
     }
   })
 
-  test('create rejects missing required fields (400/422, never 500)', async ({
-    request,
-  }) => {
+  test('create rejects missing required fields (400/422, never 500)', async ({ request }) => {
     // `name` and `email` are required on customers.
     const res = await request.post(adminApi('/resources/customers/actions/new'), {
       data: { tier: 'free' },
@@ -125,17 +120,15 @@ test.describe('Forms — customers: scalar + enum + date types', () => {
     const list = await request.get(adminApi('/resources/admins/actions/list?perPage=1'))
     const id = (await list.json()).records[0].id as string
     try {
-      const before = await request.patch(
-        adminApi(`/resources/admins/records/${id}/actions/edit`),
-        { data: { banned: true } },
-      )
+      const before = await request.patch(adminApi(`/resources/admins/records/${id}/actions/edit`), {
+        data: { banned: true },
+      })
       expect(before.ok()).toBeTruthy()
       expect((await before.json()).record.params.banned).toBe(true)
 
-      const after = await request.patch(
-        adminApi(`/resources/admins/records/${id}/actions/edit`),
-        { data: { banned: false } },
-      )
+      const after = await request.patch(adminApi(`/resources/admins/records/${id}/actions/edit`), {
+        data: { banned: false },
+      })
       expect(after.ok()).toBeTruthy()
       expect((await after.json()).record.params.banned).toBe(false)
     } finally {
@@ -341,10 +334,9 @@ test.describe('Forms — products: m2m via productTags w/ position extra', () =>
 
       // ── Edit: omit `tags` from payload — m2m hook MUST leave them
       // alone (no change). Re-attach one and verify.
-      await request.patch(
-        adminApi(`/resources/products/records/${productId}/actions/edit`),
-        { data: { tags: [{ id: t1 }] } },
-      )
+      await request.patch(adminApi(`/resources/products/records/${productId}/actions/edit`), {
+        data: { tags: [{ id: t1 }] },
+      })
       const omittedEdit = await request.patch(
         adminApi(`/resources/products/records/${productId}/actions/edit`),
         { data: { name: `Renamed ${suffix}` } },
@@ -359,9 +351,7 @@ test.describe('Forms — products: m2m via productTags w/ position extra', () =>
     }
   })
 
-  test('m2m accepts the form-encoded payload shape (`tags.0.id` etc.)', async ({
-    request,
-  }) => {
+  test('m2m accepts the form-encoded payload shape (`tags.0.id` etc.)', async ({ request }) => {
     // The HTML form serializer flattens nested arrays as
     // `tags.0.id=...&tags.0.position=...`. Verify the feature reassembles
     // them correctly when the JSON-encoded version isn't used.
@@ -507,9 +497,7 @@ test.describe('Forms — favorites: enum kind + optional polymorphic FKs', () =>
 // ─── JSON-by-key (regionalContent) ──────────────────────────────────────────
 
 test.describe('Forms — regionalContent: json columns with nested keys', () => {
-  test('create then update individual keys inside titles/previews JSON', async ({
-    request,
-  }) => {
+  test('create then update individual keys inside titles/previews JSON', async ({ request }) => {
     const suffix = uniqueSuffix()
     let id: string | null = null
     try {
@@ -551,9 +539,7 @@ test.describe('Forms — regionalContent: json columns with nested keys', () => 
 // ─── Color + previewMedia (products) ────────────────────────────────────────
 
 test.describe('Forms — products: color + previewMedia + decimal types', () => {
-  test('persist hex color, preview URLs, and decimal money values', async ({
-    request,
-  }) => {
+  test('persist hex color, preview URLs, and decimal money values', async ({ request }) => {
     const suffix = uniqueSuffix()
     let productId: string | null = null
     try {
@@ -590,9 +576,7 @@ test.describe('Forms — products: color + previewMedia + decimal types', () => 
 // ─── Scalar arrays (products.gallery) ───────────────────────────────────────
 
 test.describe('Forms — products.gallery: String[] scalar array', () => {
-  test('persist array, then update to a shorter array, then clear', async ({
-    request,
-  }) => {
+  test('persist array, then update to a shorter array, then clear', async ({ request }) => {
     const suffix = uniqueSuffix()
     let productId: string | null = null
     try {
@@ -630,9 +614,7 @@ test.describe('Forms — products.gallery: String[] scalar array', () => {
 // ─── Custom record-level actions (products) ─────────────────────────────────
 
 test.describe('Forms — products: custom @Action record-level handlers mutate state', () => {
-  test('archive flips inStock=false + quantity=0; restock revives both', async ({
-    request,
-  }) => {
+  test('archive flips inStock=false + quantity=0; restock revives both', async ({ request }) => {
     const suffix = uniqueSuffix()
     let productId: string | null = null
     try {
@@ -662,9 +644,7 @@ test.describe('Forms — products: custom @Action record-level handlers mutate s
     }
   })
 
-  test('duplicateSku rotates the sku without touching other fields', async ({
-    request,
-  }) => {
+  test('duplicateSku rotates the sku without touching other fields', async ({ request }) => {
     const suffix = uniqueSuffix()
     let productId: string | null = null
     try {
@@ -689,9 +669,7 @@ test.describe('Forms — products: custom @Action record-level handlers mutate s
 // ─── Empty / null edge cases (regression for adapter coercion) ──────────────
 
 test.describe('Forms — edge cases: empty strings, null clearing, partial PATCH', () => {
-  test('partial update never resets untouched fields to null', async ({
-    request,
-  }) => {
+  test('partial update never resets untouched fields to null', async ({ request }) => {
     const suffix = uniqueSuffix()
     let id: string | null = null
     try {
@@ -707,10 +685,9 @@ test.describe('Forms — edge cases: empty strings, null clearing, partial PATCH
       id = String((await created.json()).record.id)
 
       // PATCH only `score`.
-      const upd = await request.patch(
-        adminApi(`/resources/customers/records/${id}/actions/edit`),
-        { data: { score: 75 } },
-      )
+      const upd = await request.patch(adminApi(`/resources/customers/records/${id}/actions/edit`), {
+        data: { score: 75 },
+      })
       expect(upd.status()).toBeLessThan(300)
       const body = await upd.json()
       expect(body.record.params.score).toBe(75)
@@ -723,9 +700,7 @@ test.describe('Forms — edge cases: empty strings, null clearing, partial PATCH
     }
   })
 
-  test('empty string on optional date field does not crash the backend', async ({
-    request,
-  }) => {
+  test('empty string on optional date field does not crash the backend', async ({ request }) => {
     // Common UI pattern: user clears a date input → form posts `""`.
     // The adapter MUST not 500 on this. Either accept-and-store-null or
     // reject with a 4xx is acceptable; 5xx is a regression.
@@ -748,9 +723,7 @@ test.describe('Forms — edge cases: empty strings, null clearing, partial PATCH
     }
   })
 
-  test('empty string on optional enum-like select does not crash', async ({
-    request,
-  }) => {
+  test('empty string on optional enum-like select does not crash', async ({ request }) => {
     const suffix = uniqueSuffix()
     let id: string | null = null
     try {

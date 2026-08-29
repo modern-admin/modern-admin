@@ -47,8 +47,28 @@ describe('filterToWhere', () => {
     const model = {
       name: 'Post',
       fields: [
-        { name: 'id', kind: 'scalar' as const, type: 'String', isList: false, isRequired: true, isUnique: false, isId: true, isReadOnly: false, hasDefaultValue: true },
-        { name: 'tagIds', kind: 'scalar' as const, type: 'String', isList: true, isRequired: false, isUnique: false, isId: false, isReadOnly: false, hasDefaultValue: false },
+        {
+          name: 'id',
+          kind: 'scalar' as const,
+          type: 'String',
+          isList: false,
+          isRequired: true,
+          isUnique: false,
+          isId: true,
+          isReadOnly: false,
+          hasDefaultValue: true,
+        },
+        {
+          name: 'tagIds',
+          kind: 'scalar' as const,
+          type: 'String',
+          isList: true,
+          isRequired: false,
+          isUnique: false,
+          isId: false,
+          isReadOnly: false,
+          hasDefaultValue: false,
+        },
       ],
     }
     const resource = new PrismaResource({
@@ -63,8 +83,28 @@ describe('filterToWhere', () => {
     const model = {
       name: 'Post',
       fields: [
-        { name: 'id', kind: 'scalar' as const, type: 'String', isList: false, isRequired: true, isUnique: false, isId: true, isReadOnly: false, hasDefaultValue: true },
-        { name: 'tagIds', kind: 'scalar' as const, type: 'String', isList: true, isRequired: false, isUnique: false, isId: false, isReadOnly: false, hasDefaultValue: false },
+        {
+          name: 'id',
+          kind: 'scalar' as const,
+          type: 'String',
+          isList: false,
+          isRequired: true,
+          isUnique: false,
+          isId: true,
+          isReadOnly: false,
+          hasDefaultValue: true,
+        },
+        {
+          name: 'tagIds',
+          kind: 'scalar' as const,
+          type: 'String',
+          isList: true,
+          isRequired: false,
+          isUnique: false,
+          isId: false,
+          isReadOnly: false,
+          hasDefaultValue: false,
+        },
       ],
     }
     const resource = new PrismaResource({

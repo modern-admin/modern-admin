@@ -12,7 +12,7 @@ export type HistoryCallback = (entry: HistoryEntry) => void | Promise<void>
 
 export const DEFAULT_HISTORY_ACTIONS = ['new', 'edit', 'delete'] as const
 
-export type HistoryActionName = typeof DEFAULT_HISTORY_ACTIONS[number]
+export type HistoryActionName = (typeof DEFAULT_HISTORY_ACTIONS)[number]
 
 export interface HistoryFeatureOptions {
   store?: IHistoryStore

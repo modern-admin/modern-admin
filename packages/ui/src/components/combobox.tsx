@@ -28,11 +28,7 @@ import * as React from 'react'
 import { ChevronDown, Loader2 } from 'lucide-react'
 import { cn } from '../lib/utils.js'
 import { Input } from './input.js'
-import {
-  Popover,
-  PopoverAnchor,
-  PopoverContent,
-} from './popover.js'
+import { Popover, PopoverAnchor, PopoverContent } from './popover.js'
 
 /** Each suggestion may be a bare string (used as both value + label) or
  *  an explicit `{ value, label }` pair. */
@@ -88,16 +84,10 @@ const normalise = (s: ComboboxSuggestion): { value: string; label: string } =>
   typeof s === 'string' ? { value: s, label: s } : s
 
 /** Case-insensitive substring match on label OR value. */
-const matchesQuery = (
-  s: { value: string; label: string },
-  q: string,
-): boolean => {
+const matchesQuery = (s: { value: string; label: string }, q: string): boolean => {
   if (!q) return true
   const needle = q.toLowerCase()
-  return (
-    s.label.toLowerCase().includes(needle) ||
-    s.value.toLowerCase().includes(needle)
-  )
+  return s.label.toLowerCase().includes(needle) || s.value.toLowerCase().includes(needle)
 }
 
 export function Combobox({
@@ -138,8 +128,7 @@ export function Combobox({
   // Open whenever the input is focused AND there's something to show
   // (either matching items or a loading spinner). Empty + non-loading =
   // no panel, so the component degrades to a plain input.
-  const open =
-    !disabled && focused && !collapsed && (items.length > 0 || Boolean(loading))
+  const open = !disabled && focused && !collapsed && (items.length > 0 || Boolean(loading))
 
   const commit = (s: { value: string; label: string }): void => {
     onChange(s.value)
@@ -273,9 +262,7 @@ export function Combobox({
         className="flex max-h-[var(--radix-popover-content-available-height)] w-[var(--radix-popover-trigger-width)] flex-col p-1"
       >
         {loading && items.length === 0 ? (
-          <div className="px-2 py-2 text-sm text-muted-foreground">
-            {l.loading}
-          </div>
+          <div className="px-2 py-2 text-sm text-muted-foreground">{l.loading}</div>
         ) : items.length === 0 ? (
           <div className="px-2 py-2 text-sm text-muted-foreground">
             {l.noMatches.replace('{value}', value)}
@@ -298,16 +285,12 @@ export function Combobox({
                   onMouseEnter={() => setHighlight(i)}
                   className={cn(
                     'cursor-pointer rounded-sm px-2 py-1.5 text-sm',
-                    active
-                      ? 'bg-accent text-accent-foreground'
-                      : 'text-foreground',
+                    active ? 'bg-accent text-accent-foreground' : 'text-foreground',
                   )}
                 >
                   <span className="truncate">{s.label}</span>
                   {s.label !== s.value ? (
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      {s.value}
-                    </span>
+                    <span className="ml-2 text-xs text-muted-foreground">{s.value}</span>
                   ) : null}
                 </li>
               )

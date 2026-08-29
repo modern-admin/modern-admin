@@ -10,7 +10,20 @@ import type {
 } from '../../src/types.js'
 
 export interface FakeCall {
-  op: 'select' | 'from' | 'where' | 'orderBy' | 'groupBy' | 'limit' | 'offset' | 'insert' | 'values' | 'returning' | 'update' | 'set' | 'delete'
+  op:
+    | 'select'
+    | 'from'
+    | 'where'
+    | 'orderBy'
+    | 'groupBy'
+    | 'limit'
+    | 'offset'
+    | 'insert'
+    | 'values'
+    | 'returning'
+    | 'update'
+    | 'set'
+    | 'delete'
   arg?: unknown
 }
 
@@ -71,12 +84,15 @@ export const createFakeClient = (canned: Canned = {}): FakeClient => {
       calls.push({ op: 'select', arg: fields })
       // A bare `{ value }` select is the count() shape; time-series selects
       // also carry `bucket` / `series_key` and must resolve to selectRows.
-      const isCount = fields && 'value' in fields && !('bucket' in fields) && !('series_key' in fields)
+      const isCount =
+        fields && 'value' in fields && !('bucket' in fields) && !('series_key' in fields)
       return {
         from(table: DrizzleTable) {
           calls.push({ op: 'from', arg: table })
           if (isCount) {
-            return makeQueryBuilder([{ value: canned.countValue ?? 0 }]) as DrizzleQueryBuilder<Record<string, unknown>>
+            return makeQueryBuilder([{ value: canned.countValue ?? 0 }]) as DrizzleQueryBuilder<
+              Record<string, unknown>
+            >
           }
           return makeQueryBuilder((canned.selectRows ?? []) as Record<string, unknown>[])
         },

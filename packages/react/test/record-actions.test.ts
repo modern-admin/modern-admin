@@ -86,16 +86,22 @@ describe('isActionAllowedForResource', () => {
   const resource = (actions: ActionDescriptor[]): Pick<ResourceJSON, 'actions'> => ({ actions })
 
   test('allows only advertised resource actions', () => {
-    expect(isActionAllowedForResource('new', resource([
-      { name: 'new', actionType: 'resource', resourceId: 'users' },
-    ]))).toBe(true)
+    expect(
+      isActionAllowedForResource(
+        'new',
+        resource([{ name: 'new', actionType: 'resource', resourceId: 'users' }]),
+      ),
+    ).toBe(true)
     expect(isActionAllowedForResource('new', resource([]))).toBe(false)
   })
 
   test('does not confuse an equally named record action with a resource action', () => {
-    expect(isActionAllowedForResource('new', resource([
-      { name: 'new', actionType: 'record', resourceId: 'users' },
-    ]))).toBe(false)
+    expect(
+      isActionAllowedForResource(
+        'new',
+        resource([{ name: 'new', actionType: 'record', resourceId: 'users' }]),
+      ),
+    ).toBe(false)
   })
 
   test('fails closed until resource metadata is available', () => {

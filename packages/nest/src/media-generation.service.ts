@@ -85,7 +85,10 @@ const outputOf = (task: AiTask): MediaGenerationTaskOutput =>
 const fileExtension = (url: string, mimeType: string): string => {
   const fromUrl = extname(new URL(url).pathname).slice(0, 12)
   if (fromUrl) return fromUrl
-  const subtype = mimeType.split('/')[1]?.split(/[;+]/)[0]?.replace(/[^a-z0-9.+-]/gi, '')
+  const subtype = mimeType
+    .split('/')[1]
+    ?.split(/[;+]/)[0]
+    ?.replace(/[^a-z0-9.+-]/gi, '')
   return subtype ? `.${subtype === 'jpeg' ? 'jpg' : subtype}` : ''
 }
 
@@ -162,9 +165,10 @@ export class MediaGenerationService implements OnApplicationBootstrap {
     const next: MediaGenerationStoredSettings = {
       enabled: input.enabled,
       provider: this.config.provider.id,
-      apiKey: input.apiKey !== undefined
-        ? input.apiKey.trim() || current.apiKey || ''
-        : current.apiKey ?? '',
+      apiKey:
+        input.apiKey !== undefined
+          ? input.apiKey.trim() || current.apiKey || ''
+          : (current.apiKey ?? ''),
     }
     await this.requireConfigStore().set('global', null, MEDIA_GENERATION_SETTINGS_KEY, next)
     return this.toPublicSettings(next, currentAdmin)
@@ -176,12 +180,16 @@ export class MediaGenerationService implements OnApplicationBootstrap {
     const catalog = await this.config.provider.getCatalog({ apiKey })
     const allowedModels = this.config.allowedModels
     const allowedTypes = new Set(this.config.allowedMediaTypes ?? ['image', 'video'])
-    return catalog.filter((model) =>
-      allowedTypes.has(model.type) && (!allowedModels || allowedModels.includes(model.id)),
+    return catalog.filter(
+      (model) =>
+        allowedTypes.has(model.type) && (!allowedModels || allowedModels.includes(model.id)),
     )
   }
 
-  async createTask(input: CreateTaskInput, currentAdmin?: CurrentAdmin): Promise<MediaGenerationTask> {
+  async createTask(
+    input: CreateTaskInput,
+    currentAdmin?: CurrentAdmin,
+  ): Promise<MediaGenerationTask> {
     this.assertGenerateAllowed(currentAdmin)
     this.assertGenerationTransport()
     const settings = await this.loadSettings()
@@ -254,7 +262,11 @@ export class MediaGenerationService implements OnApplicationBootstrap {
         providerTaskId: result.externalTaskId,
         status: result.status,
       })
-      if (result.status === 'finished' || result.status === 'failed' || result.status === 'expired') {
+      if (
+        result.status === 'finished' ||
+        result.status === 'failed' ||
+        result.status === 'expired'
+      ) {
         await this.applyProviderResult(updated, result)
         const finalized = await taskStore.get(task.id)
         if (!finalized) throw new InternalServerErrorException('Media generation task disappeared')
@@ -334,8 +346,9 @@ export class MediaGenerationService implements OnApplicationBootstrap {
     currentAdmin?: CurrentAdmin,
   ): Promise<MediaGenerationTask> {
     const prior = this.applyChains.get(taskId)
-    const next = (prior ? prior.catch(() => undefined) : Promise.resolve())
-      .then(() => this.applyResultLocked(taskId, input, currentAdmin))
+    const next = (prior ? prior.catch(() => undefined) : Promise.resolve()).then(() =>
+      this.applyResultLocked(taskId, input, currentAdmin),
+    )
     this.applyChains.set(taskId, next)
     try {
       return await next
@@ -361,18 +374,21 @@ export class MediaGenerationService implements OnApplicationBootstrap {
     const file = output.files?.[input.fileIndex]
     if (!file) throw new BadRequestException('Generated file was not found')
 
-    const currentTarget = await this.resolveTarget({
-      requestId: String(task.input.requestId ?? ''),
-      model: String(task.input.model ?? ''),
-      input: {},
-      resourceId: target.resourceId,
-      recordId: target.recordId,
-      actionName: target.actionName,
-    }, currentAdmin)
+    const currentTarget = await this.resolveTarget(
+      {
+        requestId: String(task.input.requestId ?? ''),
+        model: String(task.input.model ?? ''),
+        input: {},
+        resourceId: target.resourceId,
+        recordId: target.recordId,
+        actionName: target.actionName,
+      },
+      currentAdmin,
+    )
     if (
-      !currentTarget
-      || currentTarget.targetProperty !== target.targetProperty
-      || !currentTarget.mediaTypes.includes(file.type)
+      !currentTarget ||
+      currentTarget.targetProperty !== target.targetProperty ||
+      !currentTarget.mediaTypes.includes(file.type)
     ) {
       throw new ConflictException('The media generation action configuration has changed')
     }
@@ -476,7 +492,7 @@ export class MediaGenerationService implements OnApplicationBootstrap {
   }
 
   private async requireApiKey(settings?: MediaGenerationStoredSettings): Promise<string> {
-    const resolved = settings ?? await this.loadSettings()
+    const resolved = settings ?? (await this.loadSettings())
     const apiKey = resolved.apiKey || this.config.apiKey
     if (!apiKey) throw new PreconditionFailedException('Media generation API key is not configured')
     return apiKey
@@ -494,7 +510,9 @@ export class MediaGenerationService implements OnApplicationBootstrap {
     }
     if (!userId) throw new ForbiddenException('Media generation requires an authenticated user')
     if (estimatedCostUsd === null) {
-      throw new PreconditionFailedException('This model has no catalog price for budget enforcement')
+      throw new PreconditionFailedException(
+        'This model has no catalog price for budget enforcement',
+      )
     }
     const monthStart = new Date()
     monthStart.setUTCDate(1)
@@ -546,7 +564,11 @@ export class MediaGenerationService implements OnApplicationBootstrap {
       try {
         await this.assertMonthlyBudget(estimatedCostUsd, userId, task.id)
       } catch (error) {
-        await store.updateStatus(task.id, { status: 'failed', progress: 100, error: safeError(error) })
+        await store.updateStatus(task.id, {
+          status: 'failed',
+          progress: 100,
+          error: safeError(error),
+        })
         throw error
       }
       return task
@@ -554,7 +576,10 @@ export class MediaGenerationService implements OnApplicationBootstrap {
     if (this.config.monthlyBudgetUsdPerUser === undefined || !userId) return reserve()
     const prior = this.budgetChains.get(userId) ?? Promise.resolve()
     const result = prior.then(() => reserve())
-    const tail = result.then(() => undefined, () => undefined)
+    const tail = result.then(
+      () => undefined,
+      () => undefined,
+    )
     this.budgetChains.set(userId, tail)
     try {
       return await result
@@ -590,11 +615,13 @@ export class MediaGenerationService implements OnApplicationBootstrap {
   }
 
   private assertManageAllowed(currentAdmin?: CurrentAdmin): void {
-    if (!this.canManage(currentAdmin)) throw new ForbiddenException('Media generation settings are not allowed')
+    if (!this.canManage(currentAdmin))
+      throw new ForbiddenException('Media generation settings are not allowed')
   }
 
   private assertGenerateAllowed(currentAdmin?: CurrentAdmin): void {
-    if (!this.canGenerate(currentAdmin)) throw new ForbiddenException('Media generation is not allowed')
+    if (!this.canGenerate(currentAdmin))
+      throw new ForbiddenException('Media generation is not allowed')
   }
 
   private async resolveTarget(
@@ -633,8 +660,10 @@ export class MediaGenerationService implements OnApplicationBootstrap {
       recordId: input.recordId,
       actionName: input.actionName,
       targetProperty,
-      mediaTypes: mediaTypes.filter((value): value is MediaGenerationFileType =>
-        value === 'image' || value === 'video' || value === 'music'),
+      mediaTypes: mediaTypes.filter(
+        (value): value is MediaGenerationFileType =>
+          value === 'image' || value === 'video' || value === 'music',
+      ),
     }
   }
 
@@ -701,7 +730,9 @@ export class MediaGenerationService implements OnApplicationBootstrap {
   private webhookToken(taskId: string): string {
     const secret = this.config.webhookSecret
     if (!secret || secret.length < 32) {
-      throw new PreconditionFailedException('Media generation webhookSecret must contain at least 32 characters')
+      throw new PreconditionFailedException(
+        'Media generation webhookSecret must contain at least 32 characters',
+      )
     }
     return createHmac('sha256', secret).update(taskId).digest('hex')
   }
@@ -733,7 +764,11 @@ export class MediaGenerationService implements OnApplicationBootstrap {
     // provider status request was in flight (webhook path especially). Never
     // resurrect a task that already reached a terminal status.
     const current = await store.get(task.id)
-    if (!current || current.kind !== MEDIA_GENERATION_TASK_KIND || isTerminalStatus(current.status)) {
+    if (
+      !current ||
+      current.kind !== MEDIA_GENERATION_TASK_KIND ||
+      isTerminalStatus(current.status)
+    ) {
       return
     }
     let status: AiTask['status'] = 'running'
@@ -790,7 +825,11 @@ export class MediaGenerationService implements OnApplicationBootstrap {
       if (result.externalTaskId !== providerTaskId) {
         throw new BadGatewayException('Provider returned a mismatched task id')
       }
-      if (result.status === 'finished' || result.status === 'failed' || result.status === 'expired') {
+      if (
+        result.status === 'finished' ||
+        result.status === 'failed' ||
+        result.status === 'expired'
+      ) {
         // Re-read: the user may have cancelled while getStatus was in flight.
         const current = await store.get(taskId)
         if (!current || isTerminalStatus(current.status)) return
@@ -851,10 +890,12 @@ export class MediaGenerationService implements OnApplicationBootstrap {
       if (redirects === 5) throw new BadGatewayException('Generated file has too many redirects')
     }
     if (!response) throw new BadGatewayException('Generated file download failed')
-    if (!response.ok) throw new BadGatewayException(`Generated file download failed with HTTP ${response.status}`)
+    if (!response.ok)
+      throw new BadGatewayException(`Generated file download failed with HTTP ${response.status}`)
     const declaredSize = Number(response.headers.get('content-length') ?? 0)
     if (declaredSize > maxSize) throw new BadRequestException('Generated file is too large')
-    if (!response.body) throw new BadGatewayException('Generated file download returned an empty body')
+    if (!response.body)
+      throw new BadGatewayException('Generated file download returned an empty body')
     const chunks: Buffer[] = []
     let receivedSize = 0
     const reader = response.body.getReader()
@@ -873,15 +914,14 @@ export class MediaGenerationService implements OnApplicationBootstrap {
       reader.releaseLock()
     }
     const buffer = Buffer.concat(chunks, receivedSize)
-    const fallbackMime = fileType === 'image'
-      ? 'image/png'
-      : fileType === 'video'
-        ? 'video/mp4'
-        : 'audio/mpeg'
+    const fallbackMime =
+      fileType === 'image' ? 'image/png' : fileType === 'video' ? 'video/mp4' : 'audio/mpeg'
     const mimeType = response.headers.get('content-type')?.split(';')[0]?.trim() || fallbackMime
     const sourceName = basename(url.pathname) || `generated${fileExtension(urlValue, mimeType)}`
     return {
-      originalName: sourceName.includes('.') ? sourceName : `${sourceName}${fileExtension(urlValue, mimeType)}`,
+      originalName: sourceName.includes('.')
+        ? sourceName
+        : `${sourceName}${fileExtension(urlValue, mimeType)}`,
       mimeType,
       size: buffer.byteLength,
       buffer,

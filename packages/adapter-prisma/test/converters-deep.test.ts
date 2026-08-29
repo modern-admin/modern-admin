@@ -48,17 +48,17 @@ const richModel: DmmfModel = {
   fields: [
     field({ name: 'id', type: 'String', isId: true, isRequired: true, hasDefaultValue: true }),
     field({ name: 'name', type: 'String', isRequired: true }),
-    field({ name: 'nick', type: 'String' }),                       // nullable string
-    field({ name: 'age', type: 'Int' }),                           // number
-    field({ name: 'price', type: 'Float' }),                       // float
-    field({ name: 'big', type: 'BigInt' }),                        // number (BigInt)
-    field({ name: 'paid', type: 'Decimal' }),                      // float
-    field({ name: 'active', type: 'Boolean' }),                    // boolean
-    field({ name: 'createdAt', type: 'DateTime' }),                // datetime
-    field({ name: 'meta', type: 'Json' }),                         // json
-    field({ name: 'region', kind: 'enum', type: 'Region' }),       // enum
-    field({ name: 'tags', type: 'String', isList: true }),         // String[] (scalar list)
-    field({ name: 'scores', type: 'Int', isList: true }),          // Int[]
+    field({ name: 'nick', type: 'String' }), // nullable string
+    field({ name: 'age', type: 'Int' }), // number
+    field({ name: 'price', type: 'Float' }), // float
+    field({ name: 'big', type: 'BigInt' }), // number (BigInt)
+    field({ name: 'paid', type: 'Decimal' }), // float
+    field({ name: 'active', type: 'Boolean' }), // boolean
+    field({ name: 'createdAt', type: 'DateTime' }), // datetime
+    field({ name: 'meta', type: 'Json' }), // json
+    field({ name: 'region', kind: 'enum', type: 'Region' }), // enum
+    field({ name: 'tags', type: 'String', isList: true }), // String[] (scalar list)
+    field({ name: 'scores', type: 'Int', isList: true }), // Int[]
     field({
       name: 'authorId',
       type: 'String',
@@ -184,19 +184,13 @@ describe('filterToWhere — co operator', () => {
 describe('filterToWhere — nco operator', () => {
   test('nco emits a top-level NOT clause', () => {
     expect(where({ name: 'nco:spam' })).toEqual({
-      AND: [
-        {},
-        { NOT: { name: { contains: 'spam', mode: 'insensitive' } } },
-      ],
+      AND: [{}, { NOT: { name: { contains: 'spam', mode: 'insensitive' } } }],
     })
   })
 
   test('nco combined with another filter merges via AND', () => {
     expect(where({ name: 'nco:spam', age: 'eq:30' })).toEqual({
-      AND: [
-        { age: { equals: 30 } },
-        { NOT: { name: { contains: 'spam', mode: 'insensitive' } } },
-      ],
+      AND: [{ age: { equals: 30 } }, { NOT: { name: { contains: 'spam', mode: 'insensitive' } } }],
     })
   })
 })
@@ -246,7 +240,7 @@ describe('filterToWhere — gt / lt operators', () => {
     // Documents that BigInt fields lose precision because converter uses Number().
     // For Postgres BIGINT this matters past 2^53.
     expect(where({ big: 'gt:9007199254740993' })).toEqual({
-      big: { gt: 9007199254740992 },                                 // off by 1
+      big: { gt: 9007199254740992 }, // off by 1
     })
   })
 })
@@ -332,10 +326,7 @@ describe('filterToWhere — in operator', () => {
 describe('filterToWhere — empty / nempty operators', () => {
   test('empty on string → OR(null, "")', () => {
     expect(where({ name: 'empty:' })).toEqual({
-      AND: [
-        {},
-        { OR: [{ name: null }, { name: '' }] },
-      ],
+      AND: [{}, { OR: [{ name: null }, { name: '' }] }],
     })
   })
 
@@ -347,11 +338,7 @@ describe('filterToWhere — empty / nempty operators', () => {
 
   test('nempty on string → both NOT(null) and NOT("")', () => {
     expect(where({ name: 'nempty:' })).toEqual({
-      AND: [
-        {},
-        { NOT: { name: null } },
-        { NOT: { name: '' } },
-      ],
+      AND: [{}, { NOT: { name: null } }, { NOT: { name: '' } }],
     })
   })
 
@@ -558,10 +545,7 @@ describe('filterToWhere — multi-field combinations', () => {
 
   test('field-level + top-level operator merged via AND', () => {
     expect(where({ age: 'gt:18', name: 'empty:' })).toEqual({
-      AND: [
-        { age: { gt: 18 } },
-        { OR: [{ name: null }, { name: '' }] },
-      ],
+      AND: [{ age: { gt: 18 } }, { OR: [{ name: null }, { name: '' }] }],
     })
   })
 })
