@@ -182,29 +182,29 @@ adapt the code to the new API instead.
 
 Majors currently locked, with the gotchas they impose:
 
-| Package                 | Current major | Notes                                                                          |
-| ----------------------- | ------------- | ------------------------------------------------------------------------------ |
-| typescript              | 7.x           | native compiler (`tsc` handles both `--noEmit` typecheck and `-p` build emit)  |
-| oxlint                  | 1.x           | Rust linter, single root `.oxlintrc.json`; no formatting rules (Prettier does) |
-| prettier                | 3.x           | formatter; `.prettierrc.json` (no `;`, single quotes, trailing all, 2-space)   |
-| @nestjs/*               | 12.x          | Node 20+; transport package peer dependencies require `^12`                    |
-| zod                     | 4.x           | new error API; `z.email()` instead of `.email()`                               |
-| vite                    | 8.x           | Node bumped; SSR/Rolldown changes                                              |
-| @vitejs/plugin-react    | 6.x           | matches Vite 8                                                                 |
-| tailwindcss             | 4.x           | CSS-first config (`@theme`, `@import "tailwindcss"`) — no `tailwind.config.js` |
-| react / react-dom       | 19.x          | `import type { ReactElement } from 'react'`, not `JSX.Element`                 |
-| @tanstack/react-query   | 5.x           |                                                                                |
-| @tanstack/react-router  | 1.x           | browser history via `createBrowserHistory()`; NOT TanStack Start (no SSR)      |
-| @tanstack/react-table   | 9.x           | explicit `tableFeatures`; core row model is automatic                          |
-| @hookform/resolvers     | 5.x           | API tweaks                                                                     |
-| lucide-react            | 1.x           | verify icon names                                                              |
-| tailwind-merge          | 3.x           |                                                                                |
-| prisma / @prisma/client | 7.x           | new ESM engine, client API changes                                             |
-| drizzle-orm             | 0.45.x        | driver API and schema-gen changes                                              |
-| better-auth             | 1.7+          | Account identity is the unique `(issuer, accountId)` pair                      |
-| graphql                 | 17.x          |                                                                                |
-| bullmq                  | 6.x           | queue clients are exposed through `Queue.getBackend()`                         |
-| recharts                | 3.x           |                                                                                |
+| Package                 | Current major | Notes                                                                                      |
+| ----------------------- | ------------- | ------------------------------------------------------------------------------------------ |
+| typescript              | 7.x           | native compiler; KEEP `@typescript/typescript6` alias — unplugin-dts needs the TS 6 JS API |
+| oxlint                  | 1.x           | Rust linter, single root `.oxlintrc.json`; no formatting rules (Prettier does)             |
+| prettier                | 3.x           | formatter; `.prettierrc.json` (no `;`, single quotes, trailing all, 2-space)               |
+| @nestjs/*               | 12.x          | Node 20+; transport package peer dependencies require `^12`                                |
+| zod                     | 4.x           | new error API; `z.email()` instead of `.email()`                                           |
+| vite                    | 8.x           | Node bumped; SSR/Rolldown changes                                                          |
+| @vitejs/plugin-react    | 6.x           | matches Vite 8                                                                             |
+| tailwindcss             | 4.x           | CSS-first config (`@theme`, `@import "tailwindcss"`) — no `tailwind.config.js`             |
+| react / react-dom       | 19.x          | `import type { ReactElement } from 'react'`, not `JSX.Element`                             |
+| @tanstack/react-query   | 5.x           |                                                                                            |
+| @tanstack/react-router  | 1.x           | browser history via `createBrowserHistory()`; NOT TanStack Start (no SSR)                  |
+| @tanstack/react-table   | 9.x           | explicit `tableFeatures`; core row model is automatic                                      |
+| @hookform/resolvers     | 5.x           | API tweaks                                                                                 |
+| lucide-react            | 1.x           | verify icon names                                                                          |
+| tailwind-merge          | 3.x           |                                                                                            |
+| prisma / @prisma/client | 7.x           | new ESM engine, client API changes                                                         |
+| drizzle-orm             | 0.45.x        | driver API and schema-gen changes                                                          |
+| better-auth             | 1.7+          | Account identity is the unique `(issuer, accountId)` pair                                  |
+| graphql                 | 17.x          |                                                                                            |
+| bullmq                  | 6.x           | queue clients are exposed through `Queue.getBackend()`                                     |
+| recharts                | 3.x           |                                                                                            |
 
 When touching one of those, expect to update call sites for the new API.
 

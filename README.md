@@ -215,8 +215,9 @@ Full documentation lives at **<https://docs.modernadminpro.com/docs/getting-star
   `border-border`.
 - TypeScript 7 (native compiler) carries the stricter TypeScript 6 checks
   forward: use `as unknown as T` for variance/abstract constructor casts. The
-  same `tsc` handles both `--noEmit` typecheck and `-p` build emit; no tool
-  depends on a side-by-side TypeScript JavaScript API.
+  same `tsc` handles both `--noEmit` typecheck and `-p` build emit, but tooling
+  that needs the TS JavaScript API (unplugin-dts, in the web build) uses the
+  side-by-side `@typescript/typescript6` dev dependency — keep it installed.
 - React 19: use `import type { ReactElement } from 'react'` instead of
   `JSX.Element`.
 - Mobile-first UI: base classes target small viewports, `sm:`/`md:`/`lg:`
