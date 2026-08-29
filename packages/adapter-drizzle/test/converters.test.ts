@@ -10,6 +10,17 @@ const makeResource = () => {
   return new DrizzleResource({ client, table: users, tableKey: 'users' })
 }
 
+const paramValues = (node: unknown, acc: unknown[] = []): unknown[] => {
+  if (node == null || typeof node !== 'object') return acc
+  if ('value' in node && 'encoder' in node) {
+    acc.push((node as { value: unknown }).value)
+    return acc
+  }
+  const chunks = (node as { queryChunks?: unknown[] }).queryChunks
+  if (Array.isArray(chunks)) for (const chunk of chunks) paramValues(chunk, acc)
+  return acc
+}
+
 describe('filterToWhere', () => {
   it('returns undefined for empty filter', () => {
     const resource = makeResource()
@@ -38,6 +49,26 @@ describe('filterToWhere', () => {
     const resource = makeResource()
     const where = filterToWhere(new Filter({ 'age~~from': '10', 'age~~to': '50' }, resource), users)
     expect(where).toBeDefined()
+  })
+
+  it('checks only null for empty and non-empty operators on dates', () => {
+    const resource = makeResource()
+    const empty = filterToWhere(new Filter({ created_at: 'empty:' }, resource), users)
+    const nonEmpty = filterToWhere(new Filter({ created_at: 'nempty:' }, resource), users)
+
+    expect(empty).toBeDefined()
+    expect(nonEmpty).toBeDefined()
+    expect(paramValues(empty)).toEqual([])
+    expect(paramValues(nonEmpty)).toEqual([])
+  })
+
+  it('keeps empty-string checks for nullable strings', () => {
+    const resource = makeResource()
+    const empty = filterToWhere(new Filter({ name: 'empty:' }, resource), users)
+    const nonEmpty = filterToWhere(new Filter({ name: 'nempty:' }, resource), users)
+
+    expect(paramValues(empty)).toEqual([''])
+    expect(paramValues(nonEmpty)).toEqual([''])
   })
 
   it('uses array-contains for scalar-list columns with a single needle', () => {

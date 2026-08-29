@@ -344,6 +344,18 @@ describe('DrizzleResource.aggregateTimeSeries', () => {
     ])
   })
 
+  it('resolves the metadata path when it differs from the TypeScript table key', async () => {
+    const { resource } = makeResource({
+      selectRows: [{ bucket: '2026-01-05', value: 1 }],
+    })
+    const result = await resource.aggregateTimeSeries(new Filter({}, resource), {
+      ...tsQuery,
+      dateField: 'created_at',
+    })
+
+    expect(result.series[0]?.points).toEqual([{ date: '2026-01-05', value: 1 }])
+  })
+
   it('skips NULL-valued buckets so all-NULL aggregates match the Prisma adapter', async () => {
     const { resource } = makeResource({
       selectRows: [

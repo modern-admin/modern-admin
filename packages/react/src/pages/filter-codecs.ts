@@ -89,3 +89,54 @@ export function encodeNumericFilter(op: NumericFilterOp, from: string, to: strin
   if (op === 'between') return from || to ? `between:${from},${to}` : ''
   return from ? `${op}:${from}` : ''
 }
+
+// ─── Reference filters ──────────────────────────────────────────────────────
+
+export type ReferenceFilterOp = 'eq' | 'neq' | 'empty' | 'nempty'
+
+const REFERENCE_OP_SET = new Set<string>(['eq', 'neq', 'empty', 'nempty'])
+export const ALL_REFERENCE_OPS: ReferenceFilterOp[] = ['eq', 'neq', 'empty', 'nempty']
+export const REFERENCE_NULLARY: ReadonlySet<string> = new Set(['empty', 'nempty'])
+
+export function parseReferenceFilter(raw: string): { op: ReferenceFilterOp; val: string } {
+  if (!raw) return { op: 'eq', val: '' }
+  const colonIdx = raw.indexOf(':')
+  if (colonIdx === -1) return { op: 'eq', val: raw }
+  const prefix = raw.slice(0, colonIdx)
+  if (!REFERENCE_OP_SET.has(prefix)) return { op: 'eq', val: raw }
+  return { op: prefix as ReferenceFilterOp, val: raw.slice(colonIdx + 1) }
+}
+
+export function encodeReferenceFilter(op: ReferenceFilterOp, val: string): string {
+  if (REFERENCE_NULLARY.has(op)) return `${op}:`
+  return val ? `${op}:${val}` : ''
+}
+
+// ─── Date filters ───────────────────────────────────────────────────────────
+
+export type DateFilterOp = 'between' | 'empty' | 'nempty'
+
+const DATE_OP_SET = new Set<string>(['between', 'empty', 'nempty'])
+export const ALL_DATE_OPS: DateFilterOp[] = ['between', 'empty', 'nempty']
+export const DATE_NULLARY: ReadonlySet<string> = new Set(['empty', 'nempty'])
+
+export function parseDateFilter(raw: string): { op: DateFilterOp; from: string; to: string } {
+  if (!raw) return { op: 'between', from: '', to: '' }
+  const colonIdx = raw.indexOf(':')
+  if (colonIdx === -1) return { op: 'between', from: raw, to: '' }
+  const prefix = raw.slice(0, colonIdx)
+  if (!DATE_OP_SET.has(prefix)) return { op: 'between', from: raw, to: '' }
+  if (prefix === 'between') {
+    const rest = raw.slice(colonIdx + 1)
+    const commaIdx = rest.indexOf(',')
+    return commaIdx === -1
+      ? { op: 'between', from: rest, to: '' }
+      : { op: 'between', from: rest.slice(0, commaIdx), to: rest.slice(commaIdx + 1) }
+  }
+  return { op: prefix as DateFilterOp, from: '', to: '' }
+}
+
+export function encodeDateFilter(op: DateFilterOp, from: string, to: string): string {
+  if (DATE_NULLARY.has(op)) return `${op}:`
+  return from || to ? `between:${from},${to}` : ''
+}

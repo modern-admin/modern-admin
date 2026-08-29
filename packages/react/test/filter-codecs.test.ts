@@ -1,9 +1,13 @@
 import { describe, expect, test } from 'bun:test'
 import {
+  encodeDateFilter,
   encodeFilter,
   encodeNumericFilter,
+  encodeReferenceFilter,
+  parseDateFilter,
   parseFilterString,
   parseNumericFilter,
+  parseReferenceFilter,
 } from '../src/pages/filter-codecs.js'
 
 describe('parseFilterString', () => {
@@ -123,5 +127,53 @@ describe('encodeNumericFilter', () => {
       const { op, from, to } = parseNumericFilter(raw)
       expect(encodeNumericFilter(op, from, to)).toBe(raw)
     }
+  })
+})
+
+describe('reference filter codec', () => {
+  test('legacy bare ids remain equality filters', () => {
+    expect(parseReferenceFilter('customer-1')).toEqual({ op: 'eq', val: 'customer-1' })
+  })
+
+  test('supports equality, negation and nullary operators', () => {
+    expect(parseReferenceFilter('neq:customer-1')).toEqual({ op: 'neq', val: 'customer-1' })
+    expect(parseReferenceFilter('empty:')).toEqual({ op: 'empty', val: '' })
+    expect(parseReferenceFilter('nempty:')).toEqual({ op: 'nempty', val: '' })
+    expect(encodeReferenceFilter('eq', 'customer-1')).toBe('eq:customer-1')
+    expect(encodeReferenceFilter('neq', 'customer-1')).toBe('neq:customer-1')
+    expect(encodeReferenceFilter('empty', 'ignored')).toBe('empty:')
+    expect(encodeReferenceFilter('nempty', 'ignored')).toBe('nempty:')
+  })
+
+  test('value-taking operators disappear when no record is selected', () => {
+    expect(encodeReferenceFilter('eq', '')).toBe('')
+    expect(encodeReferenceFilter('neq', '')).toBe('')
+  })
+})
+
+describe('date filter codec', () => {
+  test('empty input defaults to a blank range', () => {
+    expect(parseDateFilter('')).toEqual({ op: 'between', from: '', to: '' })
+  })
+
+  test('supports complete and one-sided ranges', () => {
+    expect(parseDateFilter('between:2026-01-01,2026-01-31')).toEqual({
+      op: 'between',
+      from: '2026-01-01',
+      to: '2026-01-31',
+    })
+    expect(encodeDateFilter('between', '2026-01-01', '')).toBe('between:2026-01-01,')
+    expect(encodeDateFilter('between', '', '2026-01-31')).toBe('between:,2026-01-31')
+  })
+
+  test('supports empty and non-empty dates', () => {
+    expect(parseDateFilter('empty:')).toEqual({ op: 'empty', from: '', to: '' })
+    expect(parseDateFilter('nempty:')).toEqual({ op: 'nempty', from: '', to: '' })
+    expect(encodeDateFilter('empty', 'ignored', 'ignored')).toBe('empty:')
+    expect(encodeDateFilter('nempty', 'ignored', 'ignored')).toBe('nempty:')
+  })
+
+  test('blank range disappears', () => {
+    expect(encodeDateFilter('between', '', '')).toBe('')
   })
 })

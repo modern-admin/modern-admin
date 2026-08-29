@@ -32,7 +32,7 @@ import {
   type TimeSeriesStep,
 } from '@modern-admin/core'
 import { DrizzleProperty, extractForeignKeys, findPrimaryColumn } from './property.js'
-import { filterToWhere, findOptionsToDrizzle } from './converters.js'
+import { filterToWhere, findOptionsToDrizzle, findTableColumn } from './converters.js'
 import type {
   DrizzleClientLike,
   DrizzleColumn,
@@ -166,7 +166,7 @@ export class DrizzleResource extends BaseResource {
     field: string,
     options?: { limit?: number; search?: string },
   ): Promise<string[]> {
-    const column = this.table[field] as DrizzleColumn | undefined
+    const column = findTableColumn(this.table, field)
     if (!column) return []
     const prop = this.property(field)
     if (!prop || prop.type() !== 'string') return []
@@ -226,7 +226,7 @@ export class DrizzleResource extends BaseResource {
     const isPg = this.dialect === 'pg'
     const conds: unknown[] = []
     for (const field of fields) {
-      const col = this.table[field] as DrizzleColumn | undefined
+      const col = findTableColumn(this.table, field)
       if (!col) continue
       const prop = this.property(field)
       if (!prop || prop.type() !== 'string') continue
@@ -322,7 +322,7 @@ export class DrizzleResource extends BaseResource {
     filter: Filter,
     query: TimeSeriesQuery,
   ): Promise<{ series: TimeSeriesSeries[]; sql: string }> {
-    const dateCol = this.table[query.dateField] as DrizzleColumn | undefined
+    const dateCol = findTableColumn(this.table, query.dateField)
     if (!dateCol) {
       throw new Error(
         `aggregateTimeSeries: dateField "${query.dateField}" not found on resource "${this._id}"`,
@@ -333,14 +333,14 @@ export class DrizzleResource extends BaseResource {
       if (!query.field) {
         throw new Error(`aggregateTimeSeries: metric "${query.metric}" requires "field"`)
       }
-      fieldCol = this.table[query.field] as DrizzleColumn | undefined
+      fieldCol = findTableColumn(this.table, query.field)
       if (!fieldCol) {
         throw new Error(`aggregateTimeSeries: field "${query.field}" not found`)
       }
     }
     let groupCol: DrizzleColumn | undefined
     if (query.groupBy) {
-      groupCol = this.table[query.groupBy] as DrizzleColumn | undefined
+      groupCol = findTableColumn(this.table, query.groupBy)
       if (!groupCol) {
         throw new Error(`aggregateTimeSeries: groupBy "${query.groupBy}" not found`)
       }

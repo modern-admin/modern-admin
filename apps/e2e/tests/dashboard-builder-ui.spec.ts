@@ -142,6 +142,35 @@ test.describe('Dashboard chart builder — UI', () => {
     await expect(page.getByText('E2E KPI Posts')).toBeVisible({ timeout: 15_000 })
   })
 
+  test('persists operator-based chart filters', async ({ page, request }) => {
+    await page.goto('/')
+    await page.getByRole('button', { name: /^Add chart$/ }).click()
+    const dialog = page.getByRole('dialog')
+
+    await dialog.locator('#chart-title').fill('Filtered posts')
+    await selectTriggerById(page, 'chart-resource').click()
+    await pickOption(page, /^Posts/)
+    await selectTriggerById(page, 'chart-datefield').click()
+    await pickOption(page, 'Published At')
+    await dialog.getByRole('tab', { name: 'Filters' }).click()
+
+    await selectTriggerById(page, 'flt-publishedAt').click()
+    await pickOption(page, 'Is empty')
+    await selectTriggerById(page, 'flt-title').click()
+    await pickOption(page, 'Is not empty')
+
+    await dialog.getByRole('button', { name: /^Save chart$/ }).click()
+    await expect(dialog).toBeHidden()
+
+    const response = await request.get(adminApi('/dashboard'))
+    expect(response.status()).toBe(200)
+    const body = (await response.json()) as {
+      dashboard: { charts: Array<{ title: string; filters: Record<string, string> }> }
+    }
+    const chart = body.dashboard.charts.find((item) => item.title === 'Filtered posts')
+    expect(chart?.filters).toMatchObject({ publishedAt: 'empty:', title: 'nempty:' })
+  })
+
   test('Save is disabled when the date field is cleared', async ({ page }) => {
     await page.goto('/')
     await page.getByRole('button', { name: /^Add chart$/ }).click()
