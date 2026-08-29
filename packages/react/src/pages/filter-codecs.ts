@@ -6,7 +6,7 @@
 // `{ op, val }` / `{ op, from, to }` shapes the filter UIs work with. Kept
 // framework-free so they're unit-testable without React.
 
-export { decodeInFilterPayload, encodeInFilterPayload } from '@modern-admin/core'
+export { decodeInFilterValues, encodeInFilterValues } from '@modern-admin/core'
 
 // ─── String filters ─────────────────────────────────────────────────────────
 // Legacy values (no prefix) default to `co` (contains) for strings.
@@ -36,6 +36,7 @@ export function parseFilterString(raw: string): { op: StringFilterOp; val: strin
   const colonIdx = raw.indexOf(':')
   if (colonIdx === -1) return { op: 'co', val: raw }
   const prefix = raw.slice(0, colonIdx)
+  if (prefix === 'in-json') return { op: 'in', val: raw.slice(colonIdx + 1) }
   if (STRING_OPS.has(prefix)) return { op: prefix as StringFilterOp, val: raw.slice(colonIdx + 1) }
   return { op: 'co', val: raw }
 }

@@ -302,7 +302,7 @@ describe('filterToWhere — in operator', () => {
   })
 
   test('in with JSON payload preserves commas inside string values', () => {
-    expect(where({ name: 'in:json:["Smith, John"]' })).toEqual({
+    expect(where({ name: 'in-json:["Smith, John"]' })).toEqual({
       name: { in: ['Smith, John'] },
     })
   })

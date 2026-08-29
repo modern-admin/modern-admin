@@ -63,8 +63,8 @@ export {
 // Filter
 export {
   Filter,
-  decodeInFilterPayload,
-  encodeInFilterPayload,
+  decodeInFilterValues,
+  encodeInFilterValues,
   FILTER_OPERATORS,
   MATCHING_PATTERNS,
   PARAM_SEPARATOR,

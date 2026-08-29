@@ -249,7 +249,7 @@ test.describe('Dashboard chart builder — UI', () => {
         dashboard: { charts: Array<{ title: string; filters: Record<string, string> }> }
       }
       const chart = body.dashboard.charts.find((item) => item.title === 'Comma-safe filter')
-      expect(chart?.filters.name).toBe(`in:json:${JSON.stringify([name])}`)
+      expect(chart?.filters.name).toBe(`in-json:${JSON.stringify([name])}`)
     } finally {
       await deleteCustomerSilently(request, customerId)
     }

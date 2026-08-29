@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type APIRequestContext, type Page } from '@playwright/test'
 
 /**
  * Regression coverage for the "Is one of" (`in`) filter.
@@ -44,7 +44,19 @@ import { expect, test, type Page } from '@playwright/test'
 
 const API_URL = process.env.E2E_API_URL ?? 'http://localhost:3001'
 const adminApi = (path: string): string => `${API_URL}/admin/api${path}`
-const jsonInFilter = (values: readonly string[]): string => `in:json:${JSON.stringify(values)}`
+const jsonInFilter = (values: readonly string[]): string => `in-json:${JSON.stringify(values)}`
+
+async function createCustomer(
+  request: APIRequestContext,
+  name: string,
+  email: string,
+): Promise<string> {
+  const response = await request.post(adminApi('/resources/customers/actions/new'), {
+    data: { email, name, tier: 'free' },
+  })
+  expect(response.ok()).toBeTruthy()
+  return String((await response.json()).record.id)
+}
 
 /** Filters trigger in the toolbar (icon + "Filters" label). */
 function filtersTrigger(page: Page) {
@@ -116,6 +128,41 @@ test.describe('Filter — "Is one of" (in) operator: API', () => {
     const records = body.records as Array<{ params: { tier: string | null } }>
     for (const r of records) {
       expect(r.params.tier).toBe('free')
+    }
+  })
+
+  test('legacy value starting with the former JSON marker remains literal', async ({ request }) => {
+    const suffix = Date.now()
+    const decodedName = `a-${suffix}`
+    const literalName = `json:["${decodedName}"]`
+    const customerIds: string[] = []
+
+    try {
+      customerIds.push(
+        await createCustomer(request, literalName, `legacy-json-literal-${suffix}@example.com`),
+      )
+      customerIds.push(
+        await createCustomer(request, decodedName, `legacy-json-decoded-${suffix}@example.com`),
+      )
+      const result = await request.get(
+        adminApi(
+          `/resources/customers/actions/list?${new URLSearchParams({
+            'filters[name]': `in:${literalName}`,
+            perPage: '200',
+          }).toString()}`,
+        ),
+      )
+
+      expect(result.status()).toBe(200)
+      const body = await result.json()
+      const names = (body.records as Array<{ params: { name: string } }>).map(
+        (record) => record.params.name,
+      )
+      expect(names).toEqual([literalName])
+    } finally {
+      for (const id of customerIds) {
+        await request.delete(adminApi(`/resources/customers/records/${id}/actions/delete`))
+      }
     }
   })
 

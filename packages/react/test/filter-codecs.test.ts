@@ -2,11 +2,11 @@ import { describe, expect, test } from 'bun:test'
 import {
   encodeDateFilter,
   encodeFilter,
-  encodeInFilterPayload,
+  encodeInFilterValues,
   encodeNumericFilter,
   encodeReferenceFilter,
   parseDateFilter,
-  decodeInFilterPayload,
+  decodeInFilterValues,
   parseFilterString,
   parseNumericFilter,
   parseReferenceFilter,
@@ -66,13 +66,19 @@ describe('encodeFilter', () => {
   })
 
   test('in picker payload round-trips values containing commas', () => {
-    const payload = encodeInFilterPayload(['Smith, John', 'Alice'])
-    const raw = encodeFilter('in', payload)
+    const raw = encodeInFilterValues(['Smith, John', 'Alice'])
     const parsed = parseFilterString(raw)
 
-    expect(raw).toBe('in:json:["Smith, John","Alice"]')
+    expect(raw).toBe('in-json:["Smith, John","Alice"]')
     expect(parsed.op).toBe('in')
-    expect(decodeInFilterPayload(parsed.val)).toEqual(['Smith, John', 'Alice'])
+    expect(decodeInFilterValues(raw)).toEqual(['Smith, John', 'Alice'])
+  })
+
+  test('legacy values using the former JSON marker remain literal', () => {
+    const raw = 'in:json:["a"]'
+
+    expect(parseFilterString(raw)).toEqual({ op: 'in', val: 'json:["a"]' })
+    expect(decodeInFilterValues(raw)).toEqual(['json:["a"]'])
   })
 
   test('round-trips through parse', () => {

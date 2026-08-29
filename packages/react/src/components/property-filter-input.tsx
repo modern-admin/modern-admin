@@ -26,10 +26,10 @@ import {
   ALL_STRING_OPS,
   type DateFilterOp,
   DATE_NULLARY,
-  decodeInFilterPayload,
+  decodeInFilterValues,
   encodeDateFilter,
   encodeFilter,
-  encodeInFilterPayload,
+  encodeInFilterValues,
   encodeNumericFilter,
   encodeReferenceFilter,
   type NumericFilterOp,
@@ -451,8 +451,12 @@ function StringFilterInput({
         <FilterValuePicker
           resourceId={resourceId}
           field={property.path}
-          selected={decodeInFilterPayload(text).map(String)}
-          onChange={(selected) => emit('in', encodeInFilterPayload(selected))}
+          selected={decodeInFilterValues(value).map(String)}
+          onChange={(selected) => {
+            setOp('in')
+            setText('')
+            onChange(encodeInFilterValues(selected))
+          }}
           preloadedValues={isLowCardinality ? distinctValues : undefined}
         />
       ) : !NULLARY_OPS.has(op) ? (

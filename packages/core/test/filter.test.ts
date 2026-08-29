@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { decodeInFilterPayload, encodeInFilterPayload, Filter } from '../src/filter/filter.js'
+import { decodeInFilterValues, encodeInFilterValues, Filter } from '../src/filter/filter.js'
 import { FakeResource } from './_helpers/fake-adapter.js'
 
 const resource = new FakeResource({ name: 'users', rows: [] })
@@ -37,15 +37,22 @@ describe('Filter', () => {
 
   test('JSON in payload preserves commas and other string delimiters', () => {
     const values = ['Smith, John', 'quoted "value"', 'path\\segment', '']
-    const payload = encodeInFilterPayload(values)
+    const encoded = encodeInFilterValues(values)
 
-    expect(payload).toBe('json:["Smith, John","quoted \\"value\\"","path\\\\segment",""]')
-    expect(decodeInFilterPayload(payload)).toEqual(values)
-    expect(new Filter({ name: `in:${payload}` }, resource).get('name')?.value).toEqual(values)
+    expect(encoded).toBe('in-json:["Smith, John","quoted \\"value\\"","path\\\\segment",""]')
+    expect(decodeInFilterValues(encoded)).toEqual(values)
+    expect(new Filter({ name: encoded }, resource).get('name')?.value).toEqual(values)
   })
 
   test('legacy comma-separated in payload remains supported', () => {
-    expect(decodeInFilterPayload('a,b,c')).toEqual(['a', 'b', 'c'])
+    expect(decodeInFilterValues('in:a,b,c')).toEqual(['a', 'b', 'c'])
     expect(new Filter({ name: 'in:a,b,c' }, resource).get('name')?.value).toEqual(['a', 'b', 'c'])
+  })
+
+  test('legacy values starting with the former JSON marker remain literal', () => {
+    const legacy = 'in:json:["a"]'
+
+    expect(decodeInFilterValues(legacy)).toEqual(['json:["a"]'])
+    expect(new Filter({ name: legacy }, resource).get('name')?.value).toEqual(['json:["a"]'])
   })
 })
