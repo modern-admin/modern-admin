@@ -113,6 +113,38 @@ test.describe('Dashboard chart builder — UI', () => {
     await expect(page.getByRole('button', { name: /^Add group$/ })).toBeVisible()
   })
 
+  test('renders builder tooltips outside the scroll-clipped dialog', async ({ page }) => {
+    await page.goto('/')
+    await page.getByRole('button', { name: /^Add chart$/ }).click()
+    await page.setViewportSize({ width: 375, height: 812 })
+
+    const dialog = page.getByRole('dialog')
+    const orderTooltipTrigger = dialog.locator('button:has(svg.lucide-info)').first()
+    await orderTooltipTrigger.hover()
+
+    const tooltip = page.getByRole('tooltip')
+    await expect(tooltip).toBeVisible()
+    await expect(tooltip).toHaveText('Lower numbers come first.')
+    expect(await tooltip.evaluate((element) => element.closest('[role="dialog"]'))).toBeNull()
+
+    const bounds = await tooltip.boundingBox()
+    expect(bounds).not.toBeNull()
+    expect(bounds!.x).toBeGreaterThanOrEqual(0)
+    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(
+      await page.evaluate(() => window.innerWidth),
+    )
+    expect(
+      await tooltip.evaluate((element) => {
+        const rect = element.getBoundingClientRect()
+        const topmost = document.elementFromPoint(
+          rect.left + rect.width / 2,
+          rect.top + rect.height / 2,
+        )
+        return topmost === element || element.contains(topmost)
+      }),
+    ).toBe(true)
+  })
+
   test('creates a KPI chart through the builder and persists across reload', async ({ page }) => {
     await page.goto('/')
     await page.getByRole('button', { name: /^Add chart$/ }).click()
