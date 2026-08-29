@@ -8,7 +8,6 @@
     "start": "bun run src/main.ts",
     "build": "tsc -b",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint .",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:push": "prisma db push",

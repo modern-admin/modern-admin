@@ -16,12 +16,7 @@
 // the admin plugin endpoint — the panel will invoke that directly via
 // a custom record action in a follow-up phase.
 
-import {
-  AdminController,
-  AdminResource,
-  Before,
-  type AdminActionContext,
-} from '@modern-admin/nest'
+import { AdminController, AdminResource, Before, type AdminActionContext } from '@modern-admin/nest'
 import { adminSource } from '../source-registry.js'
 import type { AdminUserRow } from '../types.js'
 

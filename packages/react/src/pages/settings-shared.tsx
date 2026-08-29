@@ -71,7 +71,11 @@ export function SettingsCard({
  * left edge of the table flush with the card; from `sm+` the negative
  * margin is removed.
  */
-export function SettingsTableScroll({ children }: { children: React.ReactNode }): React.ReactElement {
+export function SettingsTableScroll({
+  children,
+}: {
+  children: React.ReactNode
+}): React.ReactElement {
   return <div className="-mx-6 overflow-x-auto sm:mx-0">{children}</div>
 }
 
@@ -81,7 +85,11 @@ interface SettingsEmptyProps {
   description?: React.ReactNode
 }
 
-export function SettingsEmpty({ icon: Icon, title, description }: SettingsEmptyProps): React.ReactElement {
+export function SettingsEmpty({
+  icon: Icon,
+  title,
+  description,
+}: SettingsEmptyProps): React.ReactElement {
   return (
     <Empty className="border-0">
       <EmptyHeader>

@@ -31,8 +31,7 @@ const handler = async (
   // by hooks join it via the adapters' ambient tx client; non-DB side
   // effects (file removal) remain best-effort, as on single delete.
   const deleteAction = resource.decorate().getAction('delete')?.merged as
-    | Action<RecordActionResponse>
-    | undefined
+    Action<RecordActionResponse> | undefined
   const beforeHooks = toArray<Before>(deleteAction?.before)
   const afterHooks = toArray<After<RecordActionResponse>>(deleteAction?.after)
 

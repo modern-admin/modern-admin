@@ -55,9 +55,7 @@ export const validateProjectName = (name: string): void => {
     throw new Error('Project name must be 214 characters or fewer.')
   }
   if (/[\\/]/.test(trimmed) || trimmed.includes('..')) {
-    throw new Error(
-      `Invalid project name "${name}": path separators and ".." are not allowed.`,
-    )
+    throw new Error(`Invalid project name "${name}": path separators and ".." are not allowed.`)
   }
   if (!PROJECT_NAME_RE.test(trimmed)) {
     throw new Error(

@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  Logger,
-  type OnModuleDestroy,
-  type OnModuleInit,
-} from '@nestjs/common'
+import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common'
 import { DiscoveryService, Reflector } from '@nestjs/core'
 import { InjectQueue } from '@nestjs/bullmq'
 import type { Job, Queue } from 'bullmq'
@@ -142,9 +137,7 @@ export class CronService implements OnModuleInit, OnModuleDestroy {
       if (!registeredNames.has(scheduler.name)) {
         try {
           await this.cronQueue.removeJobScheduler(scheduler.key)
-          this.logger.log(
-            `Removed stale cron scheduler: ${scheduler.name} (key=${scheduler.key})`,
-          )
+          this.logger.log(`Removed stale cron scheduler: ${scheduler.name} (key=${scheduler.key})`)
         } catch (err: unknown) {
           this.logger.error(`Failed to remove stale scheduler ${scheduler.name}`, err)
         }

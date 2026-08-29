@@ -66,9 +66,7 @@ async function workspaceVersions(): Promise<Map<string, string>> {
 async function main(): Promise<void> {
   const versions = await workspaceVersions()
   const coreVersion = versions.get('packages/core')
-  const coreVersionFixed = coreVersion
-    ? await syncCoreFallbackVersion(coreVersion)
-    : false
+  const coreVersionFixed = coreVersion ? await syncCoreFallbackVersion(coreVersion) : false
   const original = await readFile(LOCK_PATH, 'utf8')
   let lock = original
   let fixes = 0

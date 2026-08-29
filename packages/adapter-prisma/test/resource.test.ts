@@ -61,11 +61,7 @@ describe('PrismaResource', () => {
   })
 
   test('findMany filters by id list', async () => {
-    const { resource } = buildResource([
-      { id: '1' },
-      { id: '2' },
-      { id: '3' },
-    ])
+    const { resource } = buildResource([{ id: '1' }, { id: '2' }, { id: '3' }])
     const recs = await resource.findMany(['1', '3'])
     expect(recs.map((r) => r.id()).sort()).toEqual(['1', '3'])
   })
@@ -310,7 +306,11 @@ describe('PrismaResource.aggregateTimeSeries', () => {
     return { resource, delegate }
   }
 
-  const row = (id: string, createdAt: string) => ({ id, email: `${id}@x`, createdAt: new Date(createdAt) })
+  const row = (id: string, createdAt: string) => ({
+    id,
+    email: `${id}@x`,
+    createdAt: new Date(createdAt),
+  })
 
   test('buckets rows by day and counts them', async () => {
     const { resource } = buildTsResource([
@@ -334,9 +334,7 @@ describe('PrismaResource.aggregateTimeSeries', () => {
   })
 
   test('flags truncated and bounds the scan via take when the cap is exceeded', async () => {
-    const rows = Array.from({ length: 5 }, (_, i) =>
-      row(String(i), `2026-01-0${i + 1}T00:00:00Z`),
-    )
+    const rows = Array.from({ length: 5 }, (_, i) => row(String(i), `2026-01-0${i + 1}T00:00:00Z`))
     const { resource, delegate } = buildTsResource(rows, 2)
     const result = await resource.aggregateTimeSeries(new Filter(undefined, resource), {
       dateField: 'createdAt',
@@ -379,14 +377,26 @@ describe('PrismaResource id casting', () => {
     name: 'BigItem',
     fields: [
       {
-        name: 'id', kind: 'scalar', type: 'BigInt',
-        isList: false, isRequired: true, isUnique: false,
-        isId: true, isReadOnly: false, hasDefaultValue: true,
+        name: 'id',
+        kind: 'scalar',
+        type: 'BigInt',
+        isList: false,
+        isRequired: true,
+        isUnique: false,
+        isId: true,
+        isReadOnly: false,
+        hasDefaultValue: true,
       },
       {
-        name: 'name', kind: 'scalar', type: 'String',
-        isList: false, isRequired: false, isUnique: false,
-        isId: false, isReadOnly: false, hasDefaultValue: false,
+        name: 'name',
+        kind: 'scalar',
+        type: 'String',
+        isList: false,
+        isRequired: false,
+        isUnique: false,
+        isId: false,
+        isReadOnly: false,
+        hasDefaultValue: false,
       },
     ],
   }

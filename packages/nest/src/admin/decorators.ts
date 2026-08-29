@@ -62,9 +62,7 @@ export interface ActionMeta {
   name: string
   actionType: ActionType
   isVisible?: boolean | ((ctx: ActionContext) => boolean | Promise<boolean>)
-  isAccessible?:
-    | boolean
-    | ((ctx: ActionContext) => boolean | Promise<boolean>)
+  isAccessible?: boolean | ((ctx: ActionContext) => boolean | Promise<boolean>)
   nesting?: ActionNesting
   guard?: string
   component?: string | null
@@ -78,8 +76,7 @@ export interface ActionMeta {
   invalidates?: true | string[]
 }
 
-export interface ActionDecoratorOptions
-  extends Omit<ActionMeta, 'methodName' | 'name'> {
+export interface ActionDecoratorOptions extends Omit<ActionMeta, 'methodName' | 'name'> {
   name?: string
 }
 
@@ -93,8 +90,7 @@ export interface ActionDecoratorOptions
  */
 export function Action(opts: ActionDecoratorOptions): MethodDecorator {
   return (target, propertyKey) => {
-    const list: ActionMeta[] =
-      Reflect.getMetadata(ADMIN_ACTIONS_META, target.constructor) ?? []
+    const list: ActionMeta[] = Reflect.getMetadata(ADMIN_ACTIONS_META, target.constructor) ?? []
     list.push({
       ...opts,
       methodName: String(propertyKey),
@@ -132,9 +128,7 @@ const defineHook = (
  * receives the typed `AdminActionContext` and may mutate `payload` /
  * `query` to alter the request before the handler runs.
  */
-export function Before(
-  action: BuiltInActionName | string,
-): MethodDecorator {
+export function Before(action: BuiltInActionName | string): MethodDecorator {
   return (target, propertyKey) => defineHook(target, propertyKey, 'before', action)
 }
 
@@ -143,9 +137,7 @@ export function Before(
  * receives `(ctx, response)` and may return a modified response or void
  * to keep the response unchanged.
  */
-export function After(
-  action: BuiltInActionName | string,
-): MethodDecorator {
+export function After(action: BuiltInActionName | string): MethodDecorator {
   return (target, propertyKey) => defineHook(target, propertyKey, 'after', action)
 }
 

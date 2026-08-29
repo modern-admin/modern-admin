@@ -18,7 +18,11 @@ import { test, expect, type APIRequestContext } from '@playwright/test'
 const API = process.env.E2E_API_URL ?? 'http://localhost:3001'
 const admin = (path: string): string => `${API}/admin/api${path}`
 
-type Revision = { id: string; op: 'create' | 'update' | 'delete'; snapshot: Record<string, unknown> }
+type Revision = {
+  id: string
+  op: 'create' | 'update' | 'delete'
+  snapshot: Record<string, unknown>
+}
 
 async function listRevisions(request: APIRequestContext, id: string): Promise<Revision[]> {
   const res = await request.get(admin(`/resources/customers/records/${id}/history`))
@@ -41,10 +45,13 @@ async function waitForRevisions(
 ): Promise<Revision[]> {
   let latest: Revision[] = []
   await expect
-    .poll(async () => {
-      latest = await listRevisions(request, id)
-      return predicate(latest)
-    }, { timeout: 10_000 })
+    .poll(
+      async () => {
+        latest = await listRevisions(request, id)
+        return predicate(latest)
+      },
+      { timeout: 10_000 },
+    )
     .toBe(true)
   return latest
 }
@@ -65,10 +72,9 @@ async function editCustomer(
   id: string,
   payload: Record<string, unknown>,
 ): Promise<void> {
-  const res = await request.patch(
-    admin(`/resources/customers/records/${id}/actions/edit`),
-    { data: payload },
-  )
+  const res = await request.patch(admin(`/resources/customers/records/${id}/actions/edit`), {
+    data: payload,
+  })
   expect(res.ok(), await res.text().catch(() => '')).toBeTruthy()
 }
 
@@ -123,10 +129,8 @@ test.describe('Record history endpoint', () => {
 
       // Grab the most recent edit revision (the one we want to undo). Poll
       // until the background append of the update revision has settled.
-      const list = await waitForRevisions(
-        request,
-        customer.id,
-        (revs) => revs.some((r) => r.op === 'update'),
+      const list = await waitForRevisions(request, customer.id, (revs) =>
+        revs.some((r) => r.op === 'update'),
       )
       const editRev = list.find((r) => r.op === 'update')
       expect(editRev, 'expected at least one update revision').toBeDefined()
@@ -135,7 +139,7 @@ test.describe('Record history endpoint', () => {
       const showBefore = await request.get(
         admin(`/resources/customers/records/${customer.id}/actions/show`),
       )
-      expect(((await showBefore.json()).record.params.name as string)).toBe(renamed)
+      expect((await showBefore.json()).record.params.name as string).toBe(renamed)
 
       // Revert the edit revision → record name should snap back to `original`.
       const revertRes = await request.post(

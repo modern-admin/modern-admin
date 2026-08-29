@@ -14,13 +14,7 @@
 //   * a required field is `aria-required`, not just a red asterisk.
 
 import * as React from 'react'
-import {
-  Field,
-  FieldError,
-  FieldLabel,
-  FormField,
-  InfoTooltip,
-} from '@modern-admin/ui'
+import { Field, FieldError, FieldLabel, FormField, InfoTooltip } from '@modern-admin/ui'
 import type { Control } from 'react-hook-form'
 import { PropertyEditor, isGroupPropertyEditor } from '../property-renderer.js'
 import type { PropertyJSON } from '../types.js'
@@ -69,13 +63,12 @@ export function RecordFormField({
             <FieldLabel id={labelId} htmlFor={isGroup ? undefined : controlId}>
               {property.label}
               {property.description ? (
-                <InfoTooltip
-                  content={property.description}
-                  ariaLabel={property.description}
-                />
+                <InfoTooltip content={property.description} ariaLabel={property.description} />
               ) : null}
               {property.isRequired && (
-                <span className="ml-1 text-destructive" aria-hidden="true">*</span>
+                <span className="ml-1 text-destructive" aria-hidden="true">
+                  *
+                </span>
               )}
             </FieldLabel>
             <PropertyEditor

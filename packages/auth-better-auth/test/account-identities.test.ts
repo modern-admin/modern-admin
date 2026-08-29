@@ -53,7 +53,9 @@ describe('Better Auth 1.7 account identities', () => {
     }
     expect(isCredentialAccountIdentity(valid, 'u-1')).toBe(true)
     expect(isCredentialAccountIdentity({ ...valid, providerId: 'google' }, 'u-1')).toBe(false)
-    expect(isCredentialAccountIdentity({ ...valid, issuer: 'local:oauth:credential' }, 'u-1')).toBe(false)
+    expect(isCredentialAccountIdentity({ ...valid, issuer: 'local:oauth:credential' }, 'u-1')).toBe(
+      false,
+    )
     expect(isCredentialAccountIdentity({ ...valid, accountId: 'u-2' }, 'u-1')).toBe(false)
   })
 })

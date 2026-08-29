@@ -40,9 +40,7 @@ test.describe('Wizard create page (/resources/products/new)', () => {
     // assert against the desktop viewport which Playwright uses by default.
     // `exact: true` keeps us off the mobile-only "Step 1 of 3 · Basic info"
     // summary that lives in the same DOM tree.
-    await expect(
-      page.getByText('Basic info', { exact: true }),
-    ).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText('Basic info', { exact: true })).toBeVisible({ timeout: 10_000 })
     await expect(page.getByText('Pricing', { exact: true })).toBeVisible()
     await expect(page.getByText('Media & tags', { exact: true })).toBeVisible()
 
@@ -107,10 +105,9 @@ test.describe('Wizard create page (/resources/products/new)', () => {
       expect(Number(body.record.params.price)).toBeCloseTo(19.99, 2)
 
       // Show-page redirect after a successful create.
-      await expect(page).toHaveURL(
-        new RegExp(`/resources/products/${createdId}$`),
-        { timeout: 10_000 },
-      )
+      await expect(page).toHaveURL(new RegExp(`/resources/products/${createdId}$`), {
+        timeout: 10_000,
+      })
     } finally {
       if (createdId) {
         await cleanupProduct(request, createdId)

@@ -96,16 +96,15 @@ test.describe('Per-record action visibility', () => {
     expect(sawOutOfStock, 'no out-of-stock product in the fixture').toBeTruthy()
   })
 
-  test('actions declared isVisible: false are not advertised to the SPA', async ({
-    request,
-  }) => {
+  test('actions declared isVisible: false are not advertised to the SPA', async ({ request }) => {
     // `values` and `search` back comboboxes and the global search box; they
     // are not operator-facing menu entries.
     const res = await request.get(adminApi('/config'))
     expect(res.ok()).toBeTruthy()
     const config = await res.json()
-    const products = (config.resources as Array<{ id: string; actions: Array<{ name: string }> }>)
-      .find((r) => r.id === 'products')!
+    const products = (
+      config.resources as Array<{ id: string; actions: Array<{ name: string }> }>
+    ).find((r) => r.id === 'products')!
     const names = products.actions.map((a) => a.name)
     expect(names).not.toContain('values')
     expect(names).not.toContain('search')

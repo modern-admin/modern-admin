@@ -23,7 +23,12 @@ const isUuidColumn = (name: string): boolean => /(^id$|Id$|_id$|uuid)/i.test(nam
 export class PrismaProperty extends BaseProperty {
   public readonly field: DmmfField
 
-  constructor(field: DmmfField, enums: readonly DmmfEnum[] = [], position = 1, referenceOverride: string | null = null) {
+  constructor(
+    field: DmmfField,
+    enums: readonly DmmfEnum[] = [],
+    position = 1,
+    referenceOverride: string | null = null,
+  ) {
     const enumDef = field.kind === 'enum' ? enums.find((e) => e.name === field.type) : undefined
     const reference = field.kind === 'object' ? field.type : referenceOverride
     const type = PrismaProperty.resolveType(field, enumDef !== undefined, reference !== null)
@@ -50,7 +55,11 @@ export class PrismaProperty extends BaseProperty {
     this.field = field
   }
 
-  private static resolveType(field: DmmfField, isEnum: boolean, isReference: boolean): PropertyType {
+  private static resolveType(
+    field: DmmfField,
+    isEnum: boolean,
+    isReference: boolean,
+  ): PropertyType {
     if (isEnum) return 'enum'
     if (field.kind === 'object' || isReference) return 'reference'
     if (field.kind === 'scalar') {

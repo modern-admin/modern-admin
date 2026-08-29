@@ -4,8 +4,7 @@ import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { renderTemplate, scaffold, validateProjectName } from '../src/scaffold.js'
 
-const makeTempDir = async (): Promise<string> =>
-  mkdtemp(join(tmpdir(), 'modern-admin-create-'))
+const makeTempDir = async (): Promise<string> => mkdtemp(join(tmpdir(), 'modern-admin-create-'))
 
 describe('renderTemplate', () => {
   test('substitutes {{name}} tokens', () => {
@@ -125,9 +124,7 @@ describe('scaffold', () => {
   test('rejects non-empty target directory', async () => {
     await writeFile(join(templateDir, 'a.txt'), 'hello')
     await writeFile(join(targetDir, 'existing.txt'), 'do not touch')
-    await expect(scaffold({ name: 'x', templateDir, targetDir })).rejects.toThrow(
-      /not empty/i,
-    )
+    await expect(scaffold({ name: 'x', templateDir, targetDir })).rejects.toThrow(/not empty/i)
   })
 
   test('creates target directory when missing', async () => {

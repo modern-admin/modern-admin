@@ -1,4 +1,10 @@
-import { rowToConfigEntry, type ConfigEntry, type ConfigScope, type IConfigStore, uuidv7 } from '@modern-admin/core'
+import {
+  rowToConfigEntry,
+  type ConfigEntry,
+  type ConfigScope,
+  type IConfigStore,
+  uuidv7,
+} from '@modern-admin/core'
 import type { PrismaDelegate } from '../types.js'
 
 interface ConfigRow {
@@ -12,7 +18,8 @@ interface ConfigRow {
 
 const GLOBAL_SCOPE_ID = ''
 const encodeScopeId = (scopeId: string | null): string => scopeId ?? GLOBAL_SCOPE_ID
-const decodeScopeId = (scopeId: string): string | null => scopeId === GLOBAL_SCOPE_ID ? null : scopeId
+const decodeScopeId = (scopeId: string): string | null =>
+  scopeId === GLOBAL_SCOPE_ID ? null : scopeId
 
 // Prisma stores the global scope as a non-null sentinel (`''`); decode it back
 // to `null` before handing the row to the shared mapper.
@@ -20,8 +27,7 @@ const rowToEntry = (row: ConfigRow) =>
   rowToConfigEntry({ ...row, scopeId: decodeScopeId(row.scopeId) })
 
 export class PrismaConfigStore implements IConfigStore {
-  constructor(private readonly delegate: PrismaDelegate<ConfigRow>) {
-  }
+  constructor(private readonly delegate: PrismaDelegate<ConfigRow>) {}
 
   async get(scope: ConfigScope, scopeId: string | null, key: string): Promise<unknown> {
     // findFirst instead of findUnique: tolerates accidental duplicates and

@@ -156,9 +156,7 @@ describe('AdminClient — custom actions', () => {
   })
 
   it('encodes ids and action names into the path', async () => {
-    const [req] = await captureRequests((c) =>
-      c.fetchRecordAction('a b', 'x/y', 'send push'),
-    )
+    const [req] = await captureRequests((c) => c.fetchRecordAction('a b', 'x/y', 'send push'))
     expect(req?.url).toBe(
       'https://example.test/admin/api/resources/a%20b/records/x%2Fy/actions/send%20push',
     )

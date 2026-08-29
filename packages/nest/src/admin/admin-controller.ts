@@ -55,9 +55,7 @@ const dispatch = <R extends ActionResponse>(
  * Generic base for all admin controllers. `TRow` describes the underlying
  * row shape; it flows into typed payload / record helpers.
  */
-export abstract class AdminController<
-  TRow extends object = Record<string, unknown>,
-> {
+export abstract class AdminController<TRow extends object = Record<string, unknown>> {
   /** Wired by the scanner before any method is invoked. */
   public admin!: ModernAdmin
   /** Wired by the scanner once the resource has been built. */
@@ -67,54 +65,34 @@ export abstract class AdminController<
   // Subclasses override any of them to customise behaviour.
 
   async list(ctx: ListContext<TRow>): Promise<ListActionResponse> {
-    return dispatch<ListActionResponse>(
-      listAction.handler as never,
-      ctx,
-    )
+    return dispatch<ListActionResponse>(listAction.handler as never, ctx)
   }
 
   async show(ctx: ShowContext<TRow>): Promise<RecordActionResponse> {
-    return dispatch<RecordActionResponse>(
-      showAction.handler as never,
-      ctx,
-    )
+    return dispatch<RecordActionResponse>(showAction.handler as never, ctx)
   }
 
   async new(ctx: NewContext<TRow>): Promise<RecordActionResponse> {
-    return dispatch<RecordActionResponse>(
-      newAction.handler as never,
-      ctx,
-    )
+    return dispatch<RecordActionResponse>(newAction.handler as never, ctx)
   }
 
   async edit(ctx: EditContext<TRow>): Promise<RecordActionResponse> {
-    return dispatch<RecordActionResponse>(
-      editAction.handler as never,
-      ctx,
-    )
+    return dispatch<RecordActionResponse>(editAction.handler as never, ctx)
   }
 
   async delete(ctx: DeleteContext<TRow>): Promise<RecordActionResponse> {
-    return dispatch<RecordActionResponse>(
-      deleteAction.handler as never,
-      ctx,
-    )
+    return dispatch<RecordActionResponse>(deleteAction.handler as never, ctx)
   }
 
   async bulkDelete(ctx: BulkDeleteContext<TRow>): Promise<ActionResponse> {
-    return dispatch<ActionResponse>(
-      bulkDeleteAction.handler as never,
-      ctx,
-    )
+    return dispatch<ActionResponse>(bulkDeleteAction.handler as never, ctx)
   }
 
   async search(ctx: SearchContext<TRow>): Promise<ActionResponse> {
-    return dispatch<ActionResponse>(
-      searchAction.handler as never,
-      ctx,
-    )
+    return dispatch<ActionResponse>(searchAction.handler as never, ctx)
   }
 }
 
-export type AdminControllerClass<TRow extends object = Record<string, unknown>> =
-  new (...args: never[]) => AdminController<TRow>
+export type AdminControllerClass<TRow extends object = Record<string, unknown>> = new (
+  ...args: never[]
+) => AdminController<TRow>

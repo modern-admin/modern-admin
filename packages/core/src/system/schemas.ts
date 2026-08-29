@@ -139,13 +139,7 @@ export type HistoryEntry = z.infer<typeof historyEntryZ>
 
 // ─── AI tasks ─────────────────────────────────────────────────────────────
 
-export const aiTaskStatusZ = z.enum([
-  'pending',
-  'running',
-  'succeeded',
-  'failed',
-  'cancelled',
-])
+export const aiTaskStatusZ = z.enum(['pending', 'running', 'succeeded', 'failed', 'cancelled'])
 export type AiTaskStatus = z.infer<typeof aiTaskStatusZ>
 
 /**

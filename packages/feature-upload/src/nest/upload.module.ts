@@ -39,10 +39,7 @@ export class ModernAdminUploadModule {
       module: ModernAdminUploadModule,
       global: options.global ?? false,
       controllers: [UploadController],
-      providers: [
-        { provide: UPLOAD_MODULE_OPTIONS, useValue: options },
-        UploadSweeperService,
-      ],
+      providers: [{ provide: UPLOAD_MODULE_OPTIONS, useValue: options }, UploadSweeperService],
       exports: [UPLOAD_MODULE_OPTIONS],
     }
   }

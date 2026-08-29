@@ -53,20 +53,20 @@ export const truncateDate = (d: Date, step: TimeSeriesStep): string => {
   const m = d.getUTCMonth()
   const day = d.getUTCDate()
   switch (step) {
-  case 'day':
-    return isoDate(new Date(Date.UTC(y, m, day)))
-  case 'week': {
-    // ISO week: Monday-based.
-    const dow = (d.getUTCDay() + 6) % 7 // 0 = Mon
-    const monday = new Date(Date.UTC(y, m, day - dow))
-    return isoDate(monday)
-  }
-  case 'month':
-    return isoDate(new Date(Date.UTC(y, m, 1)))
-  case 'year':
-    return isoDate(new Date(Date.UTC(y, 0, 1)))
-  case 'all':
-    return isoDate(d)
+    case 'day':
+      return isoDate(new Date(Date.UTC(y, m, day)))
+    case 'week': {
+      // ISO week: Monday-based.
+      const dow = (d.getUTCDay() + 6) % 7 // 0 = Mon
+      const monday = new Date(Date.UTC(y, m, day - dow))
+      return isoDate(monday)
+    }
+    case 'month':
+      return isoDate(new Date(Date.UTC(y, m, 1)))
+    case 'year':
+      return isoDate(new Date(Date.UTC(y, 0, 1)))
+    case 'all':
+      return isoDate(d)
   }
 }
 
@@ -125,11 +125,7 @@ export const buildDisplaySql = (
   const groupBy: string[] = []
   if (query.step !== 'all') groupBy.push('bucket')
   if (query.groupBy) groupBy.push('series_key')
-  const lines = [
-    `SELECT ${cols.join(', ')}`,
-    `FROM ${t}`,
-    `WHERE ${where.join(' AND ')}`,
-  ]
+  const lines = [`SELECT ${cols.join(', ')}`, `FROM ${t}`, `WHERE ${where.join(' AND ')}`]
   if (groupBy.length) lines.push(`GROUP BY ${groupBy.join(', ')}`)
   if (query.step !== 'all') lines.push('ORDER BY bucket ASC')
   return lines.join('\n')

@@ -40,5 +40,4 @@ export interface GraphqlSchemaExtension {
  * object — both forms are accepted.
  */
 export type GraphqlExtensionFactory =
-  | GraphqlSchemaExtension
-  | ((ctx: ExtensionContext) => GraphqlSchemaExtension)
+  GraphqlSchemaExtension | ((ctx: ExtensionContext) => GraphqlSchemaExtension)

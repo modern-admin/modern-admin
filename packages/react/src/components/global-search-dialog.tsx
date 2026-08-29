@@ -76,10 +76,7 @@ const highlightMatch = (text: string, needle: string): React.ReactNode => {
     }
     if (idx > cursor) nodes.push(text.slice(cursor, idx))
     nodes.push(
-      <mark
-        key={key++}
-        className="rounded-sm bg-primary/20 px-0.5 text-foreground"
-      >
+      <mark key={key++} className="rounded-sm bg-primary/20 px-0.5 text-foreground">
         {text.slice(idx, idx + target.length)}
       </mark>,
     )
@@ -164,9 +161,7 @@ export function GlobalSearchDialog({
       {/* Visually-hidden title + description keep Radix Dialog accessibility
           warnings quiet and provide a label for screen readers. */}
       <DialogTitle className="sr-only">{t('globalSearch:title')}</DialogTitle>
-      <DialogDescription className="sr-only">
-        {t('globalSearch:description')}
-      </DialogDescription>
+      <DialogDescription className="sr-only">{t('globalSearch:description')}</DialogDescription>
       <CommandInput
         placeholder={t('globalSearch:placeholder')}
         value={query}
@@ -226,13 +221,13 @@ export function GlobalSearchDialog({
             role="status"
             aria-live="polite"
           >
-            <Loader2 className="size-4 animate-spin" aria-hidden="true"/>
+            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
             <span>{t('common:loading')}</span>
           </div>
         )}
         {groups.map((group, idx) => (
           <React.Fragment key={group.resourceId}>
-            {idx > 0 && <CommandSeparator/>}
+            {idx > 0 && <CommandSeparator />}
             <CommandGroup heading={group.resourceName}>
               {group.records.map((hit) => (
                 <CommandItem

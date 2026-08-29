@@ -1,0 +1,14 @@
+**/node_modules/**
+**/dist/**
+**/coverage/**
+**/.next/**
+**/playwright-report/**
+**/test-results/**
+**/*.d.ts
+**/src/generated/**
+**/.dev-logs/**
+**/CHANGELOG.md
+bun.lock
+*.tsbuildinfo
+apps/e2e/**/*-chromium-linux.png
+packages/create/ui-template/**

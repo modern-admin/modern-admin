@@ -16,7 +16,13 @@ interface ServiceCalls {
   delete: string[]
 }
 
-const fakeRow = (overrides: Partial<{ id: string; name: string | null; permissions: Record<string, string[]> }> = {}) => ({
+const fakeRow = (
+  overrides: Partial<{
+    id: string
+    name: string | null
+    permissions: Record<string, string[]>
+  }> = {},
+) => ({
   id: overrides.id ?? 'k1',
   name: overrides.name ?? 'Key 1',
   start: 'abc12',
@@ -38,11 +44,18 @@ const buildService = (): { service: IApiKeyService; calls: ServiceCalls } => {
     },
     async create(body) {
       calls.create.push(body)
-      return { ...fakeRow({ id: 'k_new', name: body.name, permissions: body.permissions }), key: 'plaintext-secret-xyz' }
+      return {
+        ...fakeRow({ id: 'k_new', name: body.name, permissions: body.permissions }),
+        key: 'plaintext-secret-xyz',
+      }
     },
     async update(body) {
       calls.update.push(body)
-      return fakeRow({ id: body.keyId, name: body.name ?? null, permissions: body.permissions ?? undefined })
+      return fakeRow({
+        id: body.keyId,
+        name: body.name ?? null,
+        permissions: body.permissions ?? undefined,
+      })
     },
     async delete(keyId) {
       calls.delete.push(keyId)
@@ -77,10 +90,17 @@ describe('ApiKeysController', () => {
         return { keys: [fakeRow({ id: 'k_env' })] }
       },
       async create(body) {
-        return { ...fakeRow({ id: 'k_new', name: body.name, permissions: body.permissions }), key: 'plaintext-secret-xyz' }
+        return {
+          ...fakeRow({ id: 'k_new', name: body.name, permissions: body.permissions }),
+          key: 'plaintext-secret-xyz',
+        }
       },
       async update(body) {
-        return fakeRow({ id: body.keyId, name: body.name ?? null, permissions: body.permissions ?? undefined })
+        return fakeRow({
+          id: body.keyId,
+          name: body.name ?? null,
+          permissions: body.permissions ?? undefined,
+        })
       },
       async delete() {
         return { success: true }
@@ -104,9 +124,7 @@ describe('ApiKeysController', () => {
     const admin = buildAdmin([{ name: 'users', rows: [] }])
     const { service } = buildService()
     const ctrl = new ApiKeysController(admin, service)
-    await expect(
-      ctrl.list({ headers: {} } as never),
-    ).rejects.toThrow(ForbiddenException)
+    await expect(ctrl.list({ headers: {} } as never)).rejects.toThrow(ForbiddenException)
   })
 
   test('list throws 501 when no service is registered', async () => {
@@ -129,10 +147,7 @@ describe('ApiKeysController', () => {
     const { service } = buildService()
     const ctrl = new ApiKeysController(admin, service)
     await expect(
-      ctrl.create(
-        { name: 'CI bot', permissions: { posts: ['list'] } } as unknown,
-        sessionReq(),
-      ),
+      ctrl.create({ name: 'CI bot', permissions: { posts: ['list'] } } as unknown, sessionReq()),
     ).rejects.toThrow(/Unknown resource: posts/)
   })
 

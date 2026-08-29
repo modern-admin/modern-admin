@@ -93,14 +93,9 @@ describe('resolveResourceCacheConfig', () => {
         list: { jitterRatio: 0, crossReplicaLock: true },
       },
     }
-    expect(resolveResourceCacheConfig(opts, 'list')).toEqual(enabled(
-      DEFAULT_TTL_SECONDS.list,
-      0,
-      true,
-    ))
-    expect(resolveResourceCacheConfig(opts, 'show')).toEqual(enabled(
-      DEFAULT_TTL_SECONDS.show,
-      0.2,
-    ))
+    expect(resolveResourceCacheConfig(opts, 'list')).toEqual(
+      enabled(DEFAULT_TTL_SECONDS.list, 0, true),
+    )
+    expect(resolveResourceCacheConfig(opts, 'show')).toEqual(enabled(DEFAULT_TTL_SECONDS.show, 0.2))
   })
 })

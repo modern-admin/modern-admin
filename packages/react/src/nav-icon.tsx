@@ -34,7 +34,13 @@ const subscribe = (notify: () => void): (() => void) => {
 
 const getRegistry = (): IconRegistry | null => registry
 
-export function NavIcon({ name, className }: { name?: string; className?: string }): React.ReactElement {
+export function NavIcon({
+  name,
+  className,
+}: {
+  name?: string
+  className?: string
+}): React.ReactElement {
   const icons = React.useSyncExternalStore(subscribe, getRegistry, getRegistry)
   React.useEffect(() => {
     if (name && !registry) void loadRegistry()

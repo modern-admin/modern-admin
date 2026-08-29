@@ -71,7 +71,10 @@ describe('Custom @Action', () => {
     class C extends AdminController<{ id: string; name: string }> {
       @Action({ actionType: 'record', name: 'ping' })
       ping(ctx: AdminActionContext<{ id: string; name: string }>) {
-        return { record: ctx.record!.toJSON(), notice: { message: 'pong', type: 'success' as const } }
+        return {
+          record: ctx.record!.toJSON(),
+          notice: { message: 'pong', type: 'success' as const },
+        }
       }
     }
     const { admin } = await buildContext([C])
@@ -92,17 +95,17 @@ describe('Custom @Action', () => {
         nesting: ['Publishing', { name: 'Danger Zone', icon: 'TriangleAlert' }],
       })
       ping(ctx: AdminActionContext<{ id: string; name: string }>) {
-        return { record: ctx.record!.toJSON(), notice: { message: 'pong', type: 'success' as const } }
+        return {
+          record: ctx.record!.toJSON(),
+          notice: { message: 'pong', type: 'success' as const },
+        }
       }
     }
     const { admin } = await buildContext([C])
     expect(admin.findResource('users').decorate().toJSON().actions).toContainEqual(
       expect.objectContaining({
         name: 'ping',
-        nesting: [
-          { name: 'Publishing' },
-          { name: 'Danger Zone', icon: 'TriangleAlert' },
-        ],
+        nesting: [{ name: 'Publishing' }, { name: 'Danger Zone', icon: 'TriangleAlert' }],
       }),
     )
   })
@@ -176,7 +179,9 @@ describe('Express query parser auto-fix', () => {
     const settings: Record<string, unknown> = { 'query parser': 'simple' }
     const expressApp = {
       get: (k: string) => settings[k],
-      set: (k: string, v: unknown) => { settings[k] = v },
+      set: (k: string, v: unknown) => {
+        settings[k] = v
+      },
     }
     const httpAdapter = { getInstance: () => expressApp }
     await buildWithHttpAdapter(httpAdapter)
@@ -188,7 +193,9 @@ describe('Express query parser auto-fix', () => {
     const settings: Record<string, unknown> = { 'query parser': customParser }
     const expressApp = {
       get: (k: string) => settings[k],
-      set: (k: string, v: unknown) => { settings[k] = v },
+      set: (k: string, v: unknown) => {
+        settings[k] = v
+      },
     }
     const httpAdapter = { getInstance: () => expressApp }
     await buildWithHttpAdapter(httpAdapter)

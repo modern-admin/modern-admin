@@ -18,9 +18,15 @@ import {
   type FindOptions,
   type ParamsType,
 } from '@modern-admin/core'
-import { GlobalSearchController, type GlobalSearchResponse } from '../src/global-search.controller.js'
+import {
+  GlobalSearchController,
+  type GlobalSearchResponse,
+} from '../src/global-search.controller.js'
 
-interface Row { id: string; [key: string]: unknown }
+interface Row {
+  id: string
+  [key: string]: unknown
+}
 interface Table {
   name: string
   rows: Row[]
@@ -29,10 +35,13 @@ interface Table {
 }
 
 class TestDb extends BaseDatabase {
-  constructor(private readonly tables: Table[]) { super(tables) }
+  constructor(private readonly tables: Table[]) {
+    super(tables)
+  }
   static override isAdapterFor(db: unknown): boolean {
-    return Array.isArray(db) && db.every(
-      (t) => typeof t === 'object' && t !== null && 'rows' in t && 'properties' in t,
+    return (
+      Array.isArray(db) &&
+      db.every((t) => typeof t === 'object' && t !== null && 'rows' in t && 'properties' in t)
     )
   }
   override resources(): BaseResource[] {
@@ -41,20 +50,33 @@ class TestDb extends BaseDatabase {
 }
 
 class TestResource extends BaseResource {
-  constructor(private readonly table: Table) { super() }
+  constructor(private readonly table: Table) {
+    super()
+  }
   static override isAdapterFor(raw: unknown): boolean {
     return typeof raw === 'object' && raw !== null && 'rows' in raw && 'properties' in raw
   }
-  override id(): string { return this.table.name }
-  override databaseName(): string { return 'test' }
-  override properties(): BaseProperty[] { return this.table.properties }
+  override id(): string {
+    return this.table.name
+  }
+  override databaseName(): string {
+    return 'test'
+  }
+  override properties(): BaseProperty[] {
+    return this.table.properties
+  }
 
   private matches(row: Row, filter: Filter): boolean {
     for (const entry of Object.values(filter.filters)) {
       const cell = row[entry.path]
       const needle = entry.value
       if (typeof needle === 'string' && entry.operator === null) {
-        if (!String(cell ?? '').toLowerCase().includes(needle.toLowerCase())) return false
+        if (
+          !String(cell ?? '')
+            .toLowerCase()
+            .includes(needle.toLowerCase())
+        )
+          return false
         continue
       }
       if (String(cell) !== String(needle)) return false
@@ -120,7 +142,7 @@ const productsTable = (): Table => ({
   ],
   rows: [
     { id: 'p1', sku: 'ALPHA-1', description: 'Premium widget — pioneered by Ada' },
-    { id: 'p2', sku: 'BETA-2',  description: 'Standard gadget' },
+    { id: 'p2', sku: 'BETA-2', description: 'Standard gadget' },
   ],
 })
 
@@ -169,7 +191,10 @@ describe('GlobalSearchController', () => {
       adapters: [adapter],
     })
     const ctrl = new GlobalSearchController(admin)
-    const res = (await ctrl.search({ q: 'example.com', perResourceLimit: 1 }, req())) as GlobalSearchResponse
+    const res = (await ctrl.search(
+      { q: 'example.com', perResourceLimit: 1 },
+      req(),
+    )) as GlobalSearchResponse
     const customers = res.groups.find((g) => g.resourceId === 'customers')
     expect(customers).toBeDefined()
     expect(customers!.records).toHaveLength(1)

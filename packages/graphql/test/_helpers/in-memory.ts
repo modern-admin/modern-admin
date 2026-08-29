@@ -76,9 +76,7 @@ export class MemResource extends BaseResource {
   override async find(_filter: Filter, options: FindOptions): Promise<BaseRecord[]> {
     const offset = options.offset ?? 0
     const limit = options.limit ?? this.table.rows.length
-    return this.table.rows
-      .slice(offset, offset + limit)
-      .map((row) => new BaseRecord(row, this))
+    return this.table.rows.slice(offset, offset + limit).map((row) => new BaseRecord(row, this))
   }
 
   override async findOne(id: string): Promise<BaseRecord | null> {

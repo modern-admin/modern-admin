@@ -2,9 +2,8 @@ import { type DynamicModule, Module } from '@nestjs/common'
 import { BullModule } from '@nestjs/bullmq'
 import type { QueueModuleOptions, QueueRootOptions } from './queue.types.js'
 
-export const normalizeQueueConnection = (
-  connection: QueueRootOptions['connection'],
-): object => typeof connection === 'string' ? { url: connection } : connection
+export const normalizeQueueConnection = (connection: QueueRootOptions['connection']): object =>
+  typeof connection === 'string' ? { url: connection } : connection
 
 /**
  * BullMQ integration module for modern-admin NestJS applications.
@@ -83,9 +82,7 @@ export class QueueModule {
    * Exports the BullMQ tokens so they can be injected via `@InjectQueue(name)`.
    */
   static register(options: QueueModuleOptions): DynamicModule {
-    const queueModules = options.queues.map((name) =>
-      BullModule.registerQueue({ name }),
-    )
+    const queueModules = options.queues.map((name) => BullModule.registerQueue({ name }))
     const flowModules = (options.flows ?? []).map((name) =>
       BullModule.registerFlowProducer({ name }),
     )

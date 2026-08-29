@@ -18,7 +18,10 @@ bun run dev:api                # NestJS reference API   → http://localhost:300
 bun run dev:web                # Vite + React SPA       → http://localhost:3000
 
 bun run typecheck              # every workspace (tsc --noEmit)
-bun run lint                   # every workspace (eslint .)
+bun run lint                   # oxlint over the whole repo (single root .oxlintrc.json)
+bun run lint:fix               # oxlint --fix
+bun run format                 # prettier --write .
+bun run format:check           # prettier --check . (CI gate)
 bun run test                   # unit tests, per workspace (= bun --filter '*' test)
 bun test                       # unit tests, one bun runner over the whole repo
 bun run build                  # build all publishable packages
@@ -28,7 +31,7 @@ bun run e2e                    # Playwright suite (apps/e2e)
 Scoping to one package — both forms work:
 
 ```bash
-bun run --filter '@modern-admin/react' lint      # by package name
+bun run oxlint packages/react                    # lint one package (path scope)
 bun test --cwd packages/core                     # tests of one package
 bun test packages/core/test/filter.test.ts       # a single test file
 bun test --cwd packages/core -t 'parses between' # a single test by name
@@ -62,8 +65,9 @@ start the web app manually and then run e2e, start it on 5173.
 
 ### CI (`.github/workflows/ci.yml`)
 
-Three jobs: **check** (install → `prisma generate` → typecheck → lint → unit
-tests; hermetic, no services), **e2e** (docker-compose Postgres/Redis,
+Three jobs: **check** (install → `prisma generate` → typecheck → lint →
+`format:check` → unit tests; hermetic, no services), **e2e** (docker-compose
+Postgres/Redis,
 `prisma:push`, `build:standalone`, everything except the visual-regression
 spec), and **e2e-visual** (that spec only, inside
 `mcr.microsoft.com/playwright:v1.62.1-noble` so the checked-in
@@ -111,7 +115,7 @@ through. Read it before changing action behavior. Order:
    subscriptions, room joins) must use it rather than re-implementing checks.
 5. `before` hooks (single fn or array, chained) → `action.handler` → `after`
    hooks.
-6. `invalidateMutationCaches` — runs *after* all hooks so anything an
+6. `invalidateMutationCaches` — runs _after_ all hooks so anything an
    after-hook writes (m2m junction diffs, upload persistence) can't be
    re-cached by a concurrent read. Built-ins (`new`/`edit`/`delete`/
    `bulkDelete`) participate automatically; custom actions opt in with
@@ -156,7 +160,7 @@ overwriting):
 directory per resource) shared by the host apps. Because
 `@AdminResource({ source: () => … })` thunks are evaluated during
 `ResourcesFactory.buildResources`, and each adapter needs a different raw
-source shape, shared controllers reference resources by *logical id* and
+source shape, shared controllers reference resources by _logical id_ and
 resolve through `apps/_shared/src/admin/source-registry.ts`: the host app calls
 `registerAdminSource(id, factory)` at module-load time (before Nest bootstrap)
 and controllers declare `source: () => adminSource('customers')`.
@@ -180,25 +184,26 @@ Majors currently locked, with the gotchas they impose:
 
 | Package                 | Current major | Notes                                                                          |
 | ----------------------- | ------------- | ------------------------------------------------------------------------------ |
-| typescript              | 7.x           | native compiler; tooling uses the side-by-side TS 6 JS API                      |
-| eslint / typescript-eslint | 10.x / 8.x | flat config, `eslint.base.config.mjs` at the root                              |
+| typescript              | 7.x           | native compiler (`tsc` handles both `--noEmit` typecheck and `-p` build emit)  |
+| oxlint                  | 1.x           | Rust linter, single root `.oxlintrc.json`; no formatting rules (Prettier does) |
+| prettier                | 3.x           | formatter; `.prettierrc.json` (no `;`, single quotes, trailing all, 2-space)   |
 | @nestjs/*               | 12.x          | Node 20+; transport package peer dependencies require `^12`                    |
 | zod                     | 4.x           | new error API; `z.email()` instead of `.email()`                               |
 | vite                    | 8.x           | Node bumped; SSR/Rolldown changes                                              |
 | @vitejs/plugin-react    | 6.x           | matches Vite 8                                                                 |
-| tailwindcss             | 4.x           | CSS-first config (`@theme`, `@import "tailwindcss"`) — no `tailwind.config.js`  |
-| react / react-dom       | 19.x          | `import type { ReactElement } from 'react'`, not `JSX.Element`                  |
+| tailwindcss             | 4.x           | CSS-first config (`@theme`, `@import "tailwindcss"`) — no `tailwind.config.js` |
+| react / react-dom       | 19.x          | `import type { ReactElement } from 'react'`, not `JSX.Element`                 |
 | @tanstack/react-query   | 5.x           |                                                                                |
 | @tanstack/react-router  | 1.x           | browser history via `createBrowserHistory()`; NOT TanStack Start (no SSR)      |
-| @tanstack/react-table   | 9.x           | explicit `tableFeatures`; core row model is automatic                           |
+| @tanstack/react-table   | 9.x           | explicit `tableFeatures`; core row model is automatic                          |
 | @hookform/resolvers     | 5.x           | API tweaks                                                                     |
 | lucide-react            | 1.x           | verify icon names                                                              |
 | tailwind-merge          | 3.x           |                                                                                |
 | prisma / @prisma/client | 7.x           | new ESM engine, client API changes                                             |
 | drizzle-orm             | 0.45.x        | driver API and schema-gen changes                                              |
-| better-auth             | 1.7+          | Account identity is the unique `(issuer, accountId)` pair                       |
+| better-auth             | 1.7+          | Account identity is the unique `(issuer, accountId)` pair                      |
 | graphql                 | 17.x          |                                                                                |
-| bullmq                  | 6.x           | queue clients are exposed through `Queue.getBackend()`                          |
+| bullmq                  | 6.x           | queue clients are exposed through `Queue.getBackend()`                         |
 | recharts                | 3.x           |                                                                                |
 
 When touching one of those, expect to update call sites for the new API.
@@ -212,15 +217,21 @@ When touching one of those, expect to update call sites for the new API.
   `"types": ["bun"]` (not `bun-types`).
 - **NestJS legacy decorators** (`apps/api-prisma`, `packages/nest`): keep
   `experimentalDecorators`, `emitDecoratorMetadata`,
-  `useDefineForClassFields: false`. Related: the ESLint rule
-  `@typescript-eslint/consistent-type-imports` is **intentionally disabled** —
-  its autofix rewrites constructor param types to `import type`, which erases
-  at runtime and breaks Nest DI. Don't enable it.
-- **Lint is mandatory.** After **any** code change run `bun run lint` (or scope
-  it to the touched package) and fix every error; use `--fix` for the
-  mechanical ones. Never leave lint red. Do not add or swap a lint/format tool
-  without asking. Enforced style: 2-space indent, single quotes, **no
-  semicolons**, trailing commas in multiline, spaces inside braces.
+  `useDefineForClassFields: false`. Related: the oxlint rule
+  `typescript/consistent-type-imports` must stay **disabled** (it is off by
+  default — do not enable it). Its autofix rewrites constructor param types to
+  `import type`, which erases at runtime and breaks Nest DI.
+- **Lint + format are mandatory.** After **any** code change run `bun run lint`
+  (oxlint over the whole repo; scope one package with `bun run oxlint <path>`)
+  and `bun run format` (Prettier), and fix every error; `bun run lint:fix` for
+  the mechanical lint ones. Never leave lint red or formatting dirty — CI runs
+  `lint` **and** `format:check`. oxlint does **not** enforce formatting; Prettier
+  owns it (`.prettierrc.json`: no `;`, single quotes, trailing commas, 2-space,
+  spaces inside braces, `printWidth` 100). Do not add or swap a lint/format tool
+  without asking. The React-Compiler rule set (`react/set-state-in-effect`,
+  `react/static-components`, `react/refs`, …) is deliberately **not** enabled
+  (no compiler in this project); only `react/rules-of-hooks` +
+  `react/exhaustive-deps` run, on `*.tsx`/`*.jsx`.
 - **Tests** live in `<pkg>/test/` and run with `bun test`. Unit tests are
   hermetic — Redis is faked and no Postgres is required. E2E specs live in
   `apps/e2e/tests/` and need docker-compose services + `SEED_DEMO=1` fixtures.
@@ -283,7 +294,7 @@ When touching one of those, expect to update call sites for the new API.
   `styles.css` carries `@source "./**/*.{ts,tsx}"` (workspace) plus
   `@source "../src/**/*.{ts,tsx}"` (published, where the file ships from
   `dist/`), and composes upward with `@import "@modern-admin/<pkg>/styles.css"`.
-  Never point an `@source` at a *sibling* package — `@import` resolves package
+  Never point an `@source` at a _sibling_ package — `@import` resolves package
   specifiers, `@source` does not, so a relative hop across packages silently
   matches zero files under a non-hoisted node_modules layout (bun's isolated
   store, pnpm) and every class used only by that package vanishes. Apps import

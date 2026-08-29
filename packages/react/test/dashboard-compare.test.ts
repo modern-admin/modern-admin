@@ -48,10 +48,15 @@ describe('alignPreviousSeries', () => {
   it('re-plots previous points onto current buckets keeping sourceDate', () => {
     const prevRange = { from: '2026-06-26', to: '2026-06-30' }
     const aligned = alignPreviousSeries(
-      [{ key: '__total__', points: [
-        { date: '2026-06-26', value: 10 },
-        { date: '2026-06-28', value: 30 },
-      ] }],
+      [
+        {
+          key: '__total__',
+          points: [
+            { date: '2026-06-26', value: 10 },
+            { date: '2026-06-28', value: 30 },
+          ],
+        },
+      ],
       prevRange,
       currentBuckets,
       'day',
@@ -73,11 +78,16 @@ describe('alignPreviousSeries', () => {
     // Month step: current window spans 2 month buckets, previous spans 3.
     const curBuckets = ['2026-06-01', '2026-07-01']
     const aligned = alignPreviousSeries(
-      [{ key: '__total__', points: [
-        { date: '2026-04-01', value: 1 },
-        { date: '2026-05-01', value: 2 },
-        { date: '2026-06-01', value: 3 },
-      ] }],
+      [
+        {
+          key: '__total__',
+          points: [
+            { date: '2026-04-01', value: 1 },
+            { date: '2026-05-01', value: 2 },
+            { date: '2026-06-01', value: 3 },
+          ],
+        },
+      ],
       { from: '2026-04-20', to: '2026-06-15' },
       curBuckets,
       'month',
@@ -92,10 +102,15 @@ describe('alignPreviousSeries', () => {
   it('zero-pads the start when the previous window has fewer buckets', () => {
     const curBuckets = ['2026-05-01', '2026-06-01', '2026-07-01']
     const aligned = alignPreviousSeries(
-      [{ key: '__total__', points: [
-        { date: '2026-03-01', value: 5 },
-        { date: '2026-04-01', value: 7 },
-      ] }],
+      [
+        {
+          key: '__total__',
+          points: [
+            { date: '2026-03-01', value: 5 },
+            { date: '2026-04-01', value: 7 },
+          ],
+        },
+      ],
       { from: '2026-03-10', to: '2026-04-20' },
       curBuckets,
       'month',
@@ -125,7 +140,13 @@ describe('sumSeries / computeDelta', () => {
     expect(sumSeries([])).toBeNull()
     expect(
       sumSeries([
-        { key: 'a', points: [{ date: 'x', value: 1 }, { date: 'y', value: 2 }] },
+        {
+          key: 'a',
+          points: [
+            { date: 'x', value: 1 },
+            { date: 'y', value: 2 },
+          ],
+        },
         { key: 'b', points: [{ date: 'x', value: 3 }] },
       ]),
     ).toBe(6)

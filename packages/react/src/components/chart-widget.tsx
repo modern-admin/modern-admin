@@ -110,11 +110,13 @@ export function ChartWidget({
   // For very wide presets, automatically coarsen granularity so the point
   // count stays manageable — 3650 daily buckets for 'all' would render an
   // unreadable axis and cause significant memory pressure in Recharts.
-  const renderStep: AggregationStep =
-    isKpi ? 'all'
-      : config.timeRange.preset === 'all' && (config.step === 'day' || config.step === 'week') ? 'month'
-        : config.timeRange.preset === '1y' && config.step === 'day' ? 'week'
-          : config.step
+  const renderStep: AggregationStep = isKpi
+    ? 'all'
+    : config.timeRange.preset === 'all' && (config.step === 'day' || config.step === 'week')
+      ? 'month'
+      : config.timeRange.preset === '1y' && config.step === 'day'
+        ? 'week'
+        : config.step
 
   // Resolve the time-range preset to concrete from/to per render so cards
   // automatically reflect "now" as days roll over without re-saving.
@@ -266,10 +268,7 @@ export function ChartWidget({
       config.transform,
     ).map((s) => ({
       key: s.key,
-      label: t('dashboard:widget.previousSeries').replace(
-        '{label}',
-        seriesLabel(s.sourceKey),
-      ),
+      label: t('dashboard:widget.previousSeries').replace('{label}', seriesLabel(s.sourceKey)),
       points: s.points,
       dashed: true,
       hiddenWith: s.sourceKey,
@@ -292,9 +291,7 @@ export function ChartWidget({
   // Period-over-period delta on raw (pre-transform) totals.
   const delta = React.useMemo(
     () =>
-      compareActive && data
-        ? computeDelta(sumSeries(data.series), sumSeries(data.previous))
-        : null,
+      compareActive && data ? computeDelta(sumSeries(data.series), sumSeries(data.previous)) : null,
     [compareActive, data],
   )
 
@@ -357,9 +354,7 @@ export function ChartWidget({
             className="size-7"
             onClick={onWidthToggle}
             aria-label={
-              config.width === 'full'
-                ? t('dashboard:widget.shrink')
-                : t('dashboard:widget.expand')
+              config.width === 'full' ? t('dashboard:widget.shrink') : t('dashboard:widget.expand')
             }
           >
             {config.width === 'full' ? (
@@ -436,7 +431,8 @@ export function ChartWidget({
             have no effect. Quick filters apply immediately on change. */}
         {!unsupported && (
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            {quickFilterPaths.length > 0 && resourceConfig &&
+            {quickFilterPaths.length > 0 &&
+              resourceConfig &&
               quickFilterPaths.map((path) => {
                 const prop = resourceConfig.properties.find((p) => p.path === path)
                 if (!prop) return null
@@ -455,10 +451,7 @@ export function ChartWidget({
                 value={config.step === 'all' ? 'day' : config.step}
                 onValueChange={(v) => onStepChange(v as AggregationStep)}
               >
-                <SelectTrigger
-                  className="h-8 px-2 text-xs w-auto"
-                  aria-label={t('chart:step')}
-                >
+                <SelectTrigger className="h-8 px-2 text-xs w-auto" aria-label={t('chart:step')}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -591,9 +584,11 @@ export function ChartWidget({
               }}
               aria-label={sqlCopied ? t('common:copied') : t('common:copy')}
             >
-              {sqlCopied
-                ? <Check className="size-3 text-green-500" />
-                : <Copy className="size-3" />}
+              {sqlCopied ? (
+                <Check className="size-3 text-green-500" />
+              ) : (
+                <Copy className="size-3" />
+              )}
             </Button>
             <pre className="text-[11px] leading-snug bg-muted/50 border border-border rounded-md p-2 pr-8 overflow-x-auto whitespace-pre">
               {data.sql}
@@ -648,17 +643,16 @@ function QuickFilterInput({
   }
   if (property.availableValues && property.availableValues.length > 0) {
     return (
-      <Select
-        value={value || QF_NONE}
-        onValueChange={(v) => onChange(v === QF_NONE ? '' : v)}
-      >
+      <Select value={value || QF_NONE} onValueChange={(v) => onChange(v === QF_NONE ? '' : v)}>
         <SelectTrigger className="h-8 px-2 text-xs w-36">
           <SelectValue placeholder={ph} />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value={QF_NONE}>{ph}</SelectItem>
           {property.availableValues.map((opt) => (
-            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+            <SelectItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </SelectItem>
           ))}
         </SelectContent>
       </Select>
@@ -666,10 +660,7 @@ function QuickFilterInput({
   }
   if (property.type === 'boolean') {
     return (
-      <Select
-        value={value || QF_NONE}
-        onValueChange={(v) => onChange(v === QF_NONE ? '' : v)}
-      >
+      <Select value={value || QF_NONE} onValueChange={(v) => onChange(v === QF_NONE ? '' : v)}>
         <SelectTrigger className="h-8 px-2 text-xs w-36">
           <SelectValue placeholder={ph} />
         </SelectTrigger>
@@ -719,7 +710,9 @@ function prepareSeries(
 }
 
 interface KpiBodyProps {
-  data: { series: ReadonlyArray<TimeSeriesSeries>; previous?: ReadonlyArray<TimeSeriesSeries> } | undefined
+  data:
+    | { series: ReadonlyArray<TimeSeriesSeries>; previous?: ReadonlyArray<TimeSeriesSeries> }
+    | undefined
   transform: ReadonlyArray<ChartTransformStep>
   formatNumber: (n: number) => string
   labels: {
@@ -738,14 +731,7 @@ function KpiBody({ data, transform, formatNumber, labels }: KpiBodyProps): React
   const rawPrev = sumAll(data?.previous)
   const value = raw == null ? raw : applyTransform(raw, transform)
   const prev = rawPrev == null ? rawPrev : applyTransform(rawPrev, transform)
-  return (
-    <KpiCard
-      value={value}
-      previousValue={prev}
-      formatNumber={formatNumber}
-      labels={labels}
-    />
-  )
+  return <KpiCard value={value} previousValue={prev} formatNumber={formatNumber} labels={labels} />
 }
 
 function sumAll(series: ReadonlyArray<TimeSeriesSeries> | undefined): number | null {

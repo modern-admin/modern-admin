@@ -22,9 +22,11 @@ const chatMessageZ = z.object({
   content: z.string().min(1),
 })
 
-const clientContextZ = z.object({
-  pathname: z.string().min(1).max(2000).optional(),
-}).optional()
+const clientContextZ = z
+  .object({
+    pathname: z.string().min(1).max(2000).optional(),
+  })
+  .optional()
 
 const chatBodyZ = z.object({
   messages: z.array(chatMessageZ).min(1),
@@ -59,7 +61,10 @@ export class AiAssistantController {
   async chat(
     @Body() body: Record<string, unknown>,
     @Req() req: AdminRequest,
-  ): Promise<{ taskId: string; status: 'pending' | 'running' | 'succeeded' | 'failed' | 'cancelled' }> {
+  ): Promise<{
+    taskId: string
+    status: 'pending' | 'running' | 'succeeded' | 'failed' | 'cancelled'
+  }> {
     const parsed = chatBodyZ.parse(body)
     return this.aiAssistantService.enqueueChat(
       parsed.messages,

@@ -8,8 +8,6 @@
  * structurally, no casts required.
  */
 
-
-
 export interface PrismaDelegate<TRow = any> {
   findMany(args?: any): Promise<TRow[]>
   findUnique(args: { where: any }): Promise<TRow | null>
@@ -68,8 +66,8 @@ export function resolveDelegate(
   if (!delegate || typeof delegate.findMany !== 'function') {
     throw new Error(
       `[modern-admin/system-prisma] missing delegate "prisma.${name}". ` +
-      `Make sure the Modern Admin schema fragment is included in your schema.prisma ` +
-      `(see @modern-admin/system-prisma/schema), and that the Prisma client has been generated.`,
+        `Make sure the Modern Admin schema fragment is included in your schema.prisma ` +
+        `(see @modern-admin/system-prisma/schema), and that the Prisma client has been generated.`,
     )
   }
   return delegate

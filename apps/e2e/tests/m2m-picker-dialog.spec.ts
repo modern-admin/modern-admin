@@ -51,7 +51,10 @@ function fieldByLabel(page: Page, labelPattern: RegExp) {
 }
 
 test.describe('m2m picker — table dialog', () => {
-  test('clicking the trigger opens a dialog with the related-resource table', async ({ page, request }) => {
+  test('clicking the trigger opens a dialog with the related-resource table', async ({
+    page,
+    request,
+  }) => {
     await openPostEdit(page, request)
 
     const tags = fieldByLabel(page, /^tags$/i)
@@ -59,7 +62,10 @@ test.describe('m2m picker — table dialog', () => {
 
     // The picker exposes a single trigger button. Tagged as a regular button
     // — no combobox role — so we match by role + accessible text.
-    const trigger = tags.getByRole('button').filter({ hasText: /pick|manage/i }).first()
+    const trigger = tags
+      .getByRole('button')
+      .filter({ hasText: /pick|manage/i })
+      .first()
     await expect(trigger).toBeVisible()
     await trigger.click()
 
@@ -75,10 +81,16 @@ test.describe('m2m picker — table dialog', () => {
     await expect(dialog.locator('tbody tr').first()).toBeVisible({ timeout: 10_000 })
   })
 
-  test('selecting a row updates the staged count and Save commits a chip', async ({ page, request }) => {
+  test('selecting a row updates the staged count and Save commits a chip', async ({
+    page,
+    request,
+  }) => {
     await openPostEdit(page, request)
     const tags = fieldByLabel(page, /^tags$/i)
-    const trigger = tags.getByRole('button').filter({ hasText: /pick|manage/i }).first()
+    const trigger = tags
+      .getByRole('button')
+      .filter({ hasText: /pick|manage/i })
+      .first()
     await trigger.click()
 
     const dialog = page.getByRole('dialog')
@@ -86,7 +98,9 @@ test.describe('m2m picker — table dialog', () => {
 
     // Selection state pre-Save: read the staged count label in the footer,
     // toggle one row's checkbox, expect the count to bump.
-    const stagedBefore = (await dialog.locator('text=/\\d+\\s*selected/i').first().innerText()).trim()
+    const stagedBefore = (
+      await dialog.locator('text=/\\d+\\s*selected/i').first().innerText()
+    ).trim()
     const beforeMatch = stagedBefore.match(/(\d+)/)
     const before = beforeMatch ? Number(beforeMatch[1]) : 0
 
@@ -109,7 +123,10 @@ test.describe('m2m picker — table dialog', () => {
     // the new count baked in.
     const tagsAfter = fieldByLabel(page, /^tags$/i)
     await expect(
-      tagsAfter.getByRole('button').filter({ hasText: /manage/i }).first(),
+      tagsAfter
+        .getByRole('button')
+        .filter({ hasText: /manage/i })
+        .first(),
     ).toBeVisible({ timeout: 10_000 })
   })
 
@@ -120,10 +137,17 @@ test.describe('m2m picker — table dialog', () => {
     // Capture the trigger label before opening — it carries the current
     // committed count ("Manage selection (N)" or "Pick records").
     const beforeLabel = (
-      await tags.getByRole('button').filter({ hasText: /pick|manage/i }).first().innerText()
+      await tags
+        .getByRole('button')
+        .filter({ hasText: /pick|manage/i })
+        .first()
+        .innerText()
     ).trim()
 
-    const trigger = tags.getByRole('button').filter({ hasText: /pick|manage/i }).first()
+    const trigger = tags
+      .getByRole('button')
+      .filter({ hasText: /pick|manage/i })
+      .first()
     await trigger.click()
 
     const dialog = page.getByRole('dialog')
@@ -136,7 +160,11 @@ test.describe('m2m picker — table dialog', () => {
 
     // Committed value unchanged — trigger label still carries the same count.
     const afterLabel = (
-      await tags.getByRole('button').filter({ hasText: /pick|manage/i }).first().innerText()
+      await tags
+        .getByRole('button')
+        .filter({ hasText: /pick|manage/i })
+        .first()
+        .innerText()
     ).trim()
     expect(afterLabel).toEqual(beforeLabel)
   })

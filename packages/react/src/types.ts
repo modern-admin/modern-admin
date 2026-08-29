@@ -50,7 +50,8 @@ export interface PropertyJSON {
   isArray: boolean
   reference: string | null
   availableValues: Array<{ value: string; label: string }> | null
-  components: { list?: string; edit?: string; show?: string; filter?: string } | Record<string, string>
+  components:
+    { list?: string; edit?: string; show?: string; filter?: string } | Record<string, string>
   /** `new` is optional so a newer SPA remains compatible with older servers. */
   visibility: Record<LegacyView, boolean> & Partial<Record<'new', boolean>>
   position: number
@@ -201,7 +202,13 @@ export interface RecordJSON {
 
 export interface ListResponse {
   records: RecordJSON[]
-  meta: { total: number; page: number; perPage: number; sortBy?: string; direction?: 'asc' | 'desc' }
+  meta: {
+    total: number
+    page: number
+    perPage: number
+    sortBy?: string
+    direction?: 'asc' | 'desc'
+  }
 }
 
 export interface RecordResponse {

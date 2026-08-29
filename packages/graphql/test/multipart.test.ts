@@ -13,7 +13,12 @@ function buildRequest(fileBytes: Buffer): IncomingMessage {
   }
   push(`--${BOUNDARY}\r\n`)
   push('Content-Disposition: form-data; name="operations"\r\n\r\n')
-  push(JSON.stringify({ query: 'mutation($f: Upload!){ adminUpload(file:$f){key} }', variables: { f: null } }))
+  push(
+    JSON.stringify({
+      query: 'mutation($f: Upload!){ adminUpload(file:$f){key} }',
+      variables: { f: null },
+    }),
+  )
   push('\r\n')
   push(`--${BOUNDARY}\r\n`)
   push('Content-Disposition: form-data; name="map"\r\n\r\n')

@@ -114,9 +114,7 @@ async function isAlreadyPublished(pkg: DiscoveredPkg): Promise<boolean> {
   }
   if (res.status === 404) return false // package has never been published
   if (!res.ok) {
-    console.warn(
-      `  ⚠ registry returned ${res.status} for ${pkg.name} — will attempt publish`,
-    )
+    console.warn(`  ⚠ registry returned ${res.status} for ${pkg.name} — will attempt publish`)
     return false
   }
   const body = (await res.json().catch(() => ({}))) as {

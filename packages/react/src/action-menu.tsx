@@ -23,8 +23,7 @@ interface ActionMenuGroupNode {
 }
 
 type ActionMenuNode =
-  | { kind: 'action'; action: ActionDescriptor }
-  | { kind: 'group'; group: ActionMenuGroupNode }
+  { kind: 'action'; action: ActionDescriptor } | { kind: 'group'; group: ActionMenuGroupNode }
 
 export interface ActionMenuProps {
   actions: ActionDescriptor[]
@@ -52,9 +51,10 @@ export const isActionAllowedForRecord = (
 export const isActionAllowedForResource = (
   actionName: string,
   resource: Pick<ResourceJSON, 'actions'> | undefined,
-): boolean => resource?.actions.some(
-  (action) => action.actionType === 'resource' && action.name === actionName,
-) ?? false
+): boolean =>
+  resource?.actions.some(
+    (action) => action.actionType === 'resource' && action.name === actionName,
+  ) ?? false
 
 /** Narrow a resource's record actions down to the ones this record offers. */
 export const visibleRecordActions = (
@@ -68,10 +68,7 @@ export const visibleRecordActions = (
 
 /** Display label for an action: the (already localized) `custom.label` set
  *  by the metadata translator, falling back to the raw action name. */
-export const getActionLabel = (
-  action: ActionDescriptor,
-  t?: (key: string) => string,
-): string => {
+export const getActionLabel = (action: ActionDescriptor, t?: (key: string) => string): string => {
   if (typeof action.custom?.label === 'string') return action.custom.label
   if (typeof action.custom?.labelKey === 'string' && t) return t(action.custom.labelKey)
   return action.name
@@ -81,7 +78,11 @@ const buildActionMenuTree = (actions: ActionDescriptor[]): ActionMenuNode[] => {
   const root: ActionMenuNode[] = []
   const groups = new Map<string, ActionMenuGroupNode>()
 
-  const ensureGroup = (target: ActionMenuNode[], path: ActionGroup[], depth: number): ActionMenuNode[] => {
+  const ensureGroup = (
+    target: ActionMenuNode[],
+    path: ActionGroup[],
+    depth: number,
+  ): ActionMenuNode[] => {
     if (depth >= path.length) return target
     const segment = path[depth]!
     const key = path
@@ -114,19 +115,14 @@ const renderNodes = (
   nodes.map((node) => {
     if (node.kind === 'action') {
       return (
-        <DropdownMenuItem
-          key={node.action.name}
-          onSelect={() => onAction(node.action)}
-        >
+        <DropdownMenuItem key={node.action.name} onSelect={() => onAction(node.action)}>
           <Zap className="size-4" /> {getActionLabel(node.action, t)}
         </DropdownMenuItem>
       )
     }
     return (
       <DropdownMenuSub key={node.group.key}>
-        <DropdownMenuSubTrigger>
-          {node.group.group.name}
-        </DropdownMenuSubTrigger>
+        <DropdownMenuSubTrigger>{node.group.group.name}</DropdownMenuSubTrigger>
         <DropdownMenuPortal>
           <DropdownMenuSubContent>
             {renderNodes(node.group.items, onAction, t)}
@@ -192,12 +188,12 @@ export function MoreActionsMenu({
       onAction={onAction}
       t={t}
       menuLabel={menuLabel}
-      trigger={(
+      trigger={
         <Button variant="ghost" size="icon" className="h-8 w-8">
           <MoreHorizontal className="size-4" />
           <span className="sr-only">{t('common:openMenu')}</span>
         </Button>
-      )}
+      }
     />
   )
 }

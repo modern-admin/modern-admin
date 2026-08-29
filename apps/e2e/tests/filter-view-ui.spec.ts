@@ -65,9 +65,7 @@ async function firstCommentId(request: APIRequestContext): Promise<string> {
 }
 
 test.describe('Filter view — sheet is built from filterProperties', () => {
-  test('renders exactly the whitelisted fields, in the declared order', async ({
-    page,
-  }) => {
+  test('renders exactly the whitelisted fields, in the declared order', async ({ page }) => {
     await openList(page, 'comments')
     await openFilters(page)
 
@@ -76,12 +74,7 @@ test.describe('Filter view — sheet is built from filterProperties', () => {
     await expect(filterSheet(page).locator('label')).toHaveCount(4, { timeout: 10_000 })
     // Labels are the localized ones the SPA renders, not the raw
     // `property.label` the API serialises (`postId` → "Post", etc.).
-    expect(await filterFieldLabels(page)).toEqual([
-      'Id',
-      'Post',
-      'Author',
-      'Rating',
-    ])
+    expect(await filterFieldLabels(page)).toEqual(['Id', 'Post', 'Author', 'Rating'])
   })
 
   test('a column excluded from the filter view is unfilterable, not silently listed', async ({
@@ -107,16 +100,16 @@ test.describe('Filter view — sheet is built from filterProperties', () => {
     await openList(page, 'comments')
     await openFilters(page)
 
-    const idField = filterSheet(page).locator(
-      'xpath=.//label[normalize-space()="Id"]/parent::div',
-    )
+    const idField = filterSheet(page).locator('xpath=.//label[normalize-space()="Id"]/parent::div')
     // A uuid column has no distinct values to offer, so the field must stay a
     // free-text input — a checkbox picker with nothing in it would make the
     // opt-in unusable however correctly the panel is built.
     const idInput = idField.locator('input').first()
     await expect(idInput).toBeVisible({ timeout: 10_000 })
     await idInput.fill(commentId)
-    await filterSheet(page).getByRole('button', { name: /^Apply filters$/i }).click()
+    await filterSheet(page)
+      .getByRole('button', { name: /^Apply filters$/i })
+      .click()
     await expect(filterSheet(page)).toBeHidden({ timeout: 5_000 })
 
     await expect(dataRows(page)).toHaveCount(1, { timeout: 10_000 })

@@ -18,25 +18,14 @@ import { cn } from '../lib/utils.js'
 import { Input } from './input.js'
 import { Textarea } from './textarea.js'
 import { Switch } from './switch.js'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from './select.js'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select.js'
 import { Combobox, type ComboboxLabels, type ComboboxSuggestion } from './combobox.js'
 import { InfoTooltip } from './info-tooltip.js'
 
 /** Built-in editor types. Resource code may pass a string; unknown values
  * fall back to a plain string input. */
 export type KeyValueFieldType =
-  | 'string'
-  | 'number'
-  | 'boolean'
-  | 'textarea'
-  | 'select'
-  | 'autocomplete'
+  'string' | 'number' | 'boolean' | 'textarea' | 'select' | 'autocomplete'
 
 /** One declared key inside the JSON object. */
 export interface KeyValueFieldSpec {
@@ -102,9 +91,9 @@ export interface KeyValueEditorProps {
 
 const defaultLabels: Required<Omit<KeyValueEditorLabels, 'combobox'>> &
   Pick<KeyValueEditorLabels, 'combobox'> = {
-    emptyOption: '—',
-    fieldLabelFallback: (key) => key,
-  }
+  emptyOption: '—',
+  fieldLabelFallback: (key) => key,
+}
 
 const toRecord = (value: unknown): Record<string, unknown> => {
   if (value && typeof value === 'object' && !Array.isArray(value)) {
@@ -150,10 +139,7 @@ export function KeyValueEditor({
 
   return (
     <div
-      className={cn(
-        'divide-y divide-border rounded-md border border-border bg-card',
-        className,
-      )}
+      className={cn('divide-y divide-border rounded-md border border-border bg-card', className)}
     >
       {fields.map((f) => {
         const fieldType: KeyValueFieldType = f.type ?? 'string'
@@ -199,9 +185,7 @@ export function KeyValueEditor({
               placeholder={f.placeholder}
               disabled={disabled}
               onBlur={onBlur}
-              onChange={(e) =>
-                set(f.key, e.target.value === '' ? null : e.target.value)
-              }
+              onChange={(e) => set(f.key, e.target.value === '' ? null : e.target.value)}
               rows={3}
               aria-label={label}
             />
@@ -267,9 +251,7 @@ export function KeyValueEditor({
               placeholder={f.placeholder}
               disabled={disabled}
               onBlur={onBlur}
-              onChange={(e) =>
-                set(f.key, e.target.value === '' ? null : e.target.value)
-              }
+              onChange={(e) => set(f.key, e.target.value === '' ? null : e.target.value)}
               aria-label={label}
             />
           )
@@ -294,9 +276,7 @@ export function KeyValueEditor({
                 </span>
               ) : null}
             </label>
-            <div className="min-w-0 flex-1">
-              {control}
-            </div>
+            <div className="min-w-0 flex-1">{control}</div>
           </div>
         )
       })}
@@ -344,10 +324,7 @@ const stringifyDisplay = (
 ): string => {
   if (raw == null || raw === '') return l.emptyValue
   if (field.type === 'boolean') return raw ? l.trueLabel : l.falseLabel
-  if (
-    (field.type === 'select' || field.type === 'autocomplete') &&
-    field.availableValues
-  ) {
+  if ((field.type === 'select' || field.type === 'autocomplete') && field.availableValues) {
     const opts = normaliseAvailableValues(field.availableValues)
     const match = opts.find((o) => o.value === String(raw))
     return match?.label ?? String(raw)
@@ -412,9 +389,7 @@ export function KeyValueView({
             <dt className="shrink-0 text-xs font-medium uppercase tracking-wide text-muted-foreground sm:w-44">
               {label}
             </dt>
-            <dd className="min-w-0 flex-1 break-words text-foreground">
-              {text}
-            </dd>
+            <dd className="min-w-0 flex-1 break-words text-foreground">{text}</dd>
           </div>
         )
       })}

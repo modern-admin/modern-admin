@@ -26,7 +26,14 @@ import {
   getModKeyLabel,
 } from '@modern-admin/ui'
 import { AlertCircle, Eye, Plus, Save, Sparkles, Trash2, X } from 'lucide-react'
-import { useCreateRecord, useDeleteRecord, useFeatures, useRecord, useResource, useUpdateRecord } from '../hooks.js'
+import {
+  useCreateRecord,
+  useDeleteRecord,
+  useFeatures,
+  useRecord,
+  useResource,
+  useUpdateRecord,
+} from '../hooks.js'
 import { parseApiError } from '../client.js'
 import { RecordFormField } from '../components/record-form-field.js'
 import { Link, useNavigate } from '../router.js'
@@ -64,9 +71,10 @@ function coerceAiFillValue(property: PropertyJSON, value: unknown): unknown {
     const trimmed = value.trim()
     if (trimmed === '') return undefined
     const lower = trimmed.toLowerCase()
-    const match = property.availableValues.find((v) => v.value === trimmed)
-      ?? property.availableValues.find((v) => v.value.toLowerCase() === lower)
-      ?? property.availableValues.find((v) => v.label.toLowerCase() === lower)
+    const match =
+      property.availableValues.find((v) => v.value === trimmed) ??
+      property.availableValues.find((v) => v.value.toLowerCase() === lower) ??
+      property.availableValues.find((v) => v.label.toLowerCase() === lower)
     return match?.value
   }
   // References: keep id-shaped scalars only (string or number).
@@ -75,58 +83,59 @@ function coerceAiFillValue(property: PropertyJSON, value: unknown): unknown {
     return undefined
   }
   switch (property.type) {
-  case 'bigint':
-  case 'biginteger': {
-    // BigInt values are transported as digit strings end-to-end (matches
-    // BaseRecord.toJSON + the Prisma adapter's accept-string write path).
-    // Never round-trip via Number() — values >2^53 would lose precision.
-    if (typeof value === 'bigint') return value.toString()
-    if (typeof value === 'number') {
-      if (!Number.isFinite(value) || !Number.isInteger(value)) return undefined
-      return String(value)
+    case 'bigint':
+    case 'biginteger': {
+      // BigInt values are transported as digit strings end-to-end (matches
+      // BaseRecord.toJSON + the Prisma adapter's accept-string write path).
+      // Never round-trip via Number() — values >2^53 would lose precision.
+      if (typeof value === 'bigint') return value.toString()
+      if (typeof value === 'number') {
+        if (!Number.isFinite(value) || !Number.isInteger(value)) return undefined
+        return String(value)
+      }
+      if (typeof value !== 'string') return undefined
+      const trimmed = value.trim().replace(/[\s_]/g, '')
+      return /^-?\d+$/.test(trimmed) ? trimmed : undefined
     }
-    if (typeof value !== 'string') return undefined
-    const trimmed = value.trim().replace(/[\s_]/g, '')
-    return /^-?\d+$/.test(trimmed) ? trimmed : undefined
-  }
-  case 'number':
-  case 'float':
-  case 'currency':
-  case 'money':
-  case 'decimal':
-  case 'integer': {
-    if (typeof value === 'number') return Number.isFinite(value) ? value : undefined
-    if (typeof value !== 'string') return undefined
-    const trimmed = value.trim().replace(/[^\d.,\-+eE]/g, '')
-    if (trimmed === '' || trimmed === '-' || trimmed === '+') return undefined
-    const lastDot = trimmed.lastIndexOf('.')
-    const lastComma = trimmed.lastIndexOf(',')
-    const normalised = lastDot >= lastComma
-      ? trimmed.replace(/,/g, '')
-      : trimmed.replace(/\./g, '').replace(',', '.')
-    const n = Number(normalised)
-    if (!Number.isFinite(n)) return undefined
-    return property.type === 'integer' ? Math.trunc(n) : n
-  }
-  case 'boolean':
-    if (typeof value === 'boolean') return value
-    if (typeof value === 'number') return value !== 0
-    if (typeof value === 'string') {
-      const t = value.trim().toLowerCase()
-      if (['true', 'yes', 'y', '1', 'on'].includes(t)) return true
-      if (['false', 'no', 'n', '0', 'off'].includes(t)) return false
+    case 'number':
+    case 'float':
+    case 'currency':
+    case 'money':
+    case 'decimal':
+    case 'integer': {
+      if (typeof value === 'number') return Number.isFinite(value) ? value : undefined
+      if (typeof value !== 'string') return undefined
+      const trimmed = value.trim().replace(/[^\d.,\-+eE]/g, '')
+      if (trimmed === '' || trimmed === '-' || trimmed === '+') return undefined
+      const lastDot = trimmed.lastIndexOf('.')
+      const lastComma = trimmed.lastIndexOf(',')
+      const normalised =
+        lastDot >= lastComma
+          ? trimmed.replace(/,/g, '')
+          : trimmed.replace(/\./g, '').replace(',', '.')
+      const n = Number(normalised)
+      if (!Number.isFinite(n)) return undefined
+      return property.type === 'integer' ? Math.trunc(n) : n
     }
-    return undefined
-  case 'date':
-  case 'datetime':
-  case 'datetime-local':
-    // Keep ISO-ish strings; date pickers cope with both YYYY-MM-DD and full
-    // ISO. Reject anything that doesn't at least look year-prefixed so we
-    // don't push "12 March 2026" into a <DatePicker>.
-    if (typeof value !== 'string') return undefined
-    return /^\d{4}-\d{2}-\d{2}/.test(value.trim()) ? value.trim() : undefined
-  default:
-    return value
+    case 'boolean':
+      if (typeof value === 'boolean') return value
+      if (typeof value === 'number') return value !== 0
+      if (typeof value === 'string') {
+        const t = value.trim().toLowerCase()
+        if (['true', 'yes', 'y', '1', 'on'].includes(t)) return true
+        if (['false', 'no', 'n', '0', 'off'].includes(t)) return false
+      }
+      return undefined
+    case 'date':
+    case 'datetime':
+    case 'datetime-local':
+      // Keep ISO-ish strings; date pickers cope with both YYYY-MM-DD and full
+      // ISO. Reject anything that doesn't at least look year-prefixed so we
+      // don't push "12 March 2026" into a <DatePicker>.
+      if (typeof value !== 'string') return undefined
+      return /^\d{4}-\d{2}-\d{2}/.test(value.trim()) ? value.trim() : undefined
+    default:
+      return value
   }
 }
 
@@ -148,17 +157,14 @@ export function ResourceEditPage({
   const dialogs = useDialogs()
   const isNew = !recordId
 
-  const editable = React.useMemo<PropertyJSON[]>(
-    () => {
-      if (!resource) return []
-      const view = isNew ? 'new' : 'edit'
-      const order = isNew
-        ? (resource.propertyOrder?.new ?? resource.propertyOrder?.edit)
-        : resource.propertyOrder?.edit
-      return visibleRecordProperties(resource.properties, view, order).filter((p) => !p.isDisabled)
-    },
-    [isNew, resource],
-  )
+  const editable = React.useMemo<PropertyJSON[]>(() => {
+    if (!resource) return []
+    const view = isNew ? 'new' : 'edit'
+    const order = isNew
+      ? (resource.propertyOrder?.new ?? resource.propertyOrder?.edit)
+      : resource.propertyOrder?.edit
+    return visibleRecordProperties(resource.properties, view, order).filter((p) => !p.isDisabled)
+  }, [isNew, resource])
 
   // The validation schema needs to consult the live form values so it can
   // skip required/format checks for fields hidden by `showWhen`. We can't
@@ -450,7 +456,10 @@ export function ResourceEditPage({
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       setSubmitError(message)
-      notify.error({ key: isNew ? 'toast:createFailed' : 'toast:saveFailed' }, { description: message })
+      notify.error(
+        { key: isNew ? 'toast:createFailed' : 'toast:saveFailed' },
+        { description: message },
+      )
     }
   }
 
@@ -545,12 +554,12 @@ export function ResourceEditPage({
     ...(isNew
       ? [{ label: t('common:new') }]
       : [
-        {
-          label: recordLabel ?? '',
-          to: { name: 'show' as const, resourceId, recordId: recordId! },
-        },
-        { label: t('common:edit') },
-      ]),
+          {
+            label: recordLabel ?? '',
+            to: { name: 'show' as const, resourceId, recordId: recordId! },
+          },
+          { label: t('common:edit') },
+        ]),
   ]
 
   return (
@@ -615,11 +624,7 @@ export function ResourceEditPage({
                 </Empty>
               ) : (
                 editable.map((property) => (
-                  <ConditionalField
-                    key={property.path}
-                    control={form.control}
-                    property={property}
-                  >
+                  <ConditionalField key={property.path} control={form.control} property={property}>
                     <RecordFormField
                       control={form.control}
                       property={property}
@@ -648,9 +653,7 @@ export function ResourceEditPage({
         <div className="sticky bottom-0 -mb-px z-20 -mx-2 border-t border-border bg-card px-2 py-3 pr-14 sm:-mx-6 sm:px-6 sm:pr-16">
           <div className="flex items-center justify-between">
             <div>
-              {submitError && (
-                <span className="text-sm text-destructive">{submitError}</span>
-              )}
+              {submitError && <span className="text-sm text-destructive">{submitError}</span>}
             </div>
             <div className="flex gap-2">
               <Button

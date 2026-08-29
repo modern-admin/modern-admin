@@ -66,10 +66,7 @@ function activeRelatedPanel(page: Page) {
 }
 
 test.describe('RelatedRecordsTabs — customers show page', () => {
-  test('renders both Posts and Comments tabs with Posts active', async ({
-    page,
-    request,
-  }) => {
+  test('renders both Posts and Comments tabs with Posts active', async ({ page, request }) => {
     const customerId = await customerWithRelations(request)
     await openCustomerShow(page, customerId)
 
@@ -85,10 +82,7 @@ test.describe('RelatedRecordsTabs — customers show page', () => {
     await expect(panel.locator('tbody tr')).not.toHaveCount(0, { timeout: 15_000 })
   })
 
-  test('switching to Comments activates the Comments panel', async ({
-    page,
-    request,
-  }) => {
+  test('switching to Comments activates the Comments panel', async ({ page, request }) => {
     const customerId = await customerWithRelations(request)
     await openCustomerShow(page, customerId)
 
@@ -104,9 +98,7 @@ test.describe('RelatedRecordsTabs — customers show page', () => {
     await expect(panel.locator('tbody tr')).not.toHaveCount(0, { timeout: 15_000 })
   })
 
-  test('foreign-key filter is strict equality, not substring', async ({
-    request,
-  }) => {
+  test('foreign-key filter is strict equality, not substring', async ({ request }) => {
     // Regression: an earlier in-memory matcher used to fall back to a
     // case-insensitive `String.includes()` for any string-typed needle,
     // regardless of property type. The Prisma adapter must route FK
@@ -124,7 +116,9 @@ test.describe('RelatedRecordsTabs — customers show page', () => {
     const body = await res.json()
     const records = body.records as Array<{ params: { authorId: string } }>
     const distinct = Array.from(new Set(records.map((r) => r.params.authorId)))
-    expect(distinct, `expected only authorId "${customerId}", got ${distinct.join(', ')}`).toEqual([customerId])
+    expect(distinct, `expected only authorId "${customerId}", got ${distinct.join(', ')}`).toEqual([
+      customerId,
+    ])
     expect(body.meta.total).toBe(records.length)
   })
 
@@ -149,9 +143,9 @@ test.describe('RelatedRecordsTabs — customers show page', () => {
     )
     const apiBody = await apiRes.json()
     const apiAuthors = Array.from(
-      new Set((apiBody.records as Array<{ params: { authorId: string } }>).map(
-        (r) => r.params.authorId,
-      )),
+      new Set(
+        (apiBody.records as Array<{ params: { authorId: string } }>).map((r) => r.params.authorId),
+      ),
     )
     expect(
       apiAuthors,
@@ -166,10 +160,7 @@ test.describe('RelatedRecordsTabs — customers show page', () => {
     await expect(panel.locator('tbody tr')).toHaveCount(pageSize, { timeout: 15_000 })
   })
 
-  test('Posts tab paginates next page inside the embedded list', async ({
-    page,
-    request,
-  }) => {
+  test('Posts tab paginates next page inside the embedded list', async ({ page, request }) => {
     const customerId = await customerWithRelations(request)
     // Skip the test if there aren't enough posts to span two pages
     // (perPage in related tabs defaults to 10).

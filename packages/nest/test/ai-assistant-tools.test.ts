@@ -94,9 +94,7 @@ describe('buildAiAssistantTools', () => {
     expect(Object.keys(built.tools)).toContain('query_resource')
     expect(Object.keys(built.tools).some((name) => /^(list|show|search)_/.test(name))).toBe(false)
     expect(
-      built.descriptors
-        .filter((d) => d.resourceId === 'regionalContent')
-        .map((d) => d.action),
+      built.descriptors.filter((d) => d.resourceId === 'regionalContent').map((d) => d.action),
     ).toEqual(['list', 'show', 'search'])
     expect(built.resourceIds).toEqual(['regionalContent'])
     expect(built.sqlResources).toEqual([
@@ -125,7 +123,11 @@ describe('buildAiAssistantTools', () => {
       }>
     }
 
-    const shown = await queryTool.execute({ resourceId: 'products', action: 'show', recordId: 'p1' })
+    const shown = await queryTool.execute({
+      resourceId: 'products',
+      action: 'show',
+      recordId: 'p1',
+    })
     expect(shown.action).toBe('show')
     expect(shown.record?.id).toBe('p1')
 
@@ -149,9 +151,11 @@ describe('buildAiAssistantTools', () => {
       rawQuery: async () => [{ count: 12n, createdAt: new Date('2026-05-11T00:00:00.000Z') }],
     })
 
-    const result = await (built.tools['execute_sql'] as unknown as {
-      execute(input: { query: string }): Promise<unknown>
-    }).execute({ query: 'SELECT COUNT(*) AS "count" FROM "post";' })
+    const result = await (
+      built.tools['execute_sql'] as unknown as {
+        execute(input: { query: string }): Promise<unknown>
+      }
+    ).execute({ query: 'SELECT COUNT(*) AS "count" FROM "post";' })
 
     expect(result).toEqual({
       rows: [{ count: '12', createdAt: '2026-05-11T00:00:00.000Z' }],
@@ -170,15 +174,19 @@ describe('buildAiAssistantTools', () => {
       uiActions,
     })
 
-    const result = await (built.tools['draft_media_generation'] as unknown as {
-      execute(input: { prompt: string; mediaType: 'image' }): Promise<unknown>
-    }).execute({ prompt: 'A clean product card', mediaType: 'image' })
+    const result = await (
+      built.tools['draft_media_generation'] as unknown as {
+        execute(input: { prompt: string; mediaType: 'image' }): Promise<unknown>
+      }
+    ).execute({ prompt: 'A clean product card', mediaType: 'image' })
 
     expect(result).toMatchObject({ draftOpened: true, paidRequestStarted: false })
-    expect(uiActions).toEqual([{
-      kind: 'open-media-generation',
-      prompt: 'A clean product card',
-      mediaType: 'image',
-    }])
+    expect(uiActions).toEqual([
+      {
+        kind: 'open-media-generation',
+        prompt: 'A clean product card',
+        mediaType: 'image',
+      },
+    ])
   })
 })

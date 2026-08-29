@@ -141,12 +141,11 @@ export function ReferenceCombobox({
   const items = search.data?.records ?? []
 
   const _title = selected.data?.record?.title
-  const selectedLabel =
-    _title
-      ? `${_title} <${value}>`
-      : value != null && value !== ''
-        ? `#${value}`
-        : ''
+  const selectedLabel = _title
+    ? `${_title} <${value}>`
+    : value != null && value !== ''
+      ? `#${value}`
+      : ''
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -182,7 +181,9 @@ export function ReferenceCombobox({
             onValueChange={setQuery}
           />
           <CommandList>
-            {search.isLoading && <div className="p-3 text-sm text-muted-foreground">{t('common:loading')}</div>}
+            {search.isLoading && (
+              <div className="p-3 text-sm text-muted-foreground">{t('common:loading')}</div>
+            )}
             {!search.isLoading && items.length === 0 && (
               <CommandEmpty>{t('common:noRecords')}</CommandEmpty>
             )}
@@ -212,7 +213,10 @@ export function ReferenceCombobox({
                     }}
                   >
                     <Check className={cn('size-4', isSelected ? 'opacity-100' : 'opacity-0')} />
-                    <span className="truncate" title={r.title ? `${r.title} <${r.id}>` : `#${r.id}`}>
+                    <span
+                      className="truncate"
+                      title={r.title ? `${r.title} <${r.id}>` : `#${r.id}`}
+                    >
                       {r.title ? `${r.title} <${r.id}>` : `#${r.id}`}
                     </span>
                   </CommandItem>
@@ -255,16 +259,10 @@ export function ReferenceLinkList({
         const entry =
           populated && populatedKeyPrefix
             ? (populated[`${populatedKeyPrefix}.${id}`] as
-                | { id?: string; title?: string }
-                | undefined)
+                { id?: string; title?: string } | undefined)
             : undefined
         return (
-          <ReferenceLink
-            key={String(id)}
-            resourceId={resourceId}
-            recordId={id}
-            populated={entry}
-          />
+          <ReferenceLink key={String(id)} resourceId={resourceId} recordId={id} populated={entry} />
         )
       })}
     </div>
@@ -356,7 +354,9 @@ export function ReferenceMultiCombobox({
             className="w-full justify-between font-normal"
           >
             <span className="truncate text-muted-foreground">
-              {ids.length > 0 ? t('common:nSelectedAddMore', { count: ids.length }) : resolvedPlaceholder}
+              {ids.length > 0
+                ? t('common:nSelectedAddMore', { count: ids.length })
+                : resolvedPlaceholder}
             </span>
             <ChevronsUpDown className="size-4 shrink-0 opacity-50" />
           </Button>
@@ -366,7 +366,11 @@ export function ReferenceMultiCombobox({
           align="start"
         >
           <Command shouldFilter={false} className="min-h-0">
-            <CommandInput placeholder={t('common:searchPlaceholder')} value={query} onValueChange={setQuery} />
+            <CommandInput
+              placeholder={t('common:searchPlaceholder')}
+              value={query}
+              onValueChange={setQuery}
+            />
             <CommandList>
               {search.isLoading && (
                 <div className="p-3 text-sm text-muted-foreground">{t('common:loading')}</div>
@@ -378,15 +382,12 @@ export function ReferenceMultiCombobox({
                 {items.map((r) => {
                   const isSelected = ids.includes(String(r.id))
                   return (
-                    <CommandItem
-                      key={r.id}
-                      value={String(r.id)}
-                      onSelect={() => toggle(r.id)}
-                    >
-                      <Check
-                        className={cn('size-4', isSelected ? 'opacity-100' : 'opacity-0')}
-                      />
-                      <span className="truncate" title={r.title ? `${r.title} <${r.id}>` : `#${r.id}`}>
+                    <CommandItem key={r.id} value={String(r.id)} onSelect={() => toggle(r.id)}>
+                      <Check className={cn('size-4', isSelected ? 'opacity-100' : 'opacity-0')} />
+                      <span
+                        className="truncate"
+                        title={r.title ? `${r.title} <${r.id}>` : `#${r.id}`}
+                      >
                         {r.title ? `${r.title} <${r.id}>` : `#${r.id}`}
                       </span>
                     </CommandItem>

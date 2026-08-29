@@ -1,8 +1,28 @@
 import { type BaseResource, type ParamsType, type RecordJSON } from './adapters'
-import { BUILT_IN_ACTIONS, CacheRuntime, cacheKey, listTag, recordTag, recordsTag, rolePermissionsTag, type Action, type ActionContext, type ActionRequest, type ActionResponse, type After, type Before, type CacheRuntimeOptions } from './actions'
+import {
+  BUILT_IN_ACTIONS,
+  CacheRuntime,
+  cacheKey,
+  listTag,
+  recordTag,
+  recordsTag,
+  rolePermissionsTag,
+  type Action,
+  type ActionContext,
+  type ActionRequest,
+  type ActionResponse,
+  type After,
+  type Before,
+  type CacheRuntimeOptions,
+} from './actions'
 import type { ResourceDecorator, ResourceJSON } from './decorators/resource-decorator.js'
 import type { ActionDecorator } from './decorators/action-decorator.js'
-import { ResourcesFactory, type Adapter, type GlobalPlugin, type ResourceWithOptions } from './factories/resources-factory.js'
+import {
+  ResourcesFactory,
+  type Adapter,
+  type GlobalPlugin,
+  type ResourceWithOptions,
+} from './factories/resources-factory.js'
 import { ResourceNotFoundError, ActionNotFoundError, ForbiddenError } from './errors'
 import { flatten, unflatten } from './utils/flat.js'
 
@@ -14,7 +34,22 @@ export interface RegisterResourcesArgs {
   /** Defaults to plugins passed at construction time. */
   plugins?: GlobalPlugin[]
 }
-import { AnonymousAuthProvider, ComponentLoader, ConsoleLogger, CrossInstanceCacheProvider, NoopCacheProvider, NoopRealtimeBus, withCrossInstanceInvalidation, type CurrentAdmin, type IAuthProvider, type ICacheProvider, type IComponentLoader, type ILogger, type IRealtimeBus, type RealtimeEvent } from './ports'
+import {
+  AnonymousAuthProvider,
+  ComponentLoader,
+  ConsoleLogger,
+  CrossInstanceCacheProvider,
+  NoopCacheProvider,
+  NoopRealtimeBus,
+  withCrossInstanceInvalidation,
+  type CurrentAdmin,
+  type IAuthProvider,
+  type ICacheProvider,
+  type IComponentLoader,
+  type ILogger,
+  type IRealtimeBus,
+  type RealtimeEvent,
+} from './ports'
 import { setActiveFeatureFlags } from './feature-flags.js'
 
 export interface ModernAdminOptions {
@@ -211,7 +246,10 @@ export class ModernAdmin {
     // Providers with pub/sub support (RedisCacheProvider with a subscriber
     // client) get wrapped so tag invalidations broadcast to sibling
     // instances; providers without it are used as-is.
-    this.cache = withCrossInstanceInvalidation(options.cache ?? new NoopCacheProvider(), this.logger)
+    this.cache = withCrossInstanceInvalidation(
+      options.cache ?? new NoopCacheProvider(),
+      this.logger,
+    )
     this.cacheRuntime = new CacheRuntime(this.cache, {
       ...options.cacheRuntime,
       logger: this.logger,
@@ -259,9 +297,8 @@ export class ModernAdmin {
         const record = await resource.findOne(roleName)
         const nested = record ? (unflatten(record.params) as Record<string, unknown>) : {}
         const raw = nested.permissions
-        const permissions = raw && typeof raw === 'object' && !Array.isArray(raw)
-          ? raw as RolePermissions
-          : null
+        const permissions =
+          raw && typeof raw === 'object' && !Array.isArray(raw) ? (raw as RolePermissions) : null
         return { permissions }
       },
     )
@@ -459,7 +496,11 @@ export class ModernAdmin {
    * decide access without executing anything. Non-authorization errors
    * (e.g. a role lookup blowing up) propagate.
    */
-  async canAccess(resourceId: string, action: string, currentAdmin?: CurrentAdmin): Promise<boolean> {
+  async canAccess(
+    resourceId: string,
+    action: string,
+    currentAdmin?: CurrentAdmin,
+  ): Promise<boolean> {
     let resource: BaseResource
     try {
       resource = this.findResource(resourceId)
@@ -535,7 +576,13 @@ export class ModernAdmin {
         response = await fn(response, req, context)
       }
     }
-    await this.invalidateMutationCaches(actionDecorator.name(), action.invalidates, response, request, context)
+    await this.invalidateMutationCaches(
+      actionDecorator.name(),
+      action.invalidates,
+      response,
+      request,
+      context,
+    )
     // Annotate before redacting: visibility predicates are the app's own
     // logic and routinely key on columns the viewer may not be allowed to
     // see (`isVisible: ctx => ctx.record?.params.internalState === 'x'`).
@@ -568,7 +615,10 @@ export class ModernAdmin {
   ): Promise<void> {
     const resourceId = context.resource.decorate().id
     const isBuiltInMutation =
-      actionName === 'new' || actionName === 'edit' || actionName === 'delete' || actionName === 'bulkDelete'
+      actionName === 'new' ||
+      actionName === 'edit' ||
+      actionName === 'delete' ||
+      actionName === 'bulkDelete'
     if (!isBuiltInMutation && invalidates === undefined) return
 
     // `new` GET renders the blank form; `edit` GET renders the current
@@ -611,20 +661,42 @@ export class ModernAdmin {
     const resourceId = context.resource.decorate().id
     const actorId = context.currentAdmin?.id ? String(context.currentAdmin.id) : undefined
     const at = Date.now()
-    const recordResponse = response as { record?: { id?: string; params?: Record<string, unknown> } }
+    const recordResponse = response as {
+      record?: { id?: string; params?: Record<string, unknown> }
+    }
     const recordId = recordResponse.record?.id ?? request.params.recordId
     const params = recordResponse.record?.params
 
     if (actionName === 'new') {
-      events.push({ kind: 'created', resourceId, at, ...(recordId ? { recordId } : {}), ...(params ? { record: params } : {}), ...(actorId ? { actorId } : {}) })
+      events.push({
+        kind: 'created',
+        resourceId,
+        at,
+        ...(recordId ? { recordId } : {}),
+        ...(params ? { record: params } : {}),
+        ...(actorId ? { actorId } : {}),
+      })
     } else if (actionName === 'edit') {
-      events.push({ kind: 'updated', resourceId, at, ...(recordId ? { recordId } : {}), ...(params ? { record: params } : {}), ...(actorId ? { actorId } : {}) })
+      events.push({
+        kind: 'updated',
+        resourceId,
+        at,
+        ...(recordId ? { recordId } : {}),
+        ...(params ? { record: params } : {}),
+        ...(actorId ? { actorId } : {}),
+      })
     } else if (actionName === 'delete' && recordId) {
       events.push({ kind: 'deleted', resourceId, recordId, at, ...(actorId ? { actorId } : {}) })
     } else if (actionName === 'bulkDelete') {
       const ids = (request.params.recordIds ?? '').split(',').filter(Boolean)
       for (const id of ids) {
-        events.push({ kind: 'deleted', resourceId, recordId: id, at, ...(actorId ? { actorId } : {}) })
+        events.push({
+          kind: 'deleted',
+          resourceId,
+          recordId: id,
+          at,
+          ...(actorId ? { actorId } : {}),
+        })
       }
     }
 
@@ -766,17 +838,22 @@ export class ModernAdmin {
     return {
       ...response,
       ...(recordResponse.record
-        ? { record: { ...recordResponse.record, recordActions: await namesFor(recordResponse.record) } }
+        ? {
+            record: {
+              ...recordResponse.record,
+              recordActions: await namesFor(recordResponse.record),
+            },
+          }
         : {}),
       ...(recordResponse.records
         ? {
-          records: await Promise.all(
-            recordResponse.records.map(async (record) => ({
-              ...record,
-              recordActions: await namesFor(record),
-            })),
-          ),
-        }
+            records: await Promise.all(
+              recordResponse.records.map(async (record) => ({
+                ...record,
+                recordActions: await namesFor(record),
+              })),
+            ),
+          }
         : {}),
     }
   }
@@ -791,17 +868,18 @@ export class ModernAdmin {
     }
     if (!recordResponse.record && !recordResponse.records) return response
 
-    const allowed = await this.accessiblePropertyPaths(
-      context.resource,
-      context.currentAdmin,
-    )
+    const allowed = await this.accessiblePropertyPaths(context.resource, context.currentAdmin)
     return {
       ...response,
       ...(recordResponse.record
         ? { record: filterRecordJSONByPropertyPaths(recordResponse.record, allowed) }
         : {}),
       ...(recordResponse.records
-        ? { records: recordResponse.records.map((record) => filterRecordJSONByPropertyPaths(record, allowed)) }
+        ? {
+            records: recordResponse.records.map((record) =>
+              filterRecordJSONByPropertyPaths(record, allowed),
+            ),
+          }
         : {}),
     }
   }
@@ -841,7 +919,10 @@ export const permissionsAllow = (
   action: string,
 ): boolean => {
   const wildcardActions = perms['*']
-  if (Array.isArray(wildcardActions) && (wildcardActions.includes('*') || wildcardActions.includes(action))) {
+  if (
+    Array.isArray(wildcardActions) &&
+    (wildcardActions.includes('*') || wildcardActions.includes(action))
+  ) {
     return true
   }
   const allowed = perms[resourceId]
@@ -862,10 +943,7 @@ const apiKeyAllows = (
 const pathAllowed = (path: string, allowed: Set<string>): boolean =>
   allowed.has(path) || Array.from(allowed).some((prefix) => path.startsWith(`${prefix}.`))
 
-const filterParamsByPropertyPaths = (
-  params: ParamsType,
-  allowed: Set<string>,
-): ParamsType => {
+const filterParamsByPropertyPaths = (params: ParamsType, allowed: Set<string>): ParamsType => {
   const flat = flatten(params)
   const result: ParamsType = {}
   for (const [key, value] of Object.entries(flat)) {
@@ -874,10 +952,7 @@ const filterParamsByPropertyPaths = (
   return unflatten(result) as ParamsType
 }
 
-const filterRecordJSONByPropertyPaths = (
-  record: RecordJSON,
-  allowed: Set<string>,
-): RecordJSON => ({
+const filterRecordJSONByPropertyPaths = (record: RecordJSON, allowed: Set<string>): RecordJSON => ({
   ...record,
   params: filterParamsByPropertyPaths(record.params, allowed),
   populated: Object.fromEntries(

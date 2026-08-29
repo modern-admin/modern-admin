@@ -4,12 +4,7 @@ import type { PropertyDecorator } from '../../decorators/property-decorator.js'
 import { listTag } from '../cache-runtime.js'
 import { searchCacheKey } from '../cache-keys.js'
 import { resolveResourceCacheConfig } from '../../decorators/cache-config.js'
-import type {
-  Action,
-  ActionContext,
-  ActionRequest,
-  ListActionResponse,
-} from '../action.js'
+import type { Action, ActionContext, ActionRequest, ListActionResponse } from '../action.js'
 
 /**
  * Collect the list of property paths to search across.
@@ -38,8 +33,7 @@ const collectSearchableFields = (
   }
   if (titlePath) push(titlePath)
 
-  const decorators: ReadonlyArray<PropertyDecorator> | null =
-    decorator?.properties ?? null
+  const decorators: ReadonlyArray<PropertyDecorator> | null = decorator?.properties ?? null
 
   if (decorators) {
     for (const prop of decorators) {
@@ -123,7 +117,10 @@ const handler = async (
 
   // No query → return first 50 records unfiltered.
   if (!query) {
-    const records = await resource.find(new Filter({}, resource), { limit: RESULT_LIMIT, offset: 0 })
+    const records = await resource.find(new Filter({}, resource), {
+      limit: RESULT_LIMIT,
+      offset: 0,
+    })
     return {
       records: records.map((r) => r.toJSON()),
       meta: { total: records.length, page: 1, perPage: RESULT_LIMIT },
@@ -157,7 +154,9 @@ const handler = async (
       try {
         const byId = await resource.findOne(query)
         if (byId) add(byId)
-      } catch { /* non-numeric id on integer PK — ignore */ }
+      } catch {
+        /* non-numeric id on integer PK — ignore */
+      }
 
       // 2. Field-wide substring search via the adapter-overridable hook.
       //    Adapters with native OR build one query; the default impl fans out.
@@ -194,7 +193,7 @@ const handler = async (
           score: scoreRecord(record, query, titlePath, fields),
           index,
         }))
-        .sort((a, b) => (b.score - a.score) || (a.index - b.index))
+        .sort((a, b) => b.score - a.score || a.index - b.index)
         .slice(0, RESULT_LIMIT)
         .map((entry) => entry.record)
 

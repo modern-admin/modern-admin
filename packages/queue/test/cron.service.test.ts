@@ -68,8 +68,8 @@ describe('CronService › register', () => {
   test('upserts scheduler immediately when called after onModuleInit', async () => {
     await service.onModuleInit()
     service.register({ name: 'late', cron: '0 0 * * *', handler: mock(() => undefined) })
-    expect(queue.upsertJobScheduler.mock.calls).toSatisfy(
-      (calls: unknown[][]) => calls.some((c) => c[0] === 'late'),
+    expect(queue.upsertJobScheduler.mock.calls).toSatisfy((calls: unknown[][]) =>
+      calls.some((c) => c[0] === 'late'),
     )
   })
 })
@@ -79,14 +79,21 @@ describe('CronService › register', () => {
 describe('CronService › getHandler / shouldSkipIfRunning', () => {
   let service: CronService
 
-  beforeEach(async () => { service = await buildModule(makeQueue()) })
+  beforeEach(async () => {
+    service = await buildModule(makeQueue())
+  })
 
   test('getHandler returns undefined for unknown task', () => {
     expect(service.getHandler('nope')).toBeUndefined()
   })
 
   test('shouldSkipIfRunning is true when flag is set', () => {
-    service.register({ name: 'skip-task', cron: '* * * * *', handler: mock(() => undefined), skipIfRunning: true })
+    service.register({
+      name: 'skip-task',
+      cron: '* * * * *',
+      handler: mock(() => undefined),
+      skipIfRunning: true,
+    })
     expect(service.shouldSkipIfRunning('skip-task')).toBe(true)
   })
 
@@ -151,9 +158,7 @@ describe('CronService › onModuleInit / syncSchedulers', () => {
       handler: mock(() => undefined),
       opts: { attempts: 3, backoff: { type: 'exponential', delay: 1000 } },
     })
-    const call = queue.upsertJobScheduler.mock.calls.find(
-      (c: unknown[]) => c[0] === 'with-opts',
-    )
+    const call = queue.upsertJobScheduler.mock.calls.find((c: unknown[]) => c[0] === 'with-opts')
     expect(call?.[2]).toMatchObject({
       opts: { attempts: 3, backoff: { type: 'exponential', delay: 1000 } },
     })

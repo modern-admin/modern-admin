@@ -79,9 +79,7 @@ export const keyValueFieldZ = z.object({
   /** Visible label. Defaults to `key`. */
   label: z.string().optional(),
   /** Editor kind. Default: `'string'`. */
-  type: z
-    .enum(['string', 'number', 'boolean', 'textarea', 'select', 'autocomplete'])
-    .optional(),
+  type: z.enum(['string', 'number', 'boolean', 'textarea', 'select', 'autocomplete']).optional(),
   /** Helper text shown under the input. */
   description: z.string().optional(),
   /** Placeholder for text/number inputs. */
@@ -94,12 +92,7 @@ export const keyValueFieldZ = z.object({
    * and label) or `{ value, label }` objects.
    */
   availableValues: z
-    .array(
-      z.union([
-        z.string(),
-        z.object({ value: z.string(), label: z.string() }),
-      ]),
-    )
+    .array(z.union([z.string(), z.object({ value: z.string(), label: z.string() })]))
     .optional(),
   /**
    * For `type: 'autocomplete'`: pull dynamic suggestions from the named
@@ -127,9 +120,7 @@ export interface PropertyContext extends PropertyContextBase {
   property: BaseProperty
 }
 
-export type PropertyAccessFunction = (
-  context: PropertyContext,
-) => boolean | Promise<boolean>
+export type PropertyAccessFunction = (context: PropertyContext) => boolean | Promise<boolean>
 
 export const propertyOptionsZ = z.object({
   /** Display name (defaults to humanized property path). */
@@ -171,12 +162,7 @@ export const propertyOptionsZ = z.object({
    * of `{ value, label }` objects when label and value differ.
    */
   availableValues: z
-    .array(
-      z.union([
-        z.string(),
-        z.object({ value: z.string(), label: z.string() }),
-      ]),
-    )
+    .array(z.union([z.string(), z.object({ value: z.string(), label: z.string() })]))
     .optional(),
   components: propertyComponentsZ.optional(),
   position: z.number().optional(),
@@ -198,9 +184,6 @@ export const propertyOptionsZ = z.object({
   custom: z.record(z.string(), z.unknown()).optional(),
 })
 
-export type PropertyOptions = Omit<
-  z.infer<typeof propertyOptionsZ>,
-  'isAccessible'
-> & {
+export type PropertyOptions = Omit<z.infer<typeof propertyOptionsZ>, 'isAccessible'> & {
   isAccessible?: boolean | PropertyAccessFunction
 }

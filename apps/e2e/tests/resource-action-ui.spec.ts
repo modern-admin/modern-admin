@@ -53,13 +53,16 @@ test.describe('Resource-action UI — products.bulkRepriceUi', () => {
     expect(before.total).toBeGreaterThan(0)
 
     await page.goto('/resources/products')
-    await expect(
-      page.getByRole('heading', { name: /products/i }).first(),
-    ).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('heading', { name: /products/i }).first()).toBeVisible({
+      timeout: 15_000,
+    })
 
     // The toolbar ActionMenu — labelled "Actions" via i18n, sitting between
     // Export and "New". Nested one level under the action's `nesting`.
-    await page.getByRole('button', { name: /^actions$/i }).first().click()
+    await page
+      .getByRole('button', { name: /^actions$/i })
+      .first()
+      .click()
     const toolbar = menuOf(page, /^actions$/i)
     await expect(toolbar).toBeVisible({ timeout: 5_000 })
     const merchandising = await openSubmenu(page, toolbar, /^merchandising$/i)
@@ -78,9 +81,9 @@ test.describe('Resource-action UI — products.bulkRepriceUi', () => {
     // Page chrome comes from ResourceActionPage; the body is the registered
     // component rendering the primed numbers.
     await expect(page.getByRole('heading', { name: /bulk reprice/i })).toBeVisible()
-    await expect(
-      page.getByText(`${before.total} products, prices from`),
-    ).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText(`${before.total} products, prices from`)).toBeVisible({
+      timeout: 10_000,
+    })
 
     const percentInput = page.getByRole('spinbutton', { name: /change by/i })
     await percentInput.fill('10')
@@ -117,16 +120,22 @@ test.describe('Resource-action UI — products.bulkRepriceUi', () => {
     // can hand back the records, and reach the POST so it mutates the right
     // rows.
     await page.goto('/resources/posts?perPage=20&sortBy=id&direction=desc')
-    await expect(
-      page.getByRole('heading', { name: /posts/i }).first(),
-    ).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('heading', { name: /posts/i }).first()).toBeVisible({
+      timeout: 15_000,
+    })
 
     // Skip the `aria-busy` placeholder rows the table renders while loading —
     // they carry no checkbox, so `nth(0)` would resolve to a dead node.
     const rows = page.locator('tbody tr:not([aria-busy="true"])')
     await expect(rows.first()).toBeVisible({ timeout: 15_000 })
-    await rows.nth(0).getByRole('checkbox', { name: /^select row$/i }).check()
-    await rows.nth(1).getByRole('checkbox', { name: /^select row$/i }).check()
+    await rows
+      .nth(0)
+      .getByRole('checkbox', { name: /^select row$/i })
+      .check()
+    await rows
+      .nth(1)
+      .getByRole('checkbox', { name: /^select row$/i })
+      .check()
     await expect(page.getByText(/^2 selected$/i)).toBeVisible({ timeout: 5_000 })
 
     const primePromise = page.waitForResponse(
@@ -134,7 +143,10 @@ test.describe('Resource-action UI — products.bulkRepriceUi', () => {
         res.url().includes('/admin/api/resources/posts/actions/scheduleManyUi') &&
         res.request().method() === 'GET',
     )
-    await page.getByRole('button', { name: /^actions$/i }).first().click()
+    await page
+      .getByRole('button', { name: /^actions$/i })
+      .first()
+      .click()
     const bulkMenu = menuOf(page, /^actions$/i)
     await expect(bulkMenu).toBeVisible({ timeout: 5_000 })
     await chooseItem(bulkMenu, /schedule selected/i)
@@ -173,11 +185,14 @@ test.describe('Resource-action UI — products.bulkRepriceUi', () => {
     // `markFeaturedPalette` has `component: null` — the menu must POST it
     // immediately instead of routing anywhere.
     await page.goto('/resources/products')
-    await expect(
-      page.getByRole('heading', { name: /products/i }).first(),
-    ).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('heading', { name: /products/i }).first()).toBeVisible({
+      timeout: 15_000,
+    })
 
-    await page.getByRole('button', { name: /^actions$/i }).first().click()
+    await page
+      .getByRole('button', { name: /^actions$/i })
+      .first()
+      .click()
     const toolbar = menuOf(page, /^actions$/i)
     await expect(toolbar).toBeVisible({ timeout: 5_000 })
     const merchandising = await openSubmenu(page, toolbar, /^merchandising$/i)

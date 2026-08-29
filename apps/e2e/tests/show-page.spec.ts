@@ -31,10 +31,7 @@ async function createCustomer(
   return { id: String(body.record.id), name, email }
 }
 
-async function deleteCustomerSilently(
-  request: APIRequestContext,
-  id: string,
-): Promise<void> {
+async function deleteCustomerSilently(request: APIRequestContext, id: string): Promise<void> {
   await request.delete(adminApi(`/resources/customers/records/${id}/actions/delete`))
 }
 
@@ -70,10 +67,7 @@ test.describe('Show page — field rendering', () => {
     }
   })
 
-  test('header buttons navigate to edit and back to the list', async ({
-    page,
-    request,
-  }) => {
+  test('header buttons navigate to edit and back to the list', async ({ page, request }) => {
     const customer = await createCustomer(request)
     try {
       await page.goto(`/resources/customers/${customer.id}`)
@@ -84,9 +78,7 @@ test.describe('Show page — field rendering', () => {
       // Edit jumps to /resources/customers/:id/edit. The "Edit" trigger is
       // rendered as a navigation link (anchor), not a button.
       await page.getByRole('link', { name: 'Edit' }).click()
-      await expect(page).toHaveURL(
-        new RegExp(`/resources/customers/${customer.id}/edit$`),
-      )
+      await expect(page).toHaveURL(new RegExp(`/resources/customers/${customer.id}/edit$`))
       await expect(page.getByRole('button', { name: 'Save' })).toBeVisible()
 
       // Back to show via breadcrumbs, then to list via the `customers` crumb.

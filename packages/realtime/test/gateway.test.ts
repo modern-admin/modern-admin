@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
-import { InMemoryRealtimeBus, type CurrentAdmin, type ModernAdmin, type RealtimeEvent } from '@modern-admin/core'
+import {
+  InMemoryRealtimeBus,
+  type CurrentAdmin,
+  type ModernAdmin,
+  type RealtimeEvent,
+} from '@modern-admin/core'
 import { RealtimeGateway, configureRealtimeOrigins, isOriginAllowed } from '../src/gateway.js'
 import { REALTIME_EVENT } from '../src/tokens.js'
 
@@ -69,7 +74,11 @@ class FakeAdmin {
   auth = {
     getCurrentUser: async (_ctx: unknown): Promise<CurrentAdmin | null> => this.user,
   }
-  async canAccess(resourceId: string, _action: string, currentAdmin?: CurrentAdmin): Promise<boolean> {
+  async canAccess(
+    resourceId: string,
+    _action: string,
+    currentAdmin?: CurrentAdmin,
+  ): Promise<boolean> {
     return Boolean(currentAdmin) && this.allowed.has(resourceId)
   }
 }
@@ -164,11 +173,13 @@ describe('RealtimeGateway', () => {
 
     gateway.broadcast(event)
 
-    expect(server.roomEmits).toEqual([{
-      room: 'modern-admin:user:admin-1',
-      event: REALTIME_EVENT,
-      payload: event,
-    }])
+    expect(server.roomEmits).toEqual([
+      {
+        room: 'modern-admin:user:admin-1',
+        event: REALTIME_EVENT,
+        payload: event,
+      },
+    ])
   })
 
   describe('per-principal room gating', () => {

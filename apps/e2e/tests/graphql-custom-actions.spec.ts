@@ -122,9 +122,7 @@ test.describe('GraphQL custom actions', () => {
     expect(res.data!.postsPublish.record.id).toBe(id)
   })
 
-  test('bulk action receives its selection on both the prime and the run', async ({
-    request,
-  }) => {
+  test('bulk action receives its selection on both the prime and the run', async ({ request }) => {
     const ids = await latestPostIds(request, 2)
     expect(ids).toHaveLength(2)
 
@@ -156,9 +154,7 @@ test.describe('GraphQL custom actions', () => {
     }
   })
 
-  test('a handler-reported error surfaces as data, not a GraphQL error', async ({
-    request,
-  }) => {
+  test('a handler-reported error surfaces as data, not a GraphQL error', async ({ request }) => {
     // `bulkRepriceUi` rejects a zero percentage with a `notice`, not a throw —
     // the transport must pass that through rather than turning it into an
     // `errors` entry.

@@ -75,7 +75,12 @@ export class DrizzleLogStore implements IQueryableLogStore {
 
         const rows = (await this.db
           .delete(this.table)
-          .where(inArray(this.table.id, obsolete.map((row) => row.id)))
+          .where(
+            inArray(
+              this.table.id,
+              obsolete.map((row) => row.id),
+            ),
+          )
           .returning({ id: this.table.id })) as Array<{ id: string }>
         removed += rows.length
       }

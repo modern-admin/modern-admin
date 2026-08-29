@@ -43,9 +43,7 @@ test.describe('REST CRUD — customers', () => {
     expect(id).toBeTruthy()
     expect(createdBody.record.params.email).toBe('e2e@example.com')
 
-    const fetched = await request.get(
-      adminApi(`/resources/customers/records/${id}/actions/show`),
-    )
+    const fetched = await request.get(adminApi(`/resources/customers/records/${id}/actions/show`))
     expect(fetched.ok()).toBeTruthy()
     const fetchedBody = await fetched.json()
     expect(fetchedBody.record.params.email).toBe('e2e@example.com')
@@ -63,16 +61,12 @@ test.describe('REST CRUD — customers', () => {
     )
     expect(deleted.ok()).toBeTruthy()
 
-    const after = await request.get(
-      adminApi(`/resources/customers/records/${id}/actions/show`),
-    )
+    const after = await request.get(adminApi(`/resources/customers/records/${id}/actions/show`))
     expect(after.status()).toBe(404)
   })
 
   test('list supports pagination params', async ({ request }) => {
-    const res = await request.get(
-      adminApi('/resources/customers/actions/list?perPage=2&page=1'),
-    )
+    const res = await request.get(adminApi('/resources/customers/actions/list?perPage=2&page=1'))
     expect(res.ok()).toBeTruthy()
     const body = await res.json()
     expect(body.records.length).toBeLessThanOrEqual(2)

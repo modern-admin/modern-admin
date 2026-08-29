@@ -86,9 +86,7 @@ export const buildAiAssistantConfig = (
     defaultModel,
     manageRoles,
     excludeResourceIds,
-    ...(isTruthyEnv(process.env.AI_ASSISTANT_DEBUG)
-      ? { debug: true }
-      : {}),
+    ...(isTruthyEnv(process.env.AI_ASSISTANT_DEBUG) ? { debug: true } : {}),
     ...(process.env.API_STOCK_KEY ? { apiKey: process.env.API_STOCK_KEY } : {}),
     ...(rawQuery ? { rawQuery } : {}),
     ...overrides,

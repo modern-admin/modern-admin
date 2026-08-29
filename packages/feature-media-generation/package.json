@@ -3,7 +3,12 @@
   "version": "0.9.0",
   "description": "Configurable record actions for Modern Admin media generation.",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/feature-media-generation#readme",
-  "keywords": ["modern-admin", "media-generation", "product-images", "video"],
+  "keywords": [
+    "modern-admin",
+    "media-generation",
+    "product-images",
+    "video"
+  ],
   "type": "module",
   "license": "MIT",
   "repository": {
@@ -14,23 +19,32 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
-    ".": { "types": "./src/index.ts", "default": "./src/index.ts" }
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
   },
-  "files": ["dist", "src", "README.md"],
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ],
   "publishConfig": {
     "registry": "https://registry.npmjs.org",
     "access": "public",
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "exports": {
-      ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" }
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
     }
   },
   "scripts": {
     "build": "bun ../../scripts/clean.ts dist .tsbuildinfo && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "test": "bun test",
-    "lint": "eslint ."
+    "test": "bun test"
   },
   "dependencies": {
     "@modern-admin/core": "workspace:^"

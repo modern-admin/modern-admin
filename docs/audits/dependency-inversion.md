@@ -71,15 +71,15 @@ the GraphQL transport and resolves identity through core's `IAuthProvider`.
 
 ## Finding status
 
-| # | Previous finding | Previous severity | Current status |
-| --- | --- | --- | --- |
-| F1 | AI assistant compiled directly against OpenRouter | High | Resolved |
-| F2 | React context depended on concrete `AdminClient` | High | Resolved |
-| F3 | Browser client fixed Better Auth route shapes | Medium | Resolved |
-| F4 | `graphql` depended on sibling `nest` transport | Medium | Resolved |
-| F5 | Upload feature installed Nest transport dependencies unconditionally | Medium | Resolved |
-| F6 | Nest bootstrap called concrete telemetry functions | Low | Resolved |
-| F7 | AI background work had no broker-neutral dispatch seam | Low | Resolved |
+| #   | Previous finding                                                     | Previous severity | Current status |
+| --- | -------------------------------------------------------------------- | ----------------- | -------------- |
+| F1  | AI assistant compiled directly against OpenRouter                    | High              | Resolved       |
+| F2  | React context depended on concrete `AdminClient`                     | High              | Resolved       |
+| F3  | Browser client fixed Better Auth route shapes                        | Medium            | Resolved       |
+| F4  | `graphql` depended on sibling `nest` transport                       | Medium            | Resolved       |
+| F5  | Upload feature installed Nest transport dependencies unconditionally | Medium            | Resolved       |
+| F6  | Nest bootstrap called concrete telemetry functions                   | Low               | Resolved       |
+| F7  | AI background work had no broker-neutral dispatch seam               | Low               | Resolved       |
 
 ### F1 — LLM provider port
 

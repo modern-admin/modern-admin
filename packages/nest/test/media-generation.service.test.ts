@@ -8,19 +8,36 @@ import {
   type MediaGenerationResult,
   type ModernAdmin,
 } from '@modern-admin/core'
-import { MediaGenerationService, MEDIA_GENERATION_TASK_KIND } from '../src/media-generation.service.js'
+import {
+  MediaGenerationService,
+  MEDIA_GENERATION_TASK_KIND,
+} from '../src/media-generation.service.js'
 import type { ModernAdminModuleOptions } from '../src/module.js'
 
-const catalog = [{
-  id: 'flux', group: '', name: 'Flux', type: 'image' as const,
-  tags: [], capabilities: [],
-  pricing: [{ key: 'default', price: '0.10', isDefault: true }],
-  params: [{
-    name: 'prompt', label: 'Prompt', kind: 'string' as const, isArray: false,
-    required: true, isMedia: false, isPrompt: true, multiline: true,
-    deprecated: false,
-  }],
-}]
+const catalog = [
+  {
+    id: 'flux',
+    group: '',
+    name: 'Flux',
+    type: 'image' as const,
+    tags: [],
+    capabilities: [],
+    pricing: [{ key: 'default', price: '0.10', isDefault: true }],
+    params: [
+      {
+        name: 'prompt',
+        label: 'Prompt',
+        kind: 'string' as const,
+        isArray: false,
+        required: true,
+        isMedia: false,
+        isPrompt: true,
+        multiline: true,
+        deprecated: false,
+      },
+    ],
+  },
+]
 
 class FakeProvider implements IMediaGenerationProvider {
   readonly id = 'api-stock'
@@ -64,7 +81,11 @@ const setup = (
   const configStore = new MemoryConfigStore()
   const published: unknown[] = []
   const admin = {
-    realtime: { publish: async (event: unknown) => { published.push(event) } },
+    realtime: {
+      publish: async (event: unknown) => {
+        published.push(event)
+      },
+    },
   } as unknown as ModernAdmin
   const options = {
     aiTaskStore,
@@ -119,11 +140,13 @@ describe('MediaGenerationService', () => {
       { url: 'https://cdn.example/result.png', type: 'image' },
     ])
     expect(provider.statusCalls).toBe(1)
-    expect(published).toContainEqual(expect.objectContaining({
-      kind: 'taskUpdated',
-      taskId: task.id,
-      audienceUserId: 'admin-1',
-    }))
+    expect(published).toContainEqual(
+      expect.objectContaining({
+        kind: 'taskUpdated',
+        taskId: task.id,
+        audienceUserId: 'admin-1',
+      }),
+    )
   })
 
   it('falls back to polling when no webhook base URL is configured', async () => {
@@ -246,10 +269,12 @@ describe('MediaGenerationService', () => {
     const previous = process.env.NODE_ENV
     process.env.NODE_ENV = 'production'
     try {
-      await expect(service.createTask(
-        { requestId: 'prod-1', model: 'flux', input: { prompt: 'A cup' } },
-        { id: 'admin-1', role: 'admin' },
-      )).rejects.toThrow('webhookBaseUrl is not configured')
+      await expect(
+        service.createTask(
+          { requestId: 'prod-1', model: 'flux', input: { prompt: 'A cup' } },
+          { id: 'admin-1', role: 'admin' },
+        ),
+      ).rejects.toThrow('webhookBaseUrl is not configured')
     } finally {
       process.env.NODE_ENV = previous
     }
@@ -264,10 +289,12 @@ describe('MediaGenerationService', () => {
       currentAdmin,
     )
 
-    await expect(service.createTask(
-      { requestId: 'budget-2', model: 'flux', input: { prompt: 'Second' } },
-      currentAdmin,
-    )).rejects.toThrow('monthly budget')
+    await expect(
+      service.createTask(
+        { requestId: 'budget-2', model: 'flux', input: { prompt: 'Second' } },
+        currentAdmin,
+      ),
+    ).rejects.toThrow('monthly budget')
     expect(provider.creates).toHaveLength(1)
   })
 

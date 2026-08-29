@@ -29,18 +29,18 @@ import { expect, test, type Page, type Locator } from '@playwright/test'
 
 const RECENT_STORAGE_KEY = 'modern-admin:global-search:recent:v1'
 
-const trigger = (page: Page): Locator =>
-  page.getByRole('button', { name: 'Global search' }).first()
+const trigger = (page: Page): Locator => page.getByRole('button', { name: 'Global search' }).first()
 
 const dialog = (page: Page): Locator => page.getByRole('dialog')
 
-const input = (page: Page): Locator =>
-  dialog(page).getByPlaceholder('Search across all resources…')
+const input = (page: Page): Locator => dialog(page).getByPlaceholder('Search across all resources…')
 
 const cmdkGroup = (page: Page, heading: RegExp): Locator =>
-  dialog(page).locator('[cmdk-group]').filter({
-    has: page.locator('[cmdk-group-heading]', { hasText: heading }),
-  })
+  dialog(page)
+    .locator('[cmdk-group]')
+    .filter({
+      has: page.locator('[cmdk-group-heading]', { hasText: heading }),
+    })
 
 async function openPalette(page: Page): Promise<void> {
   await trigger(page).click()
@@ -91,7 +91,11 @@ test.describe('global search — results', () => {
   test.beforeEach(async ({ page }) => {
     // Clear recent searches so the "hint" empty state is deterministic.
     await page.addInitScript((key) => {
-      try { localStorage.removeItem(key) } catch { /* ignore */ }
+      try {
+        localStorage.removeItem(key)
+      } catch {
+        /* ignore */
+      }
     }, RECENT_STORAGE_KEY)
   })
 
@@ -105,7 +109,10 @@ test.describe('global search — results', () => {
 
     // At least one hit row mentions a "Lovelace" customer (seed customer #1).
     await expect(
-      customers.locator('[cmdk-item]').filter({ hasText: /lovelace/i }).first(),
+      customers
+        .locator('[cmdk-item]')
+        .filter({ hasText: /lovelace/i })
+        .first(),
     ).toBeVisible()
 
     // Substring match is wrapped in `<mark>` (`highlightMatch` helper).
@@ -119,14 +126,12 @@ test.describe('global search — results', () => {
     await input(page).fill('zzzzzzzznotarealsearchtokenxyzzz')
     // cmdk's `CommandEmpty` renders our `noResults` copy when the response
     // came back with 0 groups (NOT while still loading).
-    await expect(
-      dialog(page).getByText('No matching records found.'),
-    ).toBeVisible({ timeout: 10_000 })
+    await expect(dialog(page).getByText('No matching records found.')).toBeVisible({
+      timeout: 10_000,
+    })
   })
 
-  test('selecting a hit navigates to the record and closes the dialog', async ({
-    page,
-  }) => {
+  test('selecting a hit navigates to the record and closes the dialog', async ({ page }) => {
     await page.goto('/')
     await openPalette(page)
     await typeQuery(page, 'ada')
@@ -170,13 +175,15 @@ test.describe('global search — results', () => {
 test.describe('global search — recent queries', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript((key) => {
-      try { localStorage.removeItem(key) } catch { /* ignore */ }
+      try {
+        localStorage.removeItem(key)
+      } catch {
+        /* ignore */
+      }
     }, RECENT_STORAGE_KEY)
   })
 
-  test('persists picked query to localStorage and re-surfaces it on reopen', async ({
-    page,
-  }) => {
+  test('persists picked query to localStorage and re-surfaces it on reopen', async ({ page }) => {
     await page.goto('/')
     await openPalette(page)
     await typeQuery(page, 'ada')
@@ -191,10 +198,7 @@ test.describe('global search — recent queries', () => {
     await expect(dialog(page)).toBeHidden()
 
     // localStorage must now contain `["ada"]`.
-    const stored = await page.evaluate(
-      (key) => localStorage.getItem(key),
-      RECENT_STORAGE_KEY,
-    )
+    const stored = await page.evaluate((key) => localStorage.getItem(key), RECENT_STORAGE_KEY)
     expect(stored).not.toBeNull()
     expect(JSON.parse(stored!) as string[]).toContain('ada')
 
@@ -203,9 +207,7 @@ test.describe('global search — recent queries', () => {
     await expect(dialog(page)).toBeVisible()
     const recent = cmdkGroup(page, /Recent searches/i)
     await expect(recent).toBeVisible()
-    await expect(
-      recent.locator('[cmdk-item]').filter({ hasText: 'ada' }).first(),
-    ).toBeVisible()
+    await expect(recent.locator('[cmdk-item]').filter({ hasText: 'ada' }).first()).toBeVisible()
   })
 
   test('clear-recent button wipes the stored list', async ({ page }) => {
@@ -213,7 +215,11 @@ test.describe('global search — recent queries', () => {
     // dance — this exercise is about the Clear UI, not persistence.
     await page.addInitScript(
       ({ key, list }) => {
-        try { localStorage.setItem(key, JSON.stringify(list)) } catch { /* ignore */ }
+        try {
+          localStorage.setItem(key, JSON.stringify(list))
+        } catch {
+          /* ignore */
+        }
       },
       { key: RECENT_STORAGE_KEY, list: ['ada', 'beta'] },
     )
@@ -239,17 +245,18 @@ test.describe('global search — recent queries', () => {
       dialog(page).getByText('Start typing to search across all resources.'),
     ).toBeVisible()
 
-    const stored = await page.evaluate(
-      (key) => localStorage.getItem(key),
-      RECENT_STORAGE_KEY,
-    )
+    const stored = await page.evaluate((key) => localStorage.getItem(key), RECENT_STORAGE_KEY)
     expect(stored).toBe('[]')
   })
 
   test('clicking a recent entry re-runs the query immediately', async ({ page }) => {
     await page.addInitScript(
       ({ key, list }) => {
-        try { localStorage.setItem(key, JSON.stringify(list)) } catch { /* ignore */ }
+        try {
+          localStorage.setItem(key, JSON.stringify(list))
+        } catch {
+          /* ignore */
+        }
       },
       { key: RECENT_STORAGE_KEY, list: ['ada'] },
     )

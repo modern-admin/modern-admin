@@ -187,8 +187,7 @@ export function DatePicker({
     }
   }
 
-  const inputPlaceholder =
-    placeholder ?? (mode === 'datetime' ? 'YYYY-MM-DD HH:MM' : 'YYYY-MM-DD')
+  const inputPlaceholder = placeholder ?? (mode === 'datetime' ? 'YYYY-MM-DD HH:MM' : 'YYYY-MM-DD')
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

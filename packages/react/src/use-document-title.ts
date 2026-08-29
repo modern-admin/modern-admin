@@ -22,22 +22,22 @@ export function useDocumentTitle(appName: string): void {
 
   const section = React.useMemo<string | null>(() => {
     switch (route.name) {
-    case 'home':
-      return null
-    case 'audit-log':
-      return t('audit:title')
-    case 'cache':
-      return t('cache:title')
-    case 'settings':
-      return t('settings:menuItem')
-    case 'extension':
-      return null
-    default: {
-      // Every remaining route is resource-scoped (list/show/edit/new/action).
-      const resourceId = 'resourceId' in route ? route.resourceId : undefined
-      if (!resourceId) return null
-      return resources.find((r) => r.id === resourceId)?.name ?? resourceId
-    }
+      case 'home':
+        return null
+      case 'audit-log':
+        return t('audit:title')
+      case 'cache':
+        return t('cache:title')
+      case 'settings':
+        return t('settings:menuItem')
+      case 'extension':
+        return null
+      default: {
+        // Every remaining route is resource-scoped (list/show/edit/new/action).
+        const resourceId = 'resourceId' in route ? route.resourceId : undefined
+        if (!resourceId) return null
+        return resources.find((r) => r.id === resourceId)?.name ?? resourceId
+      }
     }
   }, [route, resources, t])
 

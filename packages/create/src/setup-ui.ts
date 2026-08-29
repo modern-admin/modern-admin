@@ -82,8 +82,7 @@ const here = (): string => dirname(fileURLToPath(import.meta.url))
 
 const defaultTemplateDir = (): string => join(here(), '..', 'ui-template')
 
-const isMissing = (error: unknown): boolean =>
-  (error as { code?: string }).code === 'ENOENT'
+const isMissing = (error: unknown): boolean => (error as { code?: string }).code === 'ENOENT'
 
 const readPackageJson = (source: string, path: string): PackageJson => {
   let parsed: unknown
@@ -142,11 +141,7 @@ const safeUiDir = (value: string | undefined): string => {
   return normalized
 }
 
-const safeUrlPath = (
-  value: string | undefined,
-  fallback: string,
-  option: string,
-): string => {
+const safeUrlPath = (value: string | undefined, fallback: string, option: string): string => {
   const path = value?.trim() || fallback
   if (
     !path.startsWith('/') ||
@@ -496,10 +491,7 @@ const staticUiStringOption = (source: string, property: string): string | undefi
   return stringLiteralAt(body, colon + 1)?.value
 }
 
-const staticUiRuntimeStringOption = (
-  source: string,
-  property: string,
-): string | undefined => {
+const staticUiRuntimeStringOption = (source: string, property: string): string | undefined => {
   const { body, openingBrace } = staticUiObject(source)
   const runtimeColon = topLevelPropertyColon(body, 'runtimeConfig')
   if (runtimeColon === null) return undefined
@@ -516,10 +508,7 @@ const staticUiRuntimeStringOption = (
 }
 
 /** Add `webPackage` to an existing literal Static UI options object. */
-export const patchStaticUiModule = (
-  source: string,
-  webPackage: string,
-): ModulePatch => {
+export const patchStaticUiModule = (source: string, webPackage: string): ModulePatch => {
   const { body, call, closingBrace, openingBrace } = staticUiObject(source)
   const existingColon = topLevelPropertyColon(body, 'webPackage')
   if (existingColon !== null) {
@@ -545,19 +534,13 @@ export const patchStaticUiModule = (
   const callIndent = /^\s*/.exec(source.slice(lineStart, call))?.[0] ?? ''
   const property = `webPackage: '${webPackage}'`
   if (body.trim() === '') {
-    const output =
-      source.slice(0, openingBrace + 1) +
-      ` ${property} ` +
-      source.slice(closingBrace)
+    const output = source.slice(0, openingBrace + 1) + ` ${property} ` + source.slice(closingBrace)
     return { output, changed: true }
   }
   const multiline = source[openingBrace + 1] === '\n' || source[openingBrace + 1] === '\r'
   const eol = source.includes('\r\n') ? '\r\n' : '\n'
-  const insertion = multiline
-    ? `${eol}${callIndent}  ${property},`
-    : ` ${property},`
-  const output =
-    source.slice(0, openingBrace + 1) + insertion + source.slice(openingBrace + 1)
+  const insertion = multiline ? `${eol}${callIndent}  ${property},` : ` ${property},`
+  const output = source.slice(0, openingBrace + 1) + insertion + source.slice(openingBrace + 1)
   return { output, changed: true }
 }
 
@@ -566,16 +549,10 @@ const modernAdminRange = async (pkg: PackageJson): Promise<string> => {
     ...(pkg.devDependencies ?? {}),
     ...(pkg.dependencies ?? {}),
   }
-  for (const preferred of [
-    '@modern-admin/web',
-    '@modern-admin/nest',
-    '@modern-admin/core',
-  ]) {
+  for (const preferred of ['@modern-admin/web', '@modern-admin/nest', '@modern-admin/core']) {
     if (dependencies[preferred]) return dependencies[preferred]
   }
-  const existing = Object.entries(dependencies).find(([name]) =>
-    name.startsWith('@modern-admin/'),
-  )
+  const existing = Object.entries(dependencies).find(([name]) => name.startsWith('@modern-admin/'))
   if (existing) return existing[1]
   return `^${await readOwnVersion(join(here(), '..'))}`
 }
@@ -650,17 +627,14 @@ const patchPackageJson = async (
     scripts[name] = command
     changedScripts.push(name)
   }
-  const includeScript = (
-    name: string,
-    command: string,
-    position: 'before' | 'after',
-  ): void => {
+  const includeScript = (name: string, command: string, position: 'before' | 'after'): void => {
     const current = scripts[name]
     if (current === undefined) {
       scripts[name] = command
       changedScripts.push(name)
     } else if (!current.includes(command)) {
-      scripts[name] = position === 'before' ? `${command} && ${current}` : `${current} && ${command}`
+      scripts[name] =
+        position === 'before' ? `${command} && ${current}` : `${current} && ${command}`
       changedScripts.push(name)
     }
   }

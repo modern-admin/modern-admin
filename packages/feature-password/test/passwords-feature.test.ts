@@ -103,10 +103,7 @@ describe('passwordsFeature() — new before hook', () => {
     const before = (result.actions?.new as { before: unknown }).before as Array<
       (req: ActionRequest, ctx: unknown) => Promise<ActionRequest>
     >
-    const out = await before[0]!(
-      baseRequest({ name: 'Ada', newPassword: 'secret' }, 'new'),
-      {},
-    )
+    const out = await before[0]!(baseRequest({ name: 'Ada', newPassword: 'secret' }, 'new'), {})
     expect(out.payload).toEqual({ name: 'Ada', password: 'hashed:secret' })
     expect(hash).toHaveBeenCalledWith('secret')
   })
@@ -120,10 +117,7 @@ describe('passwordsFeature() — new before hook', () => {
     const before = (result.actions?.new as { before: unknown }).before as Array<
       (req: ActionRequest, ctx: unknown) => Promise<ActionRequest>
     >
-    const out = await before[0]!(
-      baseRequest({ name: 'Ada', newPassword: '' }, 'new'),
-      {},
-    )
+    const out = await before[0]!(baseRequest({ name: 'Ada', newPassword: '' }, 'new'), {})
     expect(out.payload).toEqual({ name: 'Ada' })
   })
 })
@@ -140,10 +134,7 @@ describe('passwordsFeature() — edit before hook', () => {
     const before = (result.actions?.edit as { before: unknown }).before as Array<
       (req: ActionRequest, ctx: unknown) => Promise<ActionRequest>
     >
-    const out = await before[0]!(
-      baseRequest({ name: 'Ada', newPassword: 'fresh' }, 'edit'),
-      {},
-    )
+    const out = await before[0]!(baseRequest({ name: 'Ada', newPassword: 'fresh' }, 'edit'), {})
     expect(out.payload).toEqual({ name: 'Ada', password: 'h:fresh' })
   })
 
@@ -156,10 +147,7 @@ describe('passwordsFeature() — edit before hook', () => {
     const before = (result.actions?.edit as { before: unknown }).before as Array<
       (req: ActionRequest, ctx: unknown) => Promise<ActionRequest>
     >
-    const out = await before[0]!(
-      baseRequest({ name: 'Ada', newPassword: '' }, 'edit'),
-      {},
-    )
+    const out = await before[0]!(baseRequest({ name: 'Ada', newPassword: '' }, 'edit'), {})
     expect(out.payload).toEqual({ name: 'Ada' })
     expect((out.payload as Record<string, unknown>).password).toBeUndefined()
   })

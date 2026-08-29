@@ -30,20 +30,26 @@
  */
 
 import {
-  appendAfterHook,
-  Filter,
   type ActionRequest,
   type ActionResponse,
+  appendAfterHook,
   type BaseRecord,
   type BaseResource,
   type FeatureFn,
+  Filter,
   type ListActionResponse,
   type ModernAdmin,
   type ParamsType,
   type RecordActionResponse,
   type ResourceOptions,
 } from '@modern-admin/core'
-import { m2mRelationZ, type M2MCustomData, type M2MItem, type M2MRelation, type M2MRelationInput } from './types.js'
+import {
+  type M2MCustomData,
+  type M2MItem,
+  type M2MRelation,
+  type M2MRelationInput,
+  m2mRelationZ,
+} from './types.js'
 
 // ─── Hook chaining ───────────────────────────────────────────────────────────
 
@@ -55,8 +61,7 @@ type HookFn = (
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const ctxAdmin = (context: unknown): ModernAdmin =>
-  (context as { admin: ModernAdmin }).admin
+const ctxAdmin = (context: unknown): ModernAdmin => (context as { admin: ModernAdmin }).admin
 
 const JUNCTION_PAGE_SIZE = 1_000
 
@@ -85,11 +90,7 @@ const junctionRowsForParent = async (
   return out
 }
 
-const buildItem = (
-  junctionRow: BaseRecord,
-  foreignKey: string,
-  extraFields: string[],
-): M2MItem => {
+const buildItem = (junctionRow: BaseRecord, foreignKey: string, extraFields: string[]): M2MItem => {
   const item: M2MItem = { id: String(junctionRow.params[foreignKey] ?? '') }
   for (const f of extraFields) {
     if (f in junctionRow.params) item[f] = junctionRow.params[f]
@@ -129,9 +130,7 @@ const parsePayloadItems = (
     indices.set(idx, bucket)
   }
   if (!any) return undefined
-  const ordered = [...indices.entries()]
-    .sort((a, b) => a[0] - b[0])
-    .map(([, v]) => v)
+  const ordered = [...indices.entries()].sort((a, b) => a[0] - b[0]).map(([, v]) => v)
   return normaliseItems(ordered)
 }
 
@@ -324,7 +323,8 @@ const hydrateListRecords = async (
 
 // ─── Hooks ───────────────────────────────────────────────────────────────────
 
-const buildReadHook = (relation: M2MRelation): HookFn =>
+const buildReadHook =
+  (relation: M2MRelation): HookFn =>
   async (response, request, context) => {
     const admin = ctxAdmin(context)
     const list = response as ListActionResponse
@@ -338,7 +338,8 @@ const buildReadHook = (relation: M2MRelation): HookFn =>
     return response
   }
 
-const buildWriteHook = (relation: M2MRelation): HookFn =>
+const buildWriteHook =
+  (relation: M2MRelation): HookFn =>
   async (response, request, context) => {
     // Both `new` (POST) and `edit` (PATCH) need diff application; only the
     // GET-rendered form variants and DELETE should be ignored here.
@@ -383,7 +384,8 @@ const buildWriteHook = (relation: M2MRelation): HookFn =>
     return response
   }
 
-const buildDeleteHook = (relation: M2MRelation): HookFn =>
+const buildDeleteHook =
+  (relation: M2MRelation): HookFn =>
   async (response, request, context) => {
     const id = request.params.recordId
     if (!id) return response

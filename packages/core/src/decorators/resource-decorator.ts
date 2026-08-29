@@ -1,11 +1,6 @@
 import { BaseProperty, type BaseResource } from '../adapters'
 import type { PropertyType } from '../adapters/types.js'
-import {
-  BUILT_IN_ACTIONS,
-  type Action,
-  type ActionContext,
-  type ActionResponse,
-} from '../actions'
+import { BUILT_IN_ACTIONS, type Action, type ActionContext, type ActionResponse } from '../actions'
 import { ActionDecorator } from './action-decorator.js'
 import { PropertyDecorator, type PropertyJSON } from './property-decorator.js'
 import type { PropertyContextBase } from './property-options.js'
@@ -80,9 +75,7 @@ export class ResourceDecorator {
 
   private buildPropertyDecorators(properties: BaseProperty[]): PropertyDecorator[] {
     const overrides = this.options.properties ?? {}
-    const fromResource = properties.map(
-      (p) => new PropertyDecorator(p, overrides[p.path()] ?? {}),
-    )
+    const fromResource = properties.map((p) => new PropertyDecorator(p, overrides[p.path()] ?? {}))
     // Promote option entries that don't match an existing resource property
     // into virtual fields. Used by features (e.g. passwords) to expose
     // form-only inputs that don't exist on the underlying table — paired
@@ -155,21 +148,15 @@ export class ResourceDecorator {
   }
 
   resourceActions(): ActionDecorator<ActionResponse>[] {
-    return Array.from(this.actions.values()).filter(
-      (a) => a.actionType() === 'resource',
-    )
+    return Array.from(this.actions.values()).filter((a) => a.actionType() === 'resource')
   }
 
   recordActions(): ActionDecorator<ActionResponse>[] {
-    return Array.from(this.actions.values()).filter(
-      (a) => a.actionType() === 'record',
-    )
+    return Array.from(this.actions.values()).filter((a) => a.actionType() === 'record')
   }
 
   bulkActions(): ActionDecorator<ActionResponse>[] {
-    return Array.from(this.actions.values()).filter(
-      (a) => a.actionType() === 'bulk',
-    )
+    return Array.from(this.actions.values()).filter((a) => a.actionType() === 'bulk')
   }
 
   /**
@@ -182,15 +169,16 @@ export class ResourceDecorator {
    * logic elsewhere.
    */
   propertiesForView(view: View): PropertyDecorator[] {
-    const explicit = view === 'list'
-      ? this.options.listProperties
-      : view === 'show'
-        ? this.options.showProperties
-        : view === 'new'
-          ? (this.options.newProperties ?? this.options.editProperties)
-          : view === 'edit'
-            ? this.options.editProperties
-            : this.options.filterProperties
+    const explicit =
+      view === 'list'
+        ? this.options.listProperties
+        : view === 'show'
+          ? this.options.showProperties
+          : view === 'new'
+            ? (this.options.newProperties ?? this.options.editProperties)
+            : view === 'edit'
+              ? this.options.editProperties
+              : this.options.filterProperties
     if (explicit && explicit.length > 0) {
       return explicit
         .map((path) => this.getPropertyByKey(path))
@@ -208,12 +196,15 @@ export class ResourceDecorator {
    * has already been removed from `properties`.
    */
   private buildPropertyOrder(allowedPaths?: ReadonlySet<string>): Record<View, string[]> {
-    return VIEWS.reduce((acc, view) => {
-      acc[view] = this.propertiesForView(view)
-        .map((p) => p.path())
-        .filter((path) => allowedPaths?.has(path) ?? true)
-      return acc
-    }, {} as Record<View, string[]>)
+    return VIEWS.reduce(
+      (acc, view) => {
+        acc[view] = this.propertiesForView(view)
+          .map((p) => p.path())
+          .filter((path) => allowedPaths?.has(path) ?? true)
+        return acc
+      },
+      {} as Record<View, string[]>,
+    )
   }
 
   toJSON(): ResourceJSON
@@ -221,8 +212,9 @@ export class ResourceDecorator {
   toJSON(context?: PropertyContextBase): ResourceJSON | Promise<ResourceJSON> {
     if (context) {
       return (async () => {
-        const properties = (await Promise.all(this.properties.map((p) => p.toJSON(context))))
-          .filter((p): p is PropertyJSON => p !== null)
+        const properties = (
+          await Promise.all(this.properties.map((p) => p.toJSON(context)))
+        ).filter((p): p is PropertyJSON => p !== null)
         // Filter out actions the current admin cannot access, so the SPA can
         // gate UI on capability — e.g. <ReferenceLink> renders a plain badge
         // instead of a clickable show link when `show` is missing from the
@@ -237,15 +229,17 @@ export class ResourceDecorator {
         // record in context. (This is what drops the internal `values` /
         // `search` actions, both declared `isVisible: false`.)
         const entries = Array.from(this.actions.values())
-        const descriptors = await Promise.all(entries.map(async (a) => {
-          const descriptor = a.toDescriptor()
-          const actionContext = { ...context, action: descriptor } as ActionContext
-          if (!(await a.isAccessible(actionContext))) return null
-          if (descriptor.actionType !== 'record' && !(await a.isVisible(actionContext))) {
-            return null
-          }
-          return descriptor
-        }))
+        const descriptors = await Promise.all(
+          entries.map(async (a) => {
+            const descriptor = a.toDescriptor()
+            const actionContext = { ...context, action: descriptor } as ActionContext
+            if (!(await a.isAccessible(actionContext))) return null
+            if (descriptor.actionType !== 'record' && !(await a.isVisible(actionContext))) {
+              return null
+            }
+            return descriptor
+          }),
+        )
         return {
           id: this.id,
           name: this.name,
@@ -254,7 +248,9 @@ export class ResourceDecorator {
           showRelatedResources: this.showRelatedResources,
           properties,
           propertyOrder: this.buildPropertyOrder(new Set(properties.map((p) => p.path))),
-          actions: descriptors.filter((d): d is ReturnType<ActionDecorator['toDescriptor']> => d !== null),
+          actions: descriptors.filter(
+            (d): d is ReturnType<ActionDecorator['toDescriptor']> => d !== null,
+          ),
         }
       })()
     }

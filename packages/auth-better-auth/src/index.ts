@@ -2,7 +2,13 @@
 // Better Auth. We treat the Better Auth instance as opaque (`auth.api.*`) so
 // upgrades within Better Auth don't ripple through this adapter's surface.
 
-import { ConsoleLogger, type CurrentAdmin, type IAuthProvider, type ILogger, type LoginCredentials } from '@modern-admin/core'
+import {
+  ConsoleLogger,
+  type CurrentAdmin,
+  type IAuthProvider,
+  type ILogger,
+  type LoginCredentials,
+} from '@modern-admin/core'
 
 export {
   BUILTIN_AUTHORITATIVE_ACCOUNT_ISSUERS,
@@ -69,19 +75,22 @@ export interface ApiKeyAdminApi {
 
 interface BetterAuthApi extends Partial<ApiKeyAdminApi> {
   getSession(args: { headers: Headers }): Promise<{
-    user?: { id: string; email?: string; name?: string; image?: string | null; [key: string]: unknown }
+    user?: {
+      id: string
+      email?: string
+      name?: string
+      image?: string | null
+      [key: string]: unknown
+    }
     session?: { id: string; expiresAt?: Date | string }
   } | null>
 
   signInEmail?(args: { body: { email: string; password: string } }): Promise<unknown>
 
-
   signOut?(args: { headers: Headers }): Promise<unknown>
 
   /** Optional, present when the @better-auth/api-key plugin is mounted. */
-  verifyApiKey?(args: {
-    body: { key: string; permissions?: Record<string, string[]> }
-  }): Promise<{
+  verifyApiKey?(args: { body: { key: string; permissions?: Record<string, string[]> } }): Promise<{
     valid: boolean
     error: { code: string; message?: string } | null
     key: {
@@ -121,14 +130,14 @@ export interface BetterAuthInstance {
  */
 type SignInEmailResult =
   | {
-    user?: {
-      id?: string
-      email?: string
-      name?: string
-      image?: string | null
-      [key: string]: unknown
+      user?: {
+        id?: string
+        email?: string
+        name?: string
+        image?: string | null
+        [key: string]: unknown
+      }
     }
-  }
   | null
   | undefined
 
@@ -400,7 +409,7 @@ export class BetterAuthProvider implements IAuthProvider {
     if (typeof api.setRole !== 'function') {
       this.log.warn(
         `[modern-admin] role '${opts.role}' requested for ${opts.email}, but this Better Auth ` +
-        'instance has no admin plugin (`setRole` is absent) — the account keeps its default role.',
+          'instance has no admin plugin (`setRole` is absent) — the account keeps its default role.',
       )
       return
     }
@@ -445,7 +454,7 @@ export class BetterAuthProvider implements IAuthProvider {
     if (typeof api.listUsers !== 'function') {
       this.log.warn(
         `[modern-admin] cannot reconcile the role of the existing admin ${email}: ` +
-        'this Better Auth instance has no admin plugin (`listUsers` is absent).',
+          'this Better Auth instance has no admin plugin (`listUsers` is absent).',
       )
       return undefined
     }
@@ -456,14 +465,16 @@ export class BetterAuthProvider implements IAuthProvider {
       })
       const found = result?.users?.[0]?.id
       if (!found) {
-        this.log.warn(`[modern-admin] admin ${email} exists but could not be looked up; role left unchanged.`)
+        this.log.warn(
+          `[modern-admin] admin ${email} exists but could not be looked up; role left unchanged.`,
+        )
       }
       return found
     } catch (err) {
       this.log.warn(
         `[modern-admin] cannot reconcile the role of the existing admin ${email}. ` +
-        '`listUsers` is session-guarded and bootstrap has no session — pass ' +
-        '`seedAdminHeaders` to BetterAuthProvider if you need the role kept in sync.',
+          '`listUsers` is session-guarded and bootstrap has no session — pass ' +
+          '`seedAdminHeaders` to BetterAuthProvider if you need the role kept in sync.',
         { error: err instanceof Error ? err.message : String(err) },
       )
       return undefined

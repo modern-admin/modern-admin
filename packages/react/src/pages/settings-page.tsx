@@ -86,9 +86,12 @@ export function SettingsPage({ section }: { section?: string }): React.ReactElem
   const SECTIONS = React.useMemo<SectionDef[]>(
     () => [
       ...BUILT_IN_SECTIONS.filter((s) =>
-        s.key === 'api-keys' ? features.apiKeys
-          : s.key === 'webhooks' ? features.webhooks
-            : s.key === 'ai-assistant' ? features.aiAssistant
+        s.key === 'api-keys'
+          ? features.apiKeys
+          : s.key === 'webhooks'
+            ? features.webhooks
+            : s.key === 'ai-assistant'
+              ? features.aiAssistant
               : true,
       ),
       ...getSettingsSectionExtensions().map((ext) => ({
@@ -104,13 +107,10 @@ export function SettingsPage({ section }: { section?: string }): React.ReactElem
   // Resolve the requested section. If the URL is bogus or the section is
   // disabled, fall back to the first enabled section.
   const builtInKeys: BuiltInSectionKey[] = ['api-keys', 'webhooks', 'ai-assistant']
-  const isBuiltIn = (k: string): k is BuiltInSectionKey =>
-    (builtInKeys as string[]).includes(k)
+  const isBuiltIn = (k: string): k is BuiltInSectionKey => (builtInKeys as string[]).includes(k)
   const requested: string | null = section ?? null
   const active: string | null =
-    requested && SECTIONS.some((s) => s.key === requested)
-      ? requested
-      : (SECTIONS[0]?.key ?? null)
+    requested && SECTIONS.some((s) => s.key === requested) ? requested : (SECTIONS[0]?.key ?? null)
   if (active === null) {
     // Defensive: the user menu hides Settings entirely when no section is
     // available, so users normally won't land here. Direct navigation to
@@ -128,7 +128,10 @@ export function SettingsPage({ section }: { section?: string }): React.ReactElem
     <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[14rem_minmax(0,1fr)]">
       {/* Mobile: dropdown selector (handles many sections gracefully) */}
       <div className="lg:hidden">
-        <Select value={active ?? ''} onValueChange={(v) => navigate({ name: 'settings', section: v })}>
+        <Select
+          value={active ?? ''}
+          onValueChange={(v) => navigate({ name: 'settings', section: v })}
+        >
           <SelectTrigger className="w-full">
             <SelectValue />
           </SelectTrigger>
@@ -166,10 +169,12 @@ export function SettingsPage({ section }: { section?: string }): React.ReactElem
         {active && isBuiltIn(active) && active === 'api-keys' && <ApiKeysSection />}
         {active && isBuiltIn(active) && active === 'webhooks' && <WebhooksSection />}
         {active && isBuiltIn(active) && active === 'ai-assistant' && <AiAssistantSettingsSection />}
-        {active && !isBuiltIn(active) && (() => {
-          const extSection = getSettingsSectionExtensions().find((e) => e.key === active)
-          return extSection ? <extSection.component /> : null
-        })()}
+        {active &&
+          !isBuiltIn(active) &&
+          (() => {
+            const extSection = getSettingsSectionExtensions().find((e) => e.key === active)
+            return extSection ? <extSection.component /> : null
+          })()}
       </section>
     </div>
   )
@@ -186,7 +191,10 @@ function ApiKeysSection(): React.ReactElement {
   const resources = useResources()
   const [editorOpen, setEditorOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<ApiKeyRecord | null>(null)
-  const [createdSecret, setCreatedSecret] = React.useState<{ key: string; record: ApiKeyRecord } | null>(null)
+  const [createdSecret, setCreatedSecret] = React.useState<{
+    key: string
+    record: ApiKeyRecord
+  } | null>(null)
 
   const list = useQuery({
     queryKey: KEY_LIST,
@@ -260,11 +268,19 @@ function ApiKeysSection(): React.ReactElement {
               <TableHeader>
                 <TableRow>
                   <TableHead>{t('settings:apiKeys.columns.name')}</TableHead>
-                  <TableHead className="hidden sm:table-cell">{t('settings:apiKeys.columns.start')}</TableHead>
-                  <TableHead className="hidden md:table-cell">{t('settings:apiKeys.columns.permissions')}</TableHead>
-                  <TableHead className="hidden md:table-cell">{t('settings:apiKeys.columns.expiresAt')}</TableHead>
+                  <TableHead className="hidden sm:table-cell">
+                    {t('settings:apiKeys.columns.start')}
+                  </TableHead>
+                  <TableHead className="hidden md:table-cell">
+                    {t('settings:apiKeys.columns.permissions')}
+                  </TableHead>
+                  <TableHead className="hidden md:table-cell">
+                    {t('settings:apiKeys.columns.expiresAt')}
+                  </TableHead>
                   <TableHead>{t('settings:apiKeys.columns.enabled')}</TableHead>
-                  <TableHead className="text-right">{t('settings:apiKeys.columns.actions')}</TableHead>
+                  <TableHead className="text-right">
+                    {t('settings:apiKeys.columns.actions')}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -275,7 +291,9 @@ function ApiKeysSection(): React.ReactElement {
                         <span>{k.name ?? k.id}</span>
                         {k.lastRequest && (
                           <span className="text-xs text-muted-foreground">
-                            {t('settings:apiKeys.lastUsed', { date: formatDate(k.lastRequest, locale) })}
+                            {t('settings:apiKeys.lastUsed', {
+                              date: formatDate(k.lastRequest, locale),
+                            })}
                           </span>
                         )}
                       </div>
@@ -287,18 +305,27 @@ function ApiKeysSection(): React.ReactElement {
                       <PermissionsSummary permissions={k.permissions} />
                     </TableCell>
                     <TableCell className="hidden md:table-cell text-xs">
-                      {k.expiresAt ? formatDate(k.expiresAt, locale) : t('settings:apiKeys.expiresNever')}
+                      {k.expiresAt
+                        ? formatDate(k.expiresAt, locale)
+                        : t('settings:apiKeys.expiresNever')}
                     </TableCell>
                     <TableCell>
                       <Switch
                         checked={k.enabled}
-                        onCheckedChange={(enabled) => toggleEnabledMut.mutate({ id: k.id, enabled })}
+                        onCheckedChange={(enabled) =>
+                          toggleEnabledMut.mutate({ id: k.id, enabled })
+                        }
                         aria-label={t('settings:apiKeys.columns.enabled')}
                       />
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="inline-flex gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => onEdit(k)} aria-label={t('settings:apiKeys.actions.edit')}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onEdit(k)}
+                          aria-label={t('settings:apiKeys.actions.edit')}
+                        >
                           <Edit className="size-4" />
                         </Button>
                         <Button
@@ -337,10 +364,7 @@ function ApiKeysSection(): React.ReactElement {
         }}
       />
 
-      <CreatedSecretDialog
-        secret={createdSecret}
-        onClose={() => setCreatedSecret(null)}
-      />
+      <CreatedSecretDialog secret={createdSecret} onClose={() => setCreatedSecret(null)} />
     </div>
   )
 }
@@ -353,9 +377,7 @@ interface PermissionsState {
 }
 
 const buildState = (perms: Record<string, string[]>): PermissionsState => ({
-  byResource: Object.fromEntries(
-    Object.entries(perms).map(([k, v]) => [k, new Set(v)]),
-  ),
+  byResource: Object.fromEntries(Object.entries(perms).map(([k, v]) => [k, new Set(v)])),
 })
 
 const stateToWire = (state: PermissionsState): Record<string, string[]> => {
@@ -417,7 +439,9 @@ function PermissionsMatrix({
 
   if (resources.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">{t('settings:apiKeys.permissions.noResources')}</p>
+      <p className="text-sm text-muted-foreground">
+        {t('settings:apiKeys.permissions.noResources')}
+      </p>
     )
   }
 
@@ -450,7 +474,9 @@ function PermissionsMatrix({
         <Table>
           <TableHeader className="sticky top-0 bg-card">
             <TableRow>
-              <TableHead className="w-[14rem]">{t('settings:apiKeys.permissions.resource')}</TableHead>
+              <TableHead className="w-[14rem]">
+                {t('settings:apiKeys.permissions.resource')}
+              </TableHead>
               <TableHead>{t('settings:apiKeys.permissions.actions')}</TableHead>
             </TableRow>
           </TableHeader>
@@ -510,7 +536,11 @@ function PermissionsMatrix({
   )
 }
 
-function PermissionsSummary({ permissions }: { permissions: Record<string, string[]> }): React.ReactElement {
+function PermissionsSummary({
+  permissions,
+}: {
+  permissions: Record<string, string[]>
+}): React.ReactElement {
   const { t } = useI18n()
   const entries = Object.entries(permissions)
   if (entries.length === 0) {
@@ -519,7 +549,10 @@ function PermissionsSummary({ permissions }: { permissions: Record<string, strin
   const totalActions = entries.reduce((sum, [, a]) => sum + a.length, 0)
   return (
     <Badge variant="secondary">
-      {t('settings:apiKeys.permissions.summary', { resources: entries.length, actions: totalActions })}
+      {t('settings:apiKeys.permissions.summary', {
+        resources: entries.length,
+        actions: totalActions,
+      })}
     </Badge>
   )
 }
@@ -563,7 +596,8 @@ function ApiKeyEditorDialog({
         const res = await client.updateApiKey(editing.id, {
           name: name.trim(),
           permissions: wire,
-          expiresInDays: expiry === null ? null : Number.isFinite(expiry) && expiry > 0 ? expiry : undefined,
+          expiresInDays:
+            expiry === null ? null : Number.isFinite(expiry) && expiry > 0 ? expiry : undefined,
         })
         return { record: res.record }
       }
@@ -571,7 +605,8 @@ function ApiKeyEditorDialog({
       return client.createApiKey({
         name: name.trim(),
         permissions: wire,
-        expiresInDays: expiry === null ? null : Number.isFinite(expiry) && expiry > 0 ? expiry : undefined,
+        expiresInDays:
+          expiry === null ? null : Number.isFinite(expiry) && expiry > 0 ? expiry : undefined,
       }) as Promise<{ key: string; record: ApiKeyRecord }>
     },
     onSuccess: (result) => {
@@ -607,7 +642,9 @@ function ApiKeyEditorDialog({
       <DialogContent closeLabel={t('common:close')} className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>
-            {isEdit ? t('settings:apiKeys.editor.titleEdit') : t('settings:apiKeys.editor.titleCreate')}
+            {isEdit
+              ? t('settings:apiKeys.editor.titleEdit')
+              : t('settings:apiKeys.editor.titleCreate')}
           </DialogTitle>
           <DialogDescription>{t('settings:apiKeys.editor.description')}</DialogDescription>
         </DialogHeader>
@@ -654,14 +691,22 @@ function ApiKeyEditorDialog({
                 {t('settings:apiKeys.editor.selectedActions', { count: totalSelected })}
               </span>
             </div>
-            <PermissionsMatrix resources={resources} state={permissions} onChange={setPermissions} />
+            <PermissionsMatrix
+              resources={resources}
+              state={permissions}
+              onChange={setPermissions}
+            />
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {t('common:cancel')}
             </Button>
             <Button type="submit" disabled={save.isPending || !name.trim() || totalSelected === 0}>
-              {save.isPending ? t('common:saving') : isEdit ? t('common:save') : t('settings:apiKeys.actions.create')}
+              {save.isPending
+                ? t('common:saving')
+                : isEdit
+                  ? t('common:save')
+                  : t('settings:apiKeys.actions.create')}
             </Button>
           </DialogFooter>
         </form>
@@ -705,7 +750,8 @@ function WebhooksSection(): React.ReactElement {
   const testMut = useMutation({
     mutationFn: (id: string) => client.testWebhook(id),
     onSuccess: () => {
-      if (selectedId) qc.invalidateQueries({ queryKey: ['modern-admin', 'webhooks', selectedId, 'deliveries'] })
+      if (selectedId)
+        qc.invalidateQueries({ queryKey: ['modern-admin', 'webhooks', selectedId, 'deliveries'] })
       notify.success({ key: 'settings:webhooks.notice.testQueued' })
     },
     onError: (err) => notify.error({ message: err instanceof Error ? err.message : String(err) }),
@@ -730,7 +776,13 @@ function WebhooksSection(): React.ReactElement {
         title={t('settings:webhooks.title')}
         description={t('settings:webhooks.description')}
         action={
-          <Button size="sm" onClick={() => { setEditing(null); setEditorOpen(true) }}>
+          <Button
+            size="sm"
+            onClick={() => {
+              setEditing(null)
+              setEditorOpen(true)
+            }}
+          >
             <Plus className="size-4" />
             {t('settings:webhooks.actions.create')}
           </Button>
@@ -755,7 +807,9 @@ function WebhooksSection(): React.ReactElement {
                   <TableHead>{t('settings:webhooks.columns.resource')}</TableHead>
                   <TableHead>{t('settings:webhooks.columns.events')}</TableHead>
                   <TableHead>{t('settings:webhooks.columns.enabled')}</TableHead>
-                  <TableHead className="text-right">{t('settings:webhooks.columns.actions')}</TableHead>
+                  <TableHead className="text-right">
+                    {t('settings:webhooks.columns.actions')}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -769,21 +823,44 @@ function WebhooksSection(): React.ReactElement {
                       >
                         {webhook.name}
                       </button>
-                      <div className="max-w-xs truncate text-xs text-muted-foreground">{webhook.url}</div>
+                      <div className="max-w-xs truncate text-xs text-muted-foreground">
+                        {webhook.url}
+                      </div>
                     </TableCell>
-                    <TableCell>{resourceName(resources, webhook.resourceId, t('settings:webhooks.editor.allResources'))}</TableCell>
+                    <TableCell>
+                      {resourceName(
+                        resources,
+                        webhook.resourceId,
+                        t('settings:webhooks.editor.allResources'),
+                      )}
+                    </TableCell>
                     <TableCell className="max-w-xs">
                       <div className="flex flex-wrap gap-1">
-                        {webhook.events.map((event) => <Badge key={event} variant="outline">{event}</Badge>)}
+                        {webhook.events.map((event) => (
+                          <Badge key={event} variant="outline">
+                            {event}
+                          </Badge>
+                        ))}
                       </div>
                     </TableCell>
                     <TableCell>{webhook.enabled ? t('common:yes') : t('common:no')}</TableCell>
                     <TableCell className="text-right">
                       <div className="inline-flex gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => testMut.mutate(webhook.id)}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => testMut.mutate(webhook.id)}
+                        >
                           {t('settings:webhooks.actions.test')}
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => { setEditing(webhook); setEditorOpen(true) }}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setEditing(webhook)
+                            setEditorOpen(true)
+                          }}
+                        >
                           <Edit className="size-4" />
                         </Button>
                         <Button variant="ghost" size="sm" onClick={() => void onDelete(webhook)}>
@@ -865,7 +942,9 @@ function WebhookEditorDialog({
   const [resourceId, setResourceId] = React.useState(webhook?.resourceId ?? '')
   const [enabled, setEnabled] = React.useState(webhook?.enabled ?? true)
   const [secret, setSecret] = React.useState(webhook?.secret ?? '')
-  const [events, setEvents] = React.useState<string[]>(webhook?.events ?? ['record.created', 'record.updated'])
+  const [events, setEvents] = React.useState<string[]>(
+    webhook?.events ?? ['record.created', 'record.updated'],
+  )
   const [headers, setHeaders] = React.useState<Record<string, unknown>>(webhook?.headers ?? {})
   const [filters, setFilters] = React.useState<Record<string, unknown>>(webhook?.filters ?? {})
   const [payloadFields, setPayloadFields] = React.useState<string[]>(webhook?.payloadFields ?? [])
@@ -883,7 +962,7 @@ function WebhookEditorDialog({
   })
 
   const toggleEvent = (event: string): void => {
-    setEvents((prev) => prev.includes(event) ? prev.filter((e) => e !== event) : [...prev, event])
+    setEvents((prev) => (prev.includes(event) ? prev.filter((e) => e !== event) : [...prev, event]))
   }
 
   const onSubmit = (e: React.FormEvent): void => {
@@ -905,7 +984,11 @@ function WebhookEditorDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent closeLabel={t('common:close')} className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>{webhook ? t('settings:webhooks.editor.titleEdit') : t('settings:webhooks.editor.titleCreate')}</DialogTitle>
+          <DialogTitle>
+            {webhook
+              ? t('settings:webhooks.editor.titleEdit')
+              : t('settings:webhooks.editor.titleCreate')}
+          </DialogTitle>
           <DialogDescription>{t('settings:webhooks.editor.description')}</DialogDescription>
         </DialogHeader>
         <form className="space-y-4" onSubmit={onSubmit}>
@@ -922,18 +1005,25 @@ function WebhookEditorDialog({
               <Label>{t('settings:webhooks.editor.resource')}</Label>
               <Select
                 value={resourceId || '__all__'}
-                onValueChange={(v) => { setResourceId(v === '__all__' ? '' : v); setPayloadFields([]) }}
+                onValueChange={(v) => {
+                  setResourceId(v === '__all__' ? '' : v)
+                  setPayloadFields([])
+                }}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__all__">{t('settings:webhooks.editor.allResources')}</SelectItem>
+                  <SelectItem value="__all__">
+                    {t('settings:webhooks.editor.allResources')}
+                  </SelectItem>
                   {resources.map((resource) => (
                     <SelectItem key={resource.id} value={resource.id}>
                       {resource.name}
                       {resource.name !== resource.id && (
-                        <span className="ml-1.5 text-xs text-muted-foreground">({resource.id})</span>
+                        <span className="ml-1.5 text-xs text-muted-foreground">
+                          ({resource.id})
+                        </span>
                       )}
                     </SelectItem>
                   ))}
@@ -960,8 +1050,14 @@ function WebhookEditorDialog({
             <Label>{t('settings:webhooks.editor.events')}</Label>
             <div className="flex flex-wrap gap-2">
               {WEBHOOK_EVENTS.map((event) => (
-                <label key={event} className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm">
-                  <Checkbox checked={events.includes(event)} onCheckedChange={() => toggleEvent(event)} />
+                <label
+                  key={event}
+                  className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm"
+                >
+                  <Checkbox
+                    checked={events.includes(event)}
+                    onCheckedChange={() => toggleEvent(event)}
+                  />
                   {event}
                 </label>
               ))}
@@ -1021,8 +1117,13 @@ function WebhookEditorDialog({
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>{t('common:cancel')}</Button>
-            <Button type="submit" disabled={save.isPending || !name.trim() || !url.trim() || events.length === 0}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              {t('common:cancel')}
+            </Button>
+            <Button
+              type="submit"
+              disabled={save.isPending || !name.trim() || !url.trim() || events.length === 0}
+            >
               {save.isPending ? t('common:saving') : t('common:save')}
             </Button>
           </DialogFooter>
@@ -1036,10 +1137,12 @@ const resourceName = (
   resources: ResourceJSON[],
   id: string | null | undefined,
   fallback: string,
-): string => id ? (resources.find((r) => r.id === id)?.name ?? id) : fallback
+): string => (id ? (resources.find((r) => r.id === id)?.name ?? id) : fallback)
 
 const toJsonRecord = (value: unknown): Record<string, unknown> =>
-  value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
+  value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {}
 
 const stringRecord = (value: Record<string, unknown>): Record<string, string> => {
   const out: Record<string, string> = {}
@@ -1113,7 +1216,9 @@ function CreatedSecretDialog({
               size="sm"
               className="absolute right-1 top-1/2 -translate-y-1/2"
               onClick={() => setReveal((v) => !v)}
-              aria-label={reveal ? t('settings:apiKeys.created.hide') : t('settings:apiKeys.created.reveal')}
+              aria-label={
+                reveal ? t('settings:apiKeys.created.hide') : t('settings:apiKeys.created.reveal')
+              }
             >
               {reveal ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
             </Button>

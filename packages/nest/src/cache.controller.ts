@@ -57,10 +57,7 @@ export class CacheController {
   }
 
   @Post('invalidate')
-  async invalidate(
-    @Body() body: unknown,
-    @Req() req: AdminRequest,
-  ): Promise<{ ok: true }> {
+  async invalidate(@Body() body: unknown, @Req() req: AdminRequest): Promise<{ ok: true }> {
     this.assertAllowed(req.currentAdmin)
     const parsed = invalidateBodyZ.safeParse(body)
     if (!parsed.success) throw new BadRequestException(parsed.error.message)

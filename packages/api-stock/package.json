@@ -3,7 +3,12 @@
   "version": "0.9.0",
   "description": "API Stock media-generation provider for Modern Admin.",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/api-stock#readme",
-  "keywords": ["modern-admin", "api-stock", "image-generation", "video-generation"],
+  "keywords": [
+    "modern-admin",
+    "api-stock",
+    "image-generation",
+    "video-generation"
+  ],
   "type": "module",
   "license": "MIT",
   "repository": {
@@ -19,7 +24,11 @@
       "default": "./src/index.ts"
     }
   },
-  "files": ["dist", "src", "README.md"],
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ],
   "publishConfig": {
     "registry": "https://registry.npmjs.org",
     "access": "public",
@@ -35,8 +44,7 @@
   "scripts": {
     "build": "bun ../../scripts/clean.ts dist .tsbuildinfo && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "test": "bun test",
-    "lint": "eslint ."
+    "test": "bun test"
   },
   "dependencies": {
     "@modern-admin/core": "workspace:^",

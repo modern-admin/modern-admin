@@ -1,10 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { execute, parse, subscribe } from 'graphql'
-import {
-  InMemoryRealtimeBus,
-  ModernAdmin,
-  type RealtimeEvent,
-} from '@modern-admin/core'
+import { InMemoryRealtimeBus, ModernAdmin, type RealtimeEvent } from '@modern-admin/core'
 import { buildGraphqlSchema, createContext } from '../src/schema-builder.js'
 import { createRealtimeAsyncIterator } from '../src/subscription-iterator.js'
 import { MemDatabase, MemResource, seed } from './_helpers/in-memory.js'
@@ -56,9 +52,7 @@ describe('GraphQL subscriptions', () => {
     const bus = new InMemoryRealtimeBus()
     const iter = await subscribe({
       schema: buildGraphqlSchema(admin),
-      document: parse(
-        'subscription { usersEvents { kind resourceId recordId record at } }',
-      ),
+      document: parse('subscription { usersEvents { kind resourceId recordId record at } }'),
       contextValue: createContext(admin, undefined, bus),
     })
     if (!(Symbol.asyncIterator in iter)) {
@@ -93,9 +87,7 @@ describe('GraphQL subscriptions', () => {
     const bus = new InMemoryRealtimeBus()
     const iter = await subscribe({
       schema: buildGraphqlSchema(admin),
-      document: parse(
-        'subscription { usersEvents(kind: "deleted") { kind recordId } }',
-      ),
+      document: parse('subscription { usersEvents(kind: "deleted") { kind recordId } }'),
       contextValue: createContext(admin, undefined, bus),
     })
     if (!(Symbol.asyncIterator in iter)) throw new Error('expected AsyncIterable')

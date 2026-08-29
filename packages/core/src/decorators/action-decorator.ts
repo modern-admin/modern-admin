@@ -1,9 +1,4 @@
-import type {
-  Action,
-  ActionContext,
-  ActionDescriptor,
-  ActionResponse,
-} from '../actions/action.js'
+import type { Action, ActionContext, ActionDescriptor, ActionResponse } from '../actions/action.js'
 import { normalizeActionNesting } from '../actions/action.js'
 import type { ActionOptions } from './action-options.js'
 

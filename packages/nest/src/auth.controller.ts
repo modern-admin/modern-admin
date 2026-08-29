@@ -20,9 +20,7 @@ interface AdminRequest {
 @ApiTags('Admin / Auth')
 @Controller('admin/api/auth')
 export class AuthController {
-  constructor(
-    @Inject(MODERN_ADMIN) private readonly admin: ModernAdmin,
-  ) {}
+  constructor(@Inject(MODERN_ADMIN) private readonly admin: ModernAdmin) {}
 
   @ApiCookieAuth('session')
   @ApiOperation({ summary: 'Resolve the current authenticated admin' })

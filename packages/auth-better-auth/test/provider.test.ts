@@ -8,50 +8,58 @@ const silentLogger = {
   error: () => {},
 }
 
-const fakeAuth = (overrides: Partial<{
-  user: unknown
-  signInEmail: () => Promise<void>
-  signOut: () => Promise<void>
-  createApiKey: (args: { body: Record<string, unknown>; headers: Headers }) => Promise<ApiKeyCreated>
-  listApiKeys: (args: { headers: Headers }) => Promise<unknown>
-  updateApiKey: (args: { body: Record<string, unknown>; headers?: Headers }) => Promise<unknown>
-  deleteApiKey: (args: { body: { keyId: string }; headers: Headers }) => Promise<{ success: boolean }>
-}> = {}) => ({
-  api: {
-    async getSession({ headers }: { headers: Headers }) {
-      const cookie = headers.get('cookie')
-      if (cookie === 'valid' && overrides.user) {
-        return { user: overrides.user as { id: string }, session: { id: 's1' } }
-      }
-      return null
+const fakeAuth = (
+  overrides: Partial<{
+    user: unknown
+    signInEmail: () => Promise<void>
+    signOut: () => Promise<void>
+    createApiKey: (args: {
+      body: Record<string, unknown>
+      headers: Headers
+    }) => Promise<ApiKeyCreated>
+    listApiKeys: (args: { headers: Headers }) => Promise<unknown>
+    updateApiKey: (args: { body: Record<string, unknown>; headers?: Headers }) => Promise<unknown>
+    deleteApiKey: (args: {
+      body: { keyId: string }
+      headers: Headers
+    }) => Promise<{ success: boolean }>
+  }> = {},
+) =>
+  ({
+    api: {
+      async getSession({ headers }: { headers: Headers }) {
+        const cookie = headers.get('cookie')
+        if (cookie === 'valid' && overrides.user) {
+          return { user: overrides.user as { id: string }, session: { id: 's1' } }
+        }
+        return null
+      },
+      createApiKey:
+        overrides.createApiKey ??
+        (async () => ({
+          id: 'k1',
+          key: 'secret',
+          name: null,
+          start: null,
+          prefix: null,
+          enabled: true,
+          permissions: {},
+          expiresAt: null,
+          lastRequest: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })),
+      listApiKeys: overrides.listApiKeys ?? (async () => []),
+      updateApiKey: overrides.updateApiKey ?? (async () => ({ id: 'k1' })),
+      deleteApiKey: overrides.deleteApiKey ?? (async () => ({ success: true })),
+      signInEmail: overrides.signInEmail,
+      signOut: overrides.signOut,
     },
-    createApiKey:
-      overrides.createApiKey ??
-      (async () => ({
-        id: 'k1',
-        key: 'secret',
-        name: null,
-        start: null,
-        prefix: null,
-        enabled: true,
-        permissions: {},
-        expiresAt: null,
-        lastRequest: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      })),
-    listApiKeys: overrides.listApiKeys ?? (async () => []),
-    updateApiKey: overrides.updateApiKey ?? (async () => ({ id: 'k1' })),
-    deleteApiKey: overrides.deleteApiKey ?? (async () => ({ success: true })),
-    signInEmail: overrides.signInEmail,
-    signOut: overrides.signOut,
-  },
-  options: {
-    socialProviders: { github: {} },
-    emailAndPassword: { enabled: true },
-  },
-
-}) as any
+    options: {
+      socialProviders: { github: {} },
+      emailAndPassword: { enabled: true },
+    },
+  }) as any
 
 describe('BetterAuthProvider', () => {
   test('getUiProps surfaces enabled providers', () => {
@@ -144,9 +152,7 @@ describe('BetterAuthProvider', () => {
       role: 'admin',
     })
 
-    expect(calls.map((call) => call.body)).toEqual([
-      { userId: 'existing-user', role: 'admin' },
-    ])
+    expect(calls.map((call) => call.body)).toEqual([{ userId: 'existing-user', role: 'admin' }])
   })
 
   test('getApiKeyAdmin createApiKey resolves session user and passes userId', async () => {

@@ -69,7 +69,6 @@ export class ModernAdminGraphqlModule implements OnApplicationBootstrap {
    */
   onApplicationBootstrap(): void {
     if (this.admin.resources.length === 0) {
-
       console.warn('[modern-admin/graphql] no resources registered; schema only exposes _status')
     }
   }

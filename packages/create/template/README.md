@@ -12,7 +12,7 @@ separate frontend deployment is required.
 - **Better Auth** (email/password + API keys) via `@modern-admin/auth-better-auth`.
 - **Static SPA** at `/admin` via `@modern-admin/web`.
 - **Optional Redis cache** for cross-instance invalidation.
-- Empty resource list — add your own (see *Adding resources* below).
+- Empty resource list — add your own (see _Adding resources_ below).
 
 ## Prerequisites
 
@@ -136,18 +136,20 @@ Do not merge or delete colliding users automatically.
    import type { PrismaResourceConfig } from '@modern-admin/adapter-prisma'
    import { dmmf, prisma } from '../db.js'
 
-   const prismaSource = (modelName: string): (() => PrismaResourceConfig) => () => {
-     const model = dmmf.datamodel.models.find((m) => m.name === modelName)
-     if (!model) throw new Error(`[admin] Prisma model "${modelName}" not found`)
-     const lowerFirst = (s: string): string =>
-       s.length === 0 ? s : s.charAt(0).toLowerCase() + s.slice(1)
-     return {
-       model,
-       client: prisma,
-       clientKey: lowerFirst(modelName),
-       enums: dmmf.datamodel.enums,
+   const prismaSource =
+     (modelName: string): (() => PrismaResourceConfig) =>
+     () => {
+       const model = dmmf.datamodel.models.find((m) => m.name === modelName)
+       if (!model) throw new Error(`[admin] Prisma model "${modelName}" not found`)
+       const lowerFirst = (s: string): string =>
+         s.length === 0 ? s : s.charAt(0).toLowerCase() + s.slice(1)
+       return {
+         model,
+         client: prisma,
+         clientKey: lowerFirst(modelName),
+         enums: dmmf.datamodel.enums,
+       }
      }
-   }
 
    @AdminResource({
      source: prismaSource('Product'),
@@ -166,10 +168,7 @@ Do not merge or delete colliding users automatically.
    import { ProductsAdminModule } from './resources/product.resource.js'
 
    @Module({
-     imports: [
-       ModernAdminModule.forRoot({ /* … */ }),
-       ProductsAdminModule,
-     ],
+     imports: [ModernAdminModule.forRoot({/* … */}), ProductsAdminModule],
    })
    export class AdminModule {}
    ```

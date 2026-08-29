@@ -22,10 +22,7 @@ const graphql = async (
 
 test.describe('GraphQL', () => {
   test('schema exposes per-resource list/one/count queries', async ({ request }) => {
-    const body = await graphql(
-      request,
-      '{ __type(name: "Query") { fields { name } } }',
-    )
+    const body = await graphql(request, '{ __type(name: "Query") { fields { name } } }')
     expect(body.errors).toBeUndefined()
     const fields = (body.data?.__type as { fields: Array<{ name: string }> }).fields.map(
       (f) => f.name,
@@ -43,10 +40,7 @@ test.describe('GraphQL', () => {
   })
 
   test('customersList returns seeded rows', async ({ request }) => {
-    const body = await graphql(
-      request,
-      '{ customersList { id email name } customersCount }',
-    )
+    const body = await graphql(request, '{ customersList { id email name } customersCount }')
     expect(body.errors).toBeUndefined()
     const customers = body.data?.customersList as Array<{ email: string }>
     expect(customers.length).toBeGreaterThanOrEqual(3)

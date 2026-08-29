@@ -76,10 +76,7 @@ export class AnalyticsController {
 
   @ApiOperation({ summary: 'Aggregate time-series for a resource (KPI = step:"all")' })
   @Post('timeseries')
-  async timeseries(
-    @Body() body: unknown,
-    @Req() req: AdminRequest,
-  ): Promise<TimeSeriesResponse> {
+  async timeseries(@Body() body: unknown, @Req() req: AdminRequest): Promise<TimeSeriesResponse> {
     const parsed = requestZ.parse(body)
 
     let resource

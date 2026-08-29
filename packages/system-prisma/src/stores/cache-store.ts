@@ -1,4 +1,9 @@
-import { rowToCacheEntry, type CacheEntry, type CacheRow, type ICacheStore } from '@modern-admin/core'
+import {
+  rowToCacheEntry,
+  type CacheEntry,
+  type CacheRow,
+  type ICacheStore,
+} from '@modern-admin/core'
 import type { PrismaDelegate } from '../types.js'
 
 export class PrismaCacheStore implements ICacheStore {

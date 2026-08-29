@@ -5,13 +5,7 @@
 // `group` and the dialog sorts groups in insertion order.
 
 import * as React from 'react'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from './dialog.js'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './dialog.js'
 import { Kbd, getModKeyLabel } from './kbd.js'
 
 export interface KeyboardShortcutItem {
@@ -121,9 +115,7 @@ export function KeyboardShortcutsHelp({
                         {chordParts(it.keys, modLabel).map((part, i, arr) => (
                           <React.Fragment key={i}>
                             <Kbd>{part}</Kbd>
-                            {i < arr.length - 1 && (
-                              <span className="text-muted-foreground">+</span>
-                            )}
+                            {i < arr.length - 1 && <span className="text-muted-foreground">+</span>}
                           </React.Fragment>
                         ))}
                       </span>

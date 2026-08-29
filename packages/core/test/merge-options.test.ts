@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import {
-  deepMerge,
-  RESOURCE_OPTIONS_ARRAY_STRATEGIES,
-} from '../src/utils/merge-options.js'
+import { deepMerge, RESOURCE_OPTIONS_ARRAY_STRATEGIES } from '../src/utils/merge-options.js'
 
 describe('deepMerge', () => {
   it('concatenates arrays by default', () => {

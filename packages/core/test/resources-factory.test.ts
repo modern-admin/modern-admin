@@ -1,5 +1,9 @@
 import { describe, expect, test } from 'bun:test'
-import { ResourcesFactory, type Adapter, type GlobalPlugin } from '../src/factories/resources-factory.js'
+import {
+  ResourcesFactory,
+  type Adapter,
+  type GlobalPlugin,
+} from '../src/factories/resources-factory.js'
 import { NoDatabaseAdapterError, NoResourceAdapterError } from '../src/errors'
 import { FakeDatabase, FakeResource, type FakeTable } from './_helpers/fake-adapter.js'
 
@@ -64,8 +68,14 @@ describe('ResourcesFactory', () => {
       const original = console.warn
       const out: string[] = []
 
-      console.warn = (...args: any[]) => { out.push(args.map(String).join(' ')) }
-      try { fn() } finally { console.warn = original }
+      console.warn = (...args: any[]) => {
+        out.push(args.map(String).join(' '))
+      }
+      try {
+        fn()
+      } finally {
+        console.warn = original
+      }
       return out
     }
 
@@ -141,7 +151,10 @@ describe('ResourcesFactory', () => {
       const seen: string[] = []
       const plugin: GlobalPlugin = {
         include: ['users'],
-        apply: (opts, resource) => { seen.push(resource.id()); return opts },
+        apply: (opts, resource) => {
+          seen.push(resource.id())
+          return opts
+        },
       }
       ResourcesFactory.buildResources({
         databases: [[usersTable, postsTable]],
@@ -155,7 +168,10 @@ describe('ResourcesFactory', () => {
       const seen: string[] = []
       const plugin: GlobalPlugin = {
         exclude: ['health'],
-        apply: (opts, resource) => { seen.push(resource.id()); return opts },
+        apply: (opts, resource) => {
+          seen.push(resource.id())
+          return opts
+        },
       }
       ResourcesFactory.buildResources({
         databases: [[usersTable, postsTable, healthTable]],
@@ -193,7 +209,10 @@ describe('ResourcesFactory', () => {
       const seen: string[] = []
       const plugin: GlobalPlugin = {
         include: ['accounts'],
-        apply: (opts, resource) => { seen.push(resource.id()); return opts },
+        apply: (opts, resource) => {
+          seen.push(resource.id())
+          return opts
+        },
       }
       ResourcesFactory.buildResources({
         // raw resource id is "users" but options renames to "accounts"

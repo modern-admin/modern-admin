@@ -92,10 +92,7 @@ async function createCustomer(request: APIRequestContext): Promise<CustomerFixtu
   return { id, email, initialHash }
 }
 
-async function deleteCustomerSilently(
-  request: APIRequestContext,
-  id: string,
-): Promise<void> {
+async function deleteCustomerSilently(request: APIRequestContext, id: string): Promise<void> {
   await request.delete(adminApi(`/resources/customers/records/${id}/actions/delete`))
 }
 
@@ -140,10 +137,7 @@ function fieldByLabel(page: Page, label: RegExp): Locator {
 }
 
 test.describe('feature-password — UI surface', () => {
-  test('edit page renders newPassword as a password input', async ({
-    page,
-    request,
-  }) => {
+  test('edit page renders newPassword as a password input', async ({ page, request }) => {
     const fix = await createCustomer(request)
     try {
       await openCustomerEdit(page, fix.id)
@@ -166,10 +160,7 @@ test.describe('feature-password — UI surface', () => {
     }
   })
 
-  test('encrypted password field is absent from edit page', async ({
-    page,
-    request,
-  }) => {
+  test('encrypted password field is absent from edit page', async ({ page, request }) => {
     const fix = await createCustomer(request)
     try {
       await openCustomerEdit(page, fix.id)
@@ -194,10 +185,7 @@ test.describe('feature-password — UI surface', () => {
     }
   })
 
-  test('encrypted password field is absent from show page', async ({
-    page,
-    request,
-  }) => {
+  test('encrypted password field is absent from show page', async ({ page, request }) => {
     const fix = await createCustomer(request)
     try {
       await openCustomerShow(page, fix.id)
@@ -216,10 +204,7 @@ test.describe('feature-password — UI surface', () => {
     }
   })
 
-  test('submitting newPassword changes the stored hash', async ({
-    page,
-    request,
-  }) => {
+  test('submitting newPassword changes the stored hash', async ({ page, request }) => {
     const fix = await createCustomer(request)
     try {
       await openCustomerEdit(page, fix.id)
@@ -235,12 +220,12 @@ test.describe('feature-password — UI surface', () => {
           res.url().includes(`/resources/customers/records/${fix.id}/actions/edit`) &&
           res.request().method() === 'PATCH',
       )
-      await page.getByRole('button', { name: /^save$/i }).first().click()
+      await page
+        .getByRole('button', { name: /^save$/i })
+        .first()
+        .click()
       const saveRes = await savePromise
-      expect(
-        saveRes.ok(),
-        `save failed: ${saveRes.status()} ${await saveRes.text()}`,
-      ).toBeTruthy()
+      expect(saveRes.ok(), `save failed: ${saveRes.status()} ${await saveRes.text()}`).toBeTruthy()
 
       // The before-hook strips `newPassword` from the payload, so the echoed
       // record never carries the plaintext value — and the encrypted hash is
@@ -286,7 +271,10 @@ test.describe('feature-password — UI surface', () => {
           res.url().includes(`/resources/customers/records/${fix.id}/actions/edit`) &&
           res.request().method() === 'PATCH',
       )
-      await page.getByRole('button', { name: /^save$/i }).first().click()
+      await page
+        .getByRole('button', { name: /^save$/i })
+        .first()
+        .click()
       const saveRes = await savePromise
       expect(saveRes.ok()).toBeTruthy()
 
@@ -316,7 +304,10 @@ test.describe('feature-password — UI surface', () => {
           res.url().includes(`/resources/customers/records/${fix.id}/actions/edit`) &&
           res.request().method() === 'PATCH',
       )
-      await page.getByRole('button', { name: /^save$/i }).first().click()
+      await page
+        .getByRole('button', { name: /^save$/i })
+        .first()
+        .click()
       expect((await savePromise).ok()).toBeTruthy()
 
       // Hard reload the edit page — virtual field has no DB column to read

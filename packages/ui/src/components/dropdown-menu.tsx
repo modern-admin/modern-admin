@@ -62,8 +62,9 @@ export const DropdownMenuSubContent = React.forwardRef<
 })
 DropdownMenuSubContent.displayName = DropdownMenuPrimitive.SubContent.displayName
 
-export interface DropdownMenuContentProps
-  extends React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Content> {
+export interface DropdownMenuContentProps extends React.ComponentPropsWithoutRef<
+  typeof DropdownMenuPrimitive.Content
+> {
   /** Override the portal target. Defaults to the enclosing Dialog/Sheet
    *  content (so touch-scroll works inside it) or `document.body`. */
   container?: HTMLElement | null
@@ -185,9 +186,6 @@ export const DropdownMenuShortcut = ({
   className,
   ...props
 }: React.HTMLAttributes<HTMLSpanElement>): React.ReactElement => (
-  <span
-    className={cn('ml-auto text-xs tracking-widest opacity-60', className)}
-    {...props}
-  />
+  <span className={cn('ml-auto text-xs tracking-widest opacity-60', className)} {...props} />
 )
 DropdownMenuShortcut.displayName = 'DropdownMenuShortcut'

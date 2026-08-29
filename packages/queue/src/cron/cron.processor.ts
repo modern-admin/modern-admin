@@ -55,9 +55,7 @@ export class CronProcessor extends WorkerHost {
       'NX',
     ])) as string | null
     if (!acquired) {
-      this.logger.warn(
-        `Skipping "${job.name}" (jobId=${job.id}) — previous instance still running`,
-      )
+      this.logger.warn(`Skipping "${job.name}" (jobId=${job.id}) — previous instance still running`)
       return
     }
 
