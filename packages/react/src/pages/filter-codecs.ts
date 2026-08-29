@@ -6,6 +6,8 @@
 // `{ op, val }` / `{ op, from, to }` shapes the filter UIs work with. Kept
 // framework-free so they're unit-testable without React.
 
+export { decodeInFilterPayload, encodeInFilterPayload } from '@modern-admin/core'
+
 // ─── String filters ─────────────────────────────────────────────────────────
 // Legacy values (no prefix) default to `co` (contains) for strings.
 

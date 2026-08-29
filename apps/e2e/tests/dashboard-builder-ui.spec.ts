@@ -78,6 +78,23 @@ async function seedDashboard(
   expect(res.ok(), 'seed dashboard').toBeTruthy()
 }
 
+async function createCustomerWithName(request: APIRequestContext, name: string): Promise<string> {
+  const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const response = await request.post(adminApi('/resources/customers/actions/new'), {
+    data: { email: `chart-filter-${suffix}@example.com`, name, tier: 'free' },
+  })
+  expect(response.ok(), 'create chart filter customer').toBeTruthy()
+  return String((await response.json()).record.id)
+}
+
+async function deleteCustomerSilently(request: APIRequestContext, id: string): Promise<void> {
+  try {
+    await request.delete(adminApi(`/resources/customers/records/${id}/actions/delete`))
+  } catch {
+    // A timed-out Playwright test may dispose its request context before cleanup.
+  }
+}
+
 /** Locate a Radix select trigger by its `id` attribute. */
 function selectTriggerById(page: Page, id: string) {
   return page.locator(`#${id}`)
@@ -201,6 +218,41 @@ test.describe('Dashboard chart builder — UI', () => {
     }
     const chart = body.dashboard.charts.find((item) => item.title === 'Filtered posts')
     expect(chart?.filters).toMatchObject({ publishedAt: 'empty:', title: 'nempty:' })
+  })
+
+  test('preserves commas inside chart filter selections', async ({ page, request }) => {
+    const name = `Smith, John ${Date.now()}`
+    const customerId = await createCustomerWithName(request, name)
+
+    try {
+      await page.goto('/')
+      await page.getByRole('button', { name: /^Add chart$/ }).click()
+      const dialog = page.getByRole('dialog')
+
+      await dialog.locator('#chart-title').fill('Comma-safe filter')
+      await selectTriggerById(page, 'chart-resource').click()
+      await pickOption(page, /^Customers/)
+      await selectTriggerById(page, 'chart-datefield').click()
+      await pickOption(page, 'Member since')
+      await dialog.getByRole('tab', { name: 'Filters' }).click()
+
+      await selectTriggerById(page, 'flt-name').click()
+      await pickOption(page, 'Is one of')
+      await dialog.getByRole('checkbox', { name }).click()
+
+      await dialog.getByRole('button', { name: /^Save chart$/ }).click()
+      await expect(dialog).toBeHidden()
+
+      const response = await request.get(adminApi('/dashboard'))
+      expect(response.status()).toBe(200)
+      const body = (await response.json()) as {
+        dashboard: { charts: Array<{ title: string; filters: Record<string, string> }> }
+      }
+      const chart = body.dashboard.charts.find((item) => item.title === 'Comma-safe filter')
+      expect(chart?.filters.name).toBe(`in:json:${JSON.stringify([name])}`)
+    } finally {
+      await deleteCustomerSilently(request, customerId)
+    }
   })
 
   test('Save is disabled when the date field is cleared', async ({ page }) => {

@@ -44,6 +44,7 @@ import { expect, test, type Page } from '@playwright/test'
 
 const API_URL = process.env.E2E_API_URL ?? 'http://localhost:3001'
 const adminApi = (path: string): string => `${API_URL}/admin/api${path}`
+const jsonInFilter = (values: readonly string[]): string => `in:json:${JSON.stringify(values)}`
 
 /** Filters trigger in the toolbar (icon + "Filters" label). */
 function filtersTrigger(page: Page) {
@@ -115,6 +116,35 @@ test.describe('Filter — "Is one of" (in) operator: API', () => {
     const records = body.records as Array<{ params: { tier: string | null } }>
     for (const r of records) {
       expect(r.params.tier).toBe('free')
+    }
+  })
+
+  test('JSON in payload preserves a comma inside one selected value', async ({ request }) => {
+    const suffix = Date.now()
+    const name = `Smith, John ${suffix}`
+    const created = await request.post(adminApi('/resources/customers/actions/new'), {
+      data: { email: `comma-filter-${suffix}@example.com`, name, tier: 'free' },
+    })
+    expect(created.ok()).toBeTruthy()
+    const createdBody = await created.json()
+    const id = String(createdBody.record.id)
+
+    try {
+      const query = new URLSearchParams({
+        'filters[name]': jsonInFilter([name]),
+        perPage: '200',
+      })
+      const result = await request.get(
+        adminApi(`/resources/customers/actions/list?${query.toString()}`),
+      )
+      expect(result.status()).toBe(200)
+      const body = await result.json()
+      const names = (body.records as Array<{ params: { name: string } }>).map(
+        (record) => record.params.name,
+      )
+      expect(names).toEqual([name])
+    } finally {
+      await request.delete(adminApi(`/resources/customers/records/${id}/actions/delete`))
     }
   })
 
@@ -212,9 +242,11 @@ test.describe('Filter — "Is one of" (in) operator: UI', () => {
 
     await applyFilters(page)
 
-    // URL carries `in:` prefix + the two selected values. Order matches
+    // The JSON payload preserves delimiters inside values. Array order matches
     // the click sequence (FilterValuePicker pushes onto `selected`).
-    await expect.poll(() => filterParam(page, 'color'), { timeout: 5_000 }).toBe('in:blue,green')
+    await expect
+      .poll(() => filterParam(page, 'color'), { timeout: 5_000 })
+      .toBe(jsonInFilter(['blue', 'green']))
 
     const pageSize = Math.min(50, expectedCount)
     await expect(page.locator('tbody tr')).toHaveCount(pageSize, { timeout: 10_000 })

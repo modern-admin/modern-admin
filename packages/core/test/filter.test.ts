@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { Filter } from '../src/filter/filter.js'
+import { decodeInFilterPayload, encodeInFilterPayload, Filter } from '../src/filter/filter.js'
 import { FakeResource } from './_helpers/fake-adapter.js'
 
 const resource = new FakeResource({ name: 'users', rows: [] })
@@ -33,5 +33,19 @@ describe('Filter', () => {
     const f = new Filter({ name: 'A', id: '1' }, resource)
     const paths = f.reduce<string[]>((acc, el) => [...acc, el.path], [])
     expect(paths.sort()).toEqual(['id', 'name'])
+  })
+
+  test('JSON in payload preserves commas and other string delimiters', () => {
+    const values = ['Smith, John', 'quoted "value"', 'path\\segment', '']
+    const payload = encodeInFilterPayload(values)
+
+    expect(payload).toBe('json:["Smith, John","quoted \\"value\\"","path\\\\segment",""]')
+    expect(decodeInFilterPayload(payload)).toEqual(values)
+    expect(new Filter({ name: `in:${payload}` }, resource).get('name')?.value).toEqual(values)
+  })
+
+  test('legacy comma-separated in payload remains supported', () => {
+    expect(decodeInFilterPayload('a,b,c')).toEqual(['a', 'b', 'c'])
+    expect(new Filter({ name: 'in:a,b,c' }, resource).get('name')?.value).toEqual(['a', 'b', 'c'])
   })
 })

@@ -125,8 +125,10 @@ import {
   ALL_STRING_OPS,
   type DateFilterOp,
   DATE_NULLARY,
+  decodeInFilterPayload,
   encodeDateFilter,
   encodeFilter,
+  encodeInFilterPayload,
   encodeNumericFilter,
   encodeReferenceFilter,
   type NumericFilterOp,
@@ -2544,8 +2546,8 @@ function StringFilterField({
         <FilterValuePicker
           resourceId={resourceId}
           field={property.path}
-          selected={val ? val.split(',') : []}
-          onChange={(selected) => emit('in', selected.join(','))}
+          selected={decodeInFilterPayload(val).map(String)}
+          onChange={(selected) => emit('in', encodeInFilterPayload(selected))}
           preloadedValues={isLowCardinality ? distinctValues : undefined}
           t={t}
         />

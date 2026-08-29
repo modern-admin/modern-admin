@@ -12,6 +12,10 @@ const makeResource = () => {
 
 const paramValues = (node: unknown, acc: unknown[] = []): unknown[] => {
   if (node == null || typeof node !== 'object') return acc
+  if (Array.isArray(node)) {
+    for (const item of node) paramValues(item, acc)
+    return acc
+  }
   if ('value' in node && 'encoder' in node) {
     acc.push((node as { value: unknown }).value)
     return acc
@@ -37,6 +41,13 @@ describe('filterToWhere', () => {
     const resource = makeResource()
     const where = filterToWhere(new Filter({ email: 'foo', role: 'admin' }, resource), users)
     expect(where).toBeDefined()
+  })
+
+  it('preserves commas inside JSON-encoded in-filter values', () => {
+    const resource = makeResource()
+    const where = filterToWhere(new Filter({ name: 'in:json:["Smith, John"]' }, resource), users)
+
+    expect(paramValues(where)).toEqual(['Smith, John'])
   })
 
   it('skips fields whose property is unknown', () => {

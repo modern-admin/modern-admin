@@ -301,6 +301,12 @@ describe('filterToWhere — in operator', () => {
     expect(where({ name: 'in:Alice' })).toEqual({ name: { in: ['Alice'] } })
   })
 
+  test('in with JSON payload preserves commas inside string values', () => {
+    expect(where({ name: 'in:json:["Smith, John"]' })).toEqual({
+      name: { in: ['Smith, John'] },
+    })
+  })
+
   test('in with empty string after operator → no filter applied', () => {
     // `field=in:` arrives when the user unchecks the last item in the
     // "Is one of" picker. The adapter drops the clause entirely so the

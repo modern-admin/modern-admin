@@ -1,4 +1,5 @@
 import type { BaseProperty, BaseResource } from '../adapters'
+import { z } from 'zod'
 import { flatten, unflatten } from '../utils/flat.js'
 
 export const PARAM_SEPARATOR = '~~'
@@ -24,7 +25,7 @@ export const MATCHING_PATTERNS = {
  * - `ew`     — ends with
  * - `empty`  — is null or empty string
  * - `nempty` — is not null and not empty string
- * - `in`     — value is one of (comma-separated list → multi-select)
+ * - `in`     — value is one of (JSON list payload; legacy comma lists supported)
  */
 export type FilterOperator =
   'eq' | 'neq' | 'co' | 'nco' | 'sw' | 'ew' | 'empty' | 'nempty' | 'in' | 'gt' | 'lt' | 'between'
@@ -45,6 +46,31 @@ export const FILTER_OPERATORS: ReadonlySet<string> = new Set<FilterOperator>([
   'between',
 ])
 
+const IN_FILTER_JSON_PREFIX = 'json:'
+const inFilterPayloadZ = z.array(z.union([z.string(), z.number().finite()]))
+
+export type InFilterScalar = string | number
+
+/** Encode a multi-select payload without losing delimiters inside values. */
+export function encodeInFilterPayload(values: readonly InFilterScalar[]): string {
+  return values.length > 0 ? `${IN_FILTER_JSON_PREFIX}${JSON.stringify(values)}` : ''
+}
+
+/** Decode the JSON multi-select payload, falling back to the legacy comma format. */
+export function decodeInFilterPayload(payload: string): InFilterScalar[] {
+  if (!payload) return []
+  if (payload.startsWith(IN_FILTER_JSON_PREFIX)) {
+    try {
+      const parsed: unknown = JSON.parse(payload.slice(IN_FILTER_JSON_PREFIX.length))
+      const result = inFilterPayloadZ.safeParse(parsed)
+      if (result.success) return result.data
+    } catch {
+      // Not a valid encoded payload; preserve it as a legacy literal below.
+    }
+  }
+  return payload.split(',')
+}
+
 /**
  * Parse an operator-prefixed filter value string.
  *
@@ -53,7 +79,8 @@ export const FILTER_OPERATORS: ReadonlySet<string> = new Set<FilterOperator>([
  *
  * Examples:
  * - `'co:john'`     → `{ operator: 'co', value: 'john' }`
- * - `'in:a,b,c'`    → `{ operator: 'in', value: 'a,b,c' }`
+ * - `'in:json:["a","b"]'` → `{ operator: 'in', value: 'json:["a","b"]' }`
+ * - `'in:a,b'`      → legacy comma-separated payload
  * - `'empty:'`       → `{ operator: 'empty', value: '' }`
  * - `'john'`         → `{ operator: null, value: 'john' }`
  */
@@ -133,9 +160,10 @@ export class Filter {
         const parsed = parseOperatorValue(value)
         if (parsed.operator) {
           operator = parsed.operator
-          // `in:a,b,c` → array value
+          // JSON payloads preserve delimiters inside values; comma-separated
+          // payloads remain supported for existing URLs and integrations.
           if (operator === 'in') {
-            value = parsed.value ? parsed.value.split(',') : []
+            value = decodeInFilterPayload(parsed.value)
           } else {
             value = parsed.value
           }
