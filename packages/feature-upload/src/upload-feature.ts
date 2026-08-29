@@ -26,7 +26,14 @@
  * })
  */
 
-import { appendAfterHook, uuidv7, type ActionRequest, type ActionResponse, type FeatureFn, type ResourceOptions } from '@modern-admin/core'
+import {
+  appendAfterHook,
+  uuidv7,
+  type ActionRequest,
+  type ActionResponse,
+  type FeatureFn,
+  type ResourceOptions,
+} from '@modern-admin/core'
 import type { UploadFeatureOptions, UploadPropertyConfig } from './types.js'
 import { UploadProviderRegistry } from './registry.js'
 import { PendingUploadsRegistry } from './pending-registry.js'
@@ -171,7 +178,8 @@ export function uploadFeature(options: UploadFeatureOptions): FeatureFn {
     }
 
     // Retrieve any existing action overrides so we can chain, not replace.
-    const existingActions = resourceOptions.actions as Record<string, Record<string, unknown>> | undefined
+    const existingActions = resourceOptions.actions as
+      Record<string, Record<string, unknown>> | undefined
     const existingNew = existingActions?.['new']
     const existingEdit = existingActions?.['edit']
     const existingDelete = existingActions?.['delete']

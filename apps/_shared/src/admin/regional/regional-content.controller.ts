@@ -51,8 +51,7 @@ const REGION_LABELS: Record<string, string> = {
               provider: regionalProvider,
               mimeTypes: ['image/*'],
               maxSize: 10 * 1024 * 1024,
-              uploadPath: (filename, ctx) =>
-                `regional/${ctx.key}/${uuidv7()}${extname(filename)}`,
+              uploadPath: (filename, ctx) => `regional/${ctx.key}/${uuidv7()}${extname(filename)}`,
             },
           },
           label: (key) => `Preview — ${REGION_LABELS[key] ?? key}`,

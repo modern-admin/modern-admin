@@ -44,9 +44,7 @@ interface RegionalFixture {
   initialAsiaTitle: string
 }
 
-async function createRegionalContent(
-  request: APIRequestContext,
-): Promise<RegionalFixture> {
+async function createRegionalContent(request: APIRequestContext): Promise<RegionalFixture> {
   const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   const name = `JsonByKey Fixture ${suffix}`
   const initialEuTitle = `EU initial ${suffix}`
@@ -74,20 +72,12 @@ async function createRegionalContent(
   }
 }
 
-async function deleteRegionalSilently(
-  request: APIRequestContext,
-  id: string,
-): Promise<void> {
+async function deleteRegionalSilently(request: APIRequestContext, id: string): Promise<void> {
   await request.delete(adminApi(`/resources/regionalContent/records/${id}/actions/delete`))
 }
 
-async function readTitles(
-  request: APIRequestContext,
-  id: string,
-): Promise<Record<string, string>> {
-  const res = await request.get(
-    adminApi(`/resources/regionalContent/records/${id}/actions/show`),
-  )
+async function readTitles(request: APIRequestContext, id: string): Promise<Record<string, string>> {
+  const res = await request.get(adminApi(`/resources/regionalContent/records/${id}/actions/show`))
   expect(res.ok(), `read titles failed: ${await res.text()}`).toBeTruthy()
   const body = await res.json()
   const raw = body.record.params.titles
@@ -125,14 +115,14 @@ test.describe('feature-json-by-key — UI', () => {
       // "Title — Europe" is rendered and pre-populated with the JSON value.
       const euTitleField = fieldByLabel(page, /^title — europe\*?$/i)
       await expect(euTitleField).toBeVisible({ timeout: 5_000 })
-      await expect(euTitleField.locator('input').first()).toHaveValue(
-        fix.initialEuTitle,
-      )
+      await expect(euTitleField.locator('input').first()).toHaveValue(fix.initialEuTitle)
 
       // The other-region virtuals are unmounted by `showWhen` — their
       // field labels must not be present in the DOM at all.
       await expect(
-        page.locator('[data-slot="field-label"]').filter({ hasText: /^title — united states\*?$/i }),
+        page
+          .locator('[data-slot="field-label"]')
+          .filter({ hasText: /^title — united states\*?$/i }),
       ).toHaveCount(0)
       await expect(
         page.locator('[data-slot="field-label"]').filter({ hasText: /^title — asia-pacific\*?$/i }),
@@ -183,9 +173,7 @@ test.describe('feature-json-by-key — UI', () => {
       // the eu field disappears.
       const usTitleField = fieldByLabel(page, /^title — united states\*?$/i)
       await expect(usTitleField).toBeVisible({ timeout: 5_000 })
-      await expect(usTitleField.locator('input').first()).toHaveValue(
-        fix.initialUsTitle,
-      )
+      await expect(usTitleField.locator('input').first()).toHaveValue(fix.initialUsTitle)
       await expect(
         page.locator('[data-slot="field-label"]').filter({ hasText: /^title — europe\*?$/i }),
       ).toHaveCount(0)
@@ -210,12 +198,12 @@ test.describe('feature-json-by-key — UI', () => {
           res.url().includes(`/resources/regionalContent/records/${fix.id}/actions/edit`) &&
           res.request().method() === 'PATCH',
       )
-      await page.getByRole('button', { name: /^save$/i }).first().click()
+      await page
+        .getByRole('button', { name: /^save$/i })
+        .first()
+        .click()
       const saveRes = await savePromise
-      expect(
-        saveRes.ok(),
-        `save failed: ${saveRes.status()} ${await saveRes.text()}`,
-      ).toBeTruthy()
+      expect(saveRes.ok(), `save failed: ${saveRes.status()} ${await saveRes.text()}`).toBeTruthy()
 
       // Server-side check: the JSON column now has the new value AND the
       // untouched keys (us/asia) are preserved by the writeBeforeHook —

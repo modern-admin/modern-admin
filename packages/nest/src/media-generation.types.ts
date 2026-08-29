@@ -1,8 +1,4 @@
-import type {
-  AiTask,
-  IMediaGenerationProvider,
-  MediaGenerationFileType,
-} from '@modern-admin/core'
+import type { AiTask, IMediaGenerationProvider, MediaGenerationFileType } from '@modern-admin/core'
 
 export interface MediaGenerationOptions {
   provider: IMediaGenerationProvider

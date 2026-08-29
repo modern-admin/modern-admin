@@ -29,6 +29,11 @@ describe('ComponentLoader', () => {
     const loader = new ComponentLoader()
     loader.add('A', async () => ({ default: 1 }))
     loader.add('B', async () => ({ default: 2 }))
-    expect(loader.entries().map(([name]) => name).sort()).toEqual(['A', 'B'])
+    expect(
+      loader
+        .entries()
+        .map(([name]) => name)
+        .sort(),
+    ).toEqual(['A', 'B'])
   })
 })

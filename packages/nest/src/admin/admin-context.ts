@@ -65,9 +65,4 @@ export type BulkDeleteContext<TRow extends object = Record<string, unknown>> =
   AdminActionContext<TRow> & { records: BaseRecord[] }
 export type SearchContext<TRow extends object = Record<string, unknown>> = AdminActionContext<TRow>
 
-export type {
-  ActionResponse,
-  ListActionResponse,
-  RecordActionResponse,
-  BulkActionResponse,
-}
+export type { ActionResponse, ListActionResponse, RecordActionResponse, BulkActionResponse }

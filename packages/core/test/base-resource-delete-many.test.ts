@@ -22,12 +22,18 @@ class MemResource extends BaseResource {
     super()
     this.rows = rows
   }
-  override id(): string { return 'mem' }
-  override databaseName(): string { return 'mem' }
+  override id(): string {
+    return 'mem'
+  }
+  override databaseName(): string {
+    return 'mem'
+  }
   override properties(): BaseProperty[] {
     return [new BaseProperty({ path: 'id', isId: true })]
   }
-  override async count(): Promise<number> { return this.rows.length }
+  override async count(): Promise<number> {
+    return this.rows.length
+  }
   override async find(_filter: Filter, options: FindOptions): Promise<BaseRecord[]> {
     const offset = options.offset ?? 0
     const limit = options.limit ?? this.rows.length

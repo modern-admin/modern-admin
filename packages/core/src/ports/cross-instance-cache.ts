@@ -42,12 +42,9 @@ export class CrossInstanceCacheProvider implements ICacheProvider {
   private async startSubscription(): Promise<void> {
     if (!this.inner.subscribe) return
     try {
-      this.unsubscribe = await this.inner.subscribe(
-        CACHE_INVALIDATION_CHANNEL,
-        (message) => {
-          void this.applyRemote(message)
-        },
-      )
+      this.unsubscribe = await this.inner.subscribe(CACHE_INVALIDATION_CHANNEL, (message) => {
+        void this.applyRemote(message)
+      })
     } catch (err) {
       // A provider that advertises subscribe() but cannot establish the
       // subscription (e.g. Redis client without a subscriber connection)
@@ -133,10 +130,7 @@ export class CrossInstanceCacheProvider implements ICacheProvider {
     await this.inner.publish?.(channel, message)
   }
 
-  async subscribe(
-    channel: string,
-    handler: (message: string) => void,
-  ): Promise<() => void> {
+  async subscribe(channel: string, handler: (message: string) => void): Promise<() => void> {
     if (!this.inner.subscribe) return () => {}
     return this.inner.subscribe(channel, handler)
   }

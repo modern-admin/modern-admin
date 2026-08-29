@@ -90,8 +90,7 @@ export class ModernAdminBootstrapService implements OnApplicationBootstrap {
     const httpAdapter = this.adapterHost.httpAdapter
     if (!httpAdapter) return
     const instance = httpAdapter.getInstance?.() as
-      | { set?: (key: string, value: unknown) => void; get?: (key: string) => unknown }
-      | undefined
+      { set?: (key: string, value: unknown) => void; get?: (key: string) => unknown } | undefined
     if (!instance || typeof instance.set !== 'function' || typeof instance.get !== 'function') {
       return
     }

@@ -53,13 +53,27 @@ import type { WizardStep } from './components/wizard-form.js'
 // (sidebar + header). Heavy dependencies then ride in the page chunk that
 // actually uses them — recharts with the dashboard, tiptap with the record
 // pages — instead of blocking first paint for all of them on every load.
-const HomePage = React.lazy(() => import('./pages/home-page.js').then((m) => ({ default: m.HomePage })))
-const AuditLogPage = React.lazy(() => import('./pages/audit-log-page.js').then((m) => ({ default: m.AuditLogPage })))
-const CachePage = React.lazy(() => import('./pages/cache-page.js').then((m) => ({ default: m.CachePage })))
-const SettingsPage = React.lazy(() => import('./pages/settings-page.js').then((m) => ({ default: m.SettingsPage })))
-const ResourceListPage = React.lazy(() => import('./pages/list-page.js').then((m) => ({ default: m.ResourceListPage })))
-const ResourceShowPage = React.lazy(() => import('./pages/show-page.js').then((m) => ({ default: m.ResourceShowPage })))
-const ResourceEditPage = React.lazy(() => import('./pages/edit-page.js').then((m) => ({ default: m.ResourceEditPage })))
+const HomePage = React.lazy(() =>
+  import('./pages/home-page.js').then((m) => ({ default: m.HomePage })),
+)
+const AuditLogPage = React.lazy(() =>
+  import('./pages/audit-log-page.js').then((m) => ({ default: m.AuditLogPage })),
+)
+const CachePage = React.lazy(() =>
+  import('./pages/cache-page.js').then((m) => ({ default: m.CachePage })),
+)
+const SettingsPage = React.lazy(() =>
+  import('./pages/settings-page.js').then((m) => ({ default: m.SettingsPage })),
+)
+const ResourceListPage = React.lazy(() =>
+  import('./pages/list-page.js').then((m) => ({ default: m.ResourceListPage })),
+)
+const ResourceShowPage = React.lazy(() =>
+  import('./pages/show-page.js').then((m) => ({ default: m.ResourceShowPage })),
+)
+const ResourceEditPage = React.lazy(() =>
+  import('./pages/edit-page.js').then((m) => ({ default: m.ResourceEditPage })),
+)
 const ResourceWizardCreatePage = React.lazy(() =>
   import('./pages/wizard-create-page.js').then((m) => ({ default: m.ResourceWizardCreatePage })),
 )
@@ -77,7 +91,11 @@ interface RouterContext {
 // no text, so it needs no i18n wiring.
 function PageChunkSpinner(): React.ReactElement {
   return (
-    <div role="status" aria-busy="true" className="flex items-center justify-center py-24 text-muted-foreground">
+    <div
+      role="status"
+      aria-busy="true"
+      className="flex items-center justify-center py-24 text-muted-foreground"
+    >
       <Loader2 className="size-5 animate-spin" aria-hidden="true" />
     </div>
   )

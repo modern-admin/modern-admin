@@ -42,10 +42,7 @@ export class LocalStorageDashboardStore implements IDashboardStore {
   save(userId: string, blob: DashboardBlob): void {
     if (typeof window === 'undefined') return
     try {
-      window.localStorage.setItem(
-        STORAGE_PREFIX + (userId || ANON_USER),
-        JSON.stringify(blob),
-      )
+      window.localStorage.setItem(STORAGE_PREFIX + (userId || ANON_USER), JSON.stringify(blob))
     } catch {
       // Quota exceeded / private mode — silently drop.
     }
@@ -98,10 +95,14 @@ export function resolveRange(
 ): { from: string; to: string } {
   if (range.preset === 'custom') return { from: range.from, to: range.to }
   const days =
-    range.preset === '7d' ? 7
-      : range.preset === '30d' ? 30
-        : range.preset === '90d' ? 90
-          : range.preset === '1y' ? 365
+    range.preset === '7d'
+      ? 7
+      : range.preset === '30d'
+        ? 30
+        : range.preset === '90d'
+          ? 90
+          : range.preset === '1y'
+            ? 365
             : 3650 // 'all' → 10 years
   const to = new Date(now)
   const from = new Date(now)
@@ -112,9 +113,10 @@ export function resolveRange(
 /**
  * Equal-length window immediately preceding `[from, to]`.
  */
-export function previousRangeOf(
-  range: { from: string; to: string },
-): { from: string; to: string } | null {
+export function previousRangeOf(range: {
+  from: string
+  to: string
+}): { from: string; to: string } | null {
   const f = new Date(range.from).getTime()
   const t = new Date(range.to).getTime()
   if (isNaN(f) || isNaN(t) || t < f) return null
@@ -182,9 +184,7 @@ export interface UseDashboardChartsResult {
  * returns an empty list and ignores writes — used while
  * `useCurrentUser()` is still loading.
  */
-export function useDashboardCharts(
-  options: UseDashboardChartsOptions,
-): UseDashboardChartsResult {
+export function useDashboardCharts(options: UseDashboardChartsOptions): UseDashboardChartsResult {
   const { userId, store = defaultStore } = options
   const [charts, setCharts] = useState<ChartDef[]>([])
   const [groups, setGroups] = useState<ChartGroup[]>([])
@@ -264,14 +264,14 @@ export function useDashboardCharts(
         charts.map((c) =>
           c.id === id
             ? ({
-              ...c,
-              ...input,
-              id,
-              title: input.title ?? '',
-              filters: input.filters ?? {},
-              createdAt: c.createdAt,
-              updatedAt: new Date().toISOString(),
-            } as ChartDef)
+                ...c,
+                ...input,
+                id,
+                title: input.title ?? '',
+                filters: input.filters ?? {},
+                createdAt: c.createdAt,
+                updatedAt: new Date().toISOString(),
+              } as ChartDef)
             : c,
         ),
         groups,
@@ -282,7 +282,10 @@ export function useDashboardCharts(
 
   const removeChart = useCallback(
     (id: string): void => {
-      persist(charts.filter((c) => c.id !== id), groups)
+      persist(
+        charts.filter((c) => c.id !== id),
+        groups,
+      )
     },
     [charts, groups, persist],
   )
@@ -318,11 +321,11 @@ export function useDashboardCharts(
         groups.map((g) =>
           g.id === id
             ? {
-              ...g,
-              ...(patch.name !== undefined ? { name: patch.name } : {}),
-              ...(patch.order !== undefined ? { order: patch.order } : {}),
-              updatedAt: now,
-            }
+                ...g,
+                ...(patch.name !== undefined ? { name: patch.name } : {}),
+                ...(patch.order !== undefined ? { order: patch.order } : {}),
+                updatedAt: now,
+              }
             : g,
         ),
       )
@@ -333,7 +336,10 @@ export function useDashboardCharts(
   const removeGroup = useCallback(
     (id: string): void => {
       // Cascading delete: every chart assigned to the group disappears with it.
-      persist(charts.filter((c) => c.groupId !== id), groups.filter((g) => g.id !== id))
+      persist(
+        charts.filter((c) => c.groupId !== id),
+        groups.filter((g) => g.id !== id),
+      )
     },
     [charts, groups, persist],
   )
@@ -352,7 +358,10 @@ export function useDashboardCharts(
 }
 
 /** Stable sort: by `order` ascending, then by `createdAt` for tie-breaking. */
-function byOrderThenCreated(a: { order: number; createdAt: string }, b: { order: number; createdAt: string }): number {
+function byOrderThenCreated(
+  a: { order: number; createdAt: string },
+  b: { order: number; createdAt: string },
+): number {
   if (a.order !== b.order) return a.order - b.order
   return a.createdAt.localeCompare(b.createdAt)
 }

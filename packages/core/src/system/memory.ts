@@ -62,12 +62,10 @@ export class MemoryLogStore implements IQueryableLogStore {
     if (filter.before != null) {
       const before = filter.before
       const beforeId = filter.beforeId
-      result = result.filter((e) =>
-        e.at < before || (
-          beforeId !== undefined &&
-          e.at === before &&
-          String(e.id ?? '') < beforeId
-        ),
+      result = result.filter(
+        (e) =>
+          e.at < before ||
+          (beforeId !== undefined && e.at === before && String(e.id ?? '') < beforeId),
       )
     }
     // Ties broken by id (UUIDv7, so already time-ordered) to match the
@@ -112,7 +110,9 @@ export class MemoryLogStore implements IQueryableLogStore {
     this.entries.push(...kept)
     return doomed.size
   }
-  clear(): void { this.entries.length = 0 }
+  clear(): void {
+    this.entries.length = 0
+  }
 }
 
 /**
@@ -143,7 +143,9 @@ export class MemoryWebhookStore implements IWebhookStore {
   public readonly webhooks: Webhook[] = []
   public readonly deliveries: WebhookDelivery[] = []
 
-  async list(): Promise<Webhook[]> { return this.webhooks.slice() }
+  async list(): Promise<Webhook[]> {
+    return this.webhooks.slice()
+  }
   async get(id: string): Promise<Webhook | null> {
     return this.webhooks.find((w) => w.id === id) ?? null
   }
@@ -216,16 +218,18 @@ export class MemoryConfigStore implements IConfigStore {
     value: unknown,
   ): Promise<void> {
     this.entries.set(configKey(scope, scopeId, key), {
-      scope, scopeId, key, value, updatedAt: nowIso(),
+      scope,
+      scopeId,
+      key,
+      value,
+      updatedAt: nowIso(),
     })
   }
   async delete(scope: ConfigScope, scopeId: string | null, key: string): Promise<void> {
     this.entries.delete(configKey(scope, scopeId, key))
   }
   async list(scope: ConfigScope, scopeId: string | null): Promise<ConfigEntry[]> {
-    return [...this.entries.values()].filter(
-      (e) => e.scope === scope && e.scopeId === scopeId,
-    )
+    return [...this.entries.values()].filter((e) => e.scope === scope && e.scopeId === scopeId)
   }
 }
 
@@ -336,10 +340,16 @@ export class MemoryHistoryStore implements IHistoryStore {
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
       .slice(offset, offset + limit)
   }
-  async get(resourceId: string, recordId: string, revisionId: string): Promise<HistoryEntry | null> {
-    return this.entries.find(
-      (e) => e.resourceId === resourceId && e.recordId === recordId && e.id === revisionId,
-    ) ?? null
+  async get(
+    resourceId: string,
+    recordId: string,
+    revisionId: string,
+  ): Promise<HistoryEntry | null> {
+    return (
+      this.entries.find(
+        (e) => e.resourceId === resourceId && e.recordId === recordId && e.id === revisionId,
+      ) ?? null
+    )
   }
   async latest(resourceId: string, recordId: string): Promise<HistoryEntry | null> {
     const [first] = await this.list(resourceId, recordId, { limit: 1 })
@@ -497,7 +507,9 @@ export class MemoryCacheStore implements ICacheStore {
     }
     this.rows.set(key, { entry, expiresAtMs })
   }
-  async delete(key: string): Promise<void> { this.rows.delete(key) }
+  async delete(key: string): Promise<void> {
+    this.rows.delete(key)
+  }
   async invalidateTags(tags: string[]): Promise<number> {
     if (!tags.length) return 0
     const set = new Set(tags)
@@ -533,7 +545,7 @@ export function createMemorySystem(): ISystemStores & {
   history: MemoryHistoryStore
   aiTask: MemoryAiTaskStore
   cache: MemoryCacheStore
-  } {
+} {
   const log = new MemoryLogStore()
   const webhook = new MemoryWebhookStore()
   const config = new MemoryConfigStore()
@@ -541,7 +553,12 @@ export function createMemorySystem(): ISystemStores & {
   const aiTask = new MemoryAiTaskStore()
   const cache = new MemoryCacheStore()
   return {
-    log, webhook, config, history, aiTask, cache,
+    log,
+    webhook,
+    config,
+    history,
+    aiTask,
+    cache,
     logStore: log,
     webhookStore: webhook,
     configStore: config,

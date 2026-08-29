@@ -30,12 +30,12 @@ export const FormField = <
   TFieldValues extends FieldValues = FieldValues,
   TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
 >({
-    ...props
-  }: ControllerProps<TFieldValues, TName>): React.ReactElement => (
-    <FormFieldContext.Provider value={{ name: props.name } as FormFieldContextValue}>
-      <Controller {...props} />
-    </FormFieldContext.Provider>
-  )
+  ...props
+}: ControllerProps<TFieldValues, TName>): React.ReactElement => (
+  <FormFieldContext.Provider value={{ name: props.name } as FormFieldContextValue}>
+    <Controller {...props} />
+  </FormFieldContext.Provider>
+)
 
 interface FormItemContextValue {
   id: string
@@ -105,9 +105,7 @@ export const FormControl = React.forwardRef<
     <Slot
       ref={ref}
       id={formItemId}
-      aria-describedby={
-        !error ? `${formDescriptionId}` : `${formDescriptionId} ${formMessageId}`
-      }
+      aria-describedby={!error ? `${formDescriptionId}` : `${formDescriptionId} ${formMessageId}`}
       aria-invalid={!!error}
       {...props}
     />

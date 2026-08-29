@@ -29,7 +29,9 @@ describe('patchStaticUiModule', () => {
     const source = `// ModernAdminStaticUiModule.forRoot({ webPackage: './example' })\n${MODULE}`
     const result = patchStaticUiModule(source, './ui')
     expect(result.output).toContain("      webPackage: './ui',")
-    expect(result.output).toContain("// ModernAdminStaticUiModule.forRoot({ webPackage: './example' })")
+    expect(result.output).toContain(
+      "// ModernAdminStaticUiModule.forRoot({ webPackage: './example' })",
+    )
   })
 
   test('does not confuse a nested or commented property with webPackage', () => {
@@ -60,7 +62,10 @@ describe('patchStaticUiModule', () => {
   })
 
   test('refuses to replace a different custom bundle', () => {
-    const source = MODULE.replace("path: '/admin',", "webPackage: './brand-ui',\n      path: '/admin',")
+    const source = MODULE.replace(
+      "path: '/admin',",
+      "webPackage: './brand-ui',\n      path: '/admin',",
+    )
     expect(() => patchStaticUiModule(source, './ui')).toThrow(/refusing to overwrite/i)
   })
 })
@@ -232,8 +237,6 @@ describe('setupUi', () => {
     await mkdir(join(cwd, 'actual-ui-parent'))
     await symlink(join(cwd, 'actual-ui-parent'), join(cwd, 'linked-ui-parent'), 'dir')
 
-    await expect(
-      setupUi({ cwd, uiDir: 'linked-ui-parent/ui' }),
-    ).rejects.toThrow(/symbolic link/i)
+    await expect(setupUi({ cwd, uiDir: 'linked-ui-parent/ui' })).rejects.toThrow(/symbolic link/i)
   })
 })

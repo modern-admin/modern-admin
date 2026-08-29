@@ -34,10 +34,7 @@ async function createCustomer(
   return { id: String(body.record.id), name, email }
 }
 
-async function deleteCustomerSilently(
-  request: APIRequestContext,
-  id: string,
-): Promise<void> {
+async function deleteCustomerSilently(request: APIRequestContext, id: string): Promise<void> {
   await request.delete(adminApi(`/resources/customers/records/${id}/actions/delete`))
 }
 
@@ -67,10 +64,7 @@ test.describe('Edit page — existing record', () => {
     }
   })
 
-  test('saves edits via PATCH and navigates to the show page', async ({
-    page,
-    request,
-  }) => {
+  test('saves edits via PATCH and navigates to the show page', async ({ page, request }) => {
     const customer = await createCustomer(request)
     const renamed = `${customer.name} (renamed)`
     try {
@@ -82,9 +76,10 @@ test.describe('Edit page — existing record', () => {
 
       const patchPromise = page.waitForResponse(
         (res) =>
-          res.url().includes(
-            `/admin/api/resources/customers/records/${customer.id}/actions/edit`,
-          ) && res.request().method() === 'PATCH',
+          res
+            .url()
+            .includes(`/admin/api/resources/customers/records/${customer.id}/actions/edit`) &&
+          res.request().method() === 'PATCH',
       )
       await page.getByRole('button', { name: 'Save' }).click()
 
@@ -94,10 +89,9 @@ test.describe('Edit page — existing record', () => {
       expect(patchBody.record.params.name).toBe(renamed)
 
       // After a successful save the edit page redirects to /show.
-      await expect(page).toHaveURL(
-        new RegExp(`/resources/customers/${customer.id}$`),
-        { timeout: 10_000 },
-      )
+      await expect(page).toHaveURL(new RegExp(`/resources/customers/${customer.id}$`), {
+        timeout: 10_000,
+      })
       // Server-side double-check.
       const fetched = await request.get(
         adminApi(`/resources/customers/records/${customer.id}/actions/show`),
@@ -137,10 +131,7 @@ test.describe('Edit page — new record', () => {
     await expect(page.getByText(/is required/i).first()).toBeVisible()
   })
 
-  test('creates a record when required fields are filled', async ({
-    page,
-    request,
-  }) => {
+  test('creates a record when required fields are filled', async ({ page, request }) => {
     const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
     const email = `create-ui-${suffix}@example.com`
     const name = `Create UI ${suffix}`
@@ -154,11 +145,9 @@ test.describe('Edit page — new record', () => {
       await fieldInput(page, /^Email/).fill(email)
 
       // Explicitly pick a tier so the enum field isn't left as empty/null.
-      const tierField = page
-        .locator('[data-slot="field"]')
-        .filter({
-          has: page.locator('[data-slot="field-label"]').filter({ hasText: /^Tier/i }),
-        })
+      const tierField = page.locator('[data-slot="field"]').filter({
+        has: page.locator('[data-slot="field-label"]').filter({ hasText: /^Tier/i }),
+      })
       const tierCombo = tierField.getByRole('combobox')
       await tierCombo.click()
       await page.getByRole('option', { name: /free/i, exact: false }).first().click()
@@ -178,10 +167,9 @@ test.describe('Edit page — new record', () => {
       expect(postBody.record.params.name).toBe(name)
 
       // On success the form navigates to the new record's show page.
-      await expect(page).toHaveURL(
-        new RegExp(`/resources/customers/${createdId}$`),
-        { timeout: 10_000 },
-      )
+      await expect(page).toHaveURL(new RegExp(`/resources/customers/${createdId}$`), {
+        timeout: 10_000,
+      })
     } finally {
       if (createdId) await deleteCustomerSilently(request, createdId)
     }

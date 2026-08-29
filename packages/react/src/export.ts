@@ -78,12 +78,8 @@ export function recordsToCsv(records: RecordJSON[], opts: SerializeOptions = {})
     ? opts.properties.map((p) => ({ path: p.path, label: p.label }))
     : columnsFromRecords(records)
   const header = columns.map((c) => csvEscape(c.label)).join(',')
-  const lines = records.map((r) =>
-    columns.map((c) => csvEscape(r.params[c.path])).join(','),
-  )
-  const queryComment = opts.query
-    ? `# Query: ${JSON.stringify(opts.query)}\r\n`
-    : ''
+  const lines = records.map((r) => columns.map((c) => csvEscape(r.params[c.path])).join(','))
+  const queryComment = opts.query ? `# Query: ${JSON.stringify(opts.query)}\r\n` : ''
   return `\uFEFF${queryComment}${[header, ...lines].join('\r\n')}`
 }
 
@@ -131,7 +127,11 @@ export function downloadText(filename: string, mime: string, body: string): void
 }
 
 /** Build a stable filename like `users-20260506-143015.csv`. */
-export function exportFilename(resourceId: string, format: ExportFormat, now: Date = new Date()): string {
+export function exportFilename(
+  resourceId: string,
+  format: ExportFormat,
+  now: Date = new Date(),
+): string {
   const pad = (n: number) => String(n).padStart(2, '0')
   const stamp =
     `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}` +

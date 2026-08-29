@@ -31,12 +31,7 @@ import { ModernAdminAuthGuard } from './auth.guard.js'
 import { ModernAdminCacheInterceptor } from './cache.interceptor.js'
 import { NoHttpCache } from './no-http-cache.js'
 import { wantsRevalidation } from './revalidate.js'
-import {
-  bulkBodyZ,
-  createBodyZ,
-  listQueryZ,
-  updateBodyZ,
-} from './dto.js'
+import { bulkBodyZ, createBodyZ, listQueryZ, updateBodyZ } from './dto.js'
 
 interface AdminRequest {
   currentAdmin?: { id: string; [key: string]: unknown }
@@ -89,10 +84,7 @@ export class ResourceController {
     @Param('recordId') recordId: string,
     @Req() req: AdminRequest,
   ): Promise<ActionResponse> {
-    return this.run(
-      { params: { resourceId, recordId, action: 'show' }, method: 'get' },
-      req,
-    )
+    return this.run({ params: { resourceId, recordId, action: 'show' }, method: 'get' }, req)
   }
 
   @Post('actions/new')
@@ -102,10 +94,7 @@ export class ResourceController {
     @Req() req: AdminRequest,
   ): Promise<ActionResponse> {
     const payload = createBodyZ.parse(body)
-    return this.run(
-      { params: { resourceId, action: 'new' }, method: 'post', payload },
-      req,
-    )
+    return this.run({ params: { resourceId, action: 'new' }, method: 'post', payload }, req)
   }
 
   @Patch('records/:recordId/actions/edit')
@@ -132,10 +121,7 @@ export class ResourceController {
     @Param('recordId') recordId: string,
     @Req() req: AdminRequest,
   ): Promise<ActionResponse> {
-    return this.run(
-      { params: { resourceId, recordId, action: 'delete' }, method: 'delete' },
-      req,
-    )
+    return this.run({ params: { resourceId, recordId, action: 'delete' }, method: 'delete' }, req)
   }
 
   @Post('actions/bulkDelete')

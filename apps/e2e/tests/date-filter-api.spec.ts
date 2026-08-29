@@ -33,9 +33,7 @@ interface Row {
 }
 
 test.describe('List filters — date-range operators (customers.createdAt)', () => {
-  test('~~from / ~~to range returns only rows inside the window (no 500)', async ({
-    request,
-  }) => {
+  test('~~from / ~~to range returns only rows inside the window (no 500)', async ({ request }) => {
     // Pull a sample to find the actual date span seeded into the demo DB.
     const sample = await request.get(adminApi(`/resources/customers/actions/list?perPage=200`))
     expect(sample.status(), await sample.text().catch(() => '')).toBe(200)
@@ -49,9 +47,7 @@ test.describe('List filters — date-range operators (customers.createdAt)', () 
     // latest by ~1 day. Using a window past today (well after seed dates)
     // guarantees a strictly-smaller subset.
     const earliest = all[0]!.slice(0, 10) // yyyy-MM-dd
-    const tomorrowIso = new Date(Date.now() + 24 * 60 * 60 * 1000)
-      .toISOString()
-      .slice(0, 10)
+    const tomorrowIso = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
 
     const res = await request.get(
       adminApi(
@@ -100,9 +96,7 @@ test.describe('List filters — date-range operators (customers.createdAt)', () 
       .filter((v): v is string => !!v)
       .sort()
     const earliest = all[0]!.slice(0, 10)
-    const tomorrowIso = new Date(Date.now() + 24 * 60 * 60 * 1000)
-      .toISOString()
-      .slice(0, 10)
+    const tomorrowIso = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
 
     const res = await request.get(
       adminApi(

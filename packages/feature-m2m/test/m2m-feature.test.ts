@@ -15,7 +15,10 @@ import { m2mFeature } from '../src/m2m-feature.js'
 
 // ─── Tiny in-memory adapter (test harness) ───────────────────────────────────
 
-interface Row { id: string; [k: string]: unknown }
+interface Row {
+  id: string
+  [k: string]: unknown
+}
 interface Table {
   __testTable: true
   name: string
@@ -30,14 +33,23 @@ class TestResource extends BaseResource {
   static override isAdapterFor(raw: unknown): boolean {
     return typeof raw === 'object' && raw !== null && (raw as Table).__testTable === true
   }
-  override id(): string { return this.table.name }
-  override databaseName(): string { return 'test' }
-  override properties(): BaseProperty[] { return this.table.properties }
+  override id(): string {
+    return this.table.name
+  }
+  override databaseName(): string {
+    return 'test'
+  }
+  override properties(): BaseProperty[] {
+    return this.table.properties
+  }
   override async count(filter: Filter): Promise<number> {
     return this.match(filter).length
   }
   override async find(filter: Filter, options: FindOptions): Promise<BaseRecord[]> {
-    const rows = this.match(filter).slice(options.offset ?? 0, (options.offset ?? 0) + (options.limit ?? this.table.rows.length))
+    const rows = this.match(filter).slice(
+      options.offset ?? 0,
+      (options.offset ?? 0) + (options.limit ?? this.table.rows.length),
+    )
     return rows.map((r) => new BaseRecord(r, this))
   }
   override async findOne(id: string): Promise<BaseRecord | null> {
@@ -73,9 +85,7 @@ class TestResource extends BaseResource {
       for (const [path, el] of Object.entries(filter.filters)) {
         const cell = String(row[path] ?? '')
         if (el.operator === 'in') {
-          const list = Array.isArray(el.value)
-            ? el.value.map(String)
-            : String(el.value).split(',')
+          const list = Array.isArray(el.value) ? el.value.map(String) : String(el.value).split(',')
           if (!list.includes(cell)) return false
           continue
         }
@@ -91,17 +101,23 @@ class TestDatabase extends BaseDatabase {
     super({ tables })
   }
   static override isAdapterFor(input: unknown): boolean {
-    return typeof input === 'object' && input !== null && Array.isArray((input as { tables?: Table[] }).tables)
-      && ((input as { tables: Table[] }).tables[0]?.__testTable === true)
+    return (
+      typeof input === 'object' &&
+      input !== null &&
+      Array.isArray((input as { tables?: Table[] }).tables) &&
+      (input as { tables: Table[] }).tables[0]?.__testTable === true
+    )
   }
-  override resources(): BaseResource[] { return this.tables.map((t) => new TestResource(t)) }
+  override resources(): BaseResource[] {
+    return this.tables.map((t) => new TestResource(t))
+  }
 }
 
 const tbl = (name: string, props: string[], rows: Row[] = []): Table => ({
   __testTable: true,
   name,
-  properties: props.map((p) =>
-    new BaseProperty({ path: p, type: 'string', ...(p === 'id' ? { isId: true } : {}) }),
+  properties: props.map(
+    (p) => new BaseProperty({ path: p, type: 'string', ...(p === 'id' ? { isId: true } : {}) }),
   ),
   rows,
 })
@@ -119,15 +135,23 @@ interface BuildOpts {
 }
 
 const buildAdmin = (opts: BuildOpts = {}) => {
-  const tagsTable = tbl('tags', ['id', 'name'], [
-    { id: 't1', name: 'rust' },
-    { id: 't2', name: 'go' },
-    { id: 't3', name: 'ts' },
-  ])
-  const postsTable = tbl('posts', ['id', 'title'], [
-    { id: 'p1', title: 'Hello' },
-    { id: 'p2', title: 'World' },
-  ])
+  const tagsTable = tbl(
+    'tags',
+    ['id', 'name'],
+    [
+      { id: 't1', name: 'rust' },
+      { id: 't2', name: 'go' },
+      { id: 't3', name: 'ts' },
+    ],
+  )
+  const postsTable = tbl(
+    'posts',
+    ['id', 'title'],
+    [
+      { id: 'p1', title: 'Hello' },
+      { id: 'p2', title: 'World' },
+    ],
+  )
   const postTagsTable = tbl('postTags', ['id', 'postId', 'tagId', 'addedAt', 'note'], [])
 
   const admin = new ModernAdmin({
@@ -194,10 +218,12 @@ describe('m2mFeature — read hook', () => {
     await ctx.junction.create({ postId: 'p1', tagId: 't1', addedAt: '2024-01-01', note: 'rust' })
     await ctx.junction.create({ postId: 'p1', tagId: 't3', addedAt: '2024-02-01', note: 'ts' })
 
-    const response = await ctx.admin.invoke({
+    const response = (await ctx.admin.invoke({
       method: 'get',
       params: { resourceId: 'posts', recordId: 'p1', action: 'show' },
-    }) as { record: { id: string; params: Record<string, unknown>; populated: Record<string, unknown> } }
+    })) as {
+      record: { id: string; params: Record<string, unknown>; populated: Record<string, unknown> }
+    }
 
     const items = response.record.params.tags as Array<Record<string, unknown>>
     expect(items).toHaveLength(2)
@@ -212,10 +238,10 @@ describe('m2mFeature — read hook', () => {
 
   it('returns empty array when no junction rows exist', async () => {
     const ctx = buildAdmin()
-    const response = await ctx.admin.invoke({
+    const response = (await ctx.admin.invoke({
       method: 'get',
       params: { resourceId: 'posts', recordId: 'p2', action: 'show' },
-    }) as { record: { params: Record<string, unknown>; populated: Record<string, unknown> } }
+    })) as { record: { params: Record<string, unknown>; populated: Record<string, unknown> } }
     expect(response.record.params.tags).toEqual([])
   })
 
@@ -225,10 +251,10 @@ describe('m2mFeature — read hook', () => {
     await ctx.junction.create({ postId: 'p2', tagId: 't2' })
     await ctx.junction.create({ postId: 'p2', tagId: 't3' })
 
-    const response = await ctx.admin.invoke({
+    const response = (await ctx.admin.invoke({
       method: 'get',
       params: { resourceId: 'posts', action: 'list' },
-    }) as { records: Array<{ id: string; params: Record<string, unknown> }> }
+    })) as { records: Array<{ id: string; params: Record<string, unknown> }> }
 
     const byId = new Map(response.records.map((r) => [r.id, r]))
     expect((byId.get('p1')!.params.tags as unknown[]).length).toBe(1)
@@ -294,10 +320,7 @@ describe('m2mFeature — write hook (diff)', () => {
       params: { resourceId: 'posts', recordId: 'p1', action: 'edit' },
       payload: {
         // drop t2; update t1's note; keep t3 unchanged
-        tags: [
-          { id: 't1', note: 'new1' },
-          { id: 't3' },
-        ],
+        tags: [{ id: 't1', note: 'new1' }, { id: 't3' }],
       } as unknown as Record<string, unknown>,
     })
 
@@ -333,13 +356,13 @@ describe('m2mFeature — write hook (diff)', () => {
 
   it('rehydrates response.record.params.tags after write', async () => {
     const ctx = buildAdmin()
-    const response = await ctx.admin.invoke({
+    const response = (await ctx.admin.invoke({
       method: 'post',
       params: { resourceId: 'posts', recordId: 'p1', action: 'edit' },
       payload: {
         tags: [{ id: 't1', note: 'fresh' }],
       } as unknown as Record<string, unknown>,
-    }) as { record: { params: Record<string, unknown>; populated: Record<string, unknown> } }
+    })) as { record: { params: Record<string, unknown>; populated: Record<string, unknown> } }
     const items = response.record.params.tags as Array<Record<string, unknown>>
     expect(items).toHaveLength(1)
     expect(items[0]!.note).toBe('fresh')
@@ -457,10 +480,10 @@ describe('m2mFeature — payload parsing edge cases', () => {
       payload: {
         tags: [
           { id: 't1' },
-          { id: '' },         // empty id — drop
-          { id: null },       // null id — drop
+          { id: '' }, // empty id — drop
+          { id: null }, // null id — drop
           { note: 'orphan' }, // no id key — drop
-          null,               // null entry — drop
+          null, // null entry — drop
         ],
       } as unknown as Record<string, unknown>,
     })
@@ -500,8 +523,8 @@ describe('m2mFeature — payload parsing edge cases', () => {
       params: { resourceId: 'posts', recordId: 'p1', action: 'edit' },
       payload: {
         'tags.0.id': 't1',
-        'tags.foo.id': 'bogus',  // non-numeric index → ignored
-        'tags.1': 'naked',       // no field → ignored
+        'tags.foo.id': 'bogus', // non-numeric index → ignored
+        'tags.1': 'naked', // no field → ignored
       } as unknown as Record<string, unknown>,
     })
     expect(ctx.postTagsTable.rows.map((r) => r.tagId)).toEqual(['t1'])
@@ -530,7 +553,10 @@ describe('m2mFeature — payload parsing edge cases', () => {
       method: 'post',
       params: { resourceId: 'posts', recordId: 'p1', action: 'edit' },
       payload: {
-        tags: [{ id: 't1', note: 'first' }, { id: 't1', note: 'second' }],
+        tags: [
+          { id: 't1', note: 'first' },
+          { id: 't1', note: 'second' },
+        ],
       } as unknown as Record<string, unknown>,
     })
     const rows = ctx.postTagsTable.rows.filter((r) => r.tagId === 't1')
@@ -563,10 +589,10 @@ describe('m2mFeature — read hook resilience', () => {
         },
       ],
     })
-    const response = await admin.invoke({
+    const response = (await admin.invoke({
       method: 'get',
       params: { resourceId: 'posts', recordId: 'p1', action: 'show' },
-    }) as { record: { params: Record<string, unknown> } }
+    })) as { record: { params: Record<string, unknown> } }
     expect(response.record.params.tags).toEqual([])
   })
 
@@ -574,10 +600,10 @@ describe('m2mFeature — read hook resilience', () => {
     const ctx = buildAdmin()
     // junction row references a tagId that doesn't exist in tags table
     await ctx.junction.create({ postId: 'p1', tagId: 't999', addedAt: '2024-01-01' })
-    const response = await ctx.admin.invoke({
+    const response = (await ctx.admin.invoke({
       method: 'get',
       params: { resourceId: 'posts', recordId: 'p1', action: 'show' },
-    }) as { record: { params: Record<string, unknown>; populated: Record<string, unknown> } }
+    })) as { record: { params: Record<string, unknown>; populated: Record<string, unknown> } }
     // Item is still listed (it lives in the junction) but populated is empty.
     const items = response.record.params.tags as Array<Record<string, unknown>>
     expect(items.map((i) => i.id)).toEqual(['t999'])
@@ -602,8 +628,20 @@ describe('m2mFeature — composes with other features', () => {
         {
           resource: postsT,
           features: [
-            m2mFeature({ property: 'tags', through: 'postTags', localKey: 'postId', foreignKey: 'tagId', reference: 'tags' }),
-            m2mFeature({ property: 'cats', through: 'postCats', localKey: 'postId', foreignKey: 'catId', reference: 'cats' }),
+            m2mFeature({
+              property: 'tags',
+              through: 'postTags',
+              localKey: 'postId',
+              foreignKey: 'tagId',
+              reference: 'tags',
+            }),
+            m2mFeature({
+              property: 'cats',
+              through: 'postCats',
+              localKey: 'postId',
+              foreignKey: 'catId',
+              reference: 'cats',
+            }),
           ],
         },
       ],

@@ -1,9 +1,4 @@
-import type {
-  Action,
-  ActionContext,
-  ActionRequest,
-  RecordActionResponse,
-} from '../action.js'
+import type { Action, ActionContext, ActionRequest, RecordActionResponse } from '../action.js'
 
 const handler = async (
   request: ActionRequest,

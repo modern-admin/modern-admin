@@ -1,10 +1,18 @@
 // @modern-admin/nest — NestJS module wrapping @modern-admin/core.
 
-export { ModernAdminModule, ModernAdminFeatureModule, type ModernAdminModuleOptions } from './module.js'
+export {
+  ModernAdminModule,
+  ModernAdminFeatureModule,
+  type ModernAdminModuleOptions,
+} from './module.js'
 export { ResourceController } from './resource.controller.js'
 export { ConfigController } from './config.controller.js'
 export { AuthController } from './auth.controller.js'
-export { ApiKeysController, type IApiKeyService, type ApiKeyResponse } from './api-keys.controller.js'
+export {
+  ApiKeysController,
+  type IApiKeyService,
+  type ApiKeyResponse,
+} from './api-keys.controller.js'
 export { AiAssistantController } from './ai-assistant.controller.js'
 export {
   AiAssistantService,
@@ -13,7 +21,10 @@ export {
   type AiAssistantStoredSettings,
 } from './ai-assistant.service.js'
 export { AiAssistantProcessor } from './ai-assistant.processor.js'
-export { MediaGenerationController, MediaGenerationWebhookController } from './media-generation.controller.js'
+export {
+  MediaGenerationController,
+  MediaGenerationWebhookController,
+} from './media-generation.controller.js'
 export {
   MediaGenerationService,
   MEDIA_GENERATION_SETTINGS_KEY,

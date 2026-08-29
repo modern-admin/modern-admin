@@ -1,0 +1,53 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "oxc"],
+  "env": {
+    "builtin": true,
+    "browser": true,
+    "node": true,
+    "es2024": true
+  },
+  "globals": {
+    "Bun": "readonly"
+  },
+  "categories": {
+    "correctness": "error"
+  },
+  "rules": {
+    "no-explicit-any": "off",
+    "no-unused-vars": [
+      "warn",
+      {
+        "argsIgnorePattern": "^_",
+        "caughtErrorsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_"
+      }
+    ],
+    "typescript/no-explicit-any": "off"
+  },
+  "ignorePatterns": [
+    "**/dist/**",
+    "**/coverage/**",
+    "**/.next/**",
+    "**/playwright-report/**",
+    "**/test-results/**",
+    "**/*.d.ts",
+    "**/src/generated/**",
+    "packages/create/ui-template/**"
+  ],
+  "overrides": [
+    {
+      "files": ["**/*.{tsx,jsx}"],
+      "rules": {
+        "react/rules-of-hooks": "error",
+        "react/exhaustive-deps": "warn"
+      }
+    },
+    {
+      "files": ["**/test/**", "**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}"],
+      "rules": {
+        "no-unsafe-optional-chaining": "off"
+      }
+    }
+  ]
+}

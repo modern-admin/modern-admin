@@ -47,8 +47,7 @@
   "scripts": {
     "build": "bun ../../scripts/clean.ts dist .tsbuildinfo && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "test": "bun test",
-    "lint": "eslint ."
+    "test": "bun test"
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",

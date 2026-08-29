@@ -40,11 +40,7 @@ import {
 import { ApiCookieAuth, ApiTags } from '@nestjs/swagger'
 import type { IncomingMessage } from 'node:http'
 import Busboy from 'busboy'
-import {
-  ForbiddenError,
-  ResourceNotFoundError,
-  type ModernAdmin,
-} from '@modern-admin/core'
+import { ForbiddenError, ResourceNotFoundError, type ModernAdmin } from '@modern-admin/core'
 import { MODERN_ADMIN, ModernAdminAuthGuard } from '@modern-admin/nest'
 import { UploadProviderRegistry } from '../registry.js'
 import { PendingUploadsRegistry } from '../pending-registry.js'
@@ -129,7 +125,11 @@ function parseAllFiles(req: IncomingMessage, limits: ParseLimits): Promise<Uploa
       stream.on('data', (chunk: Buffer) => chunks.push(chunk))
       // Busboy emits 'limit' when the per-file byte cap is exceeded.
       stream.on('limit', () => {
-        fail(new PayloadTooLargeException(`File exceeds the maximum size of ${limits.maxFileSize} bytes`))
+        fail(
+          new PayloadTooLargeException(
+            `File exceeds the maximum size of ${limits.maxFileSize} bytes`,
+          ),
+        )
       })
       stream.on('end', () => {
         // `truncated` is set when the fileSize limit tripped mid-stream.
@@ -206,9 +206,7 @@ export class UploadController {
     // Per-property maxSize tightens the cap but can never raise it above the
     // module-wide hard bound.
     const maxFileSize = Math.min(moduleMax, registered.maxSize ?? Number.POSITIVE_INFINITY)
-    const maxFiles = registered.isArray
-      ? (this.moduleOptions.maxFiles ?? DEFAULT_MAX_FILES)
-      : 1
+    const maxFiles = registered.isArray ? (this.moduleOptions.maxFiles ?? DEFAULT_MAX_FILES) : 1
     const files = await parseAllFiles(req, {
       maxFileSize,
       maxFiles,
@@ -224,7 +222,9 @@ export class UploadController {
     const ttlMs = this.moduleOptions.pendingTtlMs ?? 60 * 60 * 1000
     const results: UploadedFileInfo[] = []
     for (const file of accepted) {
-      const computedKey = registered.uploadPath ? registered.uploadPath(file.originalName) : undefined
+      const computedKey = registered.uploadPath
+        ? registered.uploadPath(file.originalName)
+        : undefined
       // A custom `uploadPath` could still produce a traversal/absolute key —
       // reject at the boundary (the provider also contains it defensively).
       if (computedKey !== undefined && isUnsafeKey(computedKey)) {
@@ -275,7 +275,10 @@ export class UploadController {
   private resolveProperty(
     resourceId: string,
     field: string,
-  ): { providerId: string; registered: NonNullable<ReturnType<typeof UploadProviderRegistry.get>> } {
+  ): {
+    providerId: string
+    registered: NonNullable<ReturnType<typeof UploadProviderRegistry.get>>
+  } {
     let resource: ReturnType<typeof this.admin.findResource>
     try {
       resource = this.admin.findResource(resourceId)

@@ -18,9 +18,7 @@ const provider: ILlmProvider = {
   generate: async () => ({ text: '', toolCalls: [], toolResults: [] }),
 }
 
-const buildOptions = (
-  dispatcher: IAiAssistantQueueDispatcher,
-): ModernAdminModuleOptions => {
+const buildOptions = (dispatcher: IAiAssistantQueueDispatcher): ModernAdminModuleOptions => {
   const stores = createMemorySystem()
   return {
     configStore: stores.configStore,
@@ -103,13 +101,15 @@ describe('AI assistant dependency boundaries', () => {
       'zh-CN',
       'aiAssistant:error.providerNotConfigured',
       undefined,
-      [{
-        code: 'zh-CN',
-        name: '简体中文',
-        dict: {
-          'aiAssistant:error.providerNotConfigured': 'AI 助手提供商未配置',
+      [
+        {
+          code: 'zh-CN',
+          name: '简体中文',
+          dict: {
+            'aiAssistant:error.providerNotConfigured': 'AI 助手提供商未配置',
+          },
         },
-      }],
+      ],
     )
 
     expect(message).toBe('AI 助手提供商未配置')
@@ -133,11 +133,13 @@ describe('AI assistant dependency boundaries', () => {
       configStore: stores.configStore,
       aiTaskStore: stores.aiTaskStore,
       aiAssistant: { provider: localizedProvider },
-      serverLocales: [{
-        code: 'zh-CN',
-        name: '简体中文',
-        dict: { 'aiAssistant:fallback.noRows': '没有找到记录' },
-      }],
+      serverLocales: [
+        {
+          code: 'zh-CN',
+          name: '简体中文',
+          dict: { 'aiAssistant:fallback.noRows': '没有找到记录' },
+        },
+      ],
     })
     const task = await stores.aiTaskStore.enqueue({
       kind: 'assistant-chat',

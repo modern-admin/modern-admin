@@ -12,9 +12,7 @@ export function readEditorContent(
   format: RichtextFormat,
 ): string {
   if (format === 'markdown') {
-    return (
-      (ed.storage as { markdown?: { getMarkdown?(): string } }).markdown?.getMarkdown?.() ?? ''
-    )
+    return (ed.storage as { markdown?: { getMarkdown?(): string } }).markdown?.getMarkdown?.() ?? ''
   }
   return ed.getHTML()
 }

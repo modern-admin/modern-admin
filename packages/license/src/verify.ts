@@ -1,8 +1,5 @@
 import { compactVerify, importJWK, importSPKI } from 'jose'
-import {
-  DEFAULT_LICENSE_PUBLIC_KEY_PEM,
-  PUBLIC_KEY_IS_PLACEHOLDER,
-} from './public-key.js'
+import { DEFAULT_LICENSE_PUBLIC_KEY_PEM, PUBLIC_KEY_IS_PLACEHOLDER } from './public-key.js'
 import type {
   LicenseCheck,
   LicenseCheckFailureReason,
@@ -75,9 +72,7 @@ export async function verifyLicense(
 
   const expectedIssuer = opts.expectedIssuer ?? DEFAULT_ISSUER
   const keySource =
-    opts.publicKey ??
-    process.env.MODERN_ADMIN_LICENSE_PUBLIC_KEY ??
-    DEFAULT_LICENSE_PUBLIC_KEY_PEM
+    opts.publicKey ?? process.env.MODERN_ADMIN_LICENSE_PUBLIC_KEY ?? DEFAULT_LICENSE_PUBLIC_KEY_PEM
 
   let publicKey: VerifyKey
   try {

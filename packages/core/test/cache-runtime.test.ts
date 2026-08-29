@@ -2,7 +2,10 @@ import { describe, expect, test } from 'bun:test'
 import { CacheRuntime, listTag, recordTag } from '../src/actions/cache-runtime.js'
 import type { CacheSetOptions, ICacheProvider } from '../src/ports/cache-provider.js'
 
-interface Entry { value: unknown; tags: string[] }
+interface Entry {
+  value: unknown
+  tags: string[]
+}
 
 /** Minimal in-memory provider with tag invalidation. */
 class FakeCache implements ICacheProvider {
@@ -176,9 +179,7 @@ describe('CacheRuntime.read', () => {
       if (attempt === 1) throw new Error('boom')
       return { v: 'ok' }
     }
-    await expect(
-      rt.read('k', { enabled: true, ttl: 60 }, fetch),
-    ).rejects.toThrow('boom')
+    await expect(rt.read('k', { enabled: true, ttl: 60 }, fetch)).rejects.toThrow('boom')
     expect(cache.setCalls).toBe(0)
     expect(rt.inFlightSize).toBe(0)
     // Second call runs the fetch again and succeeds.
@@ -205,11 +206,7 @@ describe('CacheRuntime.read', () => {
     const fetch = new Promise<{ v: string }>((resolve) => {
       release = resolve
     })
-    const pending = rt.read(
-      'k',
-      { enabled: true, ttl: 60, tags: ['list:users'] },
-      () => fetch,
-    )
+    const pending = rt.read('k', { enabled: true, ttl: 60, tags: ['list:users'] }, () => fetch)
     await new Promise((resolve) => setTimeout(resolve, 0))
     await rt.invalidateTags('list:users')
     release({ v: 'stale' })
@@ -249,11 +246,9 @@ describe('CacheRuntime.read', () => {
       }
     }
     const rt = new CacheRuntime(new BrokenCache())
-    await expect(rt.read(
-      'k',
-      { enabled: true, ttl: 60, tags: ['list:users'] },
-      async () => ({ ok: true }),
-    )).resolves.toEqual({ ok: true })
+    await expect(
+      rt.read('k', { enabled: true, ttl: 60, tags: ['list:users'] }, async () => ({ ok: true })),
+    ).resolves.toEqual({ ok: true })
     expect(rt.stats().entries[0]?.readErrors).toBe(1)
   })
 
@@ -270,11 +265,9 @@ describe('CacheRuntime.read', () => {
     })
     await rt.invalidateTags('list:users')
     const readsBefore = cache.getCalls
-    await rt.read(
-      'k',
-      { enabled: true, ttl: 60, tags: ['list:users'] },
-      async () => ({ fresh: true }),
-    )
+    await rt.read('k', { enabled: true, ttl: 60, tags: ['list:users'] }, async () => ({
+      fresh: true,
+    }))
     expect(cache.getCalls).toBe(readsBefore)
     expect(cache.entries.has('k')).toBe(false)
     expect(rt.stats().dirtyTags).toEqual(['list:users'])
@@ -316,7 +309,11 @@ describe('CacheRuntime.read — refresh', () => {
     let changed = 0
     const result = await rt.read(
       'k',
-      opts({ onChanged: () => { changed++ } }),
+      opts({
+        onChanged: () => {
+          changed++
+        },
+      }),
       async () => ({ records: [{ id: '1' }] }),
     )
     expect(result).toEqual({ records: [{ id: '1' }] })
@@ -354,7 +351,11 @@ describe('CacheRuntime.read — refresh', () => {
     let changed = 0
     await rt.read(
       'k',
-      opts({ onChanged: () => { changed++ } }),
+      opts({
+        onChanged: () => {
+          changed++
+        },
+      }),
       async () => ({ createdAt: at, n: 1 }),
     )
     expect(changed).toBe(0)
@@ -366,7 +367,11 @@ describe('CacheRuntime.read — refresh', () => {
     let changed = 0
     const result = await rt.read(
       'k',
-      opts({ onChanged: () => { changed++ } }),
+      opts({
+        onChanged: () => {
+          changed++
+        },
+      }),
       async () => ({ v: 1 }),
     )
     expect(result).toEqual({ v: 1 })
@@ -380,7 +385,12 @@ describe('CacheRuntime.read — refresh', () => {
     let changed = 0
     const result = await rt.read(
       'k',
-      opts({ enabled: false, onChanged: () => { changed++ } }),
+      opts({
+        enabled: false,
+        onChanged: () => {
+          changed++
+        },
+      }),
       async () => ({ v: 1 }),
     )
     expect(result).toEqual({ v: 1 })

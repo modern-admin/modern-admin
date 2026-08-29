@@ -15,32 +15,29 @@ import { coerceScalar } from '../src/adapters/filter-coerce.js'
 
 describe('parseDateValue', () => {
   test('reads an offset-less date-time as UTC', () => {
-    expect(parseDateValue('2026-08-04T15:00').toISOString())
-      .toBe('2026-08-04T15:00:00.000Z')
+    expect(parseDateValue('2026-08-04T15:00').toISOString()).toBe('2026-08-04T15:00:00.000Z')
   })
 
   test('accepts seconds and milliseconds', () => {
-    expect(parseDateValue('2026-08-04T15:00:30').toISOString())
-      .toBe('2026-08-04T15:00:30.000Z')
-    expect(parseDateValue('2026-08-04T15:00:30.250').toISOString())
-      .toBe('2026-08-04T15:00:30.250Z')
+    expect(parseDateValue('2026-08-04T15:00:30').toISOString()).toBe('2026-08-04T15:00:30.000Z')
+    expect(parseDateValue('2026-08-04T15:00:30.250').toISOString()).toBe('2026-08-04T15:00:30.250Z')
   })
 
   test('accepts a space separator (form posts, hand-written payloads)', () => {
-    expect(parseDateValue('2026-08-04 15:00').toISOString())
-      .toBe('2026-08-04T15:00:00.000Z')
+    expect(parseDateValue('2026-08-04 15:00').toISOString()).toBe('2026-08-04T15:00:00.000Z')
   })
 
   test('preserves an explicit offset instead of overriding it', () => {
-    expect(parseDateValue('2026-08-04T15:00:00+03:00').toISOString())
-      .toBe('2026-08-04T12:00:00.000Z')
-    expect(parseDateValue('2026-08-04T15:00:00.000Z').toISOString())
-      .toBe('2026-08-04T15:00:00.000Z')
+    expect(parseDateValue('2026-08-04T15:00:00+03:00').toISOString()).toBe(
+      '2026-08-04T12:00:00.000Z',
+    )
+    expect(parseDateValue('2026-08-04T15:00:00.000Z').toISOString()).toBe(
+      '2026-08-04T15:00:00.000Z',
+    )
   })
 
   test('date-only stays UTC midnight', () => {
-    expect(parseDateValue('2026-08-04').toISOString())
-      .toBe('2026-08-04T00:00:00.000Z')
+    expect(parseDateValue('2026-08-04').toISOString()).toBe('2026-08-04T00:00:00.000Z')
   })
 
   test('surfaces unparseable input as an Invalid Date', () => {

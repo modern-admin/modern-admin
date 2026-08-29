@@ -55,29 +55,28 @@ const MODEL_TO_LOGICAL: Record<string, string> = {
  * the FK→reference map produced by the adapter uses the same logical
  * ids that `findResource` understands.
  */
-const buildPrismaSource = (
-  modelName: string,
-  logicalId: string,
-): (() => PrismaResourceConfig) => () => {
-  const model = dmmf.datamodel.models.find((m) => m.name === modelName)
-  if (!model) {
-    throw new Error(
-      `[admin] Prisma model "${modelName}" not found in DMMF — ` +
-      `did you forget to re-run \`bun run prisma:generate\` after editing schema.prisma?`,
-    )
+const buildPrismaSource =
+  (modelName: string, logicalId: string): (() => PrismaResourceConfig) =>
+  () => {
+    const model = dmmf.datamodel.models.find((m) => m.name === modelName)
+    if (!model) {
+      throw new Error(
+        `[admin] Prisma model "${modelName}" not found in DMMF — ` +
+          `did you forget to re-run \`bun run prisma:generate\` after editing schema.prisma?`,
+      )
+    }
+    const fields = model.fields.map((f) => {
+      if (f.kind !== 'object') return f
+      const mapped = MODEL_TO_LOGICAL[f.type]
+      return mapped ? { ...f, type: mapped } : f
+    })
+    return {
+      model: { ...model, name: logicalId, fields },
+      client: prisma,
+      clientKey: lowerFirst(modelName),
+      enums: dmmf.datamodel.enums,
+    }
   }
-  const fields = model.fields.map((f) => {
-    if (f.kind !== 'object') return f
-    const mapped = MODEL_TO_LOGICAL[f.type]
-    return mapped ? { ...f, type: mapped } : f
-  })
-  return {
-    model: { ...model, name: logicalId, fields },
-    client: prisma,
-    clientKey: lowerFirst(modelName),
-    enums: dmmf.datamodel.enums,
-  }
-}
 
 registerAdminSources({
   // Better Auth's `ma_user` is exposed as the panel `admins` resource —

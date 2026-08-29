@@ -125,10 +125,7 @@ function setPath(
   else (cur as Record<string, unknown>)[last] = value
 }
 
-export function get(
-  flat: FlatParams,
-  path?: string,
-): unknown {
+export function get(flat: FlatParams, path?: string): unknown {
   if (!path) return unflatten(flat)
   if (Object.prototype.hasOwnProperty.call(flat, path)) return flat[path]
   // try to assemble from sub-keys

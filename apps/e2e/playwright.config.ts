@@ -98,7 +98,8 @@ export default defineConfig({
     // which is enough to satisfy the cookie-session guard on /admin/api/*.
     {
       name: 'api',
-      testMatch: /(api|graphql|graphql-mutations|openapi|global-search-api|history-api|custom-actions-api|date-filter-api|forms-api|timeseries-api|caching-api|login-audit-api)\.spec\.ts$/,
+      testMatch:
+        /(api|graphql|graphql-mutations|openapi|global-search-api|history-api|custom-actions-api|date-filter-api|forms-api|timeseries-api|caching-api|login-audit-api)\.spec\.ts$/,
       dependencies: ['setup'],
       use: {
         storageState: 'playwright/.auth/admin.json',
@@ -111,14 +112,13 @@ export default defineConfig({
       testMatch: /auth\.setup\.ts$/,
       use: {
         ...devices['Desktop Chrome'],
-        ...(process.env.PLAYWRIGHT_CHANNEL
-          ? { channel: process.env.PLAYWRIGHT_CHANNEL }
-          : {}),
+        ...(process.env.PLAYWRIGHT_CHANNEL ? { channel: process.env.PLAYWRIGHT_CHANNEL } : {}),
       },
     },
     {
       name: 'chromium',
-      testIgnore: /(api|graphql|graphql-mutations|openapi|global-search-api|history-api|custom-actions-api|date-filter-api|forms-api|timeseries-api|caching-api|login-audit-api)\.spec\.ts$/,
+      testIgnore:
+        /(api|graphql|graphql-mutations|openapi|global-search-api|history-api|custom-actions-api|date-filter-api|forms-api|timeseries-api|caching-api|login-audit-api)\.spec\.ts$/,
       dependencies: ['setup'],
       use: {
         ...devices['Desktop Chrome'],
@@ -127,9 +127,7 @@ export default defineConfig({
         // (`PLAYWRIGHT_CHANNEL=chrome` etc.). Useful on platforms where
         // Playwright's bundled chromium binaries aren't published (e.g.
         // pre-release Ubuntu) and a locally-installed browser is available.
-        ...(process.env.PLAYWRIGHT_CHANNEL
-          ? { channel: process.env.PLAYWRIGHT_CHANNEL }
-          : {}),
+        ...(process.env.PLAYWRIGHT_CHANNEL ? { channel: process.env.PLAYWRIGHT_CHANNEL } : {}),
       },
     },
   ],

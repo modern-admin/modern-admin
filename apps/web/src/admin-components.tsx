@@ -68,10 +68,12 @@ function BulkRepriceAction({
       className="space-y-4"
       onSubmit={(e) => {
         e.preventDefault()
-        void invoke({ percent: Number(percent) }).then(close).catch(() => {
-          // The host already surfaced the error toast; stay on the form so
-          // the operator can correct the value.
-        })
+        void invoke({ percent: Number(percent) })
+          .then(close)
+          .catch(() => {
+            // The host already surfaced the error toast; stay on the form so
+            // the operator can correct the value.
+          })
       }}
     >
       <p className="text-sm text-muted-foreground">
@@ -126,9 +128,11 @@ function SchedulePostsAction({
       className="space-y-4"
       onSubmit={(e) => {
         e.preventDefault()
-        void invoke({ publishedAt: when }).then(close).catch(() => {
-          // Error toast already shown by the host; keep the form open.
-        })
+        void invoke({ publishedAt: when })
+          .then(close)
+          .catch(() => {
+            // Error toast already shown by the host; keep the form open.
+          })
       }}
     >
       <div className="space-y-1 text-sm">

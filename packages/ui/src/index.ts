@@ -10,12 +10,7 @@ export {
 
 export { cn } from './lib/utils.js'
 export { dateFnsLocale, type Locale } from './lib/date-locales.js'
-export {
-  initTheme,
-  readThemeMode,
-  setThemeMode,
-  type ThemeMode,
-} from './lib/theme.js'
+export { initTheme, readThemeMode, setThemeMode, type ThemeMode } from './lib/theme.js'
 
 // Form-control primitives
 export { Button, buttonVariants, type ButtonProps } from './components/button.js'
@@ -26,11 +21,7 @@ export { Label } from './components/label.js'
 export { Checkbox } from './components/checkbox.js'
 export { Switch } from './components/switch.js'
 export { Calendar, type CalendarProps } from './components/calendar.js'
-export {
-  DatePicker,
-  type DatePickerProps,
-  type DatePickerMode,
-} from './components/date-picker.js'
+export { DatePicker, type DatePickerProps, type DatePickerMode } from './components/date-picker.js'
 export {
   DateRangeInput,
   type DateRangeInputProps,
@@ -130,18 +121,8 @@ export {
   DropdownMenuSubTrigger,
   DropdownMenuRadioGroup,
 } from './components/dropdown-menu.js'
-export {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-  PopoverAnchor,
-} from './components/popover.js'
-export {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-  TooltipProvider,
-} from './components/tooltip.js'
+export { Popover, PopoverTrigger, PopoverContent, PopoverAnchor } from './components/popover.js'
+export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './components/tooltip.js'
 export { InfoTooltip, type InfoTooltipProps } from './components/info-tooltip.js'
 export { Kbd, getModKeyLabel } from './components/kbd.js'
 export {
@@ -253,10 +234,7 @@ export {
   type RichtextEditorProps,
   type RichtextFormat,
 } from './components/richtext-editor.js'
-export {
-  RichtextRender,
-  type RichtextRenderProps,
-} from './components/richtext-render.js'
+export { RichtextRender, type RichtextRenderProps } from './components/richtext-render.js'
 
 // Media preview (Preview button + dialog with image/video + Download)
 export {

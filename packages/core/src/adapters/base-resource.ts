@@ -167,10 +167,7 @@ export abstract class BaseResource {
    * silently restart from the first page, quietly duplicating every row an
    * export or migration had already processed. Reject it instead.
    */
-  async *streamFind(
-    filter: Filter,
-    options: StreamOptions = {},
-  ): AsyncIterable<BaseRecord> {
+  async *streamFind(filter: Filter, options: StreamOptions = {}): AsyncIterable<BaseRecord> {
     if (options.cursor != null) {
       throw new NotImplementedError(
         `${this.constructor.name}#streamFind does not support "cursor" — it paginates by offset. Override streamFind to implement cursor semantics.`,
@@ -232,7 +229,11 @@ export abstract class BaseResource {
   titlePropertyPath(): string | null {
     const override = (this._decorated?.options as { titleProperty?: string } | null)?.titleProperty
     if (override) return override
-    return this.properties().find((p) => p.isTitle())?.path() ?? null
+    return (
+      this.properties()
+        .find((p) => p.isTitle())
+        ?.path() ?? null
+    )
   }
 
   /** @internal */

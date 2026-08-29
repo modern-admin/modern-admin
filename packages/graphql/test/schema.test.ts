@@ -7,10 +7,12 @@ import { MemDatabase, MemResource, seed } from './_helpers/in-memory.js'
 const makeAdmin = () =>
   new ModernAdmin({
     databases: [seed()],
-    adapters: [{
-      Database: MemDatabase,
-      Resource: MemResource,
-    }],
+    adapters: [
+      {
+        Database: MemDatabase,
+        Resource: MemResource,
+      },
+    ],
   })
 
 const run = async (admin: ModernAdmin, query: string, variables?: Record<string, unknown>) =>
@@ -51,10 +53,12 @@ describe('GraphQL schema', () => {
     // `invoke()` means the gate fires instead of leaking rows via a direct
     // `findResource().findOne()/count()` (the IDOR the audit flagged).
     const admin = makeAdmin()
-    ;(admin.findResource('users').decorate().getAction('show')!.merged as { isAccessible?: unknown })
-      .isAccessible = false
-    ;(admin.findResource('users').decorate().getAction('list')!.merged as { isAccessible?: unknown })
-      .isAccessible = false
+    ;(
+      admin.findResource('users').decorate().getAction('show')!.merged as { isAccessible?: unknown }
+    ).isAccessible = false
+    ;(
+      admin.findResource('users').decorate().getAction('list')!.merged as { isAccessible?: unknown }
+    ).isAccessible = false
 
     const one = await run(admin, '{ usersOne(id: "1") { id name } }')
     expect(one.errors?.[0]?.message).toContain('not accessible')
@@ -99,10 +103,7 @@ describe('GraphQL schema', () => {
 
   test('reference fields resolve via DataLoader', async () => {
     const admin = makeAdmin()
-    const result = await run(
-      admin,
-      '{ postsList { id title authorId authorIdRef { id name } } }',
-    )
+    const result = await run(admin, '{ postsList { id title authorId authorIdRef { id name } } }')
     expect(result.errors).toBeUndefined()
     expect(result.data?.postsList).toEqual([
       { id: '1', title: 'Hello', authorId: '1', authorIdRef: { id: '1', name: 'Ada' } },
@@ -117,12 +118,10 @@ describe('GraphQL schema', () => {
     // `authorId` (owned by `posts`) still comes through, and the query as a
     // whole does not error.
     const admin = makeAdmin()
-    ;(admin.findResource('users').decorate().getAction('show')!.merged as { isAccessible?: unknown })
-      .isAccessible = false
-    const result = await run(
-      admin,
-      '{ postsList { id authorId authorIdRef { id name } } }',
-    )
+    ;(
+      admin.findResource('users').decorate().getAction('show')!.merged as { isAccessible?: unknown }
+    ).isAccessible = false
+    const result = await run(admin, '{ postsList { id authorId authorIdRef { id name } } }')
     expect(result.errors).toBeUndefined()
     expect(result.data?.postsList).toEqual([
       { id: '1', authorId: '1', authorIdRef: null },

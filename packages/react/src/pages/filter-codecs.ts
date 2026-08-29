@@ -9,18 +9,19 @@
 // ─── String filters ─────────────────────────────────────────────────────────
 // Legacy values (no prefix) default to `co` (contains) for strings.
 
-export type StringFilterOp =
-  | 'co'
-  | 'nco'
-  | 'sw'
-  | 'ew'
-  | 'eq'
-  | 'neq'
-  | 'empty'
-  | 'nempty'
-  | 'in'
+export type StringFilterOp = 'co' | 'nco' | 'sw' | 'ew' | 'eq' | 'neq' | 'empty' | 'nempty' | 'in'
 
-const STRING_OPS: ReadonlySet<string> = new Set(['co', 'nco', 'sw', 'ew', 'eq', 'neq', 'empty', 'nempty', 'in'])
+const STRING_OPS: ReadonlySet<string> = new Set([
+  'co',
+  'nco',
+  'sw',
+  'ew',
+  'eq',
+  'neq',
+  'empty',
+  'nempty',
+  'in',
+])
 export const ALL_STRING_OPS: StringFilterOp[] = ['co', 'nco', 'sw', 'ew', 'in', 'empty', 'nempty']
 export const NULLARY_OPS: ReadonlySet<string> = new Set(['empty', 'nempty'])
 
@@ -56,7 +57,15 @@ export function encodeFilter(op: StringFilterOp, val: string): string {
 export type NumericFilterOp = 'eq' | 'neq' | 'gt' | 'lt' | 'between' | 'empty' | 'nempty'
 
 const NUMERIC_OP_SET = new Set<string>(['eq', 'neq', 'gt', 'lt', 'between', 'empty', 'nempty'])
-export const ALL_NUMERIC_OPS: NumericFilterOp[] = ['eq', 'neq', 'gt', 'lt', 'between', 'empty', 'nempty']
+export const ALL_NUMERIC_OPS: NumericFilterOp[] = [
+  'eq',
+  'neq',
+  'gt',
+  'lt',
+  'between',
+  'empty',
+  'nempty',
+]
 export const NUMERIC_NULLARY: ReadonlySet<string> = new Set(['empty', 'nempty'])
 
 export function parseNumericFilter(raw: string): { op: NumericFilterOp; from: string; to: string } {
@@ -77,6 +86,6 @@ export function parseNumericFilter(raw: string): { op: NumericFilterOp; from: st
 
 export function encodeNumericFilter(op: NumericFilterOp, from: string, to: string): string {
   if (op === 'empty' || op === 'nempty') return `${op}:`
-  if (op === 'between') return (from || to) ? `between:${from},${to}` : ''
+  if (op === 'between') return from || to ? `between:${from},${to}` : ''
   return from ? `${op}:${from}` : ''
 }

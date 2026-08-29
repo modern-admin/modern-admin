@@ -24,10 +24,7 @@ describe('filterToWhere', () => {
 
   it('combines multiple fields with AND', () => {
     const resource = makeResource()
-    const where = filterToWhere(
-      new Filter({ email: 'foo', role: 'admin' }, resource),
-      users,
-    )
+    const where = filterToWhere(new Filter({ email: 'foo', role: 'admin' }, resource), users)
     expect(where).toBeDefined()
   })
 
@@ -39,20 +36,14 @@ describe('filterToWhere', () => {
 
   it('handles range inputs via PARAM_SEPARATOR', () => {
     const resource = makeResource()
-    const where = filterToWhere(
-      new Filter({ 'age~~from': '10', 'age~~to': '50' }, resource),
-      users,
-    )
+    const where = filterToWhere(new Filter({ 'age~~from': '10', 'age~~to': '50' }, resource), users)
     expect(where).toBeDefined()
   })
 
   it('uses array-contains for scalar-list columns with a single needle', () => {
     const client = createFakeClient()
     const resource = new DrizzleResource({ client, table: posts, tableKey: 'posts' })
-    const where = filterToWhere(
-      new Filter({ tagIds: 'turing' }, resource),
-      posts,
-    )
+    const where = filterToWhere(new Filter({ tagIds: 'turing' }, resource), posts)
     // Sanity check: the produced SQL fragment is drizzle's `arrayContains`
     // helper, which emits Postgres' `@>` operator on a `text[]` column.
     expect(where).toBeDefined()
@@ -78,10 +69,7 @@ describe('findOptionsToDrizzle', () => {
   })
 
   it('produces orderBy when sortBy is a known column', () => {
-    const result = findOptionsToDrizzle(
-      { sort: { sortBy: 'email', direction: 'desc' } },
-      users,
-    )
+    const result = findOptionsToDrizzle({ sort: { sortBy: 'email', direction: 'desc' } }, users)
     expect(result.orderBy).toBeDefined()
   })
 

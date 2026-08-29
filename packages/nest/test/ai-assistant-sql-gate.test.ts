@@ -133,9 +133,9 @@ type ResolveRaw = (
 const callResolver = (service: AiAssistantService): ResolveRaw =>
   // The resolver is private — cast through `unknown` so tests can assert
   // its behaviour without exposing it on the service's public surface.
-  ((service as unknown as { resolveRawQueryForRequest: ResolveRaw }).resolveRawQueryForRequest.bind(
+  (service as unknown as { resolveRawQueryForRequest: ResolveRaw }).resolveRawQueryForRequest.bind(
     service,
-  )) as ResolveRaw
+  ) as ResolveRaw
 
 const rawQueryStub = async (): Promise<unknown[]> => []
 

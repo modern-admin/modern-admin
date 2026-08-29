@@ -116,7 +116,9 @@ export function precompressPlugin(outDir = STANDALONE_OUT_DIR): Plugin {
       const walk = async (d: string): Promise<string[]> => {
         const entries = await fs.readdir(d, { withFileTypes: true })
         const nested = await Promise.all(
-          entries.map((e) => (e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)])),
+          entries.map((e) =>
+            e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)],
+          ),
         )
         return nested.flat()
       }

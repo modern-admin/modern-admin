@@ -177,32 +177,32 @@ export const parseLocation = (pathname: string, searchStr: string): Route => {
  *  `<Link>` href generation. */
 export const buildHref = (route: Route): string => {
   switch (route.name) {
-  case 'home':
-    return '/'
-  case 'audit-log':
-    return '/audit-log'
-  case 'cache':
-    return '/cache'
-  case 'list':
-    return `/resources/${encodeURIComponent(route.resourceId)}${buildListQuery(route.query)}`
-  case 'show':
-    return `/resources/${encodeURIComponent(route.resourceId)}/${encodeURIComponent(route.recordId)}`
-  case 'edit':
-    return `/resources/${encodeURIComponent(route.resourceId)}/${encodeURIComponent(route.recordId)}/edit`
-  case 'new':
-    return `/resources/${encodeURIComponent(route.resourceId)}/new`
-  case 'action': {
-    const base = `/resources/${encodeURIComponent(route.resourceId)}`
-    const scope = route.recordId ? `${base}/${encodeURIComponent(route.recordId)}` : base
-    const path = `${scope}/actions/${encodeURIComponent(route.actionName)}`
-    if (!route.recordIds?.length) return path
-    const params = new URLSearchParams({ recordIds: route.recordIds.join(',') })
-    return `${path}?${params.toString()}`
-  }
-  case 'settings':
-    return route.section ? `/settings/${encodeURIComponent(route.section)}` : '/settings'
-  case 'extension':
-    return `/ext/${encodeURIComponent(route.key)}`
+    case 'home':
+      return '/'
+    case 'audit-log':
+      return '/audit-log'
+    case 'cache':
+      return '/cache'
+    case 'list':
+      return `/resources/${encodeURIComponent(route.resourceId)}${buildListQuery(route.query)}`
+    case 'show':
+      return `/resources/${encodeURIComponent(route.resourceId)}/${encodeURIComponent(route.recordId)}`
+    case 'edit':
+      return `/resources/${encodeURIComponent(route.resourceId)}/${encodeURIComponent(route.recordId)}/edit`
+    case 'new':
+      return `/resources/${encodeURIComponent(route.resourceId)}/new`
+    case 'action': {
+      const base = `/resources/${encodeURIComponent(route.resourceId)}`
+      const scope = route.recordId ? `${base}/${encodeURIComponent(route.recordId)}` : base
+      const path = `${scope}/actions/${encodeURIComponent(route.actionName)}`
+      if (!route.recordIds?.length) return path
+      const params = new URLSearchParams({ recordIds: route.recordIds.join(',') })
+      return `${path}?${params.toString()}`
+    }
+    case 'settings':
+      return route.section ? `/settings/${encodeURIComponent(route.section)}` : '/settings'
+    case 'extension':
+      return `/ext/${encodeURIComponent(route.key)}`
   }
 }
 
@@ -236,10 +236,13 @@ export const useNavigate = (): ((route: Route) => void) => {
  *  `/admin/resources/...`). */
 export const useOpenInNewTab = (): ((route: Route) => void) => {
   const basepath = useBasepath()
-  return React.useCallback((route: Route) => {
-    if (typeof window === 'undefined') return
-    window.open(basepath + buildHref(route), '_blank', 'noopener,noreferrer')
-  }, [basepath])
+  return React.useCallback(
+    (route: Route) => {
+      if (typeof window === 'undefined') return
+      window.open(basepath + buildHref(route), '_blank', 'noopener,noreferrer')
+    },
+    [basepath],
+  )
 }
 
 export interface LinkProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {

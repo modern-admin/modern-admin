@@ -52,7 +52,11 @@ export class PrismaHistoryStore implements IHistoryStore {
     return rows.map(rowToEntry)
   }
 
-  async get(resourceId: string, recordId: string, revisionId: string): Promise<HistoryEntry | null> {
+  async get(
+    resourceId: string,
+    recordId: string,
+    revisionId: string,
+  ): Promise<HistoryEntry | null> {
     const row = await this.delegate.findFirst({
       where: { id: revisionId, resourceId, recordId },
     })

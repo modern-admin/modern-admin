@@ -6,8 +6,10 @@ import * as React from 'react'
 import { Eye, EyeOff } from 'lucide-react'
 import { cn } from '../lib/utils.js'
 
-export interface PasswordInputProps
-  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
+export interface PasswordInputProps extends Omit<
+  React.InputHTMLAttributes<HTMLInputElement>,
+  'type'
+> {
   /** Accessible label for the visibility toggle button. */
   toggleLabel?: { show: string; hide: string }
 }

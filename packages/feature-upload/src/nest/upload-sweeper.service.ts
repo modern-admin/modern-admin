@@ -31,7 +31,9 @@ const DEFAULT_SWEEP_INTERVAL_MS = 5 * 60 * 1000
 export class UploadSweeperService implements OnModuleInit, OnModuleDestroy {
   private timer: ReturnType<typeof setInterval> | null = null
 
-  constructor(@Inject(UPLOAD_MODULE_OPTIONS) private readonly options: ModernAdminUploadModuleOptions) {}
+  constructor(
+    @Inject(UPLOAD_MODULE_OPTIONS) private readonly options: ModernAdminUploadModuleOptions,
+  ) {}
 
   onModuleInit(): void {
     const interval = this.options.sweepIntervalMs ?? DEFAULT_SWEEP_INTERVAL_MS

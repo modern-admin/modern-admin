@@ -4,18 +4,10 @@
 // only buckets that have data; the UI fabricates the rest at value 0 so
 // charts don't have visual gaps.
 
-import type {
-  TimeSeriesPoint,
-  TimeSeriesSeries,
-  TimeSeriesStep,
-} from '../client.js'
+import type { TimeSeriesPoint, TimeSeriesSeries, TimeSeriesStep } from '../client.js'
 
 /** Generate a continuous sequence of `YYYY-MM-DD` bucket keys spanning [from, to]. */
-export function generateBuckets(
-  fromIso: string,
-  toIso: string,
-  step: TimeSeriesStep,
-): string[] {
+export function generateBuckets(fromIso: string, toIso: string, step: TimeSeriesStep): string[] {
   if (step === 'all') return [fromIso.slice(0, 10)]
   const out: string[] = []
   const cur = startOf(new Date(fromIso), step)
@@ -53,10 +45,7 @@ export function fillTimeSeries(
  * X-axis tick formatter — short label format depending on bucket size.
  * day/week → DD.MM, month → MM.YYYY, year → YYYY.
  */
-export function makeTickFormatter(
-  step: TimeSeriesStep,
-  locale = 'en-US',
-): (iso: string) => string {
+export function makeTickFormatter(step: TimeSeriesStep, locale = 'en-US'): (iso: string) => string {
   const dayMonth = new Intl.DateTimeFormat(locale, { day: '2-digit', month: '2-digit' })
   const monthYear = new Intl.DateTimeFormat(locale, { month: '2-digit', year: 'numeric' })
   const year = new Intl.DateTimeFormat(locale, { year: 'numeric' })

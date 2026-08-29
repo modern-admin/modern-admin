@@ -21,9 +21,7 @@ export interface CoercibleProperty {
  * A filter value is a range when it's a non-array object — i.e. the
  * `{ from?, to? }` shape produced by range/date pickers.
  */
-export const isRangeValue = (
-  value: FilterValue,
-): value is { from?: string; to?: string } =>
+export const isRangeValue = (value: FilterValue): value is { from?: string; to?: string } =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 
 /**
@@ -33,34 +31,31 @@ export const isRangeValue = (
  * Unparseable strings pass through unchanged. `null`/`boolean`/`number` and
  * values with no property are returned as-is; arrays coerce element-wise.
  */
-export const coerceScalar = (
-  value: FilterValue,
-  property: CoercibleProperty | null,
-): unknown => {
+export const coerceScalar = (value: FilterValue, property: CoercibleProperty | null): unknown => {
   if (value == null || typeof value === 'boolean') return value
   if (Array.isArray(value)) return value.map((v) => coerceScalar(v as FilterValue, property))
   if (typeof value === 'number') return value
   if (typeof value !== 'string') return value
   if (!property) return value
   switch (property.type()) {
-  case 'number':
-  case 'currency': {
-    const n = Number(value)
-    return Number.isFinite(n) ? n : value
-  }
-  case 'float': {
-    const n = parseFloat(value)
-    return Number.isFinite(n) ? n : value
-  }
-  case 'boolean':
-    return value === 'true' || value === '1'
-  case 'date':
-  case 'datetime': {
-    const d = parseDateValue(value)
-    return Number.isNaN(d.getTime()) ? value : d
-  }
-  default:
-    return value
+    case 'number':
+    case 'currency': {
+      const n = Number(value)
+      return Number.isFinite(n) ? n : value
+    }
+    case 'float': {
+      const n = parseFloat(value)
+      return Number.isFinite(n) ? n : value
+    }
+    case 'boolean':
+      return value === 'true' || value === '1'
+    case 'date':
+    case 'datetime': {
+      const d = parseDateValue(value)
+      return Number.isNaN(d.getTime()) ? value : d
+    }
+    default:
+      return value
   }
 }
 

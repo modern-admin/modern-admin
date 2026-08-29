@@ -33,7 +33,7 @@ export default defineAdminAppConfig({ apiProxy: 'http://localhost:3011' })
 
 ```css
 /* src/styles.css — you own the Tailwind root so your classes get scanned */
-@import "@modern-admin/react/styles.css";
+@import '@modern-admin/react/styles.css';
 @source "./**/*.{ts,tsx}";
 ```
 

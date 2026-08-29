@@ -89,8 +89,8 @@ const buildTable = (): SortedTable => ({
   ],
   rows: [
     { id: '3', name: 'Charlie', createdAt: '2024-03-01', price: 30 },
-    { id: '1', name: 'Alice',   createdAt: '2024-01-01', price: 10 },
-    { id: '2', name: 'Bob',     createdAt: '2024-02-01', price: 20 },
+    { id: '1', name: 'Alice', createdAt: '2024-01-01', price: 10 },
+    { id: '2', name: 'Bob', createdAt: '2024-02-01', price: 20 },
   ],
 })
 

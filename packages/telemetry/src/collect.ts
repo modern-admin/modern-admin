@@ -39,9 +39,7 @@ export function collectTelemetryInfo(admin: ModernAdmin): TelemetryInfo {
   }
 
   const versions = process.versions as Record<string, string | undefined>
-  const runtime = versions.bun
-    ? `bun/${versions.bun}`
-    : `node/${versions.node ?? 'unknown'}`
+  const runtime = versions.bun ? `bun/${versions.bun}` : `node/${versions.node ?? 'unknown'}`
 
   return {
     instanceId: _instanceId,

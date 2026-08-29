@@ -175,8 +175,12 @@ async function main(): Promise<void> {
     }
   }
   if (systemTotal > 0) {
-    console.log(`  ${'ma_history'.padEnd(16)} ${String(dangling.history.length).padStart(5)}  (revisions of deleted records)`)
-    console.log(`  ${'ma_log'.padEnd(16)} ${String(dangling.log.length).padStart(5)}  (audit entries for deleted records)`)
+    console.log(
+      `  ${'ma_history'.padEnd(16)} ${String(dangling.history.length).padStart(5)}  (revisions of deleted records)`,
+    )
+    console.log(
+      `  ${'ma_log'.padEnd(16)} ${String(dangling.log.length).padStart(5)}  (audit entries for deleted records)`,
+    )
   }
 
   if (demoTotal === 0 && systemTotal === 0) {
@@ -195,7 +199,9 @@ async function main(): Promise<void> {
       console.log(`  removed ${String(count).padStart(5)} from ${table}`)
     }
     if (dangling.history.length > 0) {
-      const { count } = await prisma.maHistory.deleteMany({ where: { id: { in: dangling.history } } })
+      const { count } = await prisma.maHistory.deleteMany({
+        where: { id: { in: dangling.history } },
+      })
       console.log(`  removed ${String(count).padStart(5)} from ma_history`)
     }
     if (dangling.log.length > 0) {

@@ -73,11 +73,12 @@ export function ActionComponentHost({
 
   const action = resource?.actions?.find((a) => a.name === actionName)
   const componentName = action?.component ?? null
-  const Custom = componentName === 'modern-admin:media-generation'
-    ? MediaGenerationAction
-    : componentName
-      ? components?.get(componentName)
-      : undefined
+  const Custom =
+    componentName === 'modern-admin:media-generation'
+      ? MediaGenerationAction
+      : componentName
+        ? components?.get(componentName)
+        : undefined
 
   // Only prime once we know the action exists and its component resolved —
   // otherwise the page renders an error and the handler must not run.

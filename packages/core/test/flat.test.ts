@@ -38,9 +38,10 @@ describe('flat utilities', () => {
   })
 
   test('unflatten decides container type per path, not globally', () => {
-    expect(
-      unflatten({ 'tags.0': 'a', 'costs.0': '1', 'costs.default': '1' }),
-    ).toEqual({ tags: ['a'], costs: { '0': '1', default: '1' } })
+    expect(unflatten({ 'tags.0': 'a', 'costs.0': '1', 'costs.default': '1' })).toEqual({
+      tags: ['a'],
+      costs: { '0': '1', default: '1' },
+    })
   })
 
   test('unflatten round-trips arrays of objects', () => {

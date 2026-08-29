@@ -9,7 +9,6 @@ import { PrismaClient } from './generated/prisma/client'
 import { getMergedSchemaContent } from './utils/mergeSchema'
 import type { DMMF } from '@prisma/client/runtime/client'
 
-
 const getDMMF = internals.getDMMF
 const schema = await getMergedSchemaContent()
 export const dmmf: DMMF.Document = await getDMMF({ datamodel: schema })

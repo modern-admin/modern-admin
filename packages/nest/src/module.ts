@@ -1,9 +1,4 @@
-import {
-  type DynamicModule,
-  Module,
-  type Type,
-  type Provider,
-} from '@nestjs/common'
+import { type DynamicModule, Module, type Type, type Provider } from '@nestjs/common'
 import { DiscoveryModule } from '@nestjs/core'
 import { QueueModule } from '@modern-admin/queue'
 import {
@@ -35,16 +30,16 @@ import { DashboardController } from './dashboard.controller.js'
 import { CacheController } from './cache.controller.js'
 import { ModernAdminAuthGuard, ModernAdminConfigGuard } from './auth.guard.js'
 import { ModernAdminCacheInterceptor } from './cache.interceptor.js'
-import {
-  AdminControllerScanner,
-  ModernAdminBootstrapService,
-} from './admin'
+import { AdminControllerScanner, ModernAdminBootstrapService } from './admin'
 import type { AdminController } from './admin'
 import type { ILlmProvider } from './llm-provider.js'
 import type { IAiAssistantQueueDispatcher } from './ai-assistant.types.js'
 import { translateServerMessage } from './server-i18n.js'
 import type { LocaleBundle } from '@modern-admin/i18n'
-import { MediaGenerationController, MediaGenerationWebhookController } from './media-generation.controller.js'
+import {
+  MediaGenerationController,
+  MediaGenerationWebhookController,
+} from './media-generation.controller.js'
 import { MediaGenerationService } from './media-generation.service.js'
 import type { MediaGenerationOptions } from './media-generation.types.js'
 
@@ -170,11 +165,7 @@ export interface ModernAdminModuleOptions extends ModernAdminOptions {
   webhookStore?: IWebhookStore
   /** Optional queue dispatcher used by the Webhooks test endpoint. */
   webhookDispatcher?: {
-    enqueue(job: {
-      webhookId: string
-      event: string
-      payload: unknown
-    }): void | Promise<void>
+    enqueue(job: { webhookId: string; event: string; payload: unknown }): void | Promise<void>
   }
   /** Roles allowed to inspect and revert record history. Defaults to `['admin']`. */
   historyRoles?: string[]
@@ -312,9 +303,7 @@ const buildProviders = (
     useFactory: (resolved: ModernAdminModuleOptions) => resolved.apiKeyService ?? null,
     inject: [MODERN_ADMIN_OPTIONS],
   },
-  ...(aiEnabled
-    ? [AiAssistantService, ...(bullQueueEnabled ? [AiAssistantProcessor] : [])]
-    : []),
+  ...(aiEnabled ? [AiAssistantService, ...(bullQueueEnabled ? [AiAssistantProcessor] : [])] : []),
   MediaGenerationService,
   AdminControllerScanner,
   ModernAdminBootstrapService,
@@ -465,17 +454,17 @@ function assertAiQueueAgreement(
   throw new Error(
     hasExternalDispatcher
       ? translateServerMessage(
-        undefined,
-        'aiAssistant:error.externalQueueModeRequired',
-        undefined,
-        resolved.serverLocales,
-      )
+          undefined,
+          'aiAssistant:error.externalQueueModeRequired',
+          undefined,
+          resolved.serverLocales,
+        )
       : translateServerMessage(
-        undefined,
-        'aiAssistant:error.externalQueueDispatcherRequired',
-        undefined,
-        resolved.serverLocales,
-      ),
+          undefined,
+          'aiAssistant:error.externalQueueDispatcherRequired',
+          undefined,
+          resolved.serverLocales,
+        ),
   )
 }
 
@@ -489,25 +478,22 @@ function assertAiQueueAgreement(
  * configuration behind it. Both were possible silently, so fail at boot with
  * the one-line fix instead.
  */
-function assertAiAssistantAgreement(
-  aiEnabled: boolean,
-  resolved: ModernAdminModuleOptions,
-): void {
+function assertAiAssistantAgreement(aiEnabled: boolean, resolved: ModernAdminModuleOptions): void {
   const configured = resolved.aiAssistant !== undefined
   if (aiEnabled === configured) return
   throw new Error(
     configured
       ? translateServerMessage(
-        undefined,
-        'aiAssistant:error.asyncFlagRequired',
-        undefined,
-        resolved.serverLocales,
-      )
+          undefined,
+          'aiAssistant:error.asyncFlagRequired',
+          undefined,
+          resolved.serverLocales,
+        )
       : translateServerMessage(
-        undefined,
-        'aiAssistant:error.asyncOptionsRequired',
-        undefined,
-        resolved.serverLocales,
-      ),
+          undefined,
+          'aiAssistant:error.asyncOptionsRequired',
+          undefined,
+          resolved.serverLocales,
+        ),
   )
 }

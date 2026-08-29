@@ -49,13 +49,13 @@ first boot via `seedDemoUser()`.
 
 ## Where things live
 
-| Concern                 | File / module                                               |
-| ----------------------- | ----------------------------------------------------------- |
-| PrismaClient singleton  | `src/db.ts`                                                 |
-| Better Auth config      | `src/auth.ts` (`prismaAdapter` + `apiKey` plugin)           |
-| Modern Admin wiring     | `src/admin.module.ts` (`setupPrismaSystem`, plugins)        |
-| Nest bootstrap          | `src/main.ts` (mounts Better Auth at `/api/auth`)           |
-| Schema (Auth + Ma + biz)| `prisma/schema.prisma`                                      |
+| Concern                  | File / module                                        |
+| ------------------------ | ---------------------------------------------------- |
+| PrismaClient singleton   | `src/db.ts`                                          |
+| Better Auth config       | `src/auth.ts` (`prismaAdapter` + `apiKey` plugin)    |
+| Modern Admin wiring      | `src/admin.module.ts` (`setupPrismaSystem`, plugins) |
+| Nest bootstrap           | `src/main.ts` (mounts Better Auth at `/api/auth`)    |
+| Schema (Auth + Ma + biz) | `prisma/schema.prisma`                               |
 
 ## Adding resources
 

@@ -32,7 +32,10 @@ export function InfoTooltip({
           <Info className={cn('size-3.5', iconClassName)} />
         </button>
       </TooltipTrigger>
-      <TooltipContent side={side} className="max-w-80 whitespace-pre-wrap text-left leading-relaxed">
+      <TooltipContent
+        side={side}
+        className="max-w-80 whitespace-pre-wrap text-left leading-relaxed"
+      >
         {content}
       </TooltipContent>
     </Tooltip>

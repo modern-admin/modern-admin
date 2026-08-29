@@ -38,9 +38,7 @@ interface ConnectionExtra {
 }
 
 @Injectable()
-export class GraphqlSubscriptionServer
-implements OnApplicationBootstrap, OnApplicationShutdown
-{
+export class GraphqlSubscriptionServer implements OnApplicationBootstrap, OnApplicationShutdown {
   private wsServer: WebSocketServer | null = null
   private disposer: Disposable | null = null
   private upgradeHandler: ((req: IncomingMessage, socket: Socket, head: Buffer) => void) | null =
@@ -58,7 +56,6 @@ implements OnApplicationBootstrap, OnApplicationShutdown
     if (!this.options.subscriptionsEnabled) return
     const httpServer = this.adapterHost?.httpAdapter?.getHttpServer?.()
     if (!httpServer || typeof httpServer.on !== 'function') {
-
       console.warn(
         '[modern-admin/graphql] subscriptions enabled but HTTP server is unavailable; skipping graphql-ws bootstrap',
       )

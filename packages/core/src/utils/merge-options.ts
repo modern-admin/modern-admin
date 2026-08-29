@@ -33,15 +33,11 @@ export const RESOURCE_OPTIONS_ARRAY_STRATEGIES: ArrayMergeStrategies = {
 }
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
-  value !== null
-  && typeof value === 'object'
-  && (Object.getPrototypeOf(value) === Object.prototype
-    || Object.getPrototypeOf(value) === null)
+  value !== null &&
+  typeof value === 'object' &&
+  (Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null)
 
-const strategyFor = (
-  path: string[],
-  strategies: ArrayMergeStrategies,
-): ArrayMergeStrategy => {
+const strategyFor = (path: string[], strategies: ArrayMergeStrategies): ArrayMergeStrategy => {
   for (const [pattern, strategy] of Object.entries(strategies)) {
     const parts = pattern.split('.')
     if (parts.length !== path.length) continue
@@ -67,9 +63,7 @@ function mergeValue(
     const a = base[key]
     const b = override[key]
     if (Array.isArray(a) && Array.isArray(b)) {
-      out[key] = strategyFor(childPath, strategies) === 'replace'
-        ? [...b]
-        : [...a, ...b]
+      out[key] = strategyFor(childPath, strategies) === 'replace' ? [...b] : [...a, ...b]
     } else if (isPlainObject(a) && isPlainObject(b)) {
       out[key] = mergeValue(a, b, strategies, childPath)
     } else {

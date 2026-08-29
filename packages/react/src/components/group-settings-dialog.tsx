@@ -45,12 +45,15 @@ export function GroupSettingsDialog({
   }
 
   return (
-    <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
+    >
       <DialogContent closeLabel={t('common:close')} className="w-full max-w-md">
         <DialogHeader>
-          <DialogTitle>
-            {initial ? t('chart:editGroup') : t('chart:newGroup')}
-          </DialogTitle>
+          <DialogTitle>{initial ? t('chart:editGroup') : t('chart:newGroup')}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-1">
@@ -77,14 +80,18 @@ export function GroupSettingsDialog({
               step={1}
               value={order}
               onChange={(e) =>
-                setOrder(Number.isFinite(Number(e.target.value)) ? Math.trunc(Number(e.target.value)) : 0)
+                setOrder(
+                  Number.isFinite(Number(e.target.value)) ? Math.trunc(Number(e.target.value)) : 0,
+                )
               }
             />
           </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>{t('common:cancel')}</Button>
+          <Button variant="outline" onClick={onClose}>
+            {t('common:cancel')}
+          </Button>
           <Button onClick={handleSave}>{t('chart:saveGroup')}</Button>
         </DialogFooter>
       </DialogContent>

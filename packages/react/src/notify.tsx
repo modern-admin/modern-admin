@@ -32,7 +32,11 @@ interface NotifyApi {
    * use `{ key: 'namespace:key' }` for translation. */
   promise<T>(
     p: Promise<T>,
-    messages: { loading: Input; success: Input | ((value: T) => Input); error: Input | ((err: unknown) => Input) },
+    messages: {
+      loading: Input
+      success: Input | ((value: T) => Input)
+      error: Input | ((err: unknown) => Input)
+    },
   ): Promise<T>
   /** Escape hatch for callers that want raw sonner access. */
   raw: typeof toast
@@ -78,7 +82,8 @@ export function useNotify(): NotifyApi {
         toast.promise(p, {
           loading: resolve(messages.loading).title,
           success: (value) => {
-            const m = typeof messages.success === 'function' ? messages.success(value) : messages.success
+            const m =
+              typeof messages.success === 'function' ? messages.success(value) : messages.success
             return resolve(m).title
           },
           error: (err) => {

@@ -14,7 +14,11 @@ export const TableHeader = React.forwardRef<
   HTMLTableSectionElement,
   React.HTMLAttributes<HTMLTableSectionElement>
 >(({ className, ...props }, ref) => (
-  <thead ref={ref} className={cn('[&_tr]:border-b [&_tr]:border-border bg-muted/40', className)} {...props} />
+  <thead
+    ref={ref}
+    className={cn('[&_tr]:border-b [&_tr]:border-border bg-muted/40', className)}
+    {...props}
+  />
 ))
 TableHeader.displayName = 'TableHeader'
 
@@ -84,10 +88,6 @@ export const TableCaption = React.forwardRef<
   HTMLTableCaptionElement,
   React.HTMLAttributes<HTMLTableCaptionElement>
 >(({ className, ...props }, ref) => (
-  <caption
-    ref={ref}
-    className={cn('mt-4 text-sm text-muted-foreground', className)}
-    {...props}
-  />
+  <caption ref={ref} className={cn('mt-4 text-sm text-muted-foreground', className)} {...props} />
 ))
 TableCaption.displayName = 'TableCaption'

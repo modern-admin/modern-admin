@@ -76,9 +76,7 @@ export function alignPreviousSeries(
 }
 
 /** Total across all points of all series (raw, pre-transform values). */
-export function sumSeries(
-  series: ReadonlyArray<TimeSeriesSeries> | undefined,
-): number | null {
+export function sumSeries(series: ReadonlyArray<TimeSeriesSeries> | undefined): number | null {
   if (!series || series.length === 0) return null
   let total = 0
   for (const s of series) for (const p of s.points) total += p.value
@@ -95,10 +93,7 @@ export interface PeriodDelta {
  * Period-over-period delta on raw totals: `(cur − prev) / prev`. Returns
  * null when the previous total is missing or 0 (undefined percentage).
  */
-export function computeDelta(
-  current: number | null,
-  previous: number | null,
-): PeriodDelta | null {
+export function computeDelta(current: number | null, previous: number | null): PeriodDelta | null {
   if (current == null || previous == null || previous === 0) return null
   const percent = Math.round(((current - previous) / Math.abs(previous)) * 1000) / 10
   return {

@@ -24,8 +24,9 @@ export const DialogOverlay = React.forwardRef<
 ))
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 
-export interface DialogContentProps
-  extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
+export interface DialogContentProps extends React.ComponentPropsWithoutRef<
+  typeof DialogPrimitive.Content
+> {
   /**
    * Visually-hidden label for the built-in close button. Default: 'Close'.
    * Follows the same convention as `SidebarTrigger.toggleSidebarLabel` — this
@@ -69,10 +70,7 @@ export const DialogHeader = ({
   className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>): React.ReactElement => (
-  <div
-    className={cn('flex flex-col gap-1.5 text-center sm:text-left', className)}
-    {...props}
-  />
+  <div className={cn('flex flex-col gap-1.5 text-center sm:text-left', className)} {...props} />
 )
 DialogHeader.displayName = 'DialogHeader'
 

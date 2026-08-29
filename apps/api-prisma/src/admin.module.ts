@@ -30,7 +30,11 @@ import { ApiStockMediaGenerationProvider } from '@modern-admin/api-stock'
 import { PrismaDatabase, PrismaResource } from '@modern-admin/adapter-prisma'
 import { ModernAdminGraphqlModule } from '@modern-admin/graphql'
 import { RetentionModule } from '@modern-admin/queue'
-import { ModernAdminRealtimeModule, RedisRealtimeBus, type RealtimeRedisLike } from '@modern-admin/realtime'
+import {
+  ModernAdminRealtimeModule,
+  RedisRealtimeBus,
+  type RealtimeRedisLike,
+} from '@modern-admin/realtime'
 import { RedisCacheProvider, type RedisCacheOptions } from '@modern-admin/cache-redis'
 import { ModernAdminUploadModule } from '@modern-admin/feature-upload/nest'
 import { uploadGraphqlExtension } from '@modern-admin/feature-upload/graphql'
@@ -68,7 +72,10 @@ const buildCache = (): ICacheProvider | undefined => {
   if (!url) return undefined
   const client = new Redis(url, { lazyConnect: true })
   client.connect().catch((err) => {
-    console.warn('[modern-admin/api-prisma] redis cache connect failed; requests will bypass cache while Redis reconnects', err)
+    console.warn(
+      '[modern-admin/api-prisma] redis cache connect failed; requests will bypass cache while Redis reconnects',
+      err,
+    )
   })
   return new RedisCacheProvider({ client: client as unknown as RedisCacheOptions['client'] })
 }
@@ -78,7 +85,10 @@ const buildRealtime = (): IRealtimeBus => {
   if (!url) return new InMemoryRealtimeBus()
   const client = new Redis(url, { lazyConnect: true })
   client.connect().catch((err) => {
-    console.warn('[modern-admin/api-prisma] redis realtime connect failed; the client will keep reconnecting', err)
+    console.warn(
+      '[modern-admin/api-prisma] redis realtime connect failed; the client will keep reconnecting',
+      err,
+    )
   })
   return new RedisRealtimeBus({ client: client as unknown as RealtimeRedisLike })
 }
@@ -114,9 +124,7 @@ const apiKeyService = buildApiKeyService(authProvider)
     // Single-instance demo — ack the in-process pending-registry constraint.
     ModernAdminUploadModule.forRoot({ acknowledgeSingleInstance: true }),
     RetentionModule.forRoot({
-      ...(process.env.SYSTEM_RETENTION_CRON
-        ? { cron: process.env.SYSTEM_RETENTION_CRON }
-        : {}),
+      ...(process.env.SYSTEM_RETENTION_CRON ? { cron: process.env.SYSTEM_RETENTION_CRON } : {}),
       history: {
         store: system.historyStore,
         keepDays: retentionBound('HISTORY_RETENTION_DAYS'),
@@ -130,10 +138,12 @@ const apiKeyService = buildApiKeyService(authProvider)
     }),
     ModernAdminModule.forRoot({
       global: true,
-      adapters: [{
-        Database: PrismaDatabase,
-        Resource: PrismaResource,
-      }],
+      adapters: [
+        {
+          Database: PrismaDatabase,
+          Resource: PrismaResource,
+        },
+      ],
       // No `databases:` here on purpose. Every resource is registered
       // explicitly via `@AdminResource` (see `./admin-sources.ts`) under
       // a logical id (`customers`, `posts`, …). Passing
@@ -149,9 +159,7 @@ const apiKeyService = buildApiKeyService(authProvider)
       // (read-only) are seeded by `seed-demo.ts`.
       rolesResourceId: 'roles',
       realtime: realtimeBus,
-      plugins: [
-        historyPlugin({ store: system.historyStore }),
-      ],
+      plugins: [historyPlugin({ store: system.historyStore })],
       configStore: system.configStore,
       aiTaskStore: system.aiTaskStore,
       historyStore: system.historyStore,
@@ -173,11 +181,11 @@ const apiKeyService = buildApiKeyService(authProvider)
             .$transaction(async (tx) => {
               await tx.$executeRawUnsafe('SET TRANSACTION READ ONLY')
               rows = (await tx.$queryRawUnsafe(sql)) as unknown[]
-              throw rollback        // forces Prisma to issue ROLLBACK
+              throw rollback // forces Prisma to issue ROLLBACK
             })
             .catch((err) => {
-              if (err === rollback) return rows   // expected sentinel — return data
-              throw err                           // real error — re-throw
+              if (err === rollback) return rows // expected sentinel — return data
+              throw err // real error — re-throw
             })
         },
       }),
@@ -219,9 +227,10 @@ const apiKeyService = buildApiKeyService(authProvider)
       // origin allowlist can't silently drift from it — a split-port dev
       // setup (SPA :3000/:5173, API :3001) is cross-origin and would
       // otherwise fail the fail-closed handshake gate with 403.
-      origins: process.env.WEB_ORIGIN?.split(',').map((o) => o.trim()).filter(Boolean),
+      origins: process.env.WEB_ORIGIN?.split(',')
+        .map((o) => o.trim())
+        .filter(Boolean),
     }),
   ],
 })
-export class AdminModule {
-}
+export class AdminModule {}

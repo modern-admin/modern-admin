@@ -7,16 +7,12 @@ export interface PrismaModelDelegate {
   findUnique(args: { where: Record<string, unknown> }): Promise<unknown | null>
   count(args?: { where?: Record<string, unknown> }): Promise<number>
   create(args: { data: Record<string, unknown> }): Promise<unknown>
-  update(args: {
-    where: Record<string, unknown>
-    data: Record<string, unknown>
-  }): Promise<unknown>
+  update(args: { where: Record<string, unknown>; data: Record<string, unknown> }): Promise<unknown>
   delete(args: { where: Record<string, unknown> }): Promise<unknown>
   deleteMany(args?: { where?: Record<string, unknown> }): Promise<{ count: number }>
   aggregate?(args: unknown): Promise<unknown>
   groupBy?(args: unknown): Promise<unknown[]>
 }
-
 
 export type PrismaClientLike = { [K: string]: any } & {
   $transaction?<T>(fn: (tx: PrismaClientLike) => Promise<T>): Promise<T>

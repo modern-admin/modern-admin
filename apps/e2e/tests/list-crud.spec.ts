@@ -31,10 +31,7 @@ async function createCustomer(
   return { id: String(body.record.id), name, email }
 }
 
-async function deleteCustomerSilently(
-  request: APIRequestContext,
-  id: string,
-): Promise<void> {
+async function deleteCustomerSilently(request: APIRequestContext, id: string): Promise<void> {
   // Best-effort — fixture cleanup runs even when the test left the record in
   // place via the UI, so a 404 here is expected and not a failure.
   await request.delete(adminApi(`/resources/customers/records/${id}/actions/delete`))
@@ -78,9 +75,10 @@ test.describe('List page — CRUD interactions', () => {
     await page2Button.click()
     await expect(page).toHaveURL(/[?&]page=2/)
     // `aria-current="page"` switches to the new active page.
-    await expect(
-      pagination.getByRole('button', { name: '2', exact: true }),
-    ).toHaveAttribute('aria-current', 'page')
+    await expect(pagination.getByRole('button', { name: '2', exact: true })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
 
     // The first row on page 2 must not match the first row on page 1.
     const firstRowTextAfter = await dataRows(page).first().innerText()
@@ -158,10 +156,7 @@ test.describe('List page — CRUD interactions', () => {
     await expect(page.getByRole('link', { name: 'Edit' })).toBeVisible({ timeout: 10_000 })
   })
 
-  test('row actions → Delete removes the record from the list', async ({
-    page,
-    request,
-  }) => {
+  test('row actions → Delete removes the record from the list', async ({ page, request }) => {
     // Provision a fixture row we own so we can delete it without disrupting
     // seeded data other specs rely on.
     const fixture = await createCustomer(request)
@@ -184,10 +179,7 @@ test.describe('List page — CRUD interactions', () => {
 
       const fixtureRow = dataRows(page).filter({ has: fixtureCell })
       await fixtureRow.getByRole('button', { name: 'Open menu' }).click()
-      await page
-        .getByRole('menu')
-        .getByRole('menuitem', { name: 'Delete' })
-        .click()
+      await page.getByRole('menu').getByRole('menuitem', { name: 'Delete' }).click()
 
       // A confirmation dialog appears — accept it. Scope the confirm
       // button lookup to the dialog so we cannot accidentally match a

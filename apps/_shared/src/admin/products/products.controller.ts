@@ -35,10 +35,12 @@ const productProvider = new LocalUploadProvider({
   baseUrl: `http://localhost:${process.env.API_PORT ?? 3001}/uploads`,
 })
 
-const productKeyer = (subdir: string) => (filename: string): string => {
-  const ext = extname(filename)
-  return `products/${subdir}/${uuidv7()}${ext}`
-}
+const productKeyer =
+  (subdir: string) =>
+  (filename: string): string => {
+    const ext = extname(filename)
+    return `products/${subdir}/${uuidv7()}${ext}`
+  }
 
 @AdminResource({
   source: () => adminSource('products'),
@@ -107,9 +109,7 @@ export class ProductsAdminController extends AdminController<ProductRow> {
     const base = await super.list(ctx)
     let inStockCount = 0
     try {
-      inStockCount = await this.resource.count(
-        new Filter({ inStock: true }, this.resource),
-      )
+      inStockCount = await this.resource.count(new Filter({ inStock: true }, this.resource))
     } catch {
       // Adapter doesn't support boolean-by-string filter; skip metric.
     }
@@ -209,9 +209,7 @@ export class ProductsAdminController extends AdminController<ProductRow> {
   async bulkRepriceUi(ctx: AdminActionContext<ProductRow>): Promise<ActionResponse> {
     const filter = new Filter({}, this.resource)
     const records = await this.resource.find(filter, { limit: 500, offset: 0 })
-    const prices = records
-      .map((r) => Number(r.params.price))
-      .filter((n) => Number.isFinite(n))
+    const prices = records.map((r) => Number(r.params.price)).filter((n) => Number.isFinite(n))
 
     if (ctx.request.method !== 'post') {
       return {

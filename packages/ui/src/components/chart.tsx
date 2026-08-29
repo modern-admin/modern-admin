@@ -75,10 +75,7 @@ export function ChartPanel({
   if (data.length === 0) {
     return (
       <div
-        className={cn(
-          'flex items-center justify-center text-sm text-muted-foreground',
-          className,
-        )}
+        className={cn('flex items-center justify-center text-sm text-muted-foreground', className)}
         style={{ height }}
       >
         {labels?.noData ?? 'No data'}
@@ -100,42 +97,28 @@ export function ChartPanel({
       >
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
-            <Pie
-              data={mapped}
-              dataKey={vKey}
-              nameKey="label"
-              cx="50%"
-              cy="50%"
-              outerRadius="65%"
-            >
+            <Pie data={mapped} dataKey={vKey} nameKey="label" cx="50%" cy="50%" outerRadius="65%">
               {mapped.map((_, i) => (
-                <Cell key={i} fill={PALETTE[i % PALETTE.length]!}/>
+                <Cell key={i} fill={PALETTE[i % PALETTE.length]!} />
               ))}
             </Pie>
-            <Tooltip
-              contentStyle={TOOLTIP_STYLE}
-              formatter={(value) => [value, vKey]}
-            />
+            <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value) => [value, vKey]} />
           </PieChart>
         </ResponsiveContainer>
       </div>
     )
   }
 
-  const ChartCmp =
-    type === 'area' ? AreaChart : type === 'bar' ? BarChart : LineChart
+  const ChartCmp = type === 'area' ? AreaChart : type === 'bar' ? BarChart : LineChart
 
   return (
     <div
-      className={cn(
-        'w-full [&_*:focus]:outline-none [&_*:focus-visible]:outline-none',
-        className,
-      )}
+      className={cn('w-full [&_*:focus]:outline-none [&_*:focus-visible]:outline-none', className)}
       style={{ height }}
     >
       <ResponsiveContainer width="100%" height="100%">
         <ChartCmp data={mapped} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="1 1" stroke={GRID_STROKE} strokeOpacity={GRID_OPACITY}/>
+          <CartesianGrid strokeDasharray="1 1" stroke={GRID_STROKE} strokeOpacity={GRID_OPACITY} />
           <XAxis
             dataKey="label"
             tick={AXIS_STYLE}
@@ -143,8 +126,8 @@ export function ChartPanel({
             tickLine={false}
             axisLine={false}
           />
-          <YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false}/>
-          <Tooltip contentStyle={TOOLTIP_STYLE}/>
+          <YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false} />
+          <Tooltip contentStyle={TOOLTIP_STYLE} />
           {type === 'area' ? (
             <Area
               type="monotone"
@@ -157,7 +140,7 @@ export function ChartPanel({
               activeDot={{ r: 4 }}
             />
           ) : type === 'bar' ? (
-            <Bar dataKey={vKey} fill={color} radius={[3, 3, 0, 0] as never} maxBarSize={48}/>
+            <Bar dataKey={vKey} fill={color} radius={[3, 3, 0, 0] as never} maxBarSize={48} />
           ) : (
             <Line
               type="monotone"
@@ -231,12 +214,18 @@ export function KpiCard({
 
   const hasPrev = previousValue != null && Number.isFinite(previousValue)
   const delta = hasPrev ? value - (previousValue as number) : 0
-  const percent = hasPrev && (previousValue as number) !== 0
-    ? Math.round((delta / (previousValue as number)) * 1000) / 10
-    : 0
+  const percent =
+    hasPrev && (previousValue as number) !== 0
+      ? Math.round((delta / (previousValue as number)) * 1000) / 10
+      : 0
 
-  const direction: 'up' | 'down' | 'flat' =
-    !hasPrev ? 'flat' : delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat'
+  const direction: 'up' | 'down' | 'flat' = !hasPrev
+    ? 'flat'
+    : delta > 0
+      ? 'up'
+      : delta < 0
+        ? 'down'
+        : 'flat'
 
   const tone =
     direction === 'up'
@@ -247,29 +236,21 @@ export function KpiCard({
 
   const tpl =
     direction === 'up'
-      ? labels?.deltaUp ?? '+{value} ({percent}%)'
+      ? (labels?.deltaUp ?? '+{value} ({percent}%)')
       : direction === 'down'
-        ? labels?.deltaDown ?? '−{value} ({percent}%)'
-        : labels?.deltaFlat ?? '{value} ({percent}%)'
+        ? (labels?.deltaDown ?? '−{value} ({percent}%)')
+        : (labels?.deltaFlat ?? '{value} ({percent}%)')
 
   return (
     <div className={cn('flex h-32 flex-col justify-center px-1', className)}>
-      <div className="text-3xl font-semibold tabular-nums sm:text-4xl">
-        {formatNumber(value)}
-      </div>
+      <div className="text-3xl font-semibold tabular-nums sm:text-4xl">{formatNumber(value)}</div>
       {hasPrev && (
         <div className={cn('mt-2 text-xs sm:text-sm', tone)}>
           <span className="tabular-nums">
-            {fillTemplate(
-              tpl,
-              formatNumber(Math.abs(delta)),
-              String(Math.abs(percent)),
-            )}
+            {fillTemplate(tpl, formatNumber(Math.abs(delta)), String(Math.abs(percent)))}
           </span>
           {labels?.previousPeriod && (
-            <span className="ml-1 text-muted-foreground">
-              {labels.previousPeriod}
-            </span>
+            <span className="ml-1 text-muted-foreground">{labels.previousPeriod}</span>
           )}
         </div>
       )}
@@ -434,12 +415,8 @@ export function TimeSeriesChart({
   // Re-plotted points (previous-period overlay) carry their real date in a
   // `<key>__src` column so the tooltip can show it.
   const { rows, colorByKey, primary } = React.useMemo(() => {
-    const dates = Array.from(
-      new Set(series.flatMap((s) => s.points.map((p) => p.date))),
-    ).sort()
-    const maps = series.map(
-      (s) => new Map(s.points.map((p) => [p.date, p] as const)),
-    )
+    const dates = Array.from(new Set(series.flatMap((s) => s.points.map((p) => p.date)))).sort()
+    const maps = series.map((s) => new Map(s.points.map((p) => [p.date, p] as const)))
     const rows = dates.map((date) => {
       const row: Record<string, string | number> = { date }
       series.forEach((s, i) => {
@@ -459,9 +436,7 @@ export function TimeSeriesChart({
       if (!s.dashed) return
       colorByKey.set(
         s.key,
-        s.color ??
-        (s.hiddenWith ? colorByKey.get(s.hiddenWith) : undefined) ??
-        palette[0]!,
+        s.color ?? (s.hiddenWith ? colorByKey.get(s.hiddenWith) : undefined) ?? palette[0]!,
       )
     })
     return { rows, colorByKey, primary }
@@ -470,10 +445,7 @@ export function TimeSeriesChart({
   if (series.length === 0 || series.every((s) => s.points.length === 0)) {
     return (
       <div
-        className={cn(
-          'flex items-center justify-center text-sm text-muted-foreground',
-          className,
-        )}
+        className={cn('flex items-center justify-center text-sm text-muted-foreground', className)}
         style={{ height }}
       >
         {labels?.noData ?? 'No data'}
@@ -491,8 +463,10 @@ export function TimeSeriesChart({
   // ComposedChart; the dedicated chart types stay for the common case.
   const ChartCmp = hasOverlay
     ? ComposedChart
-    : resolvedVis === 'bar' ? BarChart
-      : resolvedVis === 'line' ? LineChart
+    : resolvedVis === 'bar'
+      ? BarChart
+      : resolvedVis === 'line'
+        ? LineChart
         : AreaChart
   // Suppress animation for large datasets — animating thousands of path
   // points is expensive and retains old state in Recharts' animation subsystem.
@@ -543,10 +517,7 @@ export function TimeSeriesChart({
 
   return (
     <div
-      className={cn(
-        'w-full [&_*:focus]:outline-none [&_*:focus-visible]:outline-none',
-        className,
-      )}
+      className={cn('w-full [&_*:focus]:outline-none [&_*:focus-visible]:outline-none', className)}
     >
       <ResponsiveContainer
         width="100%"
@@ -607,8 +578,7 @@ export function TimeSeriesChart({
             formatter={(value, name, item) => {
               const key = (item as { dataKey?: unknown })?.dataKey
               const row = (item as { payload?: Record<string, unknown> })?.payload
-              const src =
-                typeof key === 'string' && row ? row[`${key}__src`] : undefined
+              const src = typeof key === 'string' && row ? row[`${key}__src`] : undefined
               const displayName =
                 typeof src === 'string'
                   ? `${String(name)} · ${labelFormatter ? labelFormatter(src) : src}`
@@ -715,7 +685,7 @@ export function TimeSeriesChart({
             onClick={handleToggleAll}
             className="text-xs text-muted-foreground hover:text-foreground"
           >
-            {allHidden ? labels?.showAll ?? 'Show all' : labels?.hideAll ?? 'Hide all'}
+            {allHidden ? (labels?.showAll ?? 'Show all') : (labels?.hideAll ?? 'Hide all')}
           </button>
         </div>
       )}

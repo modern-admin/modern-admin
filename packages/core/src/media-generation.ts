@@ -20,10 +20,14 @@ export const mediaGenerationCatalogParamZ = z.object({
   isArray: z.boolean(),
   required: z.boolean(),
   default: z.unknown().optional(),
-  options: z.array(z.object({
-    value: z.union([z.string(), z.number()]),
-    label: z.string(),
-  })).optional(),
+  options: z
+    .array(
+      z.object({
+        value: z.union([z.string(), z.number()]),
+        label: z.string(),
+      }),
+    )
+    .optional(),
   minimum: z.number().optional(),
   maximum: z.number().optional(),
   maxLength: z.number().optional(),
@@ -43,17 +47,23 @@ export const mediaGenerationCatalogModelZ = z.object({
   vendor: z.string().optional(),
   tags: z.array(z.string()).default([]),
   capabilities: z.array(z.string()).default([]),
-  pricing: z.array(z.object({
-    key: z.string(),
-    price: z.string(),
-    isDefault: z.boolean(),
-    dimensions: z.record(z.string(), z.string()).optional(),
-    unitPrice: z.string().optional(),
-  })).default([]),
-  priceMultiplier: z.object({
-    param: z.string(),
-    catalogValue: z.number(),
-  }).optional(),
+  pricing: z
+    .array(
+      z.object({
+        key: z.string(),
+        price: z.string(),
+        isDefault: z.boolean(),
+        dimensions: z.record(z.string(), z.string()).optional(),
+        unitPrice: z.string().optional(),
+      }),
+    )
+    .default([]),
+  priceMultiplier: z
+    .object({
+      param: z.string(),
+      catalogValue: z.number(),
+    })
+    .optional(),
   priceFrom: z.string().optional(),
   params: z.array(mediaGenerationCatalogParamZ).default([]),
 })
@@ -71,11 +81,14 @@ export const estimateMediaGenerationPrice = (
   input: Record<string, unknown>,
 ): number | null => {
   const matches = model.pricing
-    .filter((row) => Object.entries(row.dimensions ?? {}).every(
-      ([name, expected]) => comparableCatalogValue(input[name]) === expected,
-    ))
-    .sort((left, right) =>
-      Object.keys(right.dimensions ?? {}).length - Object.keys(left.dimensions ?? {}).length,
+    .filter((row) =>
+      Object.entries(row.dimensions ?? {}).every(
+        ([name, expected]) => comparableCatalogValue(input[name]) === expected,
+      ),
+    )
+    .sort(
+      (left, right) =>
+        Object.keys(right.dimensions ?? {}).length - Object.keys(left.dimensions ?? {}).length,
     )
   const row = matches[0] ?? model.pricing.find((candidate) => candidate.isDefault)
   const fallback = Number(row?.price ?? model.priceFrom)

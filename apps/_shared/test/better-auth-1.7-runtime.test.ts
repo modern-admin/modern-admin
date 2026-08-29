@@ -150,8 +150,8 @@ describe('Better Auth 1.7 runtime contract', () => {
       }),
     ).toEqual({ status: true })
     expect(await auth.api.listUserAccounts({ headers: sessionHeaders })).toHaveLength(1)
-    expect(
-      await auth.api.getSession({ headers: sessionHeaders }),
-    ).toMatchObject({ user: { id: signIn.response.user.id, role: 'admin' } })
+    expect(await auth.api.getSession({ headers: sessionHeaders })).toMatchObject({
+      user: { id: signIn.response.user.id, role: 'admin' },
+    })
   })
 })

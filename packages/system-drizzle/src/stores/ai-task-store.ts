@@ -23,19 +23,17 @@ export class DrizzleAiTaskStore implements IAiTaskStore {
   ) {}
 
   async enqueue(input: AiTaskInput): Promise<AiTask> {
-    const insert = this.db
-      .insert(this.taskTable)
-      .values({
-        id: uuidv7(),
-        idempotencyKey: input.idempotencyKey ?? null,
-        kind: input.kind,
-        resourceId: input.resourceId ?? null,
-        recordId: input.recordId ?? null,
-        userId: input.userId ?? null,
-        status: 'pending',
-        input: input.input ?? {},
-        progress: null,
-      })
+    const insert = this.db.insert(this.taskTable).values({
+      id: uuidv7(),
+      idempotencyKey: input.idempotencyKey ?? null,
+      kind: input.kind,
+      resourceId: input.resourceId ?? null,
+      recordId: input.recordId ?? null,
+      userId: input.userId ?? null,
+      status: 'pending',
+      input: input.input ?? {},
+      progress: null,
+    })
     const query = input.idempotencyKey
       ? insert.onConflictDoNothing({ target: this.taskTable.idempotencyKey })
       : insert

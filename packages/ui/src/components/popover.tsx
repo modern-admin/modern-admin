@@ -7,8 +7,9 @@ export const Popover = PopoverPrimitive.Root
 export const PopoverTrigger = PopoverPrimitive.Trigger
 export const PopoverAnchor = PopoverPrimitive.Anchor
 
-export interface PopoverContentProps
-  extends React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Content> {
+export interface PopoverContentProps extends React.ComponentPropsWithoutRef<
+  typeof PopoverPrimitive.Content
+> {
   /** Override the portal target. Defaults to the enclosing Dialog/Sheet
    *  content (so touch-scroll works inside it) or `document.body`. */
   container?: HTMLElement | null

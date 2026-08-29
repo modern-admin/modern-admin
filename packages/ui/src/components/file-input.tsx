@@ -85,8 +85,7 @@ export function FileInput({
     onFileSelect(first)
   }
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) =>
-    handleFiles(e.target.files)
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => handleFiles(e.target.files)
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
@@ -104,10 +103,7 @@ export function FileInput({
   const label = displayName || (value ? value.split('/').pop() : null)
 
   // Detect image for thumbnail preview
-  const isImage =
-    previewUrl
-      ? /\.(jpe?g|png|gif|webp|avif|svg|bmp)(\?|$)/i.test(previewUrl)
-      : false
+  const isImage = previewUrl ? /\.(jpe?g|png|gif|webp|avif|svg|bmp)(\?|$)/i.test(previewUrl) : false
 
   return (
     <div className={cn('w-full space-y-2', className)}>
@@ -138,9 +134,7 @@ export function FileInput({
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="size-5 animate-spin" />
               <span className="truncate" title={uploadingName ?? undefined}>
-                {uploadingName
-                  ? l.uploadingFile.replace('{name}', uploadingName)
-                  : l.uploading}
+                {uploadingName ? l.uploadingFile.replace('{name}', uploadingName) : l.uploading}
               </span>
             </div>
             {uploadProgress != null && (
@@ -172,9 +166,7 @@ export function FileInput({
                 {l.chooseAFile}
               </span>
             </span>
-            {accept && (
-              <span className="text-xs text-muted-foreground">{accept}</span>
-            )}
+            {accept && <span className="text-xs text-muted-foreground">{accept}</span>}
           </>
         )}
       </div>
@@ -213,9 +205,7 @@ export function FileInput({
       )}
 
       {/* Error message */}
-      {error && (
-        <p className="text-sm text-destructive">{error}</p>
-      )}
+      {error && <p className="text-sm text-destructive">{error}</p>}
 
       {/* Hidden native input */}
       <input

@@ -328,9 +328,7 @@ describe('writableData — scalar passthroughs', () => {
 
 describe('update — partial payload semantics', () => {
   test('omitted keys are not sent in `data` (Prisma keeps the column)', async () => {
-    const { resource, delegate } = buildWide([
-      { id: '1', name: 'Old', price: 10 },
-    ])
+    const { resource, delegate } = buildWide([{ id: '1', name: 'Old', price: 10 }])
     await resource.update('1', { price: 20 })
     const data = lastData(delegate)
     expect(Object.keys(data)).toEqual(['price'])
@@ -361,7 +359,7 @@ describe('id casting', () => {
   test('Int id model: numeric id stays numeric', async () => {
     const { resource, delegate } = buildIntId([{ id: 7, value: 1 }])
     await resource.findOne('7')
-    expect(typeof (lastWhere(delegate).id)).toBe('number')
+    expect(typeof lastWhere(delegate).id).toBe('number')
   })
 
   test('Int id model: non-numeric string is preserved as-is (Prisma surfaces the error)', async () => {

@@ -32,30 +32,24 @@ interface CustomerFixture {
  * that renames it. The revert flow then has at least one older snapshot
  * to roll back to.
  */
-async function createCustomerWithEdit(
-  request: APIRequestContext,
-): Promise<CustomerFixture> {
+async function createCustomerWithEdit(request: APIRequestContext): Promise<CustomerFixture> {
   const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   const originalName = `History Original ${suffix}`
   const renamedName = `History Renamed ${suffix}`
-  const create = await request.post(
-    adminApi('/resources/customers/actions/new'),
-    {
-      data: {
-        name: originalName,
-        email: `history-ui-${suffix}@example.com`,
-        tier: 'free',
-      },
+  const create = await request.post(adminApi('/resources/customers/actions/new'), {
+    data: {
+      name: originalName,
+      email: `history-ui-${suffix}@example.com`,
+      tier: 'free',
     },
-  )
+  })
   expect(create.ok(), `create failed: ${await create.text()}`).toBeTruthy()
   const body = await create.json()
   const id = String(body.record.id)
 
-  const patch = await request.patch(
-    adminApi(`/resources/customers/records/${id}/actions/edit`),
-    { data: { name: renamedName } },
-  )
+  const patch = await request.patch(adminApi(`/resources/customers/records/${id}/actions/edit`), {
+    data: { name: renamedName },
+  })
   expect(patch.ok(), `rename failed: ${await patch.text()}`).toBeTruthy()
 
   // `feature-history` appends revisions off the hot path (fire-and-forget),
@@ -78,10 +72,7 @@ async function createCustomerWithEdit(
   return { id, originalName, renamedName }
 }
 
-async function deleteCustomerSilently(
-  request: APIRequestContext,
-  id: string,
-): Promise<void> {
+async function deleteCustomerSilently(request: APIRequestContext, id: string): Promise<void> {
   await request.delete(adminApi(`/resources/customers/records/${id}/actions/delete`))
 }
 
@@ -89,26 +80,29 @@ async function openShowPage(page: Page, id: string): Promise<void> {
   await page.goto(`/resources/customers/${id}`)
   // The header buttons (incl. Revisions) only mount once the record load
   // resolves — `Revisions` is sourced from `useResource(...)?.actions`.
-  await expect(
-    page.getByRole('button', { name: /^revisions$/i }).first(),
-  ).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByRole('button', { name: /^revisions$/i }).first()).toBeVisible({
+    timeout: 15_000,
+  })
 }
 
 test.describe('Revisions UI — `feature-history`', () => {
-  test('clicking Revisions opens a sheet listing every edit', async ({
-    page,
-    request,
-  }) => {
+  test('clicking Revisions opens a sheet listing every edit', async ({ page, request }) => {
     const fix = await createCustomerWithEdit(request)
     try {
       await openShowPage(page, fix.id)
 
-      await page.getByRole('button', { name: /^revisions$/i }).first().click()
+      await page
+        .getByRole('button', { name: /^revisions$/i })
+        .first()
+        .click()
 
       // The Sheet is a portal-mounted `role="dialog"` whose title text is
       // the i18n'd "Revisions" label. Match the dialog explicitly so we
       // don't pick up the trigger button by accident.
-      const sheet = page.getByRole('dialog').filter({ hasText: /^revisions/i }).first()
+      const sheet = page
+        .getByRole('dialog')
+        .filter({ hasText: /^revisions/i })
+        .first()
       await expect(sheet).toBeVisible()
 
       // The timeline renders one button per revision. Two edits (create +
@@ -141,8 +135,14 @@ test.describe('Revisions UI — `feature-history`', () => {
         timeout: 10_000,
       })
 
-      await page.getByRole('button', { name: /^revisions$/i }).first().click()
-      const sheet = page.getByRole('dialog').filter({ hasText: /^revisions/i }).first()
+      await page
+        .getByRole('button', { name: /^revisions$/i })
+        .first()
+        .click()
+      const sheet = page
+        .getByRole('dialog')
+        .filter({ hasText: /^revisions/i })
+        .first()
       await expect(sheet).toBeVisible()
 
       // "Revert" undoes a revision by restoring its `snapshotBefore`. The
@@ -171,10 +171,7 @@ test.describe('Revisions UI — `feature-history`', () => {
       await confirmDialog.getByRole('button', { name: /^revert$/i }).click()
 
       const revertRes = await revertPromise
-      expect(
-        revertRes.ok(),
-        `revert request failed: ${await revertRes.text()}`,
-      ).toBeTruthy()
+      expect(revertRes.ok(), `revert request failed: ${await revertRes.text()}`).toBeTruthy()
 
       // After revert, TanStack Query invalidates the record and the show
       // page renders the original name again. The Sheet auto-closes
@@ -186,9 +183,7 @@ test.describe('Revisions UI — `feature-history`', () => {
 
       // Server-side double-check — the record is back to the original name.
       const after = await request.get(
-        adminApi(
-          `/resources/customers/records/${fix.id}/actions/show`,
-        ),
+        adminApi(`/resources/customers/records/${fix.id}/actions/show`),
       )
       expect(after.ok()).toBeTruthy()
       const afterBody = await after.json()
@@ -205,8 +200,14 @@ test.describe('Revisions UI — `feature-history`', () => {
     const fix = await createCustomerWithEdit(request)
     try {
       await openShowPage(page, fix.id)
-      await page.getByRole('button', { name: /^revisions$/i }).first().click()
-      const sheet = page.getByRole('dialog').filter({ hasText: /^revisions/i }).first()
+      await page
+        .getByRole('button', { name: /^revisions$/i })
+        .first()
+        .click()
+      const sheet = page
+        .getByRole('dialog')
+        .filter({ hasText: /^revisions/i })
+        .first()
       await expect(sheet).toBeVisible()
 
       const updatedEntry = sheet.locator('button:has-text("Updated")').first()
@@ -220,9 +221,7 @@ test.describe('Revisions UI — `feature-history`', () => {
       // Make sure no revert POST fires when the user cancels.
       const revertShouldNotFire = page
         .waitForRequest(
-          (req) =>
-            /\/history\/[^/]+\/revert/.test(req.url()) &&
-            req.method() === 'POST',
+          (req) => /\/history\/[^/]+\/revert/.test(req.url()) && req.method() === 'POST',
           { timeout: 1500 },
         )
         .catch(() => null)
@@ -232,9 +231,7 @@ test.describe('Revisions UI — `feature-history`', () => {
 
       // Record still carries the renamed value.
       const after = await request.get(
-        adminApi(
-          `/resources/customers/records/${fix.id}/actions/show`,
-        ),
+        adminApi(`/resources/customers/records/${fix.id}/actions/show`),
       )
       expect(after.ok()).toBeTruthy()
       const afterBody = await after.json()

@@ -39,7 +39,8 @@ export const de: LocaleBundle = {
     'common:actions': 'Aktionen',
     'action:notFound': 'Aktion „{action}“ ist für diese Ressource nicht verfügbar.',
     'action:componentMissing': 'Es ist keine Komponente namens „{component}“ registriert.',
-    'action:componentMissingHint': 'Registriere sie im ComponentLoader, der an <ModernAdminProvider components={…}> übergeben wird.',
+    'action:componentMissingHint':
+      'Registriere sie im ComponentLoader, der an <ModernAdminProvider components={…}> übergeben wird.',
     'action:loadFailed': 'Die Aktion konnte nicht geladen werden.',
     'common:new': 'Neu',
     'common:rowsPerPage': 'Zeilen pro Seite',
@@ -184,14 +185,17 @@ export const de: LocaleBundle = {
     'common:saving': 'Speichern…',
     'common:done': 'Fertig',
     'settings:menuItem': 'Einstellungen',
-    'settings:noSectionsConfigured': 'Für diese Installation sind keine Einstellungsbereiche verfügbar.',
+    'settings:noSectionsConfigured':
+      'Für diese Installation sind keine Einstellungsbereiche verfügbar.',
     'settings:apiKeys.title': 'API-Schlüssel',
-    'settings:apiKeys.description': 'Programmatische Zugriffstoken für die Admin-API. Jeder Schlüssel hat eine Berechtigungsmenge, die einschränkt, welche Ressourcen und Aktionen er ausführen darf.',
+    'settings:apiKeys.description':
+      'Programmatische Zugriffstoken für die Admin-API. Jeder Schlüssel hat eine Berechtigungsmenge, die einschränkt, welche Ressourcen und Aktionen er ausführen darf.',
     'settings:apiKeys.actions.create': 'Neuer Schlüssel',
     'settings:apiKeys.actions.edit': 'Bearbeiten',
     'settings:apiKeys.actions.revoke': 'Widerrufen',
     'settings:apiKeys.empty.title': 'Noch keine API-Schlüssel',
-    'settings:apiKeys.empty.description': 'Erstelle deinen ersten Schlüssel für programmatischen Zugriff.',
+    'settings:apiKeys.empty.description':
+      'Erstelle deinen ersten Schlüssel für programmatischen Zugriff.',
     'settings:apiKeys.columns.name': 'Name',
     'settings:apiKeys.columns.start': 'Präfix',
     'settings:apiKeys.columns.permissions': 'Berechtigungen',
@@ -211,17 +215,21 @@ export const de: LocaleBundle = {
     'settings:apiKeys.permissions.clearAllResources': 'Alle Ressourcen und Aktionen entfernen',
     'settings:apiKeys.editor.titleCreate': 'Neuer API-Schlüssel',
     'settings:apiKeys.editor.titleEdit': 'API-Schlüssel bearbeiten',
-    'settings:apiKeys.editor.description': 'Wähle einen aussagekräftigen Namen und gewähre nur die Ressourcen und Aktionen, die der Schlüssel wirklich braucht.',
+    'settings:apiKeys.editor.description':
+      'Wähle einen aussagekräftigen Namen und gewähre nur die Ressourcen und Aktionen, die der Schlüssel wirklich braucht.',
     'settings:apiKeys.editor.name': 'Name',
     'settings:apiKeys.editor.namePlaceholder': 'z. B. CI-Deploy-Bot',
     'settings:apiKeys.editor.expiresInDays': 'Läuft ab in (Tagen)',
     'settings:apiKeys.editor.expiresPlaceholder': 'nie',
-    'settings:apiKeys.editor.expiresHint': 'Leer lassen, damit der Schlüssel nicht abläuft. Maximal 3650 Tage.',
+    'settings:apiKeys.editor.expiresHint':
+      'Leer lassen, damit der Schlüssel nicht abläuft. Maximal 3650 Tage.',
     'settings:apiKeys.editor.permissions': 'Berechtigungen',
     'settings:apiKeys.editor.selectedActions': '{count} ausgewählt',
     'settings:apiKeys.created.title': 'API-Schlüssel erstellt',
-    'settings:apiKeys.created.description': 'Kopiere den Schlüssel jetzt — er wird nicht erneut angezeigt.',
-    'settings:apiKeys.created.warning': 'Dies ist die einzige Gelegenheit, den vollständigen Schlüssel zu sehen. Bewahre ihn sicher auf.',
+    'settings:apiKeys.created.description':
+      'Kopiere den Schlüssel jetzt — er wird nicht erneut angezeigt.',
+    'settings:apiKeys.created.warning':
+      'Dies ist die einzige Gelegenheit, den vollständigen Schlüssel zu sehen. Bewahre ihn sicher auf.',
     'settings:apiKeys.created.reveal': 'Schlüssel anzeigen',
     'settings:apiKeys.created.hide': 'Schlüssel ausblenden',
     'settings:apiKeys.created.copy': 'Kopieren',
@@ -231,18 +239,22 @@ export const de: LocaleBundle = {
     'settings:apiKeys.notice.copied': 'In die Zwischenablage kopiert',
     'settings:apiKeys.notice.copyFailed': 'Kopieren in die Zwischenablage fehlgeschlagen',
     'settings:apiKeys.confirmRevoke.title': 'API-Schlüssel widerrufen',
-    'settings:apiKeys.confirmRevoke.description': '„{name}" widerrufen? Alle Dienste, die diesen Schlüssel verwenden, funktionieren sofort nicht mehr.',
+    'settings:apiKeys.confirmRevoke.description':
+      '„{name}" widerrufen? Alle Dienste, die diesen Schlüssel verwenden, funktionieren sofort nicht mehr.',
     'settings:webhooks.title': 'Webhooks',
-    'settings:webhooks.description': 'Send signed HTTP notifications when records are created, updated, or deleted.',
+    'settings:webhooks.description':
+      'Send signed HTTP notifications when records are created, updated, or deleted.',
     'settings:webhooks.actions.create': 'New webhook',
     'settings:webhooks.actions.test': 'Test',
     'settings:webhooks.notice.saved': 'Webhook saved',
     'settings:webhooks.notice.deleted': 'Webhook deleted',
     'settings:webhooks.notice.testQueued': 'Test notification queued',
     'settings:webhooks.confirmDelete.title': 'Delete webhook',
-    'settings:webhooks.confirmDelete.description': 'Delete "{name}"? Delivery history for this webhook will also be removed.',
+    'settings:webhooks.confirmDelete.description':
+      'Delete "{name}"? Delivery history for this webhook will also be removed.',
     'settings:webhooks.empty.title': 'No webhooks yet',
-    'settings:webhooks.empty.description': 'Create a webhook to notify external systems about admin changes.',
+    'settings:webhooks.empty.description':
+      'Create a webhook to notify external systems about admin changes.',
     'settings:webhooks.columns.name': 'Name',
     'settings:webhooks.columns.resource': 'Resource',
     'settings:webhooks.columns.events': 'Events',
@@ -256,7 +268,8 @@ export const de: LocaleBundle = {
     'settings:webhooks.deliveries.createdAt': 'Created',
     'settings:webhooks.editor.titleCreate': 'New webhook',
     'settings:webhooks.editor.titleEdit': 'Edit webhook',
-    'settings:webhooks.editor.description': 'Choose target URL, events, filters, and optional payload projection.',
+    'settings:webhooks.editor.description':
+      'Choose target URL, events, filters, and optional payload projection.',
     'settings:webhooks.editor.name': 'Name',
     'settings:webhooks.editor.url': 'URL',
     'settings:webhooks.editor.resource': 'Resource',
@@ -265,12 +278,16 @@ export const de: LocaleBundle = {
     'settings:webhooks.editor.enabled': 'Enabled',
     'settings:webhooks.editor.events': 'Events',
     'settings:webhooks.editor.payloadFields': 'Payload fields',
-    'settings:webhooks.editor.payloadFieldsHint': 'Restrict the payload to specific fields. Leave all unchecked to include the full record. Useful to avoid sending sensitive columns.',
+    'settings:webhooks.editor.payloadFieldsHint':
+      'Restrict the payload to specific fields. Leave all unchecked to include the full record. Useful to avoid sending sensitive columns.',
     'settings:webhooks.editor.headers': 'Headers',
-    'settings:webhooks.editor.headersHint': 'Custom HTTP headers sent with every delivery.\n\nExample:\n{\n  "Authorization": "Bearer <token>",\n  "X-Source": "modern-admin"\n}\n\nUseful for auth tokens, Slack incoming webhook URLs stored as a header, or endpoint-specific signatures.',
+    'settings:webhooks.editor.headersHint':
+      'Custom HTTP headers sent with every delivery.\n\nExample:\n{\n  "Authorization": "Bearer <token>",\n  "X-Source": "modern-admin"\n}\n\nUseful for auth tokens, Slack incoming webhook URLs stored as a header, or endpoint-specific signatures.',
     'settings:webhooks.editor.filters': 'Filters',
-    'settings:webhooks.editor.filtersHint': 'Deliver only when the record matches all conditions (AND semantics). Leave empty to deliver for every matching event.\n\nExample:\n{\n  "status": "published",\n  "role": "admin"\n}\n\nNote: delete events bypass field filters because the record no longer exists.',
-    'settings:webhooks.editor.secretHint': 'Random string used to sign each delivery with HMAC-SHA256. Verify the X-Webhook-Signature header on your server to ensure the request is genuine.',
+    'settings:webhooks.editor.filtersHint':
+      'Deliver only when the record matches all conditions (AND semantics). Leave empty to deliver for every matching event.\n\nExample:\n{\n  "status": "published",\n  "role": "admin"\n}\n\nNote: delete events bypass field filters because the record no longer exists.',
+    'settings:webhooks.editor.secretHint':
+      'Random string used to sign each delivery with HMAC-SHA256. Verify the X-Webhook-Signature header on your server to ensure the request is genuine.',
     'chart:dashboard': 'Dashboard',
     'chart:addChart': 'Diagramm hinzufügen',
     'chart:newChart': 'Neues Diagramm',
@@ -297,7 +314,8 @@ export const de: LocaleBundle = {
     'chart:deleteChartConfirm': 'Diagramm entfernen?',
     'chart:deleteChartConfirmHint': 'Diese Aktion kann nicht rückgängig gemacht werden.',
     'chart:deleteGroupConfirm': 'Diese Gruppe entfernen?',
-    'chart:deleteGroupConfirmHint': 'Die Gruppe und alle darin enthaltenen Diagramme ({count}) werden dauerhaft gelöscht.',
+    'chart:deleteGroupConfirmHint':
+      'Die Gruppe und alle darin enthaltenen Diagramme ({count}) werden dauerhaft gelöscht.',
     'chart:title': 'Titel',
     'chart:titlePlaceholder': 'z.B. Neue Nutzer pro Tag',
     'chart:untitled': 'Ohne Titel',
@@ -336,7 +354,8 @@ export const de: LocaleBundle = {
     'dashboard:metricMax': 'Max',
     'dashboard:builder.range': 'Zeitraum',
     'dashboard:builder.filters': 'Filter',
-    'dashboard:builder.filtersHint': 'Datensatz vor der Aggregation eingrenzen. Aktiviere ein Häkchen, um den Filter über dem Diagramm einzublenden.',
+    'dashboard:builder.filtersHint':
+      'Datensatz vor der Aggregation eingrenzen. Aktiviere ein Häkchen, um den Filter über dem Diagramm einzublenden.',
     'dashboard:builder.quickFilterHint': 'Diesen Filter über dem Diagramm im Dashboard anzeigen.',
     'dashboard:builder.quickFilterToggle': '{field} als Schnellfilter einblenden',
     'dashboard:range.7d': '7T',
@@ -353,7 +372,8 @@ export const de: LocaleBundle = {
     'dashboard:widget.expand': 'Auf volle Zeile erweitern',
     'dashboard:widget.toggleSql': 'SQL anzeigen',
     'dashboard:widget.unsupported': 'Diagramme werden für Ihre Datenbank noch nicht unterstützt.',
-    'dashboard:widget.truncatedWarning': 'Teildaten werden angezeigt – zu viele Zeilen, um den gesamten Bereich zu aggregieren.',
+    'dashboard:widget.truncatedWarning':
+      'Teildaten werden angezeigt – zu viele Zeilen, um den gesamten Bereich zu aggregieren.',
     'dashboard:widget.showAll': 'Alle anzeigen',
     'dashboard:widget.hideAll': 'Alle ausblenden',
     'dashboard:seriesTotal': 'Gesamt',
@@ -368,10 +388,12 @@ export const de: LocaleBundle = {
     'dashboard:width.half': 'Halb',
     'dashboard:width.full': 'Volle Zeile',
     'dashboard:builder.comparePrevious': 'Mit vorherigem Zeitraum vergleichen',
-    'dashboard:builder.comparePreviousHint': 'Blendet den gleich langen vorherigen Zeitraum als gestrichelte Linie ein und zeigt die Veränderung neben dem Titel an.',
+    'dashboard:builder.comparePreviousHint':
+      'Blendet den gleich langen vorherigen Zeitraum als gestrichelte Linie ein und zeigt die Veränderung neben dem Titel an.',
     'dashboard:builder.comparePreviousDisabled': 'Bei einer Aufschlüsselung nicht verfügbar.',
     'dashboard:builder.transform': 'Wertetransformation',
-    'dashboard:builder.transformHint': 'Wird vor der Anzeige auf die Werte angewendet — z. B. durch 100 teilen, um Cent als Euro anzuzeigen.',
+    'dashboard:builder.transformHint':
+      'Wird vor der Anzeige auf die Werte angewendet — z. B. durch 100 teilen, um Cent als Euro anzuzeigen.',
     'dashboard:builder.transformAdd': 'Schritt hinzufügen',
     'dashboard:builder.transformRemove': 'Schritt entfernen',
     'dashboard:builder.opDivide': 'Dividieren durch',
@@ -453,9 +475,11 @@ export const de: LocaleBundle = {
     'aiAssistant:title': 'KI-Assistent',
     'aiAssistant:fab.label': 'KI-Assistenten öffnen',
     'aiAssistant:fab.short': 'KI',
-    'aiAssistant:description': 'Stellen Sie Fragen zu Datensätzen, Beziehungen, Berichten und Datentrends.',
+    'aiAssistant:description':
+      'Stellen Sie Fragen zu Datensätzen, Beziehungen, Berichten und Datentrends.',
     'aiAssistant:notConfigured.title': 'Assistent ist nicht konfiguriert',
-    'aiAssistant:notConfigured.description': 'Fügen Sie den API-Schlüssel des Anbieters in den Einstellungen hinzu, um den schreibgeschützten KI-Assistenten zu aktivieren.',
+    'aiAssistant:notConfigured.description':
+      'Fügen Sie den API-Schlüssel des Anbieters in den Einstellungen hinzu, um den schreibgeschützten KI-Assistenten zu aktivieren.',
     'aiAssistant:notConfigured.openSettings': 'Einstellungen öffnen',
     'aiAssistant:tryAsking': 'Versuchen Sie zu fragen:',
     'aiAssistant:tryAsking.example1': 'Welche Kunden haben die meisten Beiträge?',
@@ -470,24 +494,34 @@ export const de: LocaleBundle = {
     'aiAssistant:history': 'Chatverlauf',
     'aiAssistant:history.empty': 'Keine früheren Chats',
     'aiAssistant:noText': 'Hier sind die gefundenen zugehörigen Datensätze:',
-    'aiAssistant:fallback.noToolResult': 'Die Anfrage wurde ausgeführt, aber das Modell hat keine Textantwort zurückgegeben. Präzisieren Sie die Frage oder aktivieren Sie Debug-Logs, um das Tool-Ergebnis zu prüfen.',
+    'aiAssistant:fallback.noToolResult':
+      'Die Anfrage wurde ausgeführt, aber das Modell hat keine Textantwort zurückgegeben. Präzisieren Sie die Frage oder aktivieren Sie Debug-Logs, um das Tool-Ergebnis zu prüfen.',
     'aiAssistant:fallback.noRows': 'Für diese Anfrage wurden keine Datensätze gefunden.',
     'aiAssistant:fallback.rowsFound': 'Gefundene Zeilen: {count}.',
     'aiAssistant:taskFailed': 'KI-Assistent-Aufgabe fehlgeschlagen',
     'aiAssistant:provider.api-stock': 'API Stock',
     'aiAssistant:provider.openrouter': 'OpenRouter',
     'aiAssistant:error.providerNotConfigured': 'Der KI-Anbieter ist nicht konfiguriert',
-    'aiAssistant:error.queueNotConfigured': 'Die Warteschlange des KI-Assistenten ist nicht konfiguriert',
+    'aiAssistant:error.queueNotConfigured':
+      'Die Warteschlange des KI-Assistenten ist nicht konfiguriert',
     'aiAssistant:error.apiStockApiKeyMissing': 'Der API-Stock-API-Schlüssel ist nicht konfiguriert',
-    'aiAssistant:error.apiStockPeersMissing': 'ApiStockLlmProvider benötigt die optionalen Peer-Abhängigkeiten `ai` und `@ai-sdk/openai-compatible`; installieren Sie sie in der Host-Anwendung.',
-    'aiAssistant:error.openRouterApiKeyMissing': 'Der OpenRouter-API-Schlüssel ist nicht konfiguriert',
-    'aiAssistant:error.openRouterPeersMissing': 'OpenRouterLlmProvider benötigt die optionalen Peer-Abhängigkeiten `ai` und `@openrouter/ai-sdk-provider`; installieren Sie sie in der Host-Anwendung.',
-    'aiAssistant:error.externalQueueModeRequired': 'ModernAdminModule.forRootAsync hat einen externen KI-Queue-Dispatcher erhalten; setzen Sie `aiAssistantQueue` auf `external`.',
-    'aiAssistant:error.externalQueueDispatcherRequired': 'ModernAdminModule.forRootAsync hat eine externe KI-Queue ausgewählt, aber die Factory lieferte keinen `aiAssistant.queue.dispatcher`.',
-    'aiAssistant:error.asyncFlagRequired': 'Die Factory von ModernAdminModule.forRootAsync lieferte KI-Assistent-Optionen; fügen Sie `aiAssistant: true` hinzu.',
-    'aiAssistant:error.asyncOptionsRequired': 'ModernAdminModule.forRootAsync hat den KI-Assistenten aktiviert, aber die Factory lieferte keine `aiAssistant`-Optionen.',
+    'aiAssistant:error.apiStockPeersMissing':
+      'ApiStockLlmProvider benötigt die optionalen Peer-Abhängigkeiten `ai` und `@ai-sdk/openai-compatible`; installieren Sie sie in der Host-Anwendung.',
+    'aiAssistant:error.openRouterApiKeyMissing':
+      'Der OpenRouter-API-Schlüssel ist nicht konfiguriert',
+    'aiAssistant:error.openRouterPeersMissing':
+      'OpenRouterLlmProvider benötigt die optionalen Peer-Abhängigkeiten `ai` und `@openrouter/ai-sdk-provider`; installieren Sie sie in der Host-Anwendung.',
+    'aiAssistant:error.externalQueueModeRequired':
+      'ModernAdminModule.forRootAsync hat einen externen KI-Queue-Dispatcher erhalten; setzen Sie `aiAssistantQueue` auf `external`.',
+    'aiAssistant:error.externalQueueDispatcherRequired':
+      'ModernAdminModule.forRootAsync hat eine externe KI-Queue ausgewählt, aber die Factory lieferte keinen `aiAssistant.queue.dispatcher`.',
+    'aiAssistant:error.asyncFlagRequired':
+      'Die Factory von ModernAdminModule.forRootAsync lieferte KI-Assistent-Optionen; fügen Sie `aiAssistant: true` hinzu.',
+    'aiAssistant:error.asyncOptionsRequired':
+      'ModernAdminModule.forRootAsync hat den KI-Assistenten aktiviert, aber die Factory lieferte keine `aiAssistant`-Optionen.',
     'aiAssistant:settings.title': 'KI-Assistent',
-    'aiAssistant:settings.description': 'Konfigurieren Sie das schwebende Chat-Widget, das Modell und das serverseitige Assistentenverhalten.',
+    'aiAssistant:settings.description':
+      'Konfigurieren Sie das schwebende Chat-Widget, das Modell und das serverseitige Assistentenverhalten.',
     'aiAssistant:settings.enabled': 'Aktiviert',
     'aiAssistant:settings.disabled': 'Deaktiviert',
     'aiAssistant:settings.configured': 'Konfiguriert',
@@ -495,16 +529,20 @@ export const de: LocaleBundle = {
     'aiAssistant:settings.readOnly': 'Nur lesen',
     'aiAssistant:settings.provider': 'Anbieter: {provider}',
     'aiAssistant:settings.enableLabel': 'Assistenten aktivieren',
-    'aiAssistant:settings.enableHint': 'Steuert die Sichtbarkeit des schwebenden Widgets und des Chat-Endpunkts.',
+    'aiAssistant:settings.enableHint':
+      'Steuert die Sichtbarkeit des schwebenden Widgets und des Chat-Endpunkts.',
     'aiAssistant:settings.modelLabel': 'Modell',
     'aiAssistant:settings.apiKeyLabel': 'API-Schlüssel des Anbieters',
     'aiAssistant:settings.apiKeyPlaceholder': 'sk-…',
-    'aiAssistant:settings.apiKeyHint': 'Leer lassen, um den auf dem Server gespeicherten Schlüssel beizubehalten.',
+    'aiAssistant:settings.apiKeyHint':
+      'Leer lassen, um den auf dem Server gespeicherten Schlüssel beizubehalten.',
     'aiAssistant:settings.createApiKey': 'API-Schlüssel bei {provider} erstellen',
     'aiAssistant:settings.systemPromptLabel': 'System-Prompt überschreiben',
-    'aiAssistant:settings.systemPromptPlaceholder': 'Optionale projektspezifische Anweisungen für den Assistenten',
+    'aiAssistant:settings.systemPromptPlaceholder':
+      'Optionale projektspezifische Anweisungen für den Assistenten',
     'aiAssistant:settings.accessTitle': 'Zugriffsmodell',
-    'aiAssistant:settings.accessDescription': 'Der aktuelle Assistent ist auf schreibgeschützte Datensatzprüfung über Admin-Ressourcenaktionen beschränkt.',
+    'aiAssistant:settings.accessDescription':
+      'Der aktuelle Assistent ist auf schreibgeschützte Datensatzprüfung über Admin-Ressourcenaktionen beschränkt.',
     'aiAssistant:settings.futureToolsReady': 'Bereit für zukünftige Tools',
     'aiAssistant:settings.save': 'Einstellungen speichern',
     'aiAssistant:settings.saving': 'Speichere…',
@@ -541,7 +579,8 @@ export const de: LocaleBundle = {
     'common:undoDraftRestore': 'Rückgängig',
     'aiFill:button': 'KI-Ausfüllen',
     'aiFill:dialogTitle': 'Formular aus Foto ausfüllen',
-    'aiFill:dialogDescription': 'Bild hochladen — die KI extrahiert die Werte und füllt das Formular aus.',
+    'aiFill:dialogDescription':
+      'Bild hochladen — die KI extrahiert die Werte und füllt das Formular aus.',
     'aiFill:fillButton': 'Erkennen',
     'aiFill:processing': 'Bild wird erkannt…',
     'aiFill:success': '{count} Feld(er) ausgefüllt',
@@ -573,9 +612,11 @@ export const de: LocaleBundle = {
     'cache:metric.errors': 'Fehler',
     'cache:unit.ms': '{value} ms',
     'cache:quarantine.title': 'Quarantänisierte Tags',
-    'cache:quarantine.description': 'Diese Tags umgehen den Cache, bis die Invalidierung erfolgreich ist.',
+    'cache:quarantine.description':
+      'Diese Tags umgehen den Cache, bis die Invalidierung erfolgreich ist.',
     'cache:invalidate.title': 'Ressourcen-Cache invalidieren',
-    'cache:invalidate.description': 'Listen- und Datensatzeinträge einer Ressource auf allen Repliken löschen.',
+    'cache:invalidate.description':
+      'Listen- und Datensatzeinträge einer Ressource auf allen Repliken löschen.',
     'cache:invalidate.resource': 'Ressource',
     'cache:invalidate.action': 'Cache invalidieren',
     'cache:invalidate.loading': 'Cache wird invalidiert…',
@@ -593,7 +634,8 @@ export const de: LocaleBundle = {
     'cache:table.errors': 'Fehler',
     'mediaGeneration:action.label': 'Medien generieren',
     'mediaGeneration:settings.title': 'Mediengenerierung',
-    'mediaGeneration:settings.description': 'Bilder und Videos über API Stock erstellen, ohne den API-Schlüssel im Browser offenzulegen.',
+    'mediaGeneration:settings.description':
+      'Bilder und Videos über API Stock erstellen, ohne den API-Schlüssel im Browser offenzulegen.',
     'mediaGeneration:settings.saved': 'Einstellungen gespeichert',
     'mediaGeneration:settings.empty': 'Einstellungen sind nicht verfügbar.',
     'mediaGeneration:settings.enabled': 'Aktiviert',
@@ -604,14 +646,18 @@ export const de: LocaleBundle = {
     'mediaGeneration:settings.enableHint': 'Steuert neue kostenpflichtige Generierungsanfragen.',
     'mediaGeneration:settings.apiKeyLabel': 'API-Stock-API-Schlüssel',
     'mediaGeneration:settings.apiKeyPlaceholder': 'Serverseitigen API-Schlüssel eingeben',
-    'mediaGeneration:settings.apiKeyHint': 'Der Schlüssel bleibt auf dem Server und wird nie an den Browser zurückgegeben.',
+    'mediaGeneration:settings.apiKeyHint':
+      'Der Schlüssel bleibt auf dem Server und wird nie an den Browser zurückgegeben.',
     'mediaGeneration:settings.createApiKey': 'API-Stock-Schlüssel erstellen',
     'mediaGeneration:studio.title': 'Medienstudio',
-    'mediaGeneration:studio.description': 'Eigenständige Bilder oder Videos erstellen und herunterladen.',
+    'mediaGeneration:studio.description':
+      'Eigenständige Bilder oder Videos erstellen und herunterladen.',
     'mediaGeneration:field.model': 'Modell',
     'mediaGeneration:field.prompt': 'Prompt',
-    'mediaGeneration:field.arrayHint': 'Trennen Sie Werte mit einem Komma oder einem Zeilenumbruch.',
-    'mediaGeneration:confirm.cost': 'Mir ist bewusst, dass diese Anfrage API-Stock-Kosten verursachen kann.',
+    'mediaGeneration:field.arrayHint':
+      'Trennen Sie Werte mit einem Komma oder einem Zeilenumbruch.',
+    'mediaGeneration:confirm.cost':
+      'Mir ist bewusst, dass diese Anfrage API-Stock-Kosten verursachen kann.',
     'mediaGeneration:estimatedCost': 'Geschätzte Kosten: ${price}',
     'mediaGeneration:create': 'Generieren',
     'mediaGeneration:cancel': 'Warten beenden',
@@ -625,7 +671,8 @@ export const de: LocaleBundle = {
     'mediaGeneration:status.cancelled': 'Abgebrochen',
     'mediaGeneration:preview.alt': 'Generierte Variante {index}',
     'mediaGeneration:preview.variant': 'Variante {index}',
-    'mediaGeneration:preview.retention': 'Vorschau-Links des Anbieters sind temporär. Laden Sie das Ergebnis zeitnah herunter oder wenden Sie es an.',
+    'mediaGeneration:preview.retention':
+      'Vorschau-Links des Anbieters sind temporär. Laden Sie das Ergebnis zeitnah herunter oder wenden Sie es an.',
     'mediaGeneration:apply.replace': 'Vorhandene Datei ersetzen',
     'mediaGeneration:apply.button': 'Auf Datensatz anwenden',
     'mediaGeneration:apply.applied': 'Angewendet',

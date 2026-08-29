@@ -32,22 +32,18 @@ export const EmptyHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes
 )
 EmptyHeader.displayName = 'EmptyHeader'
 
-const emptyMediaVariants = cva(
-  'flex shrink-0 items-center justify-center [&>svg]:size-6',
-  {
-    variants: {
-      variant: {
-        default: 'text-muted-foreground',
-        icon: 'flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground [&>svg]:size-6',
-      },
+const emptyMediaVariants = cva('flex shrink-0 items-center justify-center [&>svg]:size-6', {
+  variants: {
+    variant: {
+      default: 'text-muted-foreground',
+      icon: 'flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground [&>svg]:size-6',
     },
-    defaultVariants: { variant: 'icon' },
   },
-)
+  defaultVariants: { variant: 'icon' },
+})
 
 export interface EmptyMediaProps
-  extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof emptyMediaVariants> {}
+  extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof emptyMediaVariants> {}
 
 export const EmptyMedia = React.forwardRef<HTMLDivElement, EmptyMediaProps>(
   ({ className, variant, ...props }, ref) => (

@@ -39,7 +39,8 @@ export const ja: LocaleBundle = {
     'common:actions': 'アクション',
     'action:notFound': 'アクション「{action}」はこのリソースでは利用できません。',
     'action:componentMissing': '「{component}」という名前のコンポーネントが登録されていません。',
-    'action:componentMissingHint': '<ModernAdminProvider components={…}> に渡す ComponentLoader に登録してください。',
+    'action:componentMissingHint':
+      '<ModernAdminProvider components={…}> に渡す ComponentLoader に登録してください。',
     'action:loadFailed': 'アクションの読み込みに失敗しました。',
     'common:new': '新規',
     'common:rowsPerPage': '1ページの行数',
@@ -186,12 +187,14 @@ export const ja: LocaleBundle = {
     'settings:menuItem': '設定',
     'settings:noSectionsConfigured': 'このデプロイメントで利用できる設定セクションはありません。',
     'settings:apiKeys.title': 'APIキー',
-    'settings:apiKeys.description': '管理APIへのプログラムアクセス用トークン。各キーには、呼び出せるリソースとアクションを制限する権限セットが含まれます。',
+    'settings:apiKeys.description':
+      '管理APIへのプログラムアクセス用トークン。各キーには、呼び出せるリソースとアクションを制限する権限セットが含まれます。',
     'settings:apiKeys.actions.create': '新しいキー',
     'settings:apiKeys.actions.edit': '編集',
     'settings:apiKeys.actions.revoke': '無効化',
     'settings:apiKeys.empty.title': 'APIキーがまだありません',
-    'settings:apiKeys.empty.description': '最初のキーを作成してプログラムアクセスを許可しましょう。',
+    'settings:apiKeys.empty.description':
+      '最初のキーを作成してプログラムアクセスを許可しましょう。',
     'settings:apiKeys.columns.name': '名前',
     'settings:apiKeys.columns.start': 'プレフィックス',
     'settings:apiKeys.columns.permissions': '権限',
@@ -211,7 +214,8 @@ export const ja: LocaleBundle = {
     'settings:apiKeys.permissions.clearAllResources': 'すべてのリソースとアクションを解除',
     'settings:apiKeys.editor.titleCreate': '新しいAPIキー',
     'settings:apiKeys.editor.titleEdit': 'APIキーを編集',
-    'settings:apiKeys.editor.description': '分かりやすい名前を付け、このキーが本当に必要とするリソースとアクションだけを許可してください。',
+    'settings:apiKeys.editor.description':
+      '分かりやすい名前を付け、このキーが本当に必要とするリソースとアクションだけを許可してください。',
     'settings:apiKeys.editor.name': '名前',
     'settings:apiKeys.editor.namePlaceholder': '例: CIデプロイボット',
     'settings:apiKeys.editor.expiresInDays': '有効期限（日数）',
@@ -221,7 +225,8 @@ export const ja: LocaleBundle = {
     'settings:apiKeys.editor.selectedActions': '{count}件選択',
     'settings:apiKeys.created.title': 'APIキーを作成しました',
     'settings:apiKeys.created.description': '今すぐキーをコピーしてください — 再表示されません。',
-    'settings:apiKeys.created.warning': '完全なキーが表示されるのは今回だけです。安全な場所に保管してください。',
+    'settings:apiKeys.created.warning':
+      '完全なキーが表示されるのは今回だけです。安全な場所に保管してください。',
     'settings:apiKeys.created.reveal': 'キーを表示',
     'settings:apiKeys.created.hide': 'キーを隠す',
     'settings:apiKeys.created.copy': 'コピー',
@@ -231,18 +236,22 @@ export const ja: LocaleBundle = {
     'settings:apiKeys.notice.copied': 'クリップボードにコピーしました',
     'settings:apiKeys.notice.copyFailed': 'クリップボードへのコピーに失敗しました',
     'settings:apiKeys.confirmRevoke.title': 'APIキーを無効化',
-    'settings:apiKeys.confirmRevoke.description': '「{name}」を無効化しますか？このキーを使用しているすべてのサービスは即座に動作しなくなります。',
+    'settings:apiKeys.confirmRevoke.description':
+      '「{name}」を無効化しますか？このキーを使用しているすべてのサービスは即座に動作しなくなります。',
     'settings:webhooks.title': 'Webhooks',
-    'settings:webhooks.description': 'Send signed HTTP notifications when records are created, updated, or deleted.',
+    'settings:webhooks.description':
+      'Send signed HTTP notifications when records are created, updated, or deleted.',
     'settings:webhooks.actions.create': 'New webhook',
     'settings:webhooks.actions.test': 'Test',
     'settings:webhooks.notice.saved': 'Webhook saved',
     'settings:webhooks.notice.deleted': 'Webhook deleted',
     'settings:webhooks.notice.testQueued': 'Test notification queued',
     'settings:webhooks.confirmDelete.title': 'Delete webhook',
-    'settings:webhooks.confirmDelete.description': 'Delete "{name}"? Delivery history for this webhook will also be removed.',
+    'settings:webhooks.confirmDelete.description':
+      'Delete "{name}"? Delivery history for this webhook will also be removed.',
     'settings:webhooks.empty.title': 'No webhooks yet',
-    'settings:webhooks.empty.description': 'Create a webhook to notify external systems about admin changes.',
+    'settings:webhooks.empty.description':
+      'Create a webhook to notify external systems about admin changes.',
     'settings:webhooks.columns.name': 'Name',
     'settings:webhooks.columns.resource': 'Resource',
     'settings:webhooks.columns.events': 'Events',
@@ -256,7 +265,8 @@ export const ja: LocaleBundle = {
     'settings:webhooks.deliveries.createdAt': 'Created',
     'settings:webhooks.editor.titleCreate': 'New webhook',
     'settings:webhooks.editor.titleEdit': 'Edit webhook',
-    'settings:webhooks.editor.description': 'Choose target URL, events, filters, and optional payload projection.',
+    'settings:webhooks.editor.description':
+      'Choose target URL, events, filters, and optional payload projection.',
     'settings:webhooks.editor.name': 'Name',
     'settings:webhooks.editor.url': 'URL',
     'settings:webhooks.editor.resource': 'Resource',
@@ -265,12 +275,16 @@ export const ja: LocaleBundle = {
     'settings:webhooks.editor.enabled': 'Enabled',
     'settings:webhooks.editor.events': 'Events',
     'settings:webhooks.editor.payloadFields': 'Payload fields',
-    'settings:webhooks.editor.payloadFieldsHint': 'Restrict the payload to specific fields. Leave all unchecked to include the full record. Useful to avoid sending sensitive columns.',
+    'settings:webhooks.editor.payloadFieldsHint':
+      'Restrict the payload to specific fields. Leave all unchecked to include the full record. Useful to avoid sending sensitive columns.',
     'settings:webhooks.editor.headers': 'Headers',
-    'settings:webhooks.editor.headersHint': 'Custom HTTP headers sent with every delivery.\n\nExample:\n{\n  "Authorization": "Bearer <token>",\n  "X-Source": "modern-admin"\n}\n\nUseful for auth tokens, Slack incoming webhook URLs stored as a header, or endpoint-specific signatures.',
+    'settings:webhooks.editor.headersHint':
+      'Custom HTTP headers sent with every delivery.\n\nExample:\n{\n  "Authorization": "Bearer <token>",\n  "X-Source": "modern-admin"\n}\n\nUseful for auth tokens, Slack incoming webhook URLs stored as a header, or endpoint-specific signatures.',
     'settings:webhooks.editor.filters': 'Filters',
-    'settings:webhooks.editor.filtersHint': 'Deliver only when the record matches all conditions (AND semantics). Leave empty to deliver for every matching event.\n\nExample:\n{\n  "status": "published",\n  "role": "admin"\n}\n\nNote: delete events bypass field filters because the record no longer exists.',
-    'settings:webhooks.editor.secretHint': 'Random string used to sign each delivery with HMAC-SHA256. Verify the X-Webhook-Signature header on your server to ensure the request is genuine.',
+    'settings:webhooks.editor.filtersHint':
+      'Deliver only when the record matches all conditions (AND semantics). Leave empty to deliver for every matching event.\n\nExample:\n{\n  "status": "published",\n  "role": "admin"\n}\n\nNote: delete events bypass field filters because the record no longer exists.',
+    'settings:webhooks.editor.secretHint':
+      'Random string used to sign each delivery with HMAC-SHA256. Verify the X-Webhook-Signature header on your server to ensure the request is genuine.',
     'chart:dashboard': 'ダッシュボード',
     'chart:addChart': 'グラフを追加',
     'chart:newChart': '新しいグラフ',
@@ -336,7 +350,8 @@ export const ja: LocaleBundle = {
     'dashboard:metricMax': '最大',
     'dashboard:builder.range': '期間',
     'dashboard:builder.filters': 'フィルター',
-    'dashboard:builder.filtersHint': '集計前にデータを絞り込みます。チェックを付けると、グラフの上にクイックフィルターとして表示されます。',
+    'dashboard:builder.filtersHint':
+      '集計前にデータを絞り込みます。チェックを付けると、グラフの上にクイックフィルターとして表示されます。',
     'dashboard:builder.quickFilterHint': 'このフィルターをダッシュボードのグラフ上部に表示します。',
     'dashboard:builder.quickFilterToggle': '{field} をクイックフィルターとして表示',
     'dashboard:range.7d': '7日',
@@ -353,7 +368,8 @@ export const ja: LocaleBundle = {
     'dashboard:widget.expand': '全幅に拡大',
     'dashboard:widget.toggleSql': 'SQLを表示',
     'dashboard:widget.unsupported': 'お使いのデータベースではグラフをまだサポートしていません。',
-    'dashboard:widget.truncatedWarning': '部分的なデータを表示しています。行数が多すぎて全期間を集計できません。',
+    'dashboard:widget.truncatedWarning':
+      '部分的なデータを表示しています。行数が多すぎて全期間を集計できません。',
     'dashboard:widget.showAll': 'すべて表示',
     'dashboard:widget.hideAll': 'すべて非表示',
     'dashboard:seriesTotal': '合計',
@@ -368,10 +384,12 @@ export const ja: LocaleBundle = {
     'dashboard:width.half': '半分',
     'dashboard:width.full': '全幅',
     'dashboard:builder.comparePrevious': '前の期間と比較',
-    'dashboard:builder.comparePreviousHint': '同じ長さの直前の期間を破線で重ねて表示し、タイトルの横に変化を表示します。',
+    'dashboard:builder.comparePreviousHint':
+      '同じ長さの直前の期間を破線で重ねて表示し、タイトルの横に変化を表示します。',
     'dashboard:builder.comparePreviousDisabled': '内訳を使用している場合は利用できません。',
     'dashboard:builder.transform': '値の変換',
-    'dashboard:builder.transformHint': '表示前に値へ適用されます — 例：100で割ってセントをドルとして表示。',
+    'dashboard:builder.transformHint':
+      '表示前に値へ適用されます — 例：100で割ってセントをドルとして表示。',
     'dashboard:builder.transformAdd': 'ステップを追加',
     'dashboard:builder.transformRemove': 'ステップを削除',
     'dashboard:builder.opDivide': '割る',
@@ -455,7 +473,8 @@ export const ja: LocaleBundle = {
     'aiAssistant:fab.short': 'AI',
     'aiAssistant:description': 'レコード、関連性、レポート、データ傾向について質問できます。',
     'aiAssistant:notConfigured.title': 'アシスタントが構成されていません',
-    'aiAssistant:notConfigured.description': '読み取り専用 AI アシスタントを有効にするには、設定でプロバイダーの API キーを追加してください。',
+    'aiAssistant:notConfigured.description':
+      '読み取り専用 AI アシスタントを有効にするには、設定でプロバイダーの API キーを追加してください。',
     'aiAssistant:notConfigured.openSettings': '設定を開く',
     'aiAssistant:tryAsking': '質問例:',
     'aiAssistant:tryAsking.example1': '投稿数が最も多い顧客は誰ですか？',
@@ -470,7 +489,8 @@ export const ja: LocaleBundle = {
     'aiAssistant:history': 'チャット履歴',
     'aiAssistant:history.empty': '以前のチャットはありません',
     'aiAssistant:noText': '関連するレコードが見つかりました:',
-    'aiAssistant:fallback.noToolResult': 'リクエストは実行されましたが、モデルがテキスト回答を返しませんでした。質問を具体化するか、デバッグログを有効にしてツール結果を確認してください。',
+    'aiAssistant:fallback.noToolResult':
+      'リクエストは実行されましたが、モデルがテキスト回答を返しませんでした。質問を具体化するか、デバッグログを有効にしてツール結果を確認してください。',
     'aiAssistant:fallback.noRows': 'このリクエストに一致するレコードは見つかりませんでした。',
     'aiAssistant:fallback.rowsFound': '見つかった行数: {count}。',
     'aiAssistant:taskFailed': 'AI アシスタントのタスクが失敗しました',
@@ -479,15 +499,22 @@ export const ja: LocaleBundle = {
     'aiAssistant:error.providerNotConfigured': 'AI アシスタントのプロバイダーが設定されていません',
     'aiAssistant:error.queueNotConfigured': 'AI アシスタントのキューが設定されていません',
     'aiAssistant:error.apiStockApiKeyMissing': 'API Stock の API キーが設定されていません',
-    'aiAssistant:error.apiStockPeersMissing': 'ApiStockLlmProvider にはオプションの peer `ai` と `@ai-sdk/openai-compatible` が必要です。ホストアプリケーションにインストールしてください。',
+    'aiAssistant:error.apiStockPeersMissing':
+      'ApiStockLlmProvider にはオプションの peer `ai` と `@ai-sdk/openai-compatible` が必要です。ホストアプリケーションにインストールしてください。',
     'aiAssistant:error.openRouterApiKeyMissing': 'OpenRouter API キーが設定されていません',
-    'aiAssistant:error.openRouterPeersMissing': 'OpenRouterLlmProvider にはオプションの peer `ai` と `@openrouter/ai-sdk-provider` が必要です。ホストアプリケーションにインストールしてください。',
-    'aiAssistant:error.externalQueueModeRequired': 'ModernAdminModule.forRootAsync が外部 AI キューディスパッチャーを受け取りました。`aiAssistantQueue` を `external` に設定してください。',
-    'aiAssistant:error.externalQueueDispatcherRequired': 'ModernAdminModule.forRootAsync で外部 AI キューが選択されましたが、factory が `aiAssistant.queue.dispatcher` を返しませんでした。',
-    'aiAssistant:error.asyncFlagRequired': 'ModernAdminModule.forRootAsync の factory が AI アシスタント設定を返しました。`aiAssistant: true` を追加してください。',
-    'aiAssistant:error.asyncOptionsRequired': 'ModernAdminModule.forRootAsync で AI アシスタントが有効ですが、factory が `aiAssistant` 設定を返しませんでした。',
+    'aiAssistant:error.openRouterPeersMissing':
+      'OpenRouterLlmProvider にはオプションの peer `ai` と `@openrouter/ai-sdk-provider` が必要です。ホストアプリケーションにインストールしてください。',
+    'aiAssistant:error.externalQueueModeRequired':
+      'ModernAdminModule.forRootAsync が外部 AI キューディスパッチャーを受け取りました。`aiAssistantQueue` を `external` に設定してください。',
+    'aiAssistant:error.externalQueueDispatcherRequired':
+      'ModernAdminModule.forRootAsync で外部 AI キューが選択されましたが、factory が `aiAssistant.queue.dispatcher` を返しませんでした。',
+    'aiAssistant:error.asyncFlagRequired':
+      'ModernAdminModule.forRootAsync の factory が AI アシスタント設定を返しました。`aiAssistant: true` を追加してください。',
+    'aiAssistant:error.asyncOptionsRequired':
+      'ModernAdminModule.forRootAsync で AI アシスタントが有効ですが、factory が `aiAssistant` 設定を返しませんでした。',
     'aiAssistant:settings.title': 'AI アシスタント',
-    'aiAssistant:settings.description': 'フローティング AI チャットウィジェット、モデル、サーバー側アシスタントの動作を構成します。',
+    'aiAssistant:settings.description':
+      'フローティング AI チャットウィジェット、モデル、サーバー側アシスタントの動作を構成します。',
     'aiAssistant:settings.enabled': '有効',
     'aiAssistant:settings.disabled': '無効',
     'aiAssistant:settings.configured': '構成済み',
@@ -495,16 +522,20 @@ export const ja: LocaleBundle = {
     'aiAssistant:settings.readOnly': '読み取り専用',
     'aiAssistant:settings.provider': 'プロバイダー: {provider}',
     'aiAssistant:settings.enableLabel': 'アシスタントを有効化',
-    'aiAssistant:settings.enableHint': 'フローティングウィジェットとチャットエンドポイントの表示を制御します。',
+    'aiAssistant:settings.enableHint':
+      'フローティングウィジェットとチャットエンドポイントの表示を制御します。',
     'aiAssistant:settings.modelLabel': 'モデル',
     'aiAssistant:settings.apiKeyLabel': 'プロバイダー API キー',
     'aiAssistant:settings.apiKeyPlaceholder': 'sk-…',
-    'aiAssistant:settings.apiKeyHint': 'サーバーに保存済みの既存キーを保持するには空のままにしてください。',
+    'aiAssistant:settings.apiKeyHint':
+      'サーバーに保存済みの既存キーを保持するには空のままにしてください。',
     'aiAssistant:settings.createApiKey': '{provider} で API キーを作成',
     'aiAssistant:settings.systemPromptLabel': 'システムプロンプトの上書き',
-    'aiAssistant:settings.systemPromptPlaceholder': 'アシスタント向けのプロジェクト固有の指示（任意）',
+    'aiAssistant:settings.systemPromptPlaceholder':
+      'アシスタント向けのプロジェクト固有の指示（任意）',
     'aiAssistant:settings.accessTitle': 'アクセスモデル',
-    'aiAssistant:settings.accessDescription': '現在のアシスタントは、管理リソースアクションを通じたレコードの読み取り専用検査に制限されています。',
+    'aiAssistant:settings.accessDescription':
+      '現在のアシスタントは、管理リソースアクションを通じたレコードの読み取り専用検査に制限されています。',
     'aiAssistant:settings.futureToolsReady': '将来のツール対応',
     'aiAssistant:settings.save': '設定を保存',
     'aiAssistant:settings.saving': '保存中…',
@@ -512,7 +543,8 @@ export const ja: LocaleBundle = {
     'aiAssistant:settings.empty': '利用可能な設定はありません。',
     'aiFill:button': 'AI で入力',
     'aiFill:dialogTitle': '写真からフォームを入力',
-    'aiFill:dialogDescription': '画像をアップロードしてください — AI が値を抽出してフォームに入力します。',
+    'aiFill:dialogDescription':
+      '画像をアップロードしてください — AI が値を抽出してフォームに入力します。',
     'aiFill:fillButton': '認識する',
     'aiFill:processing': '画像を認識中\u2026',
     'aiFill:success': '{count} 個のフィールドが入力されました',
@@ -593,7 +625,8 @@ export const ja: LocaleBundle = {
     'cache:table.errors': 'エラー',
     'mediaGeneration:action.label': 'メディアを生成',
     'mediaGeneration:settings.title': 'メディア生成',
-    'mediaGeneration:settings.description': 'APIキーをブラウザーに公開せず、API Stockで画像や動画を作成します。',
+    'mediaGeneration:settings.description':
+      'APIキーをブラウザーに公開せず、API Stockで画像や動画を作成します。',
     'mediaGeneration:settings.saved': 'メディア生成設定を保存しました',
     'mediaGeneration:settings.empty': 'メディア生成設定を利用できません。',
     'mediaGeneration:settings.enabled': '有効',
@@ -611,7 +644,8 @@ export const ja: LocaleBundle = {
     'mediaGeneration:field.model': 'モデル',
     'mediaGeneration:field.prompt': 'プロンプト',
     'mediaGeneration:field.arrayHint': '値はカンマまたは改行で区切ってください。',
-    'mediaGeneration:confirm.cost': 'このリクエストにAPI Stockの料金が発生する可能性を理解しました。',
+    'mediaGeneration:confirm.cost':
+      'このリクエストにAPI Stockの料金が発生する可能性を理解しました。',
     'mediaGeneration:estimatedCost': '推定コスト: ${price}',
     'mediaGeneration:create': '生成',
     'mediaGeneration:cancel': '待機を停止',
@@ -625,7 +659,8 @@ export const ja: LocaleBundle = {
     'mediaGeneration:status.cancelled': 'キャンセル済み',
     'mediaGeneration:preview.alt': '生成されたバリエーション {index}',
     'mediaGeneration:preview.variant': 'バリエーション {index}',
-    'mediaGeneration:preview.retention': 'プロバイダーのプレビューリンクは一時的です。選択した結果を早めにダウンロードまたは適用してください。',
+    'mediaGeneration:preview.retention':
+      'プロバイダーのプレビューリンクは一時的です。選択した結果を早めにダウンロードまたは適用してください。',
     'mediaGeneration:apply.replace': '現在のファイルを置き換える',
     'mediaGeneration:apply.button': 'レコードに適用',
     'mediaGeneration:apply.applied': '適用済み',

@@ -68,8 +68,7 @@
     "build:config": "tsc -p tsconfig.config.json",
     "build:standalone": "vite build --mode standalone",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint ."
+    "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
     "react": "^19.2.8",

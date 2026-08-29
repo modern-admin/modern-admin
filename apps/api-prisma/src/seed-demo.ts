@@ -64,51 +64,160 @@ const idFor = (entity: keyof typeof ENTITY_PREFIX, n: number): string => {
 
 // ─── Static dictionaries (mirror InMemory seed) ──────────────────────────
 const FIRST_NAMES = [
-  'Ada', 'Alan', 'Grace', 'Linus', 'Margaret', 'Donald', 'Edsger', 'Barbara',
-  'Niklaus', 'Ken', 'Brian', 'Tony', 'Frances', 'Yukihiro', 'Anders', 'James',
-  'Bjarne', 'Guido', 'Larry', 'Rich', 'Dennis', 'Bill', 'Steve', 'Jeff',
-  'John', 'Lara', 'Sara', 'Maya', 'Yuki', 'Olga',
+  'Ada',
+  'Alan',
+  'Grace',
+  'Linus',
+  'Margaret',
+  'Donald',
+  'Edsger',
+  'Barbara',
+  'Niklaus',
+  'Ken',
+  'Brian',
+  'Tony',
+  'Frances',
+  'Yukihiro',
+  'Anders',
+  'James',
+  'Bjarne',
+  'Guido',
+  'Larry',
+  'Rich',
+  'Dennis',
+  'Bill',
+  'Steve',
+  'Jeff',
+  'John',
+  'Lara',
+  'Sara',
+  'Maya',
+  'Yuki',
+  'Olga',
 ]
 const LAST_NAMES = [
-  'Lovelace', 'Turing', 'Hopper', 'Torvalds', 'Hamilton', 'Knuth', 'Dijkstra',
-  'Liskov', 'Wirth', 'Thompson', 'Kernighan', 'Hoare', 'Allen', 'Matsumoto',
-  'Hejlsberg', 'Gosling', 'Stroustrup', 'van Rossum', 'Wall', 'Hickey',
+  'Lovelace',
+  'Turing',
+  'Hopper',
+  'Torvalds',
+  'Hamilton',
+  'Knuth',
+  'Dijkstra',
+  'Liskov',
+  'Wirth',
+  'Thompson',
+  'Kernighan',
+  'Hoare',
+  'Allen',
+  'Matsumoto',
+  'Hejlsberg',
+  'Gosling',
+  'Stroustrup',
+  'van Rossum',
+  'Wall',
+  'Hickey',
 ]
 const TIERS = ['free', 'pro', 'enterprise'] as const
 const TAG_COLORS = ['gray', 'blue', 'green', 'amber', 'red', 'violet'] as const
 const CATEGORY_NAMES = [
-  'Engineering', 'Mathematics', 'History', 'Design', 'DevOps', 'Security',
-  'Data', 'Mobile', 'Web', 'Embedded', 'AI/ML', 'Cloud',
+  'Engineering',
+  'Mathematics',
+  'History',
+  'Design',
+  'DevOps',
+  'Security',
+  'Data',
+  'Mobile',
+  'Web',
+  'Embedded',
+  'AI/ML',
+  'Cloud',
 ]
 const TAG_NAMES = [
-  'open-source', 'kernel', 'turing', 'logic', 'apollo', 'compilers', 'rust',
-  'typescript', 'react', 'graphql', 'postgres', 'redis', 'docker', 'k8s',
-  'wasm', 'edge', 'algorithms', 'hardware', 'history', 'theory', 'practice',
-  'tutorial', 'rfc', 'paper', 'talk',
+  'open-source',
+  'kernel',
+  'turing',
+  'logic',
+  'apollo',
+  'compilers',
+  'rust',
+  'typescript',
+  'react',
+  'graphql',
+  'postgres',
+  'redis',
+  'docker',
+  'k8s',
+  'wasm',
+  'edge',
+  'algorithms',
+  'hardware',
+  'history',
+  'theory',
+  'practice',
+  'tutorial',
+  'rfc',
+  'paper',
+  'talk',
 ]
 const POST_VERBS = [
-  'Notes on', 'Inside', 'Revisiting', 'A short tour of', 'Lessons from',
-  'A look at', 'Anatomy of',
+  'Notes on',
+  'Inside',
+  'Revisiting',
+  'A short tour of',
+  'Lessons from',
+  'A look at',
+  'Anatomy of',
 ]
 const POST_NOUNS = [
-  'compilers', 'kernels', 'concurrency', 'category theory', 'lambda calculus',
-  'distributed systems', 'storage engines', 'SAT solvers', 'memory models',
+  'compilers',
+  'kernels',
+  'concurrency',
+  'category theory',
+  'lambda calculus',
+  'distributed systems',
+  'storage engines',
+  'SAT solvers',
+  'memory models',
   'ray tracing',
 ]
 const PRODUCT_BASES = [
-  'Modern Notebook', 'Quantum Mug', 'Compiler Hoodie', 'Deadlock Sticker',
-  'Tabs vs Spaces Tee', 'Recursive Plushie', 'Big-O Bottle', 'Lambda Cap',
-  'Y-Combinator Pin', 'Halting Hat', 'Monad Tote', 'Functor Notebook',
+  'Modern Notebook',
+  'Quantum Mug',
+  'Compiler Hoodie',
+  'Deadlock Sticker',
+  'Tabs vs Spaces Tee',
+  'Recursive Plushie',
+  'Big-O Bottle',
+  'Lambda Cap',
+  'Y-Combinator Pin',
+  'Halting Hat',
+  'Monad Tote',
+  'Functor Notebook',
 ]
 const PRODUCT_CURRENCIES = ['USD', 'EUR', 'RUB'] as const
 const PRODUCT_ACCENT_COLORS = [
-  '#111827', '#2563eb', '#7c3aed', '#dc2626', '#059669', '#ea580c',
+  '#111827',
+  '#2563eb',
+  '#7c3aed',
+  '#dc2626',
+  '#059669',
+  '#ea580c',
 ] as const
 const REGIONS = ['eu', 'us', 'asia'] as const
 const REGIONAL_NAMES = [
-  'Holiday Sale', 'Spring Launch', 'Back to School', 'Black Friday',
-  'New Year', 'Summer Tour', 'Q4 Roadshow', 'Press Day',
-  'Beta Invite', 'Early Access', 'Anniversary', 'Family Pack',
+  'Holiday Sale',
+  'Spring Launch',
+  'Back to School',
+  'Black Friday',
+  'New Year',
+  'Summer Tour',
+  'Q4 Roadshow',
+  'Press Day',
+  'Beta Invite',
+  'Early Access',
+  'Anniversary',
+  'Family Pack',
 ]
 const FAV_KINDS = ['post', 'product', 'category'] as const
 
@@ -121,11 +230,41 @@ const FAVORITES_COUNT = 18
 
 // ─── Text helpers ────────────────────────────────────────────────────────
 const WORDS = [
-  'lorem', 'ipsum', 'dolor', 'sit', 'amet', 'consectetur', 'adipiscing',
-  'elit', 'sed', 'eiusmod', 'tempor', 'incididunt', 'labore', 'magna',
-  'aliqua', 'kernel', 'thread', 'cache', 'pointer', 'lambda', 'monad',
-  'compiler', 'parser', 'lexer', 'token', 'graph', 'queue', 'stack',
-  'tree', 'hash', 'index', 'shard', 'replica', 'commit', 'rebase',
+  'lorem',
+  'ipsum',
+  'dolor',
+  'sit',
+  'amet',
+  'consectetur',
+  'adipiscing',
+  'elit',
+  'sed',
+  'eiusmod',
+  'tempor',
+  'incididunt',
+  'labore',
+  'magna',
+  'aliqua',
+  'kernel',
+  'thread',
+  'cache',
+  'pointer',
+  'lambda',
+  'monad',
+  'compiler',
+  'parser',
+  'lexer',
+  'token',
+  'graph',
+  'queue',
+  'stack',
+  'tree',
+  'hash',
+  'index',
+  'shard',
+  'replica',
+  'commit',
+  'rebase',
 ]
 
 const slugify = (text: string): string =>
@@ -155,8 +294,7 @@ async function seedDemo(): Promise<void> {
   }
   const word = (): string => pick(WORDS)
   const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1)
-  const sentence = (len = 10): string =>
-    cap(Array.from({ length: len }, word).join(' ')) + '.'
+  const sentence = (len = 10): string => cap(Array.from({ length: len }, word).join(' ')) + '.'
   const paragraph = (sentences = 4): string =>
     Array.from({ length: sentences }, () => sentence(8 + rand(8))).join(' ')
 
@@ -440,8 +578,7 @@ async function seedDemo(): Promise<void> {
       kind,
       postId: kind === 'post' ? idFor('post', 1 + rand(POSTS_COUNT)) : null,
       productId: kind === 'product' ? idFor('product', 1 + rand(PRODUCTS_COUNT)) : null,
-      categoryId:
-        kind === 'category' ? categoryIds[rand(CATEGORY_NAMES.length)]! : null,
+      categoryId: kind === 'category' ? categoryIds[rand(CATEGORY_NAMES.length)]! : null,
       createdAt: dateAt(rand(365)),
     }
     await prisma.favorite.upsert({
@@ -459,10 +596,10 @@ export async function seedDemoIfEnabled(): Promise<void> {
     await seedDemo()
     console.log(
       '[modern-admin/api-prisma] seeded demo data: ' +
-      `${CUSTOMERS_COUNT} customers, ${CATEGORY_NAMES.length} categories, ` +
-      `${TAG_NAMES.length} tags, ${POSTS_COUNT} posts, ` +
-      `${COMMENTS_COUNT} comments, ${PRODUCTS_COUNT} products, ` +
-      `${REGIONAL_NAMES.length} regional, ${FAVORITES_COUNT} favorites`,
+        `${CUSTOMERS_COUNT} customers, ${CATEGORY_NAMES.length} categories, ` +
+        `${TAG_NAMES.length} tags, ${POSTS_COUNT} posts, ` +
+        `${COMMENTS_COUNT} comments, ${PRODUCTS_COUNT} products, ` +
+        `${REGIONAL_NAMES.length} regional, ${FAVORITES_COUNT} favorites`,
     )
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)

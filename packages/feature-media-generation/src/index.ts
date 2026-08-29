@@ -36,13 +36,14 @@ const promptFromTemplate = (
   template: string,
   record: Record<string, unknown>,
   allowed: ReadonlySet<string>,
-): string => template.replace(/\{([^{}]+)\}/g, (_match, rawPath: string) => {
-  const path = rawPath.trim()
-  if (!allowed.has(path)) return ''
-  const value = valueAtPath(record, path)
-  if (value === null || value === undefined) return ''
-  return Array.isArray(value) ? value.join(', ') : String(value)
-})
+): string =>
+  template.replace(/\{([^{}]+)\}/g, (_match, rawPath: string) => {
+    const path = rawPath.trim()
+    if (!allowed.has(path)) return ''
+    const value = valueAtPath(record, path)
+    if (value === null || value === undefined) return ''
+    return Array.isArray(value) ? value.join(', ') : String(value)
+  })
 
 /**
  * Adds a record action backed by the built-in React media-generation dialog.
@@ -53,7 +54,8 @@ export function mediaGenerationFeature(options: MediaGenerationFeatureOptions): 
   const actionName = options.actionName ?? DEFAULT_MEDIA_GENERATION_ACTION
   const sourceProperties = options.sourceProperties ?? []
   const allowedSources = new Set(sourceProperties)
-  const promptTemplate = options.promptTemplate ?? sourceProperties.map((path) => `{${path}}`).join('\n')
+  const promptTemplate =
+    options.promptTemplate ?? sourceProperties.map((path) => `{${path}}`).join('\n')
 
   return (resourceOptions: ResourceOptions): ResourceOptions => ({
     ...resourceOptions,

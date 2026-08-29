@@ -39,7 +39,8 @@ export const ru: LocaleBundle = {
     'common:actions': 'Действия',
     'action:notFound': 'Действие «{action}» недоступно для этого ресурса.',
     'action:componentMissing': 'Компонент «{component}» не зарегистрирован.',
-    'action:componentMissingHint': 'Зарегистрируйте его в ComponentLoader, передаваемом в <ModernAdminProvider components={…}>.',
+    'action:componentMissingHint':
+      'Зарегистрируйте его в ComponentLoader, передаваемом в <ModernAdminProvider components={…}>.',
     'action:loadFailed': 'Не удалось загрузить действие.',
     'common:new': 'Создать',
     'common:rowsPerPage': 'Строк на странице',
@@ -186,12 +187,14 @@ export const ru: LocaleBundle = {
     'settings:menuItem': 'Настройки',
     'settings:noSectionsConfigured': 'В этом развёртывании нет доступных разделов настроек.',
     'settings:apiKeys.title': 'API-ключи',
-    'settings:apiKeys.description': 'Программные токены доступа к API админ-панели. Каждый ключ имеет набор прав, ограничивающий доступные ресурсы и действия.',
+    'settings:apiKeys.description':
+      'Программные токены доступа к API админ-панели. Каждый ключ имеет набор прав, ограничивающий доступные ресурсы и действия.',
     'settings:apiKeys.actions.create': 'Создать ключ',
     'settings:apiKeys.actions.edit': 'Редактировать',
     'settings:apiKeys.actions.revoke': 'Отозвать',
     'settings:apiKeys.empty.title': 'Ключей ещё нет',
-    'settings:apiKeys.empty.description': 'Создайте первый ключ, чтобы предоставить программный доступ.',
+    'settings:apiKeys.empty.description':
+      'Создайте первый ключ, чтобы предоставить программный доступ.',
     'settings:apiKeys.columns.name': 'Название',
     'settings:apiKeys.columns.start': 'Префикс',
     'settings:apiKeys.columns.permissions': 'Права',
@@ -211,17 +214,20 @@ export const ru: LocaleBundle = {
     'settings:apiKeys.permissions.clearAllResources': 'Снять все ресурсы и действия',
     'settings:apiKeys.editor.titleCreate': 'Новый API-ключ',
     'settings:apiKeys.editor.titleEdit': 'Изменить API-ключ',
-    'settings:apiKeys.editor.description': 'Дайте ключу понятное название и выдайте только те ресурсы и действия, которые ему действительно нужны.',
+    'settings:apiKeys.editor.description':
+      'Дайте ключу понятное название и выдайте только те ресурсы и действия, которые ему действительно нужны.',
     'settings:apiKeys.editor.name': 'Название',
     'settings:apiKeys.editor.namePlaceholder': 'напр. CI-бот деплоя',
     'settings:apiKeys.editor.expiresInDays': 'Срок действия (дней)',
     'settings:apiKeys.editor.expiresPlaceholder': 'без срока',
-    'settings:apiKeys.editor.expiresHint': 'Оставьте пустым, чтобы ключ не истекал. Максимум 3650 дней.',
+    'settings:apiKeys.editor.expiresHint':
+      'Оставьте пустым, чтобы ключ не истекал. Максимум 3650 дней.',
     'settings:apiKeys.editor.permissions': 'Права',
     'settings:apiKeys.editor.selectedActions': 'Выбрано: {count}',
     'settings:apiKeys.created.title': 'API-ключ создан',
     'settings:apiKeys.created.description': 'Скопируйте ключ сейчас — он больше не будет показан.',
-    'settings:apiKeys.created.warning': 'Это единственный раз, когда виден полный ключ. Сохраните его в надёжном месте.',
+    'settings:apiKeys.created.warning':
+      'Это единственный раз, когда виден полный ключ. Сохраните его в надёжном месте.',
     'settings:apiKeys.created.reveal': 'Показать ключ',
     'settings:apiKeys.created.hide': 'Скрыть ключ',
     'settings:apiKeys.created.copy': 'Копировать',
@@ -231,18 +237,22 @@ export const ru: LocaleBundle = {
     'settings:apiKeys.notice.copied': 'Скопировано в буфер обмена',
     'settings:apiKeys.notice.copyFailed': 'Не удалось скопировать в буфер обмена',
     'settings:apiKeys.confirmRevoke.title': 'Отозвать API-ключ',
-    'settings:apiKeys.confirmRevoke.description': 'Отозвать «{name}»? Все сервисы, использующие этот ключ, сразу перестанут работать.',
+    'settings:apiKeys.confirmRevoke.description':
+      'Отозвать «{name}»? Все сервисы, использующие этот ключ, сразу перестанут работать.',
     'settings:webhooks.title': 'Вебхуки',
-    'settings:webhooks.description': 'Отправляйте подписанные HTTP-уведомления при создании, изменении или удалении записей.',
+    'settings:webhooks.description':
+      'Отправляйте подписанные HTTP-уведомления при создании, изменении или удалении записей.',
     'settings:webhooks.actions.create': 'Новый вебхук',
     'settings:webhooks.actions.test': 'Тест',
     'settings:webhooks.notice.saved': 'Вебхук сохранён',
     'settings:webhooks.notice.deleted': 'Вебхук удалён',
     'settings:webhooks.notice.testQueued': 'Тестовое уведомление поставлено в очередь',
     'settings:webhooks.confirmDelete.title': 'Удалить вебхук',
-    'settings:webhooks.confirmDelete.description': 'Удалить «{name}»? История доставок этого вебхука тоже будет удалена.',
+    'settings:webhooks.confirmDelete.description':
+      'Удалить «{name}»? История доставок этого вебхука тоже будет удалена.',
     'settings:webhooks.empty.title': 'Вебхуков пока нет',
-    'settings:webhooks.empty.description': 'Создайте вебхук, чтобы уведомлять внешние системы об изменениях в админке.',
+    'settings:webhooks.empty.description':
+      'Создайте вебхук, чтобы уведомлять внешние системы об изменениях в админке.',
     'settings:webhooks.columns.name': 'Название',
     'settings:webhooks.columns.resource': 'Ресурс',
     'settings:webhooks.columns.events': 'События',
@@ -265,12 +275,16 @@ export const ru: LocaleBundle = {
     'settings:webhooks.editor.enabled': 'Включён',
     'settings:webhooks.editor.events': 'События',
     'settings:webhooks.editor.payloadFields': 'Поля payload',
-    'settings:webhooks.editor.payloadFieldsHint': 'Ограничьте payload конкретными полями. Оставьте все не выбранными, чтобы включить полную запись. Удобно для скрытия чувствительных данных.',
+    'settings:webhooks.editor.payloadFieldsHint':
+      'Ограничьте payload конкретными полями. Оставьте все не выбранными, чтобы включить полную запись. Удобно для скрытия чувствительных данных.',
     'settings:webhooks.editor.headers': 'Заголовки',
-    'settings:webhooks.editor.headersHint': 'HTTP-заголовки, отправляемые с каждым запросом.\n\nПример:\n{\n  "Authorization": "Bearer <token>",\n  "X-Source": "modern-admin"\n}\n\nПодходит для токенов авторизации и подписей.',
+    'settings:webhooks.editor.headersHint':
+      'HTTP-заголовки, отправляемые с каждым запросом.\n\nПример:\n{\n  "Authorization": "Bearer <token>",\n  "X-Source": "modern-admin"\n}\n\nПодходит для токенов авторизации и подписей.',
     'settings:webhooks.editor.filters': 'Фильтры',
-    'settings:webhooks.editor.filtersHint': 'Доставлять только когда запись соответствует всем условиям (AND). Оставьте пустым для доставки по всем событиям.\n\nПример:\n{\n  "status": "published",\n  "role": "admin"\n}\n\nПримечание: события удаления игнорируют фильтры, т.к. записи уже нет.',
-    'settings:webhooks.editor.secretHint': 'Случайная строка для подписи доставок через HMAC-SHA256. Проверяйте заголовок X-Webhook-Signature на сервере.',
+    'settings:webhooks.editor.filtersHint':
+      'Доставлять только когда запись соответствует всем условиям (AND). Оставьте пустым для доставки по всем событиям.\n\nПример:\n{\n  "status": "published",\n  "role": "admin"\n}\n\nПримечание: события удаления игнорируют фильтры, т.к. записи уже нет.',
+    'settings:webhooks.editor.secretHint':
+      'Случайная строка для подписи доставок через HMAC-SHA256. Проверяйте заголовок X-Webhook-Signature на сервере.',
     'chart:dashboard': 'Дашборд',
     'chart:addChart': 'Добавить график',
     'chart:newChart': 'Новый график',
@@ -297,7 +311,8 @@ export const ru: LocaleBundle = {
     'chart:deleteChartConfirm': 'Удалить этот график?',
     'chart:deleteChartConfirmHint': 'Это действие нельзя отменить.',
     'chart:deleteGroupConfirm': 'Удалить эту группу?',
-    'chart:deleteGroupConfirmHint': 'Группа и все графики в ней ({count}) будут удалены безвозвратно.',
+    'chart:deleteGroupConfirmHint':
+      'Группа и все графики в ней ({count}) будут удалены безвозвратно.',
     'chart:title': 'Название',
     'chart:titlePlaceholder': 'напр. Новые пользователи в день',
     'chart:untitled': 'Без названия',
@@ -336,7 +351,8 @@ export const ru: LocaleBundle = {
     'dashboard:metricMax': 'Максимум',
     'dashboard:builder.range': 'Период',
     'dashboard:builder.filters': 'Фильтры',
-    'dashboard:builder.filtersHint': 'Сузить выборку перед агрегацией. Отметьте фильтр, чтобы вывести его над графиком как быстрый фильтр.',
+    'dashboard:builder.filtersHint':
+      'Сузить выборку перед агрегацией. Отметьте фильтр, чтобы вывести его над графиком как быстрый фильтр.',
     'dashboard:builder.quickFilterHint': 'Показывать этот фильтр над графиком на дашборде.',
     'dashboard:builder.quickFilterToggle': 'Вывести {field} как быстрый фильтр',
     'dashboard:range.7d': '7 дн.',
@@ -353,7 +369,8 @@ export const ru: LocaleBundle = {
     'dashboard:widget.expand': 'Растянуть на всю ширину',
     'dashboard:widget.toggleSql': 'Показать SQL',
     'dashboard:widget.unsupported': 'Графики для вашей базы данных пока не поддерживаются.',
-    'dashboard:widget.truncatedWarning': 'Показаны неполные данные — слишком много строк для агрегации всего диапазона.',
+    'dashboard:widget.truncatedWarning':
+      'Показаны неполные данные — слишком много строк для агрегации всего диапазона.',
     'dashboard:widget.showAll': 'Показать все',
     'dashboard:widget.hideAll': 'Скрыть все',
     'dashboard:seriesTotal': 'Всего',
@@ -368,10 +385,12 @@ export const ru: LocaleBundle = {
     'dashboard:width.half': 'Половина',
     'dashboard:width.full': 'Полная',
     'dashboard:builder.comparePrevious': 'Сравнить с предыдущим периодом',
-    'dashboard:builder.comparePreviousHint': 'Накладывает предыдущий период той же длины пунктирной линией и показывает изменение рядом с заголовком.',
+    'dashboard:builder.comparePreviousHint':
+      'Накладывает предыдущий период той же длины пунктирной линией и показывает изменение рядом с заголовком.',
     'dashboard:builder.comparePreviousDisabled': 'Недоступно при разбивке.',
     'dashboard:builder.transform': 'Преобразование значений',
-    'dashboard:builder.transformHint': 'Применяется к значениям перед отображением — например, разделить на 100, чтобы показать центы как доллары.',
+    'dashboard:builder.transformHint':
+      'Применяется к значениям перед отображением — например, разделить на 100, чтобы показать центы как доллары.',
     'dashboard:builder.transformAdd': 'Добавить шаг',
     'dashboard:builder.transformRemove': 'Удалить шаг',
     'dashboard:builder.opDivide': 'Разделить на',
@@ -455,7 +474,8 @@ export const ru: LocaleBundle = {
     'aiAssistant:fab.short': 'AI',
     'aiAssistant:description': 'Задайте вопросы о записях, связях, отчётах и трендах данных.',
     'aiAssistant:notConfigured.title': 'Помощник не настроен',
-    'aiAssistant:notConfigured.description': 'Добавьте ключ API провайдера в настройках, чтобы включить помощника (только чтение).',
+    'aiAssistant:notConfigured.description':
+      'Добавьте ключ API провайдера в настройках, чтобы включить помощника (только чтение).',
     'aiAssistant:notConfigured.openSettings': 'Открыть настройки',
     'aiAssistant:tryAsking': 'Попробуйте спросить:',
     'aiAssistant:tryAsking.example1': 'У каких клиентов больше всего постов?',
@@ -470,7 +490,8 @@ export const ru: LocaleBundle = {
     'aiAssistant:history': 'История чатов',
     'aiAssistant:history.empty': 'Предыдущих чатов нет',
     'aiAssistant:noText': 'Вот найденные связанные записи:',
-    'aiAssistant:fallback.noToolResult': 'Запрос выполнен, но модель не вернула текстовый ответ. Уточните вопрос или включите debug-логи, чтобы проверить результат инструмента.',
+    'aiAssistant:fallback.noToolResult':
+      'Запрос выполнен, но модель не вернула текстовый ответ. Уточните вопрос или включите debug-логи, чтобы проверить результат инструмента.',
     'aiAssistant:fallback.noRows': 'По этому запросу записи не найдены.',
     'aiAssistant:fallback.rowsFound': 'Найдено строк: {count}.',
     'aiAssistant:taskFailed': 'Задача AI помощника не выполнена',
@@ -479,15 +500,22 @@ export const ru: LocaleBundle = {
     'aiAssistant:error.providerNotConfigured': 'Провайдер AI-помощника не настроен',
     'aiAssistant:error.queueNotConfigured': 'Очередь AI-помощника не настроена',
     'aiAssistant:error.apiStockApiKeyMissing': 'Ключ API Stock не настроен',
-    'aiAssistant:error.apiStockPeersMissing': 'ApiStockLlmProvider требует необязательные peer-зависимости `ai` и `@ai-sdk/openai-compatible`; установите их в хост-приложении.',
+    'aiAssistant:error.apiStockPeersMissing':
+      'ApiStockLlmProvider требует необязательные peer-зависимости `ai` и `@ai-sdk/openai-compatible`; установите их в хост-приложении.',
     'aiAssistant:error.openRouterApiKeyMissing': 'Ключ API OpenRouter не настроен',
-    'aiAssistant:error.openRouterPeersMissing': 'OpenRouterLlmProvider требует необязательные peer-зависимости `ai` и `@openrouter/ai-sdk-provider`; установите их в хост-приложении.',
-    'aiAssistant:error.externalQueueModeRequired': 'ModernAdminModule.forRootAsync получил внешний диспетчер очереди AI; установите `aiAssistantQueue` в `external`.',
-    'aiAssistant:error.externalQueueDispatcherRequired': 'ModernAdminModule.forRootAsync выбрал внешнюю очередь AI, но фабрика не вернула `aiAssistant.queue.dispatcher`.',
-    'aiAssistant:error.asyncFlagRequired': 'Фабрика ModernAdminModule.forRootAsync вернула настройки AI-помощника; добавьте `aiAssistant: true`.',
-    'aiAssistant:error.asyncOptionsRequired': 'ModernAdminModule.forRootAsync включил AI-помощника, но фабрика не вернула настройки `aiAssistant`.',
+    'aiAssistant:error.openRouterPeersMissing':
+      'OpenRouterLlmProvider требует необязательные peer-зависимости `ai` и `@openrouter/ai-sdk-provider`; установите их в хост-приложении.',
+    'aiAssistant:error.externalQueueModeRequired':
+      'ModernAdminModule.forRootAsync получил внешний диспетчер очереди AI; установите `aiAssistantQueue` в `external`.',
+    'aiAssistant:error.externalQueueDispatcherRequired':
+      'ModernAdminModule.forRootAsync выбрал внешнюю очередь AI, но фабрика не вернула `aiAssistant.queue.dispatcher`.',
+    'aiAssistant:error.asyncFlagRequired':
+      'Фабрика ModernAdminModule.forRootAsync вернула настройки AI-помощника; добавьте `aiAssistant: true`.',
+    'aiAssistant:error.asyncOptionsRequired':
+      'ModernAdminModule.forRootAsync включил AI-помощника, но фабрика не вернула настройки `aiAssistant`.',
     'aiAssistant:settings.title': 'AI Помощник',
-    'aiAssistant:settings.description': 'Настройте плавающий чат-виджет, модель и серверное поведение помощника.',
+    'aiAssistant:settings.description':
+      'Настройте плавающий чат-виджет, модель и серверное поведение помощника.',
     'aiAssistant:settings.enabled': 'Включён',
     'aiAssistant:settings.disabled': 'Выключен',
     'aiAssistant:settings.configured': 'Настроен',
@@ -499,12 +527,15 @@ export const ru: LocaleBundle = {
     'aiAssistant:settings.modelLabel': 'Модель',
     'aiAssistant:settings.apiKeyLabel': 'Ключ API провайдера',
     'aiAssistant:settings.apiKeyPlaceholder': 'sk-…',
-    'aiAssistant:settings.apiKeyHint': 'Оставьте пустым, чтобы сохранить уже сохранённый на сервере ключ.',
+    'aiAssistant:settings.apiKeyHint':
+      'Оставьте пустым, чтобы сохранить уже сохранённый на сервере ключ.',
     'aiAssistant:settings.createApiKey': 'Создать ключ API на сайте {provider}',
     'aiAssistant:settings.systemPromptLabel': 'Переопределение системного промпта',
-    'aiAssistant:settings.systemPromptPlaceholder': 'Дополнительные инструкции под ваш проект (необязательно)',
+    'aiAssistant:settings.systemPromptPlaceholder':
+      'Дополнительные инструкции под ваш проект (необязательно)',
     'aiAssistant:settings.accessTitle': 'Модель доступа',
-    'aiAssistant:settings.accessDescription': 'Сейчас помощник ограничен инспекцией записей в режиме только чтения через действия ресурсов.',
+    'aiAssistant:settings.accessDescription':
+      'Сейчас помощник ограничен инспекцией записей в режиме только чтения через действия ресурсов.',
     'aiAssistant:settings.futureToolsReady': 'Готов к будущим инструментам',
     'aiAssistant:settings.save': 'Сохранить настройки',
     'aiAssistant:settings.saving': 'Сохраняем…',
@@ -573,7 +604,8 @@ export const ru: LocaleBundle = {
     'cache:metric.errors': 'Ошибки',
     'cache:unit.ms': '{value} мс',
     'cache:quarantine.title': 'Теги в карантине',
-    'cache:quarantine.description': 'Для этих тегов кэш обходится, пока инвалидация не завершится успешно.',
+    'cache:quarantine.description':
+      'Для этих тегов кэш обходится, пока инвалидация не завершится успешно.',
     'cache:invalidate.title': 'Инвалидация кэша ресурса',
     'cache:invalidate.description': 'Удаляет списки и записи ресурса на всех настроенных репликах.',
     'cache:invalidate.resource': 'Ресурс',
@@ -593,7 +625,8 @@ export const ru: LocaleBundle = {
     'cache:table.errors': 'Ошибки',
     'mediaGeneration:action.label': 'Создать медиа',
     'mediaGeneration:settings.title': 'Генерация медиа',
-    'mediaGeneration:settings.description': 'Создавайте изображения и видео через API Stock, не передавая API-ключ в браузер.',
+    'mediaGeneration:settings.description':
+      'Создавайте изображения и видео через API Stock, не передавая API-ключ в браузер.',
     'mediaGeneration:settings.saved': 'Настройки генерации медиа сохранены',
     'mediaGeneration:settings.empty': 'Настройки генерации медиа недоступны.',
     'mediaGeneration:settings.enabled': 'Включено',
@@ -604,14 +637,17 @@ export const ru: LocaleBundle = {
     'mediaGeneration:settings.enableHint': 'Управляет новыми платными запросами генерации.',
     'mediaGeneration:settings.apiKeyLabel': 'API-ключ API Stock',
     'mediaGeneration:settings.apiKeyPlaceholder': 'Введите серверный API-ключ',
-    'mediaGeneration:settings.apiKeyHint': 'Ключ хранится на сервере и никогда не возвращается в браузер.',
+    'mediaGeneration:settings.apiKeyHint':
+      'Ключ хранится на сервере и никогда не возвращается в браузер.',
     'mediaGeneration:settings.createApiKey': 'Создать ключ API Stock',
     'mediaGeneration:studio.title': 'Медиастудия',
-    'mediaGeneration:studio.description': 'Создавайте отдельные изображения или видео и скачивайте результат.',
+    'mediaGeneration:studio.description':
+      'Создавайте отдельные изображения или видео и скачивайте результат.',
     'mediaGeneration:field.model': 'Модель',
     'mediaGeneration:field.prompt': 'Запрос',
     'mediaGeneration:field.arrayHint': 'Разделяйте значения запятой или переносом строки.',
-    'mediaGeneration:confirm.cost': 'Я понимаю, что этот запрос может привести к списанию средств в API Stock.',
+    'mediaGeneration:confirm.cost':
+      'Я понимаю, что этот запрос может привести к списанию средств в API Stock.',
     'mediaGeneration:estimatedCost': 'Ориентировочная стоимость: ${price}',
     'mediaGeneration:create': 'Создать',
     'mediaGeneration:cancel': 'Не ждать',
@@ -625,7 +661,8 @@ export const ru: LocaleBundle = {
     'mediaGeneration:status.cancelled': 'Отменено',
     'mediaGeneration:preview.alt': 'Созданный вариант {index}',
     'mediaGeneration:preview.variant': 'Вариант {index}',
-    'mediaGeneration:preview.retention': 'Ссылки предпросмотра провайдера временные. Скачайте или примените выбранный результат в ближайшее время.',
+    'mediaGeneration:preview.retention':
+      'Ссылки предпросмотра провайдера временные. Скачайте или примените выбранный результат в ближайшее время.',
     'mediaGeneration:apply.replace': 'Заменить текущий файл, если он есть',
     'mediaGeneration:apply.button': 'Применить к записи',
     'mediaGeneration:apply.applied': 'Применено',

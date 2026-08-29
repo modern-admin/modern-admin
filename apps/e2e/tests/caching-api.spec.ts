@@ -23,7 +23,8 @@ const adminApi = (path: string): string => `${API}/admin/api${path}`
 /** Wire-level header reader — Playwright normalises header names to lower-case. */
 const xCache = (headers: Record<string, string>): string | undefined => headers['x-cache']
 
-const uniqueSuffix = (label: string): string => `${label}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`
+const uniqueSuffix = (label: string): string =>
+  `${label}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`
 
 const seedCustomer = async (
   request: APIRequestContext,
@@ -79,7 +80,9 @@ test.describe('HTTP cache — x-cache header semantics', () => {
     expect(xCache(deleted.headers())).toBe('BYPASS')
   })
 
-  test('unknown resource bypasses the cache (interceptor defers to controller 404)', async ({ request }) => {
+  test('unknown resource bypasses the cache (interceptor defers to controller 404)', async ({
+    request,
+  }) => {
     const res = await request.get(adminApi('/resources/__does_not_exist__/actions/list'))
     expect(res.status()).toBe(404)
     expect(xCache(res.headers())).toBe('BYPASS')
@@ -88,7 +91,9 @@ test.describe('HTTP cache — x-cache header semantics', () => {
 
 test.describe('Tag invalidation', () => {
   test('creating a record invalidates the list cache (list:<resource>)', async ({ request }) => {
-    const url = adminApi(`/resources/customers/actions/list?_t=${uniqueSuffix('create-inv')}&perPage=100`)
+    const url = adminApi(
+      `/resources/customers/actions/list?_t=${uniqueSuffix('create-inv')}&perPage=100`,
+    )
     // Prime.
     expect(xCache((await request.get(url)).headers())).toBe('MISS')
     expect(xCache((await request.get(url)).headers())).toBe('HIT')
@@ -98,14 +103,18 @@ test.describe('Tag invalidation', () => {
       const after = await request.get(url)
       expect(xCache(after.headers())).toBe('MISS')
       const body = await after.json()
-      const emails = (body.records as Array<{ params: { email: string } }>).map((r) => r.params.email)
+      const emails = (body.records as Array<{ params: { email: string } }>).map(
+        (r) => r.params.email,
+      )
       expect(emails).toContain(email)
     } finally {
       await removeCustomer(request, id)
     }
   })
 
-  test('editing record A invalidates show A but NOT show B (split-tag promise)', async ({ request }) => {
+  test('editing record A invalidates show A but NOT show B (split-tag promise)', async ({
+    request,
+  }) => {
     const { id: idA } = await seedCustomer(request, 'split-a')
     const { id: idB } = await seedCustomer(request, 'split-b')
     const showA = adminApi(`/resources/customers/records/${idA}/actions/show`)
@@ -198,10 +207,9 @@ test.describe('Tag invalidation', () => {
     expect(xCache((await request.get(showB)).headers())).toBe('HIT')
 
     // The bulkDelete REST endpoint follows the resource-level pattern.
-    const res = await request.post(
-      adminApi('/resources/customers/actions/bulkDelete'),
-      { data: { recordIds: [a.id, b.id] } },
-    )
+    const res = await request.post(adminApi('/resources/customers/actions/bulkDelete'), {
+      data: { recordIds: [a.id, b.id] },
+    })
     expect(res.ok()).toBeTruthy()
 
     // All three caches must be invalidated: list, and one record tag per id.
@@ -216,9 +224,7 @@ test.describe('In-flight dedup correctness', () => {
     const { id } = await seedCustomer(request, 'dedup')
     const url = adminApi(`/resources/customers/records/${id}/actions/show`)
     try {
-      const responses = await Promise.all(
-        Array.from({ length: 10 }, () => request.get(url)),
-      )
+      const responses = await Promise.all(Array.from({ length: 10 }, () => request.get(url)))
       const bodies = await Promise.all(responses.map((r) => r.json()))
       const emails = new Set(bodies.map((b) => b.record.params.email as string))
       expect(emails.size).toBe(1)

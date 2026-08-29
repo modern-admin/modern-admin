@@ -5,10 +5,10 @@ import { FakeResource } from './_helpers/fake-adapter.js'
 import type { ResourceOptions } from '../src/decorators/resource-options.js'
 
 const decorate = (props: BaseProperty[], options: ResourceOptions = {}): ResourceDecorator =>
-  new ResourceDecorator(
-    new FakeResource({ name: 'users', rows: [], properties: props }),
-    { id: 'users', ...options },
-  )
+  new ResourceDecorator(new FakeResource({ name: 'users', rows: [], properties: props }), {
+    id: 'users',
+    ...options,
+  })
 
 describe('ResourceDecorator propertyOrder', () => {
   test('sorts view-visible properties by position (default, no explicit list)', () => {
@@ -49,24 +49,18 @@ describe('ResourceDecorator propertyOrder', () => {
 
   test('virtual option-only fields keep a trailing position under the sort', () => {
     const decorator = decorate(
-      [
-        new BaseProperty({ path: 'a', position: 1 }),
-        new BaseProperty({ path: 'b', position: 2 }),
-      ],
+      [new BaseProperty({ path: 'a', position: 1 }), new BaseProperty({ path: 'b', position: 2 })],
       { properties: { extra: { type: 'string' } } },
     )
     expect(decorator.toJSON().propertyOrder.edit).toEqual(['a', 'b', 'extra'])
   })
 
   test('new visibility can differ from edit visibility', () => {
-    const decorator = decorate(
-      [new BaseProperty({ path: 'immutableAfterCreate' })],
-      {
-        properties: {
-          immutableAfterCreate: { isVisible: { new: true, edit: false } },
-        },
+    const decorator = decorate([new BaseProperty({ path: 'immutableAfterCreate' })], {
+      properties: {
+        immutableAfterCreate: { isVisible: { new: true, edit: false } },
       },
-    )
+    })
 
     const json = decorator.toJSON()
     expect(json.properties[0]?.visibility.new).toBe(true)
@@ -77,10 +71,7 @@ describe('ResourceDecorator propertyOrder', () => {
 
   test('new view falls back to edit visibility and property order', () => {
     const decorator = decorate(
-      [
-        new BaseProperty({ path: 'name' }),
-        new BaseProperty({ path: 'code' }),
-      ],
+      [new BaseProperty({ path: 'name' }), new BaseProperty({ path: 'code' })],
       {
         properties: { code: { isVisible: { edit: false } } },
         editProperties: ['name'],
@@ -94,10 +85,7 @@ describe('ResourceDecorator propertyOrder', () => {
 
   test('newProperties overrides editProperties for creation forms', () => {
     const decorator = decorate(
-      [
-        new BaseProperty({ path: 'name' }),
-        new BaseProperty({ path: 'code' }),
-      ],
+      [new BaseProperty({ path: 'name' }), new BaseProperty({ path: 'code' })],
       {
         editProperties: ['name'],
         newProperties: ['code', 'name'],

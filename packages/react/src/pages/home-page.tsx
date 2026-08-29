@@ -54,19 +54,11 @@ export function HomePage(): React.ReactElement {
   // Use server-backed store so charts persist across devices/browsers.
   // Falls back gracefully when configStore is not configured server-side.
   const serverStore = React.useMemo(() => new ServerDashboardStore(adminClient), [adminClient])
-  const {
-    charts,
-    groups,
-    addChart,
-    updateChart,
-    removeChart,
-    addGroup,
-    updateGroup,
-    removeGroup,
-  } = useDashboardCharts({
-    userId: user?.id ?? null,
-    store: serverStore,
-  })
+  const { charts, groups, addChart, updateChart, removeChart, addGroup, updateGroup, removeGroup } =
+    useDashboardCharts({
+      userId: user?.id ?? null,
+      store: serverStore,
+    })
 
   // Only show resources explicitly visible in navigation (same rule as sidebar).
   const navResources = React.useMemo(
@@ -121,7 +113,7 @@ export function HomePage(): React.ReactElement {
     return filtered.sort(byChartOrder)
   }, [charts, groups.length, activeGroupId, firstGroupId])
 
-  const activeGroup = activeGroupId ? groups.find((g) => g.id === activeGroupId) ?? null : null
+  const activeGroup = activeGroupId ? (groups.find((g) => g.id === activeGroupId) ?? null) : null
 
   const handleDeleteChart = async (chart: ChartDef): Promise<void> => {
     const ok = await dialogs.confirm({
@@ -155,15 +147,15 @@ export function HomePage(): React.ReactElement {
         <CardHeader className="flex flex-row items-center justify-between p-3 pb-2 space-y-0 gap-2 sm:p-6 sm:pb-2">
           <CardTitle>{t('chart:dashboard')}</CardTitle>
           <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setGroupDialog('new')}
-            >
+            <Button size="sm" variant="outline" onClick={() => setGroupDialog('new')}>
               <FolderPlus className="size-4" />
               <span className="hidden sm:inline ml-1.5">{t('chart:addGroup')}</span>
             </Button>
-            <Button size="sm" onClick={() => setBuilding(true)} disabled={navResources.length === 0}>
+            <Button
+              size="sm"
+              onClick={() => setBuilding(true)}
+              disabled={navResources.length === 0}
+            >
               <Plus className="size-4" />
               <span className="hidden sm:inline ml-1.5">{t('chart:addChart')}</span>
             </Button>
@@ -171,11 +163,7 @@ export function HomePage(): React.ReactElement {
         </CardHeader>
         <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
           {groups.length > 0 && activeGroupId && (
-            <Tabs
-              value={activeGroupId}
-              onValueChange={(v) => setActiveGroupId(v)}
-              className="mb-4"
-            >
+            <Tabs value={activeGroupId} onValueChange={(v) => setActiveGroupId(v)} className="mb-4">
               <div className="flex items-end justify-between gap-2">
                 <TabsList className="flex-1">
                   {groups.map((g) => (
@@ -223,10 +211,7 @@ export function HomePage(): React.ReactElement {
           ) : (
             <div className="grid gap-3 grid-cols-1 sm:gap-4 md:grid-cols-2">
               {visibleCharts.map((c) => (
-                <div
-                  key={c.id}
-                  className={c.width === 'full' ? 'md:col-span-2' : undefined}
-                >
+                <div key={c.id} className={c.width === 'full' ? 'md:col-span-2' : undefined}>
                   <LazyChartWidget
                     config={c}
                     onEdit={() => setEditingId(c.id)}
@@ -290,9 +275,7 @@ export function HomePage(): React.ReactElement {
                     className="block rounded-md border border-border bg-card p-4 hover:border-primary/40 hover:shadow-sm transition-shadow"
                   >
                     <div className="font-semibold">{r.name}</div>
-                    {r.name !== r.id && (
-                      <div className="text-xs text-muted-foreground">{r.id}</div>
-                    )}
+                    {r.name !== r.id && <div className="text-xs text-muted-foreground">{r.id}</div>}
                   </Link>
                 </li>
               ))}
@@ -317,7 +300,10 @@ export function HomePage(): React.ReactElement {
       {editingChart && (
         <ChartBuilderDialog
           initial={editingChart}
-          onSave={(input) => { updateChart(editingChart.id, input); setEditingId(null) }}
+          onSave={(input) => {
+            updateChart(editingChart.id, input)
+            setEditingId(null)
+          }}
           onClose={() => setEditingId(null)}
         />
       )}

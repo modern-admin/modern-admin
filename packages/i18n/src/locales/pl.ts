@@ -39,7 +39,8 @@ export const pl: LocaleBundle = {
     'common:actions': 'Akcje',
     'action:notFound': 'Akcja „{action}” jest niedostępna dla tego zasobu.',
     'action:componentMissing': 'Nie zarejestrowano komponentu o nazwie „{component}”.',
-    'action:componentMissingHint': 'Zarejestruj go w ComponentLoaderze przekazywanym do <ModernAdminProvider components={…}>.',
+    'action:componentMissingHint':
+      'Zarejestruj go w ComponentLoaderze przekazywanym do <ModernAdminProvider components={…}>.',
     'action:loadFailed': 'Nie udało się wczytać akcji.',
     'common:new': 'Nowy',
     'common:rowsPerPage': 'Wierszy na stronę',
@@ -186,7 +187,8 @@ export const pl: LocaleBundle = {
     'settings:menuItem': 'Ustawienia',
     'settings:noSectionsConfigured': 'Dla tego wdrożenia nie są dostępne żadne sekcje ustawień.',
     'settings:apiKeys.title': 'Klucze API',
-    'settings:apiKeys.description': 'Tokeny programowego dostępu do API administracyjnego. Każdy klucz ma zestaw uprawnień ograniczający, jakie zasoby i akcje może wywołać.',
+    'settings:apiKeys.description':
+      'Tokeny programowego dostępu do API administracyjnego. Każdy klucz ma zestaw uprawnień ograniczający, jakie zasoby i akcje może wywołać.',
     'settings:apiKeys.actions.create': 'Nowy klucz',
     'settings:apiKeys.actions.edit': 'Edytuj',
     'settings:apiKeys.actions.revoke': 'Odwołaj',
@@ -211,17 +213,20 @@ export const pl: LocaleBundle = {
     'settings:apiKeys.permissions.clearAllResources': 'Wyczyść wszystkie zasoby i akcje',
     'settings:apiKeys.editor.titleCreate': 'Nowy klucz API',
     'settings:apiKeys.editor.titleEdit': 'Edytuj klucz API',
-    'settings:apiKeys.editor.description': 'Wybierz opisową nazwę i nadaj tylko te zasoby i akcje, których ten klucz naprawdę potrzebuje.',
+    'settings:apiKeys.editor.description':
+      'Wybierz opisową nazwę i nadaj tylko te zasoby i akcje, których ten klucz naprawdę potrzebuje.',
     'settings:apiKeys.editor.name': 'Nazwa',
     'settings:apiKeys.editor.namePlaceholder': 'np. bot wdrożeniowy CI',
     'settings:apiKeys.editor.expiresInDays': 'Wygasa za (dni)',
     'settings:apiKeys.editor.expiresPlaceholder': 'nigdy',
-    'settings:apiKeys.editor.expiresHint': 'Pozostaw puste, aby klucz nie wygasał. Maksymalnie 3650 dni.',
+    'settings:apiKeys.editor.expiresHint':
+      'Pozostaw puste, aby klucz nie wygasał. Maksymalnie 3650 dni.',
     'settings:apiKeys.editor.permissions': 'Uprawnienia',
     'settings:apiKeys.editor.selectedActions': 'Zaznaczonych: {count}',
     'settings:apiKeys.created.title': 'Klucz API utworzony',
     'settings:apiKeys.created.description': 'Skopiuj klucz teraz — nie zostanie pokazany ponownie.',
-    'settings:apiKeys.created.warning': 'To jedyny raz, kiedy zobaczysz pełny klucz. Przechowuj go w bezpiecznym miejscu.',
+    'settings:apiKeys.created.warning':
+      'To jedyny raz, kiedy zobaczysz pełny klucz. Przechowuj go w bezpiecznym miejscu.',
     'settings:apiKeys.created.reveal': 'Pokaż klucz',
     'settings:apiKeys.created.hide': 'Ukryj klucz',
     'settings:apiKeys.created.copy': 'Kopiuj',
@@ -231,18 +236,22 @@ export const pl: LocaleBundle = {
     'settings:apiKeys.notice.copied': 'Skopiowano do schowka',
     'settings:apiKeys.notice.copyFailed': 'Nie udało się skopiować do schowka',
     'settings:apiKeys.confirmRevoke.title': 'Odwołaj klucz API',
-    'settings:apiKeys.confirmRevoke.description': 'Odwołać „{name}"? Każda usługa korzystająca z tego klucza natychmiast przestanie działać.',
+    'settings:apiKeys.confirmRevoke.description':
+      'Odwołać „{name}"? Każda usługa korzystająca z tego klucza natychmiast przestanie działać.',
     'settings:webhooks.title': 'Webhooks',
-    'settings:webhooks.description': 'Send signed HTTP notifications when records are created, updated, or deleted.',
+    'settings:webhooks.description':
+      'Send signed HTTP notifications when records are created, updated, or deleted.',
     'settings:webhooks.actions.create': 'New webhook',
     'settings:webhooks.actions.test': 'Test',
     'settings:webhooks.notice.saved': 'Webhook saved',
     'settings:webhooks.notice.deleted': 'Webhook deleted',
     'settings:webhooks.notice.testQueued': 'Test notification queued',
     'settings:webhooks.confirmDelete.title': 'Delete webhook',
-    'settings:webhooks.confirmDelete.description': 'Delete "{name}"? Delivery history for this webhook will also be removed.',
+    'settings:webhooks.confirmDelete.description':
+      'Delete "{name}"? Delivery history for this webhook will also be removed.',
     'settings:webhooks.empty.title': 'No webhooks yet',
-    'settings:webhooks.empty.description': 'Create a webhook to notify external systems about admin changes.',
+    'settings:webhooks.empty.description':
+      'Create a webhook to notify external systems about admin changes.',
     'settings:webhooks.columns.name': 'Name',
     'settings:webhooks.columns.resource': 'Resource',
     'settings:webhooks.columns.events': 'Events',
@@ -256,7 +265,8 @@ export const pl: LocaleBundle = {
     'settings:webhooks.deliveries.createdAt': 'Created',
     'settings:webhooks.editor.titleCreate': 'New webhook',
     'settings:webhooks.editor.titleEdit': 'Edit webhook',
-    'settings:webhooks.editor.description': 'Choose target URL, events, filters, and optional payload projection.',
+    'settings:webhooks.editor.description':
+      'Choose target URL, events, filters, and optional payload projection.',
     'settings:webhooks.editor.name': 'Name',
     'settings:webhooks.editor.url': 'URL',
     'settings:webhooks.editor.resource': 'Resource',
@@ -265,12 +275,16 @@ export const pl: LocaleBundle = {
     'settings:webhooks.editor.enabled': 'Enabled',
     'settings:webhooks.editor.events': 'Events',
     'settings:webhooks.editor.payloadFields': 'Payload fields',
-    'settings:webhooks.editor.payloadFieldsHint': 'Restrict the payload to specific fields. Leave all unchecked to include the full record. Useful to avoid sending sensitive columns.',
+    'settings:webhooks.editor.payloadFieldsHint':
+      'Restrict the payload to specific fields. Leave all unchecked to include the full record. Useful to avoid sending sensitive columns.',
     'settings:webhooks.editor.headers': 'Headers',
-    'settings:webhooks.editor.headersHint': 'Custom HTTP headers sent with every delivery.\n\nExample:\n{\n  "Authorization": "Bearer <token>",\n  "X-Source": "modern-admin"\n}\n\nUseful for auth tokens, Slack incoming webhook URLs stored as a header, or endpoint-specific signatures.',
+    'settings:webhooks.editor.headersHint':
+      'Custom HTTP headers sent with every delivery.\n\nExample:\n{\n  "Authorization": "Bearer <token>",\n  "X-Source": "modern-admin"\n}\n\nUseful for auth tokens, Slack incoming webhook URLs stored as a header, or endpoint-specific signatures.',
     'settings:webhooks.editor.filters': 'Filters',
-    'settings:webhooks.editor.filtersHint': 'Deliver only when the record matches all conditions (AND semantics). Leave empty to deliver for every matching event.\n\nExample:\n{\n  "status": "published",\n  "role": "admin"\n}\n\nNote: delete events bypass field filters because the record no longer exists.',
-    'settings:webhooks.editor.secretHint': 'Random string used to sign each delivery with HMAC-SHA256. Verify the X-Webhook-Signature header on your server to ensure the request is genuine.',
+    'settings:webhooks.editor.filtersHint':
+      'Deliver only when the record matches all conditions (AND semantics). Leave empty to deliver for every matching event.\n\nExample:\n{\n  "status": "published",\n  "role": "admin"\n}\n\nNote: delete events bypass field filters because the record no longer exists.',
+    'settings:webhooks.editor.secretHint':
+      'Random string used to sign each delivery with HMAC-SHA256. Verify the X-Webhook-Signature header on your server to ensure the request is genuine.',
     'chart:dashboard': 'Panel',
     'chart:addChart': 'Dodaj wykres',
     'chart:newChart': 'Nowy wykres',
@@ -336,7 +350,8 @@ export const pl: LocaleBundle = {
     'dashboard:metricMax': 'Maks',
     'dashboard:builder.range': 'Zakres czasu',
     'dashboard:builder.filters': 'Filtry',
-    'dashboard:builder.filtersHint': 'Zawęź zbiór danych przed agregacją. Zaznacz filtr, aby pokazać go nad wykresem.',
+    'dashboard:builder.filtersHint':
+      'Zawęź zbiór danych przed agregacją. Zaznacz filtr, aby pokazać go nad wykresem.',
     'dashboard:builder.quickFilterHint': 'Pokaż ten filtr nad wykresem na pulpicie.',
     'dashboard:builder.quickFilterToggle': 'Pokaż {field} jako szybki filtr',
     'dashboard:range.7d': '7d',
@@ -353,7 +368,8 @@ export const pl: LocaleBundle = {
     'dashboard:widget.expand': 'Rozwiń na cały wiersz',
     'dashboard:widget.toggleSql': 'Pokaż SQL',
     'dashboard:widget.unsupported': 'Wykresy nie są jeszcze obsługiwane dla Twojej bazy danych.',
-    'dashboard:widget.truncatedWarning': 'Wyświetlanie częściowych danych — zbyt wiele wierszy, aby zagregować cały zakres.',
+    'dashboard:widget.truncatedWarning':
+      'Wyświetlanie częściowych danych — zbyt wiele wierszy, aby zagregować cały zakres.',
     'dashboard:widget.showAll': 'Pokaż wszystko',
     'dashboard:widget.hideAll': 'Ukryj wszystko',
     'dashboard:seriesTotal': 'Łącznie',
@@ -368,10 +384,12 @@ export const pl: LocaleBundle = {
     'dashboard:width.half': 'Połowa',
     'dashboard:width.full': 'Cały wiersz',
     'dashboard:builder.comparePrevious': 'Porównaj z poprzednim okresem',
-    'dashboard:builder.comparePreviousHint': 'Nakłada poprzedni okres o tej samej długości jako linię przerywaną i pokazuje zmianę obok tytułu.',
+    'dashboard:builder.comparePreviousHint':
+      'Nakłada poprzedni okres o tej samej długości jako linię przerywaną i pokazuje zmianę obok tytułu.',
     'dashboard:builder.comparePreviousDisabled': 'Niedostępne przy podziale.',
     'dashboard:builder.transform': 'Przekształcenie wartości',
-    'dashboard:builder.transformHint': 'Stosowane do wartości przed wyświetleniem — np. podziel przez 100, aby pokazać centy jako dolary.',
+    'dashboard:builder.transformHint':
+      'Stosowane do wartości przed wyświetleniem — np. podziel przez 100, aby pokazać centy jako dolary.',
     'dashboard:builder.transformAdd': 'Dodaj krok',
     'dashboard:builder.transformRemove': 'Usuń krok',
     'dashboard:builder.opDivide': 'Podziel przez',
@@ -455,7 +473,8 @@ export const pl: LocaleBundle = {
     'aiAssistant:fab.short': 'AI',
     'aiAssistant:description': 'Zadawaj pytania o rekordy, relacje, raporty i trendy w danych.',
     'aiAssistant:notConfigured.title': 'Asystent nie jest skonfigurowany',
-    'aiAssistant:notConfigured.description': 'Dodaj klucz API dostawcy w ustawieniach, aby włączyć asystenta AI w trybie tylko do odczytu.',
+    'aiAssistant:notConfigured.description':
+      'Dodaj klucz API dostawcy w ustawieniach, aby włączyć asystenta AI w trybie tylko do odczytu.',
     'aiAssistant:notConfigured.openSettings': 'Otwórz ustawienia',
     'aiAssistant:tryAsking': 'Spróbuj zapytać:',
     'aiAssistant:tryAsking.example1': 'Którzy klienci mają najwięcej postów?',
@@ -470,7 +489,8 @@ export const pl: LocaleBundle = {
     'aiAssistant:history': 'Historia czatów',
     'aiAssistant:history.empty': 'Brak wcześniejszych czatów',
     'aiAssistant:noText': 'Oto znalezione powiązane rekordy:',
-    'aiAssistant:fallback.noToolResult': 'Żądanie zostało wykonane, ale model nie zwrócił odpowiedzi tekstowej. Doprecyzuj pytanie albo włącz logi debugowania, aby sprawdzić wynik narzędzia.',
+    'aiAssistant:fallback.noToolResult':
+      'Żądanie zostało wykonane, ale model nie zwrócił odpowiedzi tekstowej. Doprecyzuj pytanie albo włącz logi debugowania, aby sprawdzić wynik narzędzia.',
     'aiAssistant:fallback.noRows': 'Nie znaleziono rekordów dla tego żądania.',
     'aiAssistant:fallback.rowsFound': 'Znalezione wiersze: {count}.',
     'aiAssistant:taskFailed': 'Zadanie asystenta AI nie powiodło się',
@@ -479,15 +499,22 @@ export const pl: LocaleBundle = {
     'aiAssistant:error.providerNotConfigured': 'Dostawca asystenta AI nie jest skonfigurowany',
     'aiAssistant:error.queueNotConfigured': 'Kolejka asystenta AI nie jest skonfigurowana',
     'aiAssistant:error.apiStockApiKeyMissing': 'Klucz API Stock nie jest skonfigurowany',
-    'aiAssistant:error.apiStockPeersMissing': 'ApiStockLlmProvider wymaga opcjonalnych zależności równorzędnych `ai` i `@ai-sdk/openai-compatible`; zainstaluj je w aplikacji hosta.',
+    'aiAssistant:error.apiStockPeersMissing':
+      'ApiStockLlmProvider wymaga opcjonalnych zależności równorzędnych `ai` i `@ai-sdk/openai-compatible`; zainstaluj je w aplikacji hosta.',
     'aiAssistant:error.openRouterApiKeyMissing': 'Klucz API OpenRouter nie jest skonfigurowany',
-    'aiAssistant:error.openRouterPeersMissing': 'OpenRouterLlmProvider wymaga opcjonalnych zależności równorzędnych `ai` i `@openrouter/ai-sdk-provider`; zainstaluj je w aplikacji hosta.',
-    'aiAssistant:error.externalQueueModeRequired': 'ModernAdminModule.forRootAsync otrzymał zewnętrzny dispatcher kolejki AI; ustaw `aiAssistantQueue` na `external`.',
-    'aiAssistant:error.externalQueueDispatcherRequired': 'ModernAdminModule.forRootAsync wybrał zewnętrzną kolejkę AI, ale fabryka nie zwróciła `aiAssistant.queue.dispatcher`.',
-    'aiAssistant:error.asyncFlagRequired': 'Fabryka ModernAdminModule.forRootAsync zwróciła opcje asystenta AI; dodaj `aiAssistant: true`.',
-    'aiAssistant:error.asyncOptionsRequired': 'ModernAdminModule.forRootAsync włączył asystenta AI, ale fabryka nie zwróciła opcji `aiAssistant`.',
+    'aiAssistant:error.openRouterPeersMissing':
+      'OpenRouterLlmProvider wymaga opcjonalnych zależności równorzędnych `ai` i `@openrouter/ai-sdk-provider`; zainstaluj je w aplikacji hosta.',
+    'aiAssistant:error.externalQueueModeRequired':
+      'ModernAdminModule.forRootAsync otrzymał zewnętrzny dispatcher kolejki AI; ustaw `aiAssistantQueue` na `external`.',
+    'aiAssistant:error.externalQueueDispatcherRequired':
+      'ModernAdminModule.forRootAsync wybrał zewnętrzną kolejkę AI, ale fabryka nie zwróciła `aiAssistant.queue.dispatcher`.',
+    'aiAssistant:error.asyncFlagRequired':
+      'Fabryka ModernAdminModule.forRootAsync zwróciła opcje asystenta AI; dodaj `aiAssistant: true`.',
+    'aiAssistant:error.asyncOptionsRequired':
+      'ModernAdminModule.forRootAsync włączył asystenta AI, ale fabryka nie zwróciła opcji `aiAssistant`.',
     'aiAssistant:settings.title': 'Asystent AI',
-    'aiAssistant:settings.description': 'Skonfiguruj pływający widżet czatu AI, model i zachowanie asystenta po stronie serwera.',
+    'aiAssistant:settings.description':
+      'Skonfiguruj pływający widżet czatu AI, model i zachowanie asystenta po stronie serwera.',
     'aiAssistant:settings.enabled': 'Włączony',
     'aiAssistant:settings.disabled': 'Wyłączony',
     'aiAssistant:settings.configured': 'Skonfigurowano',
@@ -495,16 +522,20 @@ export const pl: LocaleBundle = {
     'aiAssistant:settings.readOnly': 'Tylko do odczytu',
     'aiAssistant:settings.provider': 'Dostawca: {provider}',
     'aiAssistant:settings.enableLabel': 'Włącz asystenta',
-    'aiAssistant:settings.enableHint': 'Kontroluje widoczność pływającego widżetu i punktu końcowego czatu.',
+    'aiAssistant:settings.enableHint':
+      'Kontroluje widoczność pływającego widżetu i punktu końcowego czatu.',
     'aiAssistant:settings.modelLabel': 'Model',
     'aiAssistant:settings.apiKeyLabel': 'Klucz API dostawcy',
     'aiAssistant:settings.apiKeyPlaceholder': 'sk-…',
-    'aiAssistant:settings.apiKeyHint': 'Pozostaw puste, aby zachować istniejący klucz zapisany na serwerze.',
+    'aiAssistant:settings.apiKeyHint':
+      'Pozostaw puste, aby zachować istniejący klucz zapisany na serwerze.',
     'aiAssistant:settings.createApiKey': 'Utwórz klucz API w {provider}',
     'aiAssistant:settings.systemPromptLabel': 'Nadpisanie promptu systemowego',
-    'aiAssistant:settings.systemPromptPlaceholder': 'Opcjonalne instrukcje dla asystenta specyficzne dla projektu',
+    'aiAssistant:settings.systemPromptPlaceholder':
+      'Opcjonalne instrukcje dla asystenta specyficzne dla projektu',
     'aiAssistant:settings.accessTitle': 'Model dostępu',
-    'aiAssistant:settings.accessDescription': 'Obecny asystent jest ograniczony do inspekcji rekordów tylko do odczytu poprzez akcje zasobów administracyjnych.',
+    'aiAssistant:settings.accessDescription':
+      'Obecny asystent jest ograniczony do inspekcji rekordów tylko do odczytu poprzez akcje zasobów administracyjnych.',
     'aiAssistant:settings.futureToolsReady': 'Przyszłe narzędzia gotowe',
     'aiAssistant:settings.save': 'Zapisz ustawienia',
     'aiAssistant:settings.saving': 'Zapisywanie…',
@@ -575,7 +606,8 @@ export const pl: LocaleBundle = {
     'cache:quarantine.title': 'Tagi w kwarantannie',
     'cache:quarantine.description': 'Te tagi omijają pamięć podręczną do pomyślnego unieważnienia.',
     'cache:invalidate.title': 'Unieważnij pamięć zasobu',
-    'cache:invalidate.description': 'Usuwa listy i rekordy zasobu ze wszystkich skonfigurowanych replik.',
+    'cache:invalidate.description':
+      'Usuwa listy i rekordy zasobu ze wszystkich skonfigurowanych replik.',
     'cache:invalidate.resource': 'Zasób',
     'cache:invalidate.action': 'Unieważnij pamięć',
     'cache:invalidate.loading': 'Unieważnianie pamięci…',
@@ -593,7 +625,8 @@ export const pl: LocaleBundle = {
     'cache:table.errors': 'Błędy',
     'mediaGeneration:action.label': 'Generuj multimedia',
     'mediaGeneration:settings.title': 'Generowanie multimediów',
-    'mediaGeneration:settings.description': 'Twórz obrazy i filmy przez API Stock bez ujawniania klucza API w przeglądarce.',
+    'mediaGeneration:settings.description':
+      'Twórz obrazy i filmy przez API Stock bez ujawniania klucza API w przeglądarce.',
     'mediaGeneration:settings.saved': 'Ustawienia zapisane',
     'mediaGeneration:settings.empty': 'Ustawienia są niedostępne.',
     'mediaGeneration:settings.enabled': 'Włączone',
@@ -604,7 +637,8 @@ export const pl: LocaleBundle = {
     'mediaGeneration:settings.enableHint': 'Steruje nowymi płatnymi żądaniami generowania.',
     'mediaGeneration:settings.apiKeyLabel': 'Klucz API Stock',
     'mediaGeneration:settings.apiKeyPlaceholder': 'Wprowadź serwerowy klucz API',
-    'mediaGeneration:settings.apiKeyHint': 'Klucz pozostaje na serwerze i nigdy nie jest zwracany do przeglądarki.',
+    'mediaGeneration:settings.apiKeyHint':
+      'Klucz pozostaje na serwerze i nigdy nie jest zwracany do przeglądarki.',
     'mediaGeneration:settings.createApiKey': 'Utwórz klucz API Stock',
     'mediaGeneration:studio.title': 'Studio multimediów',
     'mediaGeneration:studio.description': 'Generuj samodzielne obrazy lub filmy i pobieraj wynik.',
@@ -625,7 +659,8 @@ export const pl: LocaleBundle = {
     'mediaGeneration:status.cancelled': 'Anulowane',
     'mediaGeneration:preview.alt': 'Wygenerowany wariant {index}',
     'mediaGeneration:preview.variant': 'Wariant {index}',
-    'mediaGeneration:preview.retention': 'Linki podglądu dostawcy są tymczasowe. Pobierz lub zastosuj wybrany wynik możliwie szybko.',
+    'mediaGeneration:preview.retention':
+      'Linki podglądu dostawcy są tymczasowe. Pobierz lub zastosuj wybrany wynik możliwie szybko.',
     'mediaGeneration:apply.replace': 'Zastąp bieżący plik',
     'mediaGeneration:apply.button': 'Zastosuj do rekordu',
     'mediaGeneration:apply.applied': 'Zastosowano',

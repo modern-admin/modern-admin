@@ -36,7 +36,11 @@ import {
   type PropertyType,
 } from '@modern-admin/core'
 import { GraphQLUpload } from './scalars.js'
-import type { ExtensionContext, GraphqlExtensionFactory, GraphqlSchemaExtension } from './extensions.js'
+import type {
+  ExtensionContext,
+  GraphqlExtensionFactory,
+  GraphqlSchemaExtension,
+} from './extensions.js'
 import { createRealtimeAsyncIterator } from './subscription-iterator.js'
 
 export interface GraphqlContext {
@@ -54,25 +58,25 @@ const GraphQLJSON = new GraphQLScalarType({
   parseValue: (v) => v,
   parseLiteral(ast): unknown {
     switch (ast.kind) {
-    case Kind.STRING:
-    case Kind.BOOLEAN:
-      return ast.value
-    case Kind.INT:
-    case Kind.FLOAT:
-      return Number(ast.value)
-    case Kind.NULL:
-      return null
-    case Kind.LIST:
-      return ast.values.map((v) => GraphQLJSON.parseLiteral(v, undefined))
-    case Kind.OBJECT: {
-      const obj: Record<string, unknown> = {}
-      for (const field of ast.fields) {
-        obj[field.name.value] = GraphQLJSON.parseLiteral(field.value, undefined)
+      case Kind.STRING:
+      case Kind.BOOLEAN:
+        return ast.value
+      case Kind.INT:
+      case Kind.FLOAT:
+        return Number(ast.value)
+      case Kind.NULL:
+        return null
+      case Kind.LIST:
+        return ast.values.map((v) => GraphQLJSON.parseLiteral(v, undefined))
+      case Kind.OBJECT: {
+        const obj: Record<string, unknown> = {}
+        for (const field of ast.fields) {
+          obj[field.name.value] = GraphQLJSON.parseLiteral(field.value, undefined)
+        }
+        return obj
       }
-      return obj
-    }
-    default:
-      return null
+      default:
+        return null
     }
   },
 })
@@ -87,24 +91,24 @@ const GraphQLDateTime = new GraphQLScalarType({
 
 const scalarFor = (type: PropertyType): GraphQLScalarType => {
   switch (type) {
-  case 'number':
-    return GraphQLInt
-  case 'float':
-  case 'currency':
-    return GraphQLFloat
-  case 'boolean':
-    return GraphQLBoolean
-  case 'date':
-  case 'datetime':
-    return GraphQLDateTime
-  case 'json':
-  case 'mixed':
-  case 'key-value':
-    return GraphQLJSON
-  case 'reference':
-    return GraphQLID
-  default:
-    return GraphQLString
+    case 'number':
+      return GraphQLInt
+    case 'float':
+    case 'currency':
+      return GraphQLFloat
+    case 'boolean':
+      return GraphQLBoolean
+    case 'date':
+    case 'datetime':
+      return GraphQLDateTime
+    case 'json':
+    case 'mixed':
+    case 'key-value':
+      return GraphQLJSON
+    case 'reference':
+      return GraphQLID
+    default:
+      return GraphQLString
   }
 }
 
@@ -148,15 +152,15 @@ const actionArgs = (
   actionType: ActionDescriptor['actionType'],
 ): Record<string, { type: GraphQLInputType }> => {
   switch (actionType) {
-  case 'record':
-    return { id: { type: new GraphQLNonNull(GraphQLID) }, payload: { type: GraphQLJSON } }
-  case 'bulk':
-    return {
-      ids: { type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(GraphQLID))) },
-      payload: { type: GraphQLJSON },
-    }
-  default:
-    return { payload: { type: GraphQLJSON } }
+    case 'record':
+      return { id: { type: new GraphQLNonNull(GraphQLID) }, payload: { type: GraphQLJSON } }
+    case 'bulk':
+      return {
+        ids: { type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(GraphQLID))) },
+        payload: { type: GraphQLJSON },
+      }
+    default:
+      return { payload: { type: GraphQLJSON } }
   }
 }
 
@@ -250,10 +254,7 @@ const buildUpdateInputFields = (
   return fields
 }
 
-const loaderFor = (
-  ctx: GraphqlContext,
-  resource: BaseResource,
-): DataLoader<string, unknown> => {
+const loaderFor = (ctx: GraphqlContext, resource: BaseResource): DataLoader<string, unknown> => {
   const id = resource.decorate().id
   let loader = ctx.loaders.get(id)
   if (!loader) {
@@ -305,8 +306,9 @@ const attachReferenceResolvers = (
     if (!targetResource) continue
     // Augment the existing scalar field with a sibling-loaded reference.
     const refFieldName = `${property.path()}Ref`
-    const targetType = (admin as unknown as { _gqlTypes?: Map<string, GraphQLObjectType> })
-      ._gqlTypes?.get(refId)
+    const targetType = (
+      admin as unknown as { _gqlTypes?: Map<string, GraphQLObjectType> }
+    )._gqlTypes?.get(refId)
     if (!targetType) continue
     const resolve: GraphQLFieldResolver<unknown, GraphqlContext> = async (src, _args, ctx) => {
       const fk = (src as Record<string, unknown>)[property.path()]
@@ -449,9 +451,10 @@ export const buildGraphqlSchema = (
             params: { resourceId: id, action: 'list' },
             method: 'get',
             query: {
-              page: args.offset != null && args.limit
-                ? String(Math.floor(Number(args.offset) / Number(args.limit)) + 1)
-                : '1',
+              page:
+                args.offset != null && args.limit
+                  ? String(Math.floor(Number(args.offset) / Number(args.limit)) + 1)
+                  : '1',
               perPage: args.limit != null ? String(args.limit) : undefined,
               sortBy: args.sortBy ?? undefined,
               direction: args.sortDirection ?? undefined,
@@ -633,9 +636,7 @@ export const buildGraphqlSchema = (
         }
         const kindArg = args.kind as string | undefined
         const kind =
-          kindArg === 'created' || kindArg === 'updated' || kindArg === 'deleted'
-            ? kindArg
-            : null
+          kindArg === 'created' || kindArg === 'updated' || kindArg === 'deleted' ? kindArg : null
         return createRealtimeAsyncIterator(ctx.bus, { resourceId: id, kind })
       },
       resolve: (payload) => payload,
