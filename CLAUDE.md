@@ -182,7 +182,7 @@ Majors currently locked, with the gotchas they impose:
 | ----------------------- | ------------- | ------------------------------------------------------------------------------ |
 | typescript              | 7.x           | native compiler; tooling uses the side-by-side TS 6 JS API                      |
 | eslint / typescript-eslint | 10.x / 8.x | flat config, `eslint.base.config.mjs` at the root                              |
-| @nestjs/*               | 11.x          | Node 20+; cache-manager API changed                                            |
+| @nestjs/*               | 12.x          | Node 20+; transport package peer dependencies require `^12`                    |
 | zod                     | 4.x           | new error API; `z.email()` instead of `.email()`                               |
 | vite                    | 8.x           | Node bumped; SSR/Rolldown changes                                              |
 | @vitejs/plugin-react    | 6.x           | matches Vite 8                                                                 |
