@@ -18,6 +18,8 @@
 
 import * as React from 'react'
 import { useRouter, useRouterState } from '@tanstack/react-router'
+import type { FilterMap } from '@modern-admin/core'
+import { appendFilterQuery, parseFilterQuery } from './filter-query.js'
 
 /**
  * Provides the SPA mount basepath (e.g. `/admin`) to all navigation
@@ -37,7 +39,7 @@ export interface ListQueryState {
   sortBy?: string
   direction?: 'asc' | 'desc'
   /** Per-column filter values keyed by property path. */
-  filters?: Record<string, string>
+  filters?: FilterMap
 }
 
 export type Route =
@@ -88,12 +90,8 @@ const parseListQuery = (search: string): ListQueryState | undefined => {
   if (sortBy) out.sortBy = sortBy
   const direction = params.get('direction')
   if (direction === 'asc' || direction === 'desc') out.direction = direction
-  const filters: Record<string, string> = {}
-  params.forEach((value, key) => {
-    const m = key.match(/^filters\[(.+)\]$/)
-    if (m && m[1] != null && value !== '') filters[m[1]] = value
-  })
-  if (Object.keys(filters).length > 0) out.filters = filters
+  const filters = parseFilterQuery(params)
+  if (filters) out.filters = filters
   return Object.keys(out).length > 0 ? out : undefined
 }
 
@@ -104,11 +102,7 @@ const buildListQuery = (q: ListQueryState | undefined): string => {
   if (q.perPage != null && q.perPage !== 20) params.set('perPage', String(q.perPage))
   if (q.sortBy) params.set('sortBy', q.sortBy)
   if (q.direction) params.set('direction', q.direction)
-  if (q.filters) {
-    for (const [k, v] of Object.entries(q.filters)) {
-      if (v != null && v !== '') params.set(`filters[${k}]`, v)
-    }
-  }
+  if (q.filters) appendFilterQuery(params, q.filters)
   const s = params.toString()
   return s ? `?${s}` : ''
 }

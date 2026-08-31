@@ -6,6 +6,7 @@
 // visibility, plus a paginator with page-size selector.
 
 import * as React from 'react'
+import type { FilterCriterion, FilterInput, FilterMap } from '@modern-admin/core'
 import {
   columnFilteringFeature,
   columnResizingFeature,
@@ -57,6 +58,7 @@ import {
   ScrollArea,
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -118,16 +120,27 @@ import { useHotkey } from '../use-hotkey.js'
 import { homeCrumb, PageBreadcrumbs } from '../breadcrumbs.js'
 import { ExportDialog } from './export-dialog.js'
 import {
+  ALL_DATE_OPS,
   ALL_NUMERIC_OPS,
+  ALL_REFERENCE_OPS,
   ALL_STRING_OPS,
+  type DateFilterOp,
+  DATE_NULLARY,
+  encodeDateFilter,
   encodeFilter,
+  encodeInFilterValues,
   encodeNumericFilter,
+  encodeReferenceFilter,
   type NumericFilterOp,
   NUMERIC_NULLARY,
   NULLARY_OPS,
   ONE_OF_DEFAULT_MAX,
+  parseDateFilter,
   parseFilterString,
   parseNumericFilter,
+  parseReferenceFilter,
+  type ReferenceFilterOp,
+  REFERENCE_NULLARY,
   type StringFilterOp,
 } from './filter-codecs.js'
 import {
@@ -324,7 +337,7 @@ export interface ResourceListPageProps {
   /** Filters always applied to the data query but hidden from the filter UI
    *  and never written to the URL. Used to embed the list as a related-records
    *  view filtered by a parent record's id. */
-  lockedFilters?: Record<string, string>
+  lockedFilters?: FilterMap
   features?: ResourceListFeatures
   /** When provided, row selection is controlled from outside. The
    *  internal bulk action bar should be hidden (`features.bulk = false`)
@@ -544,9 +557,9 @@ export function ResourceListPage({
   const handleFilterChange = React.useCallback(
     (updater: ColumnFiltersState | ((prev: ColumnFiltersState) => ColumnFiltersState)) => {
       const next = typeof updater === 'function' ? updater(columnFilters) : updater
-      const filters: Record<string, string> = {}
+      const filters: FilterMap = {}
       for (const f of next) {
-        if (f.value != null && f.value !== '') filters[f.id] = String(f.value)
+        if (f.value != null && f.value !== '') filters[f.id] = f.value as FilterInput
       }
       updateUrlQuery({
         filters: Object.keys(filters).length > 0 ? filters : undefined,
@@ -565,10 +578,10 @@ export function ResourceListPage({
   }, [columnFilters])
 
   const handleColumnFilterApply = React.useCallback(
-    (updates: Record<string, string>) => {
+    (updates: Record<string, FilterInput | null>) => {
       const next = columnFiltersRef.current.filter((f) => !(f.id in updates))
       for (const [id, value] of Object.entries(updates)) {
-        if (value) next.push({ id, value })
+        if (value != null && value !== '') next.push({ id, value })
       }
       handleFilterChange(next)
     },
@@ -1904,7 +1917,7 @@ function NumericFilterField({
   onChange,
   t,
 }: {
-  value: string
+  value?: FilterInput
   onChange(v: unknown): void
   t: (key: string, params?: Record<string, string | number>) => string
 }): React.ReactElement {
@@ -2098,8 +2111,21 @@ function FilterPanel({
   }, [open, mountedCount, properties.length])
 
   const setDraftFilter = (id: string, value: unknown) => {
-    const without = draft.filter((f) => f.id !== id)
-    setDraft(value != null && value !== '' ? [...without, { id, value }] : without)
+    setDraft((current) => {
+      const without = current.filter((f) => f.id !== id)
+      return value != null && value !== '' ? [...without, { id, value }] : without
+    })
+  }
+
+  const setDraftDateFilter = (path: string, value: FilterCriterion | null) => {
+    setDraft((current) => {
+      const legacyFrom = path + '~~from'
+      const legacyTo = path + '~~to'
+      const without = current.filter(
+        (filter) => filter.id !== path && filter.id !== legacyFrom && filter.id !== legacyTo,
+      )
+      return value ? [...without, { id: path, value }] : without
+    })
   }
 
   const handleApply = () => {
@@ -2141,12 +2167,11 @@ function FilterPanel({
                 <FilterField
                   key={p.path}
                   property={p}
-                  value={draftMap.get(p.path) as string | undefined}
+                  value={draftMap.get(p.path) as FilterInput | undefined}
                   onChange={(v) => setDraftFilter(p.path, v)}
                   valueFrom={draftMap.get(p.path + '~~from') as string | undefined}
                   valueTo={draftMap.get(p.path + '~~to') as string | undefined}
-                  onChangeFrom={(v) => setDraftFilter(p.path + '~~from', v)}
-                  onChangeTo={(v) => setDraftFilter(p.path + '~~to', v)}
+                  onDateChange={(v) => setDraftDateFilter(p.path, v)}
                   resourceId={resourceId}
                   t={t}
                 />
@@ -2178,18 +2203,16 @@ function FilterField({
   onChange,
   valueFrom,
   valueTo,
-  onChangeFrom,
-  onChangeTo,
+  onDateChange,
   resourceId,
   t,
 }: {
   property: PropertyJSON
-  value: string | undefined
+  value: FilterInput | undefined
   onChange(v: unknown): void
   valueFrom?: string
   valueTo?: string
-  onChangeFrom?(v: unknown): void
-  onChangeTo?(v: unknown): void
+  onDateChange?(v: FilterCriterion | null): void
   resourceId: string
   t: (key: string, params?: Record<string, string | number>) => string
 }): React.ReactElement {
@@ -2198,18 +2221,18 @@ function FilterField({
     <div className="space-y-1.5">
       <Label className="text-sm font-medium">{property.label}</Label>
       {isDateType ? (
-        <DateRangeFilter
+        <DateFilterField
           mode={property.type as 'date' | 'datetime'}
-          from={valueFrom}
-          to={valueTo}
-          onFromChange={onChangeFrom ?? onChange}
-          onToChange={onChangeTo ?? onChange}
+          value={value}
+          legacyFrom={valueFrom}
+          legacyTo={valueTo}
+          onChange={onDateChange ?? ((next) => onChange(next))}
           t={t}
         />
       ) : (
         <FilterInput
           property={property}
-          value={value ?? ''}
+          value={value}
           onChange={onChange}
           resourceId={resourceId}
           t={t}
@@ -2219,47 +2242,82 @@ function FilterField({
   )
 }
 
-function DateRangeFilter({
+function DateFilterField({
   mode,
-  from,
-  to,
-  onFromChange,
-  onToChange,
+  value,
+  legacyFrom,
+  legacyTo,
+  onChange,
   t,
 }: {
   mode: 'date' | 'datetime'
-  from: string | undefined
-  to: string | undefined
-  onFromChange(v: unknown): void
-  onToChange(v: unknown): void
+  value?: FilterInput
+  legacyFrom?: string
+  legacyTo?: string
+  onChange(v: FilterCriterion | null): void
   t: (key: string, params?: Record<string, string | number>) => string
 }): React.ReactElement {
   // The calendar popover needs a date-fns locale of its own — the `t` prop
   // only covers the surrounding labels.
   const { locale: uiLocale } = useI18n()
   const locale = dateFnsLocale(uiLocale)
+  const initial = parseDateFilter(
+    value ?? encodeDateFilter('between', legacyFrom ?? '', legacyTo ?? '') ?? undefined,
+  )
+  const [op, setOp] = React.useState<DateFilterOp>(initial.op)
+  const [from, setFrom] = React.useState(initial.from)
+  const [to, setTo] = React.useState(initial.to)
+
+  React.useEffect(() => {
+    const next = parseDateFilter(
+      value ?? encodeDateFilter('between', legacyFrom ?? '', legacyTo ?? '') ?? undefined,
+    )
+    setOp(next.op)
+    setFrom(next.from)
+    setTo(next.to)
+  }, [value, legacyFrom, legacyTo])
+
+  const emit = (nextOp: DateFilterOp, nextFrom: string, nextTo: string) => {
+    setOp(nextOp)
+    setFrom(nextFrom)
+    setTo(nextTo)
+    onChange(encodeDateFilter(nextOp, nextFrom, nextTo))
+  }
+
   return (
     <div className="space-y-2">
-      <div className="space-y-1">
-        <span className="text-xs text-muted-foreground">{t('common:from')}</span>
-        <DatePicker
-          mode={mode}
-          value={from ?? ''}
-          onChange={(v) => onFromChange(v)}
-          ariaLabel={t('common:from')}
-          locale={locale}
-        />
-      </div>
-      <div className="space-y-1">
-        <span className="text-xs text-muted-foreground">{t('common:to')}</span>
-        <DatePicker
-          mode={mode}
-          value={to ?? ''}
-          onChange={(v) => onToChange(v)}
-          ariaLabel={t('common:to')}
-          locale={locale}
-        />
-      </div>
+      <Select value={op} onValueChange={(next) => emit(next as DateFilterOp, from, to)}>
+        <SelectTrigger className="h-7 text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            {ALL_DATE_OPS.map((option) => (
+              <SelectItem key={option} value={option} className="text-xs">
+                {t(`filter:op.${option}`)}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+      {!DATE_NULLARY.has(op) && (
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <DatePicker
+            mode={mode}
+            value={from}
+            onChange={(next) => emit('between', next, to)}
+            ariaLabel={t('common:from')}
+            locale={locale}
+          />
+          <DatePicker
+            mode={mode}
+            value={to}
+            onChange={(next) => emit('between', from, next)}
+            ariaLabel={t('common:to')}
+            locale={locale}
+          />
+        </div>
+      )}
     </div>
   )
 }
@@ -2274,7 +2332,7 @@ function FilterInput({
   t,
 }: {
   property: PropertyJSON
-  value: string
+  value?: FilterInput
   onChange(v: unknown): void
   resourceId: string
   t: (key: string, params?: Record<string, string | number>) => string
@@ -2282,11 +2340,11 @@ function FilterInput({
   // Reference field → combobox backed by the referenced resource's search action
   if (property.reference && !property.isArray) {
     return (
-      <ReferenceCombobox
+      <ReferenceFilterField
         referenceResourceId={property.reference}
-        value={value || null}
-        onChange={(v) => onChange(v ?? '')}
-        placeholder={t('common:any')}
+        value={value}
+        onChange={onChange}
+        t={t}
       />
     )
   }
@@ -2294,7 +2352,10 @@ function FilterInput({
   // Enum / available values → Select
   if (property.availableValues?.length) {
     return (
-      <Select value={value || '_any_'} onValueChange={(v) => onChange(v === '_any_' ? '' : v)}>
+      <Select
+        value={parseReferenceFilter(value).val || '_any_'}
+        onValueChange={(v) => onChange(v === '_any_' ? null : encodeReferenceFilter('eq', v))}
+      >
         <SelectTrigger className="h-8">
           <SelectValue placeholder={t('common:any')} />
         </SelectTrigger>
@@ -2313,7 +2374,10 @@ function FilterInput({
   switch (property.type) {
     case 'boolean':
       return (
-        <Select value={value || '_any_'} onValueChange={(v) => onChange(v === '_any_' ? '' : v)}>
+        <Select
+          value={parseReferenceFilter(value).val || '_any_'}
+          onValueChange={(v) => onChange(v === '_any_' ? null : encodeReferenceFilter('eq', v))}
+        >
           <SelectTrigger className="h-8">
             <SelectValue placeholder={t('common:any')} />
           </SelectTrigger>
@@ -2344,6 +2408,66 @@ function FilterInput({
 
 // ─── String filter with operator selector + value picker ─────────────────────
 
+function ReferenceFilterField({
+  referenceResourceId,
+  value,
+  onChange,
+  t,
+}: {
+  referenceResourceId: string
+  value?: FilterInput
+  onChange(v: unknown): void
+  t: (key: string, params?: Record<string, string | number>) => string
+}): React.ReactElement {
+  const parsed = parseReferenceFilter(value)
+  const [op, setOp] = React.useState<ReferenceFilterOp>(parsed.op)
+  const [selected, setSelected] = React.useState(parsed.val)
+
+  React.useEffect(() => {
+    const next = parseReferenceFilter(value)
+    setOp(next.op)
+    setSelected(next.val)
+  }, [value])
+
+  const emit = (nextOp: ReferenceFilterOp, nextValue: string) => {
+    setOp(nextOp)
+    setSelected(nextValue)
+    onChange(encodeReferenceFilter(nextOp, nextValue))
+  }
+
+  return (
+    <div className="space-y-2">
+      <Select
+        value={op}
+        onValueChange={(next) =>
+          emit(next as ReferenceFilterOp, REFERENCE_NULLARY.has(next) ? '' : selected)
+        }
+      >
+        <SelectTrigger className="h-7 text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            {ALL_REFERENCE_OPS.map((option) => (
+              <SelectItem key={option} value={option} className="text-xs">
+                {t(`filter:op.${option}`)}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+      {!REFERENCE_NULLARY.has(op) && (
+        <ReferenceCombobox
+          referenceResourceId={referenceResourceId}
+          value={selected || null}
+          onChange={(next) => emit(op, next == null ? '' : String(next))}
+          placeholder={t('common:any')}
+        />
+      )}
+    </div>
+  )
+}
+
 function StringFilterField({
   property,
   value,
@@ -2352,7 +2476,7 @@ function StringFilterField({
   t,
 }: {
   property: PropertyJSON
-  value: string
+  value?: FilterInput
   onChange(v: unknown): void
   resourceId: string
   t: (key: string, params?: Record<string, string | number>) => string
@@ -2434,8 +2558,12 @@ function StringFilterField({
         <FilterValuePicker
           resourceId={resourceId}
           field={property.path}
-          selected={val ? val.split(',') : []}
-          onChange={(selected) => emit('in', selected.join(','))}
+          selected={parsed.values}
+          onChange={(selected) => {
+            setOp('in')
+            setVal('')
+            onChange(encodeInFilterValues(selected))
+          }}
           preloadedValues={isLowCardinality ? distinctValues : undefined}
           t={t}
         />
@@ -2622,57 +2750,68 @@ function ColumnFilterPopover({
 }: {
   property: PropertyJSON
   getFilters(): ColumnFiltersState
-  onApply(updates: Record<string, string>): void
+  onApply(updates: Record<string, FilterInput | null>): void
   resourceId: string
   t: (key: string, params?: Record<string, string | number>) => string
 }): React.ReactElement {
   const [open, setOpen] = React.useState(false)
   const isDateType = property.type === 'date' || property.type === 'datetime'
 
-  const [value, setValue] = React.useState('')
+  const [value, setValue] = React.useState<FilterInput | undefined>()
   const [valueFrom, setValueFrom] = React.useState('')
   const [valueTo, setValueTo] = React.useState('')
 
   // Initialise draft from current URL filters each time the popover opens.
   React.useEffect(() => {
     if (!open) return
-    const map = new Map(getFilters().map((f) => [f.id, String(f.value ?? '')]))
+    const map = new Map(getFilters().map((f) => [f.id, f.value as FilterInput | undefined]))
     if (isDateType) {
-      setValueFrom(map.get(property.path + '~~from') ?? '')
-      setValueTo(map.get(property.path + '~~to') ?? '')
+      const legacyFrom = map.get(property.path + '~~from')
+      const legacyTo = map.get(property.path + '~~to')
+      const from = typeof legacyFrom === 'string' ? legacyFrom : ''
+      const to = typeof legacyTo === 'string' ? legacyTo : ''
+      setValue(map.get(property.path) ?? encodeDateFilter('between', from, to) ?? undefined)
+      setValueFrom(from)
+      setValueTo(to)
     } else {
-      setValue(map.get(property.path) ?? '')
+      setValue(map.get(property.path))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   // Icon is highlighted when any filter for this property is set.
   const isActive = (() => {
-    const map = new Map(getFilters().map((f) => [f.id, String(f.value ?? '')]))
+    const map = new Map(getFilters().map((f) => [f.id, f.value]))
     return isDateType
-      ? !!(map.get(property.path + '~~from') || map.get(property.path + '~~to'))
+      ? !!(
+          map.get(property.path) ||
+          map.get(property.path + '~~from') ||
+          map.get(property.path + '~~to')
+        )
       : !!map.get(property.path)
   })()
 
   const handleApply = () => {
-    const updates: Record<string, string> = {}
+    const updates: Record<string, FilterInput | null> = {}
     if (isDateType) {
-      updates[property.path + '~~from'] = valueFrom
-      updates[property.path + '~~to'] = valueTo
+      updates[property.path] = value ?? null
+      updates[property.path + '~~from'] = null
+      updates[property.path + '~~to'] = null
     } else {
-      updates[property.path] = value
+      updates[property.path] = value ?? null
     }
     onApply(updates)
     setOpen(false)
   }
 
   const handleClear = () => {
-    const updates: Record<string, string> = {}
+    const updates: Record<string, FilterInput | null> = {}
     if (isDateType) {
-      updates[property.path + '~~from'] = ''
-      updates[property.path + '~~to'] = ''
+      updates[property.path] = null
+      updates[property.path + '~~from'] = null
+      updates[property.path + '~~to'] = null
     } else {
-      updates[property.path] = ''
+      updates[property.path] = null
     }
     onApply(updates)
     setOpen(false)
@@ -2700,11 +2839,10 @@ function ColumnFilterPopover({
           <FilterField
             property={property}
             value={value}
-            onChange={(v) => setValue(String(v ?? ''))}
+            onChange={(v) => setValue((v as FilterInput | null) ?? undefined)}
             valueFrom={valueFrom}
             valueTo={valueTo}
-            onChangeFrom={(v) => setValueFrom(String(v ?? ''))}
-            onChangeTo={(v) => setValueTo(String(v ?? ''))}
+            onDateChange={(next) => setValue(next ?? undefined)}
             resourceId={resourceId}
             t={t}
           />

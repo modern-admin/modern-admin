@@ -39,14 +39,16 @@ import {
   type ChartFormat,
   type ChartTransformStep,
   type ChartVisualisation,
+  type FilterCriterion,
+  type FilterMap,
   type TimeRange,
   type TimeRangePreset,
 } from '@modern-admin/core'
 import { applyTransform, makeValueFormatter } from '../dashboard/value-format.js'
 import { useI18n } from '../i18n.js'
 import { useResources } from '../hooks.js'
-import { ReferenceCombobox } from '../reference.js'
 import type { PropertyJSON } from '../types.js'
+import { PropertyFilterInput } from './property-filter-input.js'
 
 export interface ChartBuilderDialogProps {
   /** Pre-populate for editing an existing chart. */
@@ -126,7 +128,7 @@ export function ChartBuilderDialog({
   const [preset, setPreset] = React.useState<Exclude<TimeRangePreset, 'custom'>>(
     initial && initial.timeRange.preset !== 'custom' ? initial.timeRange.preset : '30d',
   )
-  const [filters, setFilters] = React.useState<Record<string, string>>(initial?.filters ?? {})
+  const [filters, setFilters] = React.useState<FilterMap>(initial?.filters ?? {})
   const [quickFilters, setQuickFilters] = React.useState<string[]>(initial?.quickFilters ?? [])
   const [order, setOrder] = React.useState<number>(initial?.order ?? 0)
   const [comparePrevious, setComparePrevious] = React.useState(initial?.comparePrevious ?? false)
@@ -220,10 +222,10 @@ export function ChartBuilderDialog({
   const PREVIEW_SAMPLE = 1234
   const previewText = `${PREVIEW_SAMPLE} → ${previewFormat(applyTransform(PREVIEW_SAMPLE, transform))}`
 
-  const handleFilterChange = (path: string, value: string): void => {
+  const handleFilterChange = (path: string, value: FilterCriterion | null): void => {
     setFilters((prev) => {
       const next = { ...prev }
-      if (value === '') delete next[path]
+      if (value === null) delete next[path]
       else next[path] = value
       return next
     })
@@ -750,10 +752,12 @@ export function ChartBuilderDialog({
                             title={t('dashboard:builder.quickFilterHint')}
                           />
                         </div>
-                        <FilterInput
+                        <PropertyFilterInput
                           property={p}
-                          value={filters[p.path] ?? ''}
+                          resourceId={resourceId}
+                          value={filters[p.path]}
                           onChange={(v) => handleFilterChange(p.path, v)}
+                          inputId={`flt-${p.path}`}
                         />
                       </div>
                     )
@@ -799,73 +803,6 @@ function isFilterable(p: PropertyJSON): boolean {
     if (!(path.endsWith('Id') || path.endsWith('_id'))) return false
   }
   return true
-}
-
-/**
- * Renders an inline input for one filter row in the builder. Reference
- * properties get the same combobox the resource forms use; enums/booleans
- * get a Select; numerics get a number input; everything else falls back to
- * a plain text input.
- */
-function FilterInput({
-  property,
-  value,
-  onChange,
-}: {
-  property: PropertyJSON
-  value: string
-  onChange(next: string): void
-}): React.ReactElement {
-  if (property.reference) {
-    return (
-      <ReferenceCombobox
-        referenceResourceId={property.reference}
-        value={value || null}
-        onChange={(next) => onChange(next == null ? '' : String(next))}
-      />
-    )
-  }
-  if (property.availableValues && property.availableValues.length > 0) {
-    return (
-      <Select value={value || NONE} onValueChange={(v) => onChange(v === NONE ? '' : v)}>
-        <SelectTrigger id={`flt-${property.path}`}>
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={NONE}>—</SelectItem>
-          {property.availableValues.map((opt) => (
-            <SelectItem key={opt.value} value={opt.value}>
-              {opt.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    )
-  }
-  if (property.type === 'boolean') {
-    return (
-      <Select value={value || NONE} onValueChange={(v) => onChange(v === NONE ? '' : v)}>
-        <SelectTrigger id={`flt-${property.path}`}>
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={NONE}>—</SelectItem>
-          <SelectItem value="true">true</SelectItem>
-          <SelectItem value="false">false</SelectItem>
-        </SelectContent>
-      </Select>
-    )
-  }
-  const isNumeric =
-    property.type === 'number' || property.type === 'float' || property.type === 'currency'
-  return (
-    <Input
-      id={`flt-${property.path}`}
-      type={isNumeric ? 'number' : 'text'}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-    />
-  )
 }
 
 /**

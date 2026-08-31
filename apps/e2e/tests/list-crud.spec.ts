@@ -114,8 +114,11 @@ test.describe('List page — CRUD interactions', () => {
     await sheet.getByRole('button', { name: 'Apply filters' }).click()
     await expect(sheet).toBeHidden()
 
-    // URL must persist the filter (TSR encodes the brackets/colon).
-    await expect(page).toHaveURL(/filters(\[|%5B)email(\]|%5D)=/)
+    // URL must persist the structured filter.
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get('filters[email][operator]'))
+      .toBe('co')
+    expect(new URL(page.url()).searchParams.get('filters[email][value]')).toBe('ada')
 
     // After filtering, only Ada-family customers (seeded handles
     // `ada.lovelace1@example.com`, `ada.allen8@example.com`, …) remain.

@@ -35,6 +35,15 @@ import type { DrizzleColumn, DrizzleTable } from './types.js'
 const ciLike = (column: DrizzleColumn) =>
   (column as DrizzleColumn).columnType?.startsWith('Pg') ? ilike : like
 
+export const findTableColumn = (table: DrizzleTable, path: string): DrizzleColumn | undefined => {
+  const direct = table[path] as DrizzleColumn | undefined
+  if (direct) return direct
+  return Object.values(table).find(
+    (candidate): candidate is DrizzleColumn =>
+      candidate != null && typeof candidate === 'object' && candidate.name === path,
+  )
+}
+
 /**
  * Wrap a value in `%...%` for a LIKE/ILIKE contains match.
  * The `%` characters within the user value are escaped so they match literally.
@@ -52,7 +61,7 @@ const likeEndsWith = (v: string) => `%${v}`
 const elementToCondition = (element: FilterElement, table: DrizzleTable): unknown => {
   const property = element.property as DrizzleProperty | null
   if (!property) return null
-  const column = table[element.path] as DrizzleColumn | undefined
+  const column = findTableColumn(table, element.path)
   if (!column) return null
   const { value, operator } = element
 
@@ -155,9 +164,13 @@ const buildOperatorCondition = (
       return eq(column as never, coerced as never)
     }
     case 'empty':
-      return or(isNull(column as never), eq(column as never, '' as never))
+      return isString
+        ? or(isNull(column as never), eq(column as never, '' as never))
+        : isNull(column as never)
     case 'nempty':
-      return and(isNotNull(column as never), ne(column as never, '' as never))
+      return isString
+        ? and(isNotNull(column as never), ne(column as never, '' as never))
+        : isNotNull(column as never)
     case 'in': {
       if (Array.isArray(value)) {
         const list = value.map((v) => coerceScalar(v as FilterValue, property)) as unknown[]
@@ -222,7 +235,7 @@ export const findOptionsToDrizzle = (
   if (options.offset != null) out.offset = options.offset
   const sortBy = options.sort?.sortBy
   if (sortBy) {
-    const column = table[sortBy] as DrizzleColumn | undefined
+    const column = findTableColumn(table, sortBy)
     if (column) {
       out.orderBy = (options.sort?.direction === 'desc' ? desc : asc)(column as never)
     }

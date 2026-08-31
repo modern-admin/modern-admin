@@ -60,11 +60,18 @@ export const coerceScalar = (value: FilterValue, property: CoercibleProperty | n
 }
 
 /**
- * Split a `between` filter value (`"from,to"`) into its two raw string bounds.
- * A missing comma treats the whole value as the lower bound. Each side is
- * coerced by the caller (which owns the property-specific end-of-day handling).
+ * Read the bounds from a structured `{ from, to }` criterion or split the
+ * legacy `"from,to"` representation. A missing comma in the legacy form
+ * treats the whole value as the lower bound. Each side is coerced by the
+ * caller (which owns the property-specific end-of-day handling).
  */
 export const parseBetween = (value: FilterValue): { fromStr: string; toStr: string } => {
+  if (isRangeValue(value)) {
+    return {
+      fromStr: value.from ?? '',
+      toStr: value.to ?? '',
+    }
+  }
   const str = typeof value === 'string' ? value : ''
   const comma = str.indexOf(',')
   return {

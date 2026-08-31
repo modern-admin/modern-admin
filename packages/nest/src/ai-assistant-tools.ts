@@ -3,6 +3,8 @@ import { z } from 'zod/v4'
 import {
   chartDefZ,
   type CurrentAdmin,
+  type FilterMap,
+  filterMapZ,
   type IDashboardStore,
   type ModernAdmin,
   type RecordJSON,
@@ -141,8 +143,6 @@ const sanitizeToolName = (value: string): string =>
     .replace(/[^a-zA-Z0-9_]+/g, '_')
     .replace(/^_+|_+$/g, '')
     .toLowerCase()
-
-const filterValueZ = z.union([z.string(), z.number(), z.boolean()])
 
 interface RecordSummary {
   id: string
@@ -409,7 +409,7 @@ export function buildAiAssistantTools({
         perPage?: number
         sortBy?: string
         direction?: 'asc' | 'desc'
-        filters?: Record<string, string | number | boolean>
+        filters?: FilterMap
       },
     ) => {
       const result = (await admin.invoke(
@@ -421,11 +421,7 @@ export function buildAiAssistantTools({
             ...(opts.perPage !== undefined ? { perPage: opts.perPage } : {}),
             ...(opts.sortBy ? { sortBy: opts.sortBy } : {}),
             ...(opts.direction ? { direction: opts.direction } : {}),
-            ...(opts.filters
-              ? Object.fromEntries(
-                  Object.entries(opts.filters).map(([key, value]) => [`filters.${key}`, value]),
-                )
-              : {}),
+            ...(opts.filters ? { filters: opts.filters } : {}),
           },
         },
         currentAdmin,
@@ -504,7 +500,7 @@ export function buildAiAssistantTools({
         perPage: z.number().int().positive().max(maxRecordsPerTool).optional(),
         sortBy: z.string().optional(),
         direction: z.enum(['asc', 'desc']).optional(),
-        filters: z.record(z.string(), filterValueZ).optional(),
+        filters: filterMapZ.optional(),
       }),
       execute: async ({
         resourceId,
@@ -635,15 +631,13 @@ export function buildAiAssistantTools({
         .enum(['half', 'full'])
         .default('half')
         .describe('Tile width: half = 1 of 2 columns, full = full row'),
-      filters: z
-        .record(z.string(), z.string())
+      filters: filterMapZ
         .optional()
         .describe(
-          'Exact-match filters as { "<propertyPath>": "<value>" }. ' +
-            'Values MUST be strings — convert numbers/booleans/ids with String(...). ' +
+          'Structured filters keyed by property path, for example ' +
+            '{ "status": { "operator": "eq", "value": "paid" } }. ' +
             'Use this whenever the user scopes the chart to a specific entity ' +
-            '(e.g. comments for one post: { "postId": "00000000-0004-4000-8000-000000000076" }, ' +
-            'orders for one customer: { "customerId": "..." }, posts in a category: { "categoryId": "..." }).',
+            '(e.g. comments for one post: { "postId": { "operator": "eq", "value": "..." } }).',
         ),
       quickFilters: z
         .array(z.string())

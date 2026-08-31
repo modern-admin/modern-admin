@@ -48,6 +48,52 @@ describe('GraphQL schema', () => {
     expect(result.data?.usersCount).toBe(2)
   })
 
+  test('typed where criteria reach the action pipeline structurally', async () => {
+    const admin = makeAdmin()
+    const invoke = admin.invoke.bind(admin)
+    let filters: unknown
+    admin.invoke = async (request, currentAdmin) => {
+      if (request.params.action === 'list') filters = request.query?.filters
+      return invoke(request, currentAdmin)
+    }
+
+    const result = await run(
+      admin,
+      'query($where: UsersWhereInput) { usersList(where: $where) { id } }',
+      { where: { name: { in: ['Smith, John', 'in-json:["a"]'] } } },
+    )
+
+    expect(result.errors).toBeUndefined()
+    expect(filters).toEqual({
+      name: { operator: 'in', values: ['Smith, John', 'in-json:["a"]'] },
+    })
+  })
+
+  test('where criterion accepts exactly one condition', async () => {
+    const admin = makeAdmin()
+    const result = await run(
+      admin,
+      'query($where: UsersWhereInput) { usersList(where: $where) { id } }',
+      { where: { name: { equals: 'Ada', contains: 'A' } } },
+    )
+
+    expect(result.errors?.[0]?.message).toContain('exactly one field')
+  })
+
+  test('does not expose the removed legacy filter argument', () => {
+    const fields = buildGraphqlSchema(makeAdmin()).getQueryType()!.getFields()
+
+    expect(fields.usersList!.args.map((argument) => argument.name)).toEqual([
+      'where',
+      'limit',
+      'offset',
+      'sortBy',
+      'sortDirection',
+    ])
+    expect(fields.usersCount!.args.map((argument) => argument.name)).toEqual(['where'])
+    expect(buildGraphqlSchema(makeAdmin()).getType('UsersFilterInput')).toBeUndefined()
+  })
+
   test('one/count enforce access through invoke (no raw findOne/count bypass)', async () => {
     // Deny the read actions; routing `usersOne`/`usersCount` through
     // `invoke()` means the gate fires instead of leaking rows via a direct

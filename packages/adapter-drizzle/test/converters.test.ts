@@ -10,6 +10,21 @@ const makeResource = () => {
   return new DrizzleResource({ client, table: users, tableKey: 'users' })
 }
 
+const paramValues = (node: unknown, acc: unknown[] = []): unknown[] => {
+  if (node == null || typeof node !== 'object') return acc
+  if (Array.isArray(node)) {
+    for (const item of node) paramValues(item, acc)
+    return acc
+  }
+  if ('value' in node && 'encoder' in node) {
+    acc.push((node as { value: unknown }).value)
+    return acc
+  }
+  const chunks = (node as { queryChunks?: unknown[] }).queryChunks
+  if (Array.isArray(chunks)) for (const chunk of chunks) paramValues(chunk, acc)
+  return acc
+}
+
 describe('filterToWhere', () => {
   it('returns undefined for empty filter', () => {
     const resource = makeResource()
@@ -28,6 +43,16 @@ describe('filterToWhere', () => {
     expect(where).toBeDefined()
   })
 
+  it('preserves commas inside structured in-filter values', () => {
+    const resource = makeResource()
+    const where = filterToWhere(
+      new Filter({ name: { operator: 'in', values: ['Smith, John'] } }, resource),
+      users,
+    )
+
+    expect(paramValues(where)).toEqual(['Smith, John'])
+  })
+
   it('skips fields whose property is unknown', () => {
     const resource = makeResource()
     const where = filterToWhere(new Filter({ unknownField: 'x' }, resource), users)
@@ -38,6 +63,36 @@ describe('filterToWhere', () => {
     const resource = makeResource()
     const where = filterToWhere(new Filter({ 'age~~from': '10', 'age~~to': '50' }, resource), users)
     expect(where).toBeDefined()
+  })
+
+  it('handles a structured between criterion', () => {
+    const resource = makeResource()
+    const where = filterToWhere(
+      new Filter({ age: { operator: 'between', from: '150', to: '420' } }, resource),
+      users,
+    )
+
+    expect(paramValues(where)).toEqual([150, 420])
+  })
+
+  it('checks only null for empty and non-empty operators on dates', () => {
+    const resource = makeResource()
+    const empty = filterToWhere(new Filter({ created_at: 'empty:' }, resource), users)
+    const nonEmpty = filterToWhere(new Filter({ created_at: 'nempty:' }, resource), users)
+
+    expect(empty).toBeDefined()
+    expect(nonEmpty).toBeDefined()
+    expect(paramValues(empty)).toEqual([])
+    expect(paramValues(nonEmpty)).toEqual([])
+  })
+
+  it('keeps empty-string checks for nullable strings', () => {
+    const resource = makeResource()
+    const empty = filterToWhere(new Filter({ name: 'empty:' }, resource), users)
+    const nonEmpty = filterToWhere(new Filter({ name: 'nempty:' }, resource), users)
+
+    expect(paramValues(empty)).toEqual([''])
+    expect(paramValues(nonEmpty)).toEqual([''])
   })
 
   it('uses array-contains for scalar-list columns with a single needle', () => {

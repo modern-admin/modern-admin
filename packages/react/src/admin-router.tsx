@@ -15,7 +15,7 @@
 // can prepend it when pushing to browser history.
 //
 // Search params: TSR's default JSON-style parser would mangle our existing
-// `filters[<path>]=<value>` URL format. We make `parseSearch`/`stringifySearch`
+// bracket-notation filter URL format. We make `parseSearch`/`stringifySearch`
 // no-ops (TSR keeps `searchStr` raw); `useRoute()` re-parses `searchStr` into
 // `ListQueryState` via `parseLocation` in `router.tsx`.
 
@@ -326,19 +326,22 @@ const routeTree = rootRoute.addChildren([
 //
 // Search params: in TSR v1.169 `location.searchStr` is computed as
 // `stringifySearch(parseSearch(rawUrlSearch))` — it's NOT the raw URL search
-// string. Our list page reads `searchStr` to extract `filters[<path>]=<value>`
+// string. Our list page reads `searchStr` to extract bracketed filter criteria
 // pairs (see `parseLocation` in `router.tsx`), so the parse/stringify pair
 // must be a flat-key identity round-trip rather than TSR's default
 // JSON-encoded values (which would mangle the bracket notation) or no-ops
 // (which would drop the search entirely — filters/sort never reach the API).
 
-const flatParseSearch = (search: string): Record<string, string> => {
+const flatParseSearch = (search: string): Record<string, string | string[]> => {
   const str = search.startsWith('?') ? search.slice(1) : search
   if (!str) return {}
   const params = new URLSearchParams(str)
-  const out: Record<string, string> = {}
+  const out: Record<string, string | string[]> = {}
   params.forEach((value, key) => {
-    out[key] = value
+    const current = out[key]
+    if (current === undefined) out[key] = value
+    else if (Array.isArray(current)) current.push(value)
+    else out[key] = [current, value]
   })
   return out
 }
@@ -348,7 +351,11 @@ const flatStringifySearch = (search: Record<string, unknown>): string => {
   const params = new URLSearchParams()
   for (const [k, v] of Object.entries(search)) {
     if (v == null || v === '') continue
-    params.set(k, typeof v === 'string' ? v : String(v))
+    if (Array.isArray(v)) {
+      for (const item of v) params.append(k, String(item))
+    } else {
+      params.set(k, typeof v === 'string' ? v : String(v))
+    }
   }
   const s = params.toString()
   return s ? `?${s}` : ''

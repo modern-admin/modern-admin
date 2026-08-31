@@ -230,6 +230,10 @@ export const filterToWhere = (
 ): Record<string, unknown> => {
   const where: Record<string, unknown> = {}
   const topLevel: unknown[] = []
+  const primaryPath = filter.resource
+    .properties()
+    .find((property) => property.isId())
+    ?.path()
 
   filter.reduce<null>((_, element) => {
     if (!element.property) return null
@@ -238,6 +242,7 @@ export const filterToWhere = (
     const isString = property != null && property.type() === 'string'
 
     const isArray = property?.isArray() ?? false
+    const isRequired = property?.field.isRequired === true && !isArray
 
     // ── Operators that need top-level WHERE clauses ──────────────────
     if (operator === 'empty') {
@@ -245,6 +250,14 @@ export const filterToWhere = (
         // Prisma's only valid empty-check for scalar lists; `null` is
         // rejected because list columns are non-nullable in Postgres.
         where[path] = { isEmpty: true }
+      } else if (isRequired && isString) {
+        // A required string cannot be null, but it can still contain `''`.
+        where[path] = { equals: '', ...insensitive(dialect) }
+      } else if (isRequired) {
+        // `field: null` is invalid for required Prisma scalars and relations.
+        // Express the impossible match through the model's primary key so
+        // every required type (including JSON/reference fields) stays valid.
+        where[primaryPath ?? path] = { in: [] }
       } else if (isString) {
         topLevel.push({ OR: [{ [path]: null }, { [path]: '' }] })
       } else {
@@ -255,6 +268,12 @@ export const filterToWhere = (
     if (operator === 'nempty') {
       if (isArray) {
         where[path] = { isEmpty: false }
+        return null
+      }
+      if (isRequired) {
+        // Every required non-string value is inherently non-empty. Required
+        // strings still need to exclude the representable empty string.
+        if (isString) topLevel.push({ NOT: { [path]: '' } })
         return null
       }
       topLevel.push({ NOT: { [path]: null } })

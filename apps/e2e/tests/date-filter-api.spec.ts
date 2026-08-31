@@ -175,4 +175,30 @@ test.describe('List filters — date-range operators (customers.createdAt)', () 
     )
     expect(res.status(), `unexpected 5xx: ${await res.text().catch(() => '')}`).toBeLessThan(500)
   })
+
+  test('empty and non-empty operators partition a nullable date column', async ({ request }) => {
+    const allResponse = await request.get(adminApi('/resources/posts/actions/list?perPage=200'))
+    const emptyResponse = await request.get(
+      adminApi('/resources/posts/actions/list?filters[publishedAt]=empty:&perPage=200'),
+    )
+    const nonEmptyResponse = await request.get(
+      adminApi('/resources/posts/actions/list?filters[publishedAt]=nempty:&perPage=200'),
+    )
+    expect(allResponse.status()).toBe(200)
+    expect(emptyResponse.status()).toBe(200)
+    expect(nonEmptyResponse.status()).toBe(200)
+
+    const all = (await allResponse.json()).records as Array<{
+      params: { publishedAt: string | null }
+    }>
+    const empty = (await emptyResponse.json()).records as Array<{
+      params: { publishedAt: string | null }
+    }>
+    const nonEmpty = (await nonEmptyResponse.json()).records as Array<{
+      params: { publishedAt: string | null }
+    }>
+    expect(empty.every((record) => !record.params.publishedAt)).toBe(true)
+    expect(nonEmpty.every((record) => !!record.params.publishedAt)).toBe(true)
+    expect(empty.length + nonEmpty.length).toBe(all.length)
+  })
 })
