@@ -56,19 +56,21 @@ export function encodeInFilterValues(values: readonly InFilterScalar[]): string 
   return values.length > 0 ? `${IN_FILTER_JSON_OPERATOR}:${JSON.stringify(values)}` : ''
 }
 
+function parseInFilterJsonPayload(payload: string): InFilterScalar[] | null {
+  try {
+    const result = inFilterPayloadZ.safeParse(JSON.parse(payload) as unknown)
+    return result.success ? result.data : null
+  } catch {
+    return null
+  }
+}
+
 /** Decode either the framed JSON format or the legacy comma-separated format. */
 export function decodeInFilterValues(raw: string): InFilterScalar[] {
   const parsed = parseOperatorValue(raw)
   if (parsed.operator !== 'in') return []
   if (parsed.encoding === 'json') {
-    try {
-      const json: unknown = JSON.parse(parsed.value)
-      const result = inFilterPayloadZ.safeParse(json)
-      if (result.success) return result.data
-    } catch {
-      // Invalid framed payloads are treated as an empty selection.
-    }
-    return []
+    return parseInFilterJsonPayload(parsed.value) ?? []
   }
   return parsed.value ? parsed.value.split(',') : []
 }
@@ -94,7 +96,10 @@ export function parseOperatorValue(raw: string): {
   const colonIdx = raw.indexOf(':')
   if (colonIdx === -1) return { operator: null, value: raw }
   const prefix = raw.slice(0, colonIdx)
-  if (prefix === IN_FILTER_JSON_OPERATOR) {
+  if (
+    prefix === IN_FILTER_JSON_OPERATOR &&
+    parseInFilterJsonPayload(raw.slice(colonIdx + 1)) !== null
+  ) {
     return { operator: 'in', value: raw.slice(colonIdx + 1), encoding: 'json' }
   }
   if (FILTER_OPERATORS.has(prefix)) {

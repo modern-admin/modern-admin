@@ -166,6 +166,37 @@ test.describe('Filter — "Is one of" (in) operator: API', () => {
     }
   })
 
+  test('legacy value starting with an invalid JSON frame prefix remains constrained', async ({
+    request,
+  }) => {
+    const suffix = Date.now()
+    const literalName = `in-json:not-json-${suffix}`
+    const id = await createCustomer(
+      request,
+      literalName,
+      `legacy-in-json-prefix-${suffix}@example.com`,
+    )
+
+    try {
+      const query = new URLSearchParams({
+        'filters[name]': literalName,
+        perPage: '200',
+      })
+      const result = await request.get(
+        adminApi(`/resources/customers/actions/list?${query.toString()}`),
+      )
+
+      expect(result.status()).toBe(200)
+      const body = await result.json()
+      const names = (body.records as Array<{ params: { name: string } }>).map(
+        (record) => record.params.name,
+      )
+      expect(names).toEqual([literalName])
+    } finally {
+      await request.delete(adminApi(`/resources/customers/records/${id}/actions/delete`))
+    }
+  })
+
   test('JSON in payload preserves a comma inside one selected value', async ({ request }) => {
     const suffix = Date.now()
     const name = `Smith, John ${suffix}`

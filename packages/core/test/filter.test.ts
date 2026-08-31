@@ -55,4 +55,12 @@ describe('Filter', () => {
     expect(decodeInFilterValues(legacy)).toEqual(['json:["a"]'])
     expect(new Filter({ name: legacy }, resource).get('name')?.value).toEqual(['json:["a"]'])
   })
+
+  test('legacy values starting with the JSON operator but without a valid frame remain literal', () => {
+    const legacy = 'in-json:not-a-json-array'
+    const filter = new Filter({ name: legacy }, resource).get('name')
+
+    expect(filter?.operator).toBeNull()
+    expect(filter?.value).toBe(legacy)
+  })
 })

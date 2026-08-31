@@ -81,6 +81,13 @@ describe('encodeFilter', () => {
     expect(decodeInFilterValues(raw)).toEqual(['json:["a"]'])
   })
 
+  test('invalid JSON frames using the new prefix remain literal', () => {
+    const raw = 'in-json:not-a-json-array'
+
+    expect(parseFilterString(raw)).toEqual({ op: 'co', val: raw })
+    expect(decodeInFilterValues(raw)).toEqual([])
+  })
+
   test('round-trips through parse', () => {
     for (const raw of ['co:ada', 'sw:x', 'empty:', 'nempty:', 'in:a,b,c', 'eq:1']) {
       const { op, val } = parseFilterString(raw)
