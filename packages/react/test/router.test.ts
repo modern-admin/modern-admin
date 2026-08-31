@@ -15,6 +15,27 @@ describe('buildHref', () => {
     expect(buildHref({ name: 'list', resourceId: 'users' })).toBe('/resources/users')
   })
 
+  test('structured list filters round-trip without delimiter collisions', () => {
+    const route: Route = {
+      name: 'list',
+      resourceId: 'users',
+      query: {
+        filters: {
+          name: { operator: 'in', values: ['Smith, John', 'in-json:["a"]'] },
+          deletedAt: { operator: 'empty' },
+        },
+      },
+    }
+    const href = buildHref(route)
+    const [path, search] = href.split('?')
+
+    expect(parseLocation(path!, `?${search}`)).toEqual(route)
+    expect(new URLSearchParams(search).getAll('filters[name][values][]')).toEqual([
+      'Smith, John',
+      'in-json:["a"]',
+    ])
+  })
+
   test('show', () => {
     expect(buildHref({ name: 'show', resourceId: 'users', recordId: '42' })).toBe(
       '/resources/users/42',

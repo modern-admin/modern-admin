@@ -43,9 +43,12 @@ describe('filterToWhere', () => {
     expect(where).toBeDefined()
   })
 
-  it('preserves commas inside JSON-encoded in-filter values', () => {
+  it('preserves commas inside structured in-filter values', () => {
     const resource = makeResource()
-    const where = filterToWhere(new Filter({ name: 'in-json:["Smith, John"]' }, resource), users)
+    const where = filterToWhere(
+      new Filter({ name: { operator: 'in', values: ['Smith, John'] } }, resource),
+      users,
+    )
 
     expect(paramValues(where)).toEqual(['Smith, John'])
   })

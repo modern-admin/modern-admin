@@ -6,6 +6,7 @@
 // visibility, plus a paginator with page-size selector.
 
 import * as React from 'react'
+import type { FilterCriterion, FilterInput, FilterMap } from '@modern-admin/core'
 import {
   columnFilteringFeature,
   columnResizingFeature,
@@ -125,7 +126,6 @@ import {
   ALL_STRING_OPS,
   type DateFilterOp,
   DATE_NULLARY,
-  decodeInFilterValues,
   encodeDateFilter,
   encodeFilter,
   encodeInFilterValues,
@@ -337,7 +337,7 @@ export interface ResourceListPageProps {
   /** Filters always applied to the data query but hidden from the filter UI
    *  and never written to the URL. Used to embed the list as a related-records
    *  view filtered by a parent record's id. */
-  lockedFilters?: Record<string, string>
+  lockedFilters?: FilterMap
   features?: ResourceListFeatures
   /** When provided, row selection is controlled from outside. The
    *  internal bulk action bar should be hidden (`features.bulk = false`)
@@ -557,9 +557,9 @@ export function ResourceListPage({
   const handleFilterChange = React.useCallback(
     (updater: ColumnFiltersState | ((prev: ColumnFiltersState) => ColumnFiltersState)) => {
       const next = typeof updater === 'function' ? updater(columnFilters) : updater
-      const filters: Record<string, string> = {}
+      const filters: FilterMap = {}
       for (const f of next) {
-        if (f.value != null && f.value !== '') filters[f.id] = String(f.value)
+        if (f.value != null && f.value !== '') filters[f.id] = f.value as FilterInput
       }
       updateUrlQuery({
         filters: Object.keys(filters).length > 0 ? filters : undefined,
@@ -578,10 +578,10 @@ export function ResourceListPage({
   }, [columnFilters])
 
   const handleColumnFilterApply = React.useCallback(
-    (updates: Record<string, string>) => {
+    (updates: Record<string, FilterInput | null>) => {
       const next = columnFiltersRef.current.filter((f) => !(f.id in updates))
       for (const [id, value] of Object.entries(updates)) {
-        if (value) next.push({ id, value })
+        if (value != null && value !== '') next.push({ id, value })
       }
       handleFilterChange(next)
     },
@@ -1917,7 +1917,7 @@ function NumericFilterField({
   onChange,
   t,
 }: {
-  value: string
+  value?: FilterInput
   onChange(v: unknown): void
   t: (key: string, params?: Record<string, string | number>) => string
 }): React.ReactElement {
@@ -2117,7 +2117,7 @@ function FilterPanel({
     })
   }
 
-  const setDraftDateFilter = (path: string, value: string) => {
+  const setDraftDateFilter = (path: string, value: FilterCriterion | null) => {
     setDraft((current) => {
       const legacyFrom = path + '~~from'
       const legacyTo = path + '~~to'
@@ -2167,7 +2167,7 @@ function FilterPanel({
                 <FilterField
                   key={p.path}
                   property={p}
-                  value={draftMap.get(p.path) as string | undefined}
+                  value={draftMap.get(p.path) as FilterInput | undefined}
                   onChange={(v) => setDraftFilter(p.path, v)}
                   valueFrom={draftMap.get(p.path + '~~from') as string | undefined}
                   valueTo={draftMap.get(p.path + '~~to') as string | undefined}
@@ -2208,11 +2208,11 @@ function FilterField({
   t,
 }: {
   property: PropertyJSON
-  value: string | undefined
+  value: FilterInput | undefined
   onChange(v: unknown): void
   valueFrom?: string
   valueTo?: string
-  onDateChange?(v: string): void
+  onDateChange?(v: FilterCriterion | null): void
   resourceId: string
   t: (key: string, params?: Record<string, string | number>) => string
 }): React.ReactElement {
@@ -2223,7 +2223,7 @@ function FilterField({
       {isDateType ? (
         <DateFilterField
           mode={property.type as 'date' | 'datetime'}
-          value={value ?? ''}
+          value={value}
           legacyFrom={valueFrom}
           legacyTo={valueTo}
           onChange={onDateChange ?? ((next) => onChange(next))}
@@ -2232,7 +2232,7 @@ function FilterField({
       ) : (
         <FilterInput
           property={property}
-          value={value ?? ''}
+          value={value}
           onChange={onChange}
           resourceId={resourceId}
           t={t}
@@ -2251,10 +2251,10 @@ function DateFilterField({
   t,
 }: {
   mode: 'date' | 'datetime'
-  value: string
+  value?: FilterInput
   legacyFrom?: string
   legacyTo?: string
-  onChange(v: string): void
+  onChange(v: FilterCriterion | null): void
   t: (key: string, params?: Record<string, string | number>) => string
 }): React.ReactElement {
   // The calendar popover needs a date-fns locale of its own — the `t` prop
@@ -2262,7 +2262,7 @@ function DateFilterField({
   const { locale: uiLocale } = useI18n()
   const locale = dateFnsLocale(uiLocale)
   const initial = parseDateFilter(
-    value || encodeDateFilter('between', legacyFrom ?? '', legacyTo ?? ''),
+    value ?? encodeDateFilter('between', legacyFrom ?? '', legacyTo ?? '') ?? undefined,
   )
   const [op, setOp] = React.useState<DateFilterOp>(initial.op)
   const [from, setFrom] = React.useState(initial.from)
@@ -2270,7 +2270,7 @@ function DateFilterField({
 
   React.useEffect(() => {
     const next = parseDateFilter(
-      value || encodeDateFilter('between', legacyFrom ?? '', legacyTo ?? ''),
+      value ?? encodeDateFilter('between', legacyFrom ?? '', legacyTo ?? '') ?? undefined,
     )
     setOp(next.op)
     setFrom(next.from)
@@ -2332,7 +2332,7 @@ function FilterInput({
   t,
 }: {
   property: PropertyJSON
-  value: string
+  value?: FilterInput
   onChange(v: unknown): void
   resourceId: string
   t: (key: string, params?: Record<string, string | number>) => string
@@ -2352,7 +2352,10 @@ function FilterInput({
   // Enum / available values → Select
   if (property.availableValues?.length) {
     return (
-      <Select value={value || '_any_'} onValueChange={(v) => onChange(v === '_any_' ? '' : v)}>
+      <Select
+        value={parseReferenceFilter(value).val || '_any_'}
+        onValueChange={(v) => onChange(v === '_any_' ? null : encodeReferenceFilter('eq', v))}
+      >
         <SelectTrigger className="h-8">
           <SelectValue placeholder={t('common:any')} />
         </SelectTrigger>
@@ -2371,7 +2374,10 @@ function FilterInput({
   switch (property.type) {
     case 'boolean':
       return (
-        <Select value={value || '_any_'} onValueChange={(v) => onChange(v === '_any_' ? '' : v)}>
+        <Select
+          value={parseReferenceFilter(value).val || '_any_'}
+          onValueChange={(v) => onChange(v === '_any_' ? null : encodeReferenceFilter('eq', v))}
+        >
           <SelectTrigger className="h-8">
             <SelectValue placeholder={t('common:any')} />
           </SelectTrigger>
@@ -2409,7 +2415,7 @@ function ReferenceFilterField({
   t,
 }: {
   referenceResourceId: string
-  value: string
+  value?: FilterInput
   onChange(v: unknown): void
   t: (key: string, params?: Record<string, string | number>) => string
 }): React.ReactElement {
@@ -2470,7 +2476,7 @@ function StringFilterField({
   t,
 }: {
   property: PropertyJSON
-  value: string
+  value?: FilterInput
   onChange(v: unknown): void
   resourceId: string
   t: (key: string, params?: Record<string, string | number>) => string
@@ -2552,7 +2558,7 @@ function StringFilterField({
         <FilterValuePicker
           resourceId={resourceId}
           field={property.path}
-          selected={decodeInFilterValues(value).map(String)}
+          selected={parsed.values}
           onChange={(selected) => {
             setOp('in')
             setVal('')
@@ -2744,36 +2750,38 @@ function ColumnFilterPopover({
 }: {
   property: PropertyJSON
   getFilters(): ColumnFiltersState
-  onApply(updates: Record<string, string>): void
+  onApply(updates: Record<string, FilterInput | null>): void
   resourceId: string
   t: (key: string, params?: Record<string, string | number>) => string
 }): React.ReactElement {
   const [open, setOpen] = React.useState(false)
   const isDateType = property.type === 'date' || property.type === 'datetime'
 
-  const [value, setValue] = React.useState('')
+  const [value, setValue] = React.useState<FilterInput | undefined>()
   const [valueFrom, setValueFrom] = React.useState('')
   const [valueTo, setValueTo] = React.useState('')
 
   // Initialise draft from current URL filters each time the popover opens.
   React.useEffect(() => {
     if (!open) return
-    const map = new Map(getFilters().map((f) => [f.id, String(f.value ?? '')]))
+    const map = new Map(getFilters().map((f) => [f.id, f.value as FilterInput | undefined]))
     if (isDateType) {
-      const from = map.get(property.path + '~~from') ?? ''
-      const to = map.get(property.path + '~~to') ?? ''
-      setValue(map.get(property.path) ?? encodeDateFilter('between', from, to))
+      const legacyFrom = map.get(property.path + '~~from')
+      const legacyTo = map.get(property.path + '~~to')
+      const from = typeof legacyFrom === 'string' ? legacyFrom : ''
+      const to = typeof legacyTo === 'string' ? legacyTo : ''
+      setValue(map.get(property.path) ?? encodeDateFilter('between', from, to) ?? undefined)
       setValueFrom(from)
       setValueTo(to)
     } else {
-      setValue(map.get(property.path) ?? '')
+      setValue(map.get(property.path))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   // Icon is highlighted when any filter for this property is set.
   const isActive = (() => {
-    const map = new Map(getFilters().map((f) => [f.id, String(f.value ?? '')]))
+    const map = new Map(getFilters().map((f) => [f.id, f.value]))
     return isDateType
       ? !!(
           map.get(property.path) ||
@@ -2784,26 +2792,26 @@ function ColumnFilterPopover({
   })()
 
   const handleApply = () => {
-    const updates: Record<string, string> = {}
+    const updates: Record<string, FilterInput | null> = {}
     if (isDateType) {
-      updates[property.path] = value
-      updates[property.path + '~~from'] = ''
-      updates[property.path + '~~to'] = ''
+      updates[property.path] = value ?? null
+      updates[property.path + '~~from'] = null
+      updates[property.path + '~~to'] = null
     } else {
-      updates[property.path] = value
+      updates[property.path] = value ?? null
     }
     onApply(updates)
     setOpen(false)
   }
 
   const handleClear = () => {
-    const updates: Record<string, string> = {}
+    const updates: Record<string, FilterInput | null> = {}
     if (isDateType) {
-      updates[property.path] = ''
-      updates[property.path + '~~from'] = ''
-      updates[property.path + '~~to'] = ''
+      updates[property.path] = null
+      updates[property.path + '~~from'] = null
+      updates[property.path + '~~to'] = null
     } else {
-      updates[property.path] = ''
+      updates[property.path] = null
     }
     onApply(updates)
     setOpen(false)
@@ -2831,10 +2839,10 @@ function ColumnFilterPopover({
           <FilterField
             property={property}
             value={value}
-            onChange={(v) => setValue(String(v ?? ''))}
+            onChange={(v) => setValue((v as FilterInput | null) ?? undefined)}
             valueFrom={valueFrom}
             valueTo={valueTo}
-            onDateChange={setValue}
+            onDateChange={(next) => setValue(next ?? undefined)}
             resourceId={resourceId}
             t={t}
           />

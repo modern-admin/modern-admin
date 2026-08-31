@@ -56,6 +56,10 @@ function filterParam(page: Page, key: string): string | null {
   return new URL(page.url()).searchParams.get(`filters[${key}]`)
 }
 
+function filterMember(page: Page, key: string, member: string): string | null {
+  return new URL(page.url()).searchParams.get(`filters[${key}][${member}]`)
+}
+
 /** The filter sheet (Radix Sheet → role="dialog"). */
 function filterSheet(page: Page) {
   return page.getByRole('dialog')
@@ -158,8 +162,9 @@ test.describe('FilterPanel — UI sidebar interactions', () => {
     await applyFilters(page)
 
     await expect
-      .poll(() => filterParam(page, 'authorId'), { timeout: 5_000 })
-      .toBe(`eq:${authorId}`)
+      .poll(() => filterMember(page, 'authorId', 'operator'), { timeout: 5_000 })
+      .toBe('eq')
+    expect(filterMember(page, 'authorId', 'value')).toBe(authorId)
 
     const pageSize = Math.min(50, expectedCount)
     await expect(dataRows(page)).toHaveCount(pageSize, { timeout: 10_000 })
@@ -195,8 +200,9 @@ test.describe('FilterPanel — UI sidebar interactions', () => {
     await applyFilters(page)
 
     await expect
-      .poll(() => filterParam(page, 'authorId'), { timeout: 5_000 })
-      .toBe(`neq:${authorId}`)
+      .poll(() => filterMember(page, 'authorId', 'operator'), { timeout: 5_000 })
+      .toBe('neq')
+    expect(filterMember(page, 'authorId', 'value')).toBe(authorId)
     await expect(dataRows(page)).toHaveCount(Math.min(50, expectedRecords.length), {
       timeout: 10_000,
     })
@@ -220,7 +226,9 @@ test.describe('FilterPanel — UI sidebar interactions', () => {
     await page.getByRole('option', { name: 'Is not empty' }).click()
     await applyFilters(page)
 
-    await expect.poll(() => filterParam(page, 'publishedAt'), { timeout: 5_000 }).toBe('nempty:')
+    await expect
+      .poll(() => filterMember(page, 'publishedAt', 'operator'), { timeout: 5_000 })
+      .toBe('nempty')
     await expect(dataRows(page)).toHaveCount(Math.min(50, expectedCount), { timeout: 10_000 })
   })
 
@@ -250,7 +258,8 @@ test.describe('FilterPanel — UI sidebar interactions', () => {
 
     await applyFilters(page)
 
-    await expect.poll(() => filterParam(page, 'tier'), { timeout: 5_000 }).toBe('pro')
+    await expect.poll(() => filterMember(page, 'tier', 'operator'), { timeout: 5_000 }).toBe('eq')
+    expect(filterMember(page, 'tier', 'value')).toBe('pro')
 
     // Filtered row count matches the strict API count.
     const pageSize = Math.min(50, expectedCount)

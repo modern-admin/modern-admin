@@ -21,8 +21,8 @@ import { expect, test, type APIRequestContext, type Page } from '@playwright/tes
  * Fixes:
  *   • `packages/adapter-prisma/src/converters.ts`: empty `in: []` → drop
  *     the field-level clause (`return undefined`), matching Drizzle.
- *   • `packages/react/src/pages/list-page.tsx`: `encodeFilter('in', '')`
- *     returns `''` so the draft cleans up to "no filter".
+ *   • `packages/react/src/pages/filter-codecs.ts`: an empty selection returns
+ *     `null` so the draft cleans up to "no filter".
  *
  * Resource pick for the auto-switch tests: `tags.color` — a plain
  * auto-detected string property with 6 distinct seed values, under the
@@ -36,15 +36,17 @@ import { expect, test, type APIRequestContext, type Page } from '@playwright/tes
  *   • `admins.role` is overridden to `{type: 'reference'}` in the
  *     shared admin module → renders as a reference picker.
  *
- * API tests still target `customers.tier`: the bug surface is the URL
- * encoding `filters[col]=in:...` at the adapter layer, which is
- * UI-agnostic. Tier has 3 known values and short categorical names,
- * which makes the API assertions readable.
+ * API tests still target `customers.tier`: tier has 3 known values and short
+ * categorical names, which makes compatibility assertions readable.
  */
 
 const API_URL = process.env.E2E_API_URL ?? 'http://localhost:3001'
 const adminApi = (path: string): string => `${API_URL}/admin/api${path}`
-const jsonInFilter = (values: readonly string[]): string => `in-json:${JSON.stringify(values)}`
+const structuredInQuery = (path: string, values: readonly string[]): URLSearchParams => {
+  const query = new URLSearchParams({ [`filters[${path}][operator]`]: 'in', perPage: '200' })
+  for (const value of values) query.append(`filters[${path}][values][]`, value)
+  return query
+}
 
 async function createCustomer(
   request: APIRequestContext,
@@ -81,6 +83,10 @@ function filterField(page: Page, labelText: string) {
 /** Read a `filters[<key>]` URL param. */
 function filterParam(page: Page, key: string): string | null {
   return new URL(page.url()).searchParams.get(`filters[${key}]`)
+}
+
+function structuredFilterParam(page: Page, key: string, member: string): string | null {
+  return new URL(page.url()).searchParams.get(`filters[${key}][${member}]`)
 }
 
 async function openCategoriesList(page: Page): Promise<void> {
@@ -166,11 +172,11 @@ test.describe('Filter — "Is one of" (in) operator: API', () => {
     }
   })
 
-  test('legacy value starting with an invalid JSON frame prefix remains constrained', async ({
+  test('legacy value matching the former valid JSON frame remains constrained', async ({
     request,
   }) => {
     const suffix = Date.now()
-    const literalName = `in-json:not-json-${suffix}`
+    const literalName = `in-json:["literal-${suffix}"]`
     const id = await createCustomer(
       request,
       literalName,
@@ -197,7 +203,7 @@ test.describe('Filter — "Is one of" (in) operator: API', () => {
     }
   })
 
-  test('JSON in payload preserves a comma inside one selected value', async ({ request }) => {
+  test('structured in payload preserves a comma inside one selected value', async ({ request }) => {
     const suffix = Date.now()
     const name = `Smith, John ${suffix}`
     const created = await request.post(adminApi('/resources/customers/actions/new'), {
@@ -208,10 +214,7 @@ test.describe('Filter — "Is one of" (in) operator: API', () => {
     const id = String(createdBody.record.id)
 
     try {
-      const query = new URLSearchParams({
-        'filters[name]': jsonInFilter([name]),
-        perPage: '200',
-      })
+      const query = structuredInQuery('name', [name])
       const result = await request.get(
         adminApi(`/resources/customers/actions/list?${query.toString()}`),
       )
@@ -320,11 +323,15 @@ test.describe('Filter — "Is one of" (in) operator: UI', () => {
 
     await applyFilters(page)
 
-    // The JSON payload preserves delimiters inside values. Array order matches
+    // Repeated structured values preserve delimiters. Array order matches
     // the click sequence (FilterValuePicker pushes onto `selected`).
     await expect
-      .poll(() => filterParam(page, 'color'), { timeout: 5_000 })
-      .toBe(jsonInFilter(['blue', 'green']))
+      .poll(() => structuredFilterParam(page, 'color', 'operator'), { timeout: 5_000 })
+      .toBe('in')
+    expect(new URL(page.url()).searchParams.getAll('filters[color][values][]')).toEqual([
+      'blue',
+      'green',
+    ])
 
     const pageSize = Math.min(50, expectedCount)
     await expect(page.locator('tbody tr')).toHaveCount(pageSize, { timeout: 10_000 })
@@ -353,9 +360,8 @@ test.describe('Filter — "Is one of" (in) operator: UI', () => {
 
     await applyFilters(page)
 
-    // After the fix, `encodeFilter('in', '')` returns '' → the filter is
-    // dropped from the draft and the URL. Pre-fix the URL would still
-    // carry `filters[name]=in:`.
+    // An empty structured selection returns null, so the filter is dropped
+    // from both the draft and the URL.
     await expect.poll(() => filterParam(page, 'name'), { timeout: 5_000 }).toBeNull()
 
     // Row count grows beyond the filtered subset (full list restored).

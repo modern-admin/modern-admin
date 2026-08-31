@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { decodeInFilterValues, encodeInFilterValues, Filter } from '../src/filter/filter.js'
+import { Filter } from '../src/filter/filter.js'
 import { FakeResource } from './_helpers/fake-adapter.js'
 
 const resource = new FakeResource({ name: 'users', rows: [] })
@@ -35,32 +35,46 @@ describe('Filter', () => {
     expect(paths.sort()).toEqual(['id', 'name'])
   })
 
-  test('JSON in payload preserves commas and other string delimiters', () => {
+  test('structured in criterion preserves commas and other string delimiters', () => {
     const values = ['Smith, John', 'quoted "value"', 'path\\segment', '']
-    const encoded = encodeInFilterValues(values)
+    const filter = new Filter({ name: { operator: 'in', values } }, resource)
 
-    expect(encoded).toBe('in-json:["Smith, John","quoted \\"value\\"","path\\\\segment",""]')
-    expect(decodeInFilterValues(encoded)).toEqual(values)
-    expect(new Filter({ name: encoded }, resource).get('name')?.value).toEqual(values)
+    expect(filter.get('name')).toMatchObject({ operator: 'in', value: values })
+    expect(filter.toJSON()).toEqual({ name: { operator: 'in', values } })
   })
 
   test('legacy comma-separated in payload remains supported', () => {
-    expect(decodeInFilterValues('in:a,b,c')).toEqual(['a', 'b', 'c'])
     expect(new Filter({ name: 'in:a,b,c' }, resource).get('name')?.value).toEqual(['a', 'b', 'c'])
   })
 
-  test('legacy values starting with the former JSON marker remain literal', () => {
-    const legacy = 'in:json:["a"]'
+  test('all strings using the removed in-json prefix remain literal', () => {
+    for (const legacy of ['in-json:not-a-json-array', 'in-json:["a"]']) {
+      const filter = new Filter({ name: legacy }, resource).get('name')
 
-    expect(decodeInFilterValues(legacy)).toEqual(['json:["a"]'])
-    expect(new Filter({ name: legacy }, resource).get('name')?.value).toEqual(['json:["a"]'])
+      expect(filter?.operator).toBeNull()
+      expect(filter?.value).toBe(legacy)
+    }
   })
 
-  test('legacy values starting with the JSON operator but without a valid frame remain literal', () => {
-    const legacy = 'in-json:not-a-json-array'
-    const filter = new Filter({ name: legacy }, resource).get('name')
+  test('supports structured value, range, and nullary criteria', () => {
+    const filter = new Filter(
+      {
+        name: { operator: 'nco', value: 'robot' },
+        age: { operator: 'between', from: '18', to: '65' },
+        deletedAt: { operator: 'empty' },
+      },
+      resource,
+    )
 
-    expect(filter?.operator).toBeNull()
-    expect(filter?.value).toBe(legacy)
+    expect(filter.get('name')).toMatchObject({ operator: 'nco', value: 'robot' })
+    expect(filter.get('age')).toMatchObject({
+      operator: 'between',
+      value: { from: '18', to: '65' },
+    })
+    expect(filter.get('deletedAt')).toMatchObject({ operator: 'empty', value: '' })
+  })
+
+  test('malformed structured criteria are rejected instead of silently dropped', () => {
+    expect(() => new Filter({ name: { operator: 'in', values: 'a,b' } }, resource)).toThrow()
   })
 })

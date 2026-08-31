@@ -273,10 +273,7 @@ const hydrateListRecords = async (
   }
 
   const parentIds = records.map((r) => String(r.id))
-  // Filter encodes `in:` operator via the value prefix (see
-  // `packages/core/src/filter/filter.ts` → `parseOperatorValue`). Works
-  // across all three current adapters (Prisma, Drizzle, in-memory).
-  const filter = new Filter({ [localKey]: `in:${parentIds.join(',')}` }, junction)
+  const filter = new Filter({ [localKey]: { operator: 'in', values: parentIds } }, junction)
   const allRows = await junction.find(filter, { limit: 100_000 })
 
   // Post-filter in JS: adapters with looser `in` semantics (none today, but

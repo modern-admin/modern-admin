@@ -39,6 +39,8 @@ import {
   type ChartFormat,
   type ChartTransformStep,
   type ChartVisualisation,
+  type FilterCriterion,
+  type FilterMap,
   type TimeRange,
   type TimeRangePreset,
 } from '@modern-admin/core'
@@ -126,7 +128,7 @@ export function ChartBuilderDialog({
   const [preset, setPreset] = React.useState<Exclude<TimeRangePreset, 'custom'>>(
     initial && initial.timeRange.preset !== 'custom' ? initial.timeRange.preset : '30d',
   )
-  const [filters, setFilters] = React.useState<Record<string, string>>(initial?.filters ?? {})
+  const [filters, setFilters] = React.useState<FilterMap>(initial?.filters ?? {})
   const [quickFilters, setQuickFilters] = React.useState<string[]>(initial?.quickFilters ?? [])
   const [order, setOrder] = React.useState<number>(initial?.order ?? 0)
   const [comparePrevious, setComparePrevious] = React.useState(initial?.comparePrevious ?? false)
@@ -220,10 +222,10 @@ export function ChartBuilderDialog({
   const PREVIEW_SAMPLE = 1234
   const previewText = `${PREVIEW_SAMPLE} → ${previewFormat(applyTransform(PREVIEW_SAMPLE, transform))}`
 
-  const handleFilterChange = (path: string, value: string): void => {
+  const handleFilterChange = (path: string, value: FilterCriterion | null): void => {
     setFilters((prev) => {
       const next = { ...prev }
-      if (value === '') delete next[path]
+      if (value === null) delete next[path]
       else next[path] = value
       return next
     })
@@ -753,7 +755,7 @@ export function ChartBuilderDialog({
                         <PropertyFilterInput
                           property={p}
                           resourceId={resourceId}
-                          value={filters[p.path] ?? ''}
+                          value={filters[p.path]}
                           onChange={(v) => handleFilterChange(p.path, v)}
                           inputId={`flt-${p.path}`}
                         />

@@ -1,3 +1,5 @@
+import type { FilterMap } from '@modern-admin/core'
+
 // Wire-shape mirror of `ResourceDecorator#toJSON()` and friends. We re-declare
 // rather than re-import so the React bundle doesn't drag in the full core
 // (which references Node-only deps in a few corners).
@@ -270,7 +272,7 @@ export interface ListQuery {
   perPage?: number
   sortBy?: string
   direction?: 'asc' | 'desc'
-  filters?: Record<string, string>
+  filters?: FilterMap
 }
 
 /**

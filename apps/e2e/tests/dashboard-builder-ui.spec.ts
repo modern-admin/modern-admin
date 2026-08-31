@@ -214,10 +214,13 @@ test.describe('Dashboard chart builder — UI', () => {
     const response = await request.get(adminApi('/dashboard'))
     expect(response.status()).toBe(200)
     const body = (await response.json()) as {
-      dashboard: { charts: Array<{ title: string; filters: Record<string, string> }> }
+      dashboard: { charts: Array<{ title: string; filters: Record<string, unknown> }> }
     }
     const chart = body.dashboard.charts.find((item) => item.title === 'Filtered posts')
-    expect(chart?.filters).toMatchObject({ publishedAt: 'empty:', title: 'nempty:' })
+    expect(chart?.filters).toMatchObject({
+      publishedAt: { operator: 'empty' },
+      title: { operator: 'nempty' },
+    })
   })
 
   test('preserves commas inside chart filter selections', async ({ page, request }) => {
@@ -246,10 +249,10 @@ test.describe('Dashboard chart builder — UI', () => {
       const response = await request.get(adminApi('/dashboard'))
       expect(response.status()).toBe(200)
       const body = (await response.json()) as {
-        dashboard: { charts: Array<{ title: string; filters: Record<string, string> }> }
+        dashboard: { charts: Array<{ title: string; filters: Record<string, unknown> }> }
       }
       const chart = body.dashboard.charts.find((item) => item.title === 'Comma-safe filter')
-      expect(chart?.filters.name).toBe(`in-json:${JSON.stringify([name])}`)
+      expect(chart?.filters.name).toEqual({ operator: 'in', values: [name] })
     } finally {
       await deleteCustomerSilently(request, customerId)
     }

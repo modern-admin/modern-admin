@@ -34,6 +34,7 @@ import {
   type IRealtimeBus,
   type ModernAdmin,
   type PropertyType,
+  type FilterMap,
 } from '@modern-admin/core'
 import { GraphQLUpload } from './scalars.js'
 import type {
@@ -222,6 +223,194 @@ const buildFilterInputFields = (
   return fields
 }
 
+type WhereOperatorName =
+  | 'equals'
+  | 'notEquals'
+  | 'contains'
+  | 'notContains'
+  | 'startsWith'
+  | 'endsWith'
+  | 'in'
+  | 'greaterThan'
+  | 'lessThan'
+  | 'between'
+  | 'isEmpty'
+
+const whereOperator = {
+  equals: 'eq',
+  notEquals: 'neq',
+  contains: 'co',
+  notContains: 'nco',
+  startsWith: 'sw',
+  endsWith: 'ew',
+  greaterThan: 'gt',
+  lessThan: 'lt',
+} as const
+
+const buildWhereCriterionTypes = (): Record<string, GraphQLInputObjectType> => {
+  const valueType = (
+    name: string,
+    scalar: GraphQLScalarType,
+    fields: readonly WhereOperatorName[],
+  ): GraphQLInputObjectType => {
+    const rangeType = fields.includes('between')
+      ? new GraphQLInputObjectType({
+          name: name.replace(/Criterion$/, 'Range'),
+          description: 'Inclusive range; at least one boundary should be provided.',
+          fields: {
+            from: { type: scalar, description: 'Inclusive lower boundary.' },
+            to: { type: scalar, description: 'Inclusive upper boundary.' },
+          },
+        })
+      : null
+    return new GraphQLInputObjectType({
+      name,
+      description: 'Choose exactly one filter condition.',
+      isOneOf: true,
+      fields: () => {
+        const out: Record<string, GraphQLInputFieldConfig> = {}
+        for (const field of fields) {
+          if (field === 'in') {
+            out.in = {
+              type: new GraphQLList(new GraphQLNonNull(scalar)),
+              description: 'Match any value in this list.',
+            }
+          } else if (field === 'between') {
+            out.between = {
+              type: rangeType!,
+              description: 'Match values inside the inclusive range.',
+            }
+          } else if (field === 'isEmpty') {
+            out.isEmpty = {
+              type: GraphQLBoolean,
+              description: 'True matches empty values; false matches non-empty values.',
+            }
+          } else {
+            out[field] = { type: scalar }
+          }
+        }
+        return out
+      },
+    })
+  }
+
+  return {
+    string: valueType('StringFilterCriterion', GraphQLString, [
+      'equals',
+      'notEquals',
+      'contains',
+      'notContains',
+      'startsWith',
+      'endsWith',
+      'in',
+      'isEmpty',
+    ]),
+    integer: valueType('IntegerFilterCriterion', GraphQLInt, [
+      'equals',
+      'notEquals',
+      'greaterThan',
+      'lessThan',
+      'between',
+      'isEmpty',
+    ]),
+    float: valueType('FloatFilterCriterion', GraphQLFloat, [
+      'equals',
+      'notEquals',
+      'greaterThan',
+      'lessThan',
+      'between',
+      'isEmpty',
+    ]),
+    boolean: valueType('BooleanFilterCriterion', GraphQLBoolean, [
+      'equals',
+      'notEquals',
+      'isEmpty',
+    ]),
+    id: valueType('IdFilterCriterion', GraphQLID, ['equals', 'notEquals', 'in', 'isEmpty']),
+    date: valueType('DateFilterCriterion', GraphQLString, [
+      'equals',
+      'notEquals',
+      'greaterThan',
+      'lessThan',
+      'between',
+      'isEmpty',
+    ]),
+  }
+}
+
+const criterionTypeFor = (
+  property: BaseProperty,
+  types: Record<string, GraphQLInputObjectType>,
+): GraphQLInputObjectType => {
+  if (property.isId() || property.reference()) return types.id!
+  switch (property.type()) {
+    case 'number':
+      return types.integer!
+    case 'float':
+    case 'money':
+    case 'currency':
+      return types.float!
+    case 'boolean':
+      return types.boolean!
+    case 'date':
+    case 'datetime':
+      return types.date!
+    default:
+      return types.string!
+  }
+}
+
+const buildWhereInputFields = (
+  properties: BaseProperty[],
+  types: Record<string, GraphQLInputObjectType>,
+): Record<string, GraphQLInputFieldConfig> => {
+  const fields: Record<string, GraphQLInputFieldConfig> = {}
+  for (const property of properties) {
+    if (property.subProperties().length > 0) continue
+    fields[property.path()] = {
+      type: criterionTypeFor(property, types),
+      description: `Filter ${property.path()}.`,
+    }
+  }
+  return fields
+}
+
+const normalizeWhere = (where: unknown): FilterMap => {
+  if (where === null || typeof where !== 'object' || Array.isArray(where)) return {}
+  const filters: FilterMap = {}
+  for (const [path, rawCriterion] of Object.entries(where)) {
+    if (rawCriterion === null || typeof rawCriterion !== 'object' || Array.isArray(rawCriterion)) {
+      continue
+    }
+    const entry = Object.entries(rawCriterion)[0] as [WhereOperatorName, unknown] | undefined
+    if (!entry) continue
+    const [name, value] = entry
+    if (name === 'isEmpty') {
+      filters[path] = { operator: value === true ? 'empty' : 'nempty' }
+    } else if (name === 'in' && Array.isArray(value)) {
+      filters[path] = {
+        operator: 'in',
+        values: value.filter(
+          (item): item is string | number => typeof item === 'string' || typeof item === 'number',
+        ),
+      }
+    } else if (name === 'between' && value !== null && typeof value === 'object') {
+      const range = value as { from?: unknown; to?: unknown }
+      filters[path] = {
+        operator: 'between',
+        ...(range.from != null ? { from: String(range.from) } : {}),
+        ...(range.to != null ? { to: String(range.to) } : {}),
+      }
+    } else if (name in whereOperator) {
+      filters[path] = {
+        operator: whereOperator[name as keyof typeof whereOperator],
+        value: value as string | number | boolean | null,
+      }
+    }
+  }
+  return filters
+}
+
 const buildCreateInputFields = (
   properties: BaseProperty[],
 ): Record<string, GraphQLInputFieldConfig> => {
@@ -341,8 +530,10 @@ export const buildGraphqlSchema = (
 ): GraphQLSchema => {
   const objectTypes = new Map<string, GraphQLObjectType>()
   const filterInputs = new Map<string, GraphQLInputObjectType>()
+  const whereInputs = new Map<string, GraphQLInputObjectType>()
   const createInputs = new Map<string, GraphQLInputObjectType>()
   const updateInputs = new Map<string, GraphQLInputObjectType>()
+  const whereCriterionTypes = buildWhereCriterionTypes()
 
   // First pass: object types so reference resolvers can target them.
   for (const resource of admin.resources) {
@@ -360,6 +551,14 @@ export const buildGraphqlSchema = (
       new GraphQLInputObjectType({
         name: `${typeName}FilterInput`,
         fields: () => buildFilterInputFields(resource.properties()),
+      }),
+    )
+    whereInputs.set(
+      id,
+      new GraphQLInputObjectType({
+        name: `${typeName}WhereInput`,
+        description: `Structured filters for ${typeName}. Conditions on different fields are combined with AND.`,
+        fields: () => buildWhereInputFields(resource.properties(), whereCriterionTypes),
       }),
     )
     createInputs.set(
@@ -433,13 +632,22 @@ export const buildGraphqlSchema = (
     const lower = id.charAt(0).toLowerCase() + id.slice(1)
     const objType = objectTypes.get(id)!
     const filterInput = filterInputs.get(id)!
+    const whereInput = whereInputs.get(id)!
     const createInput = createInputs.get(id)!
     const updateInput = updateInputs.get(id)!
 
     queryFields[`${lower}List`] = {
       type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(objType))),
       args: {
-        filter: { type: filterInput },
+        filter: {
+          type: filterInput,
+          description: 'Legacy operator-prefixed string filters.',
+          deprecationReason: 'Use the typed where argument.',
+        },
+        where: {
+          type: whereInput,
+          description: 'Typed, collision-free filter conditions.',
+        },
         limit: { type: GraphQLInt },
         offset: { type: GraphQLInt },
         sortBy: { type: GraphQLString },
@@ -458,7 +666,10 @@ export const buildGraphqlSchema = (
               perPage: args.limit != null ? String(args.limit) : undefined,
               sortBy: args.sortBy ?? undefined,
               direction: args.sortDirection ?? undefined,
-              filters: (args.filter as Record<string, unknown> | undefined) ?? {},
+              filters: {
+                ...((args.filter as Record<string, unknown> | undefined) ?? {}),
+                ...normalizeWhere(args.where),
+              },
             },
           },
           ctx.currentAdmin,
@@ -495,7 +706,17 @@ export const buildGraphqlSchema = (
 
     queryFields[`${lower}Count`] = {
       type: new GraphQLNonNull(GraphQLInt),
-      args: { filter: { type: filterInput } },
+      args: {
+        filter: {
+          type: filterInput,
+          description: 'Legacy operator-prefixed string filters.',
+          deprecationReason: 'Use the typed where argument.',
+        },
+        where: {
+          type: whereInput,
+          description: 'Typed, collision-free filter conditions.',
+        },
+      },
       async resolve(_src, args, ctx) {
         // Count via `invoke('list')` (reads `meta.total`) so the same gates
         // apply as the list query; `perPage: 1` keeps the fetched page tiny
@@ -507,7 +728,10 @@ export const buildGraphqlSchema = (
             query: {
               page: '1',
               perPage: '1',
-              filters: (args.filter as Record<string, unknown> | undefined) ?? {},
+              filters: {
+                ...((args.filter as Record<string, unknown> | undefined) ?? {}),
+                ...normalizeWhere(args.where),
+              },
             },
           },
           ctx.currentAdmin,

@@ -301,8 +301,8 @@ describe('filterToWhere — in operator', () => {
     expect(where({ name: 'in:Alice' })).toEqual({ name: { in: ['Alice'] } })
   })
 
-  test('in with JSON payload preserves commas inside string values', () => {
-    expect(where({ name: 'in-json:["Smith, John"]' })).toEqual({
+  test('structured in preserves commas inside string values', () => {
+    expect(where({ name: { operator: 'in', values: ['Smith, John'] } })).toEqual({
       name: { in: ['Smith, John'] },
     })
   })

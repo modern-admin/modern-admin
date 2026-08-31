@@ -60,6 +60,9 @@ import type {
   ChartDefInput,
   AggregationStep,
   ChartWidth,
+  FilterCriterion,
+  FilterInput,
+  FilterMap,
   TimeRange,
   TimeRangePreset,
 } from '@modern-admin/core'
@@ -194,9 +197,9 @@ export function ChartWidget({
     onUpdate({ ...config, ...patch, updatedAt: new Date().toISOString() })
   }
 
-  const applyQuickFilter = (path: string, value: string): void => {
-    const next: Record<string, string> = { ...config.filters }
-    if (value === '') delete next[path]
+  const applyQuickFilter = (path: string, value: FilterCriterion | null): void => {
+    const next: FilterMap = { ...config.filters }
+    if (value === null) delete next[path]
     else next[path] = value
     update({ filters: next })
   }
@@ -447,7 +450,7 @@ export function ChartWidget({
                     property={prop}
                     resourceId={config.resource}
                     placeholder={prop.label}
-                    value={config.filters[path] ?? ''}
+                    value={config.filters[path]}
                     onChange={(v) => applyQuickFilter(path, v)}
                   />
                 )
@@ -630,8 +633,8 @@ function QuickFilterInput({
   property: PropertyJSON
   resourceId: string
   placeholder?: string
-  value: string
-  onChange(next: string): void
+  value?: FilterInput
+  onChange(next: FilterCriterion | null): void
 }): React.ReactElement {
   const { t } = useI18n()
   const ph = placeholder ?? property.label
@@ -660,7 +663,7 @@ function QuickFilterInput({
             />
           </Field>
           {value && (
-            <Button type="button" variant="outline" size="sm" onClick={() => onChange('')}>
+            <Button type="button" variant="outline" size="sm" onClick={() => onChange(null)}>
               {t('common:clear')}
             </Button>
           )}

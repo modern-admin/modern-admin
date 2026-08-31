@@ -113,7 +113,9 @@ test.describe('Filter view — sheet is built from filterProperties', () => {
     await expect(filterSheet(page)).toBeHidden({ timeout: 5_000 })
 
     await expect(dataRows(page)).toHaveCount(1, { timeout: 10_000 })
-    expect(new URL(page.url()).searchParams.get('filters[id]')).toContain(commentId)
+    const search = new URL(page.url()).searchParams
+    expect(search.get('filters[id][operator]')).toBe('co')
+    expect(search.get('filters[id][value]')).toBe(commentId)
   })
 
   test('without filterProperties, id is offered as a column but not as a filter', async ({

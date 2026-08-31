@@ -4,9 +4,11 @@
 
 import type {
   DashboardBlob,
+  FilterMap,
   MediaGenerationCatalogModel,
   MediaGenerationFileType,
 } from '@modern-admin/core'
+import { appendFilterQuery } from './filter-query.js'
 import type {
   AdminConfig,
   CustomActionResponse,
@@ -85,13 +87,7 @@ const buildQuery = (query?: ListQuery): string => {
   if (query.perPage != null) params.set('perPage', String(query.perPage))
   if (query.sortBy) params.set('sortBy', query.sortBy)
   if (query.direction) params.set('direction', query.direction)
-  if (query.filters) {
-    // Bracket notation — Express's qs parser turns `filters[k]=v` into
-    // `query.filters = { k: 'v' }` which is what the list action expects.
-    for (const [k, v] of Object.entries(query.filters)) {
-      if (v !== '' && v != null) params.set(`filters[${k}]`, v)
-    }
-  }
+  if (query.filters) appendFilterQuery(params, query.filters)
   const qs = params.toString()
   return qs ? `?${qs}` : ''
 }
@@ -1103,7 +1099,7 @@ export interface TimeSeriesQuery {
   /** ISO datetime, inclusive end. */
   to: string
   /** List-page-style filters narrowing the dataset. */
-  filters?: Record<string, string>
+  filters?: FilterMap
   /** When true, response includes the equal-length previous window (KPI delta). */
   comparePrevious?: boolean
 }

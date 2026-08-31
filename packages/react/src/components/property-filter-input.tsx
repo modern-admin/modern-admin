@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { Search } from 'lucide-react'
+import type { FilterCriterion, FilterInput } from '@modern-admin/core'
 import {
   Checkbox,
   DatePicker,
@@ -26,7 +27,6 @@ import {
   ALL_STRING_OPS,
   type DateFilterOp,
   DATE_NULLARY,
-  decodeInFilterValues,
   encodeDateFilter,
   encodeFilter,
   encodeInFilterValues,
@@ -48,8 +48,8 @@ import {
 export interface PropertyFilterInputProps {
   property: PropertyJSON
   resourceId: string
-  value: string
-  onChange(next: string): void
+  value?: FilterInput
+  onChange(next: FilterCriterion | null): void
   inputId?: string
 }
 
@@ -156,8 +156,8 @@ function ReferenceFilterInput({
   inputId,
 }: {
   referenceResourceId: string
-  value: string
-  onChange(next: string): void
+  value?: FilterInput
+  onChange(next: FilterCriterion | null): void
   inputId?: string
 }): React.ReactElement {
   const { t } = useI18n()
@@ -203,8 +203,8 @@ function ChoiceFilterInput({
   choices,
   inputId,
 }: {
-  value: string
-  onChange(next: string): void
+  value?: FilterInput
+  onChange(next: FilterCriterion | null): void
   choices: Array<{ value: string; label: string }>
   inputId?: string
 }): React.ReactElement {
@@ -262,8 +262,8 @@ function NumericFilterInput({
   onChange,
   inputId,
 }: {
-  value: string
-  onChange(next: string): void
+  value?: FilterInput
+  onChange(next: FilterCriterion | null): void
   inputId?: string
 }): React.ReactElement {
   const { t } = useI18n()
@@ -331,8 +331,8 @@ function DateFilterInput({
   inputId,
 }: {
   mode: 'date' | 'datetime'
-  value: string
-  onChange(next: string): void
+  value?: FilterInput
+  onChange(next: FilterCriterion | null): void
   inputId?: string
 }): React.ReactElement {
   const { t, locale: uiLocale } = useI18n()
@@ -401,8 +401,8 @@ function StringFilterInput({
 }: {
   property: PropertyJSON
   resourceId: string
-  value: string
-  onChange(next: string): void
+  value?: FilterInput
+  onChange(next: FilterCriterion | null): void
   inputId?: string
 }): React.ReactElement {
   const { t } = useI18n()
@@ -451,7 +451,7 @@ function StringFilterInput({
         <FilterValuePicker
           resourceId={resourceId}
           field={property.path}
-          selected={decodeInFilterValues(value).map(String)}
+          selected={parsed.values}
           onChange={(selected) => {
             setOp('in')
             setText('')
