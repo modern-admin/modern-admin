@@ -62,6 +62,7 @@ const richModel: DmmfModel = {
     field({
       name: 'authorId',
       type: 'String',
+      isRequired: true,
       isReadOnly: true,
     }),
     field({
@@ -336,9 +337,15 @@ describe('filterToWhere — in operator', () => {
 })
 
 describe('filterToWhere — empty / nempty operators', () => {
-  test('empty on string → OR(null, "")', () => {
+  test('empty on required string checks only the empty string', () => {
     expect(where({ name: 'empty:' })).toEqual({
-      AND: [{}, { OR: [{ name: null }, { name: '' }] }],
+      name: { equals: '', mode: 'insensitive' },
+    })
+  })
+
+  test('empty on nullable string checks null or the empty string', () => {
+    expect(where({ nick: 'empty:' })).toEqual({
+      AND: [{}, { OR: [{ nick: null }, { nick: '' }] }],
     })
   })
 
@@ -348,9 +355,15 @@ describe('filterToWhere — empty / nempty operators', () => {
     })
   })
 
-  test('nempty on string → both NOT(null) and NOT("")', () => {
+  test('nempty on required string excludes only the empty string', () => {
     expect(where({ name: 'nempty:' })).toEqual({
-      AND: [{}, { NOT: { name: null } }, { NOT: { name: '' } }],
+      AND: [{}, { NOT: { name: '' } }],
+    })
+  })
+
+  test('nempty on nullable string excludes null and the empty string', () => {
+    expect(where({ nick: 'nempty:' })).toEqual({
+      AND: [{}, { NOT: { nick: null } }, { NOT: { nick: '' } }],
     })
   })
 
@@ -368,6 +381,14 @@ describe('filterToWhere — empty / nempty operators', () => {
 
   test('nempty on array field uses Prisma `isEmpty: false`', () => {
     expect(where({ tags: 'nempty:' })).toEqual({ tags: { isEmpty: false } })
+  })
+
+  test('empty on a required reference produces an impossible valid predicate', () => {
+    expect(where({ authorId: { operator: 'empty' } })).toEqual({ id: { in: [] } })
+  })
+
+  test('nempty on a required reference is a no-op', () => {
+    expect(where({ authorId: { operator: 'nempty' } })).toEqual({})
   })
 })
 
@@ -555,9 +576,10 @@ describe('filterToWhere — multi-field combinations', () => {
     })
   })
 
-  test('field-level + top-level operator merged via AND', () => {
+  test('field-level filters on required fields share the same where object', () => {
     expect(where({ age: 'gt:18', name: 'empty:' })).toEqual({
-      AND: [{ age: { gt: 18 } }, { OR: [{ name: null }, { name: '' }] }],
+      age: { gt: 18 },
+      name: { equals: '', mode: 'insensitive' },
     })
   })
 })

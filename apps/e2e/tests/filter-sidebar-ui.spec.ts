@@ -208,6 +208,31 @@ test.describe('FilterPanel — UI sidebar interactions', () => {
     })
   })
 
+  test('empty on a required reference returns no rows without a Prisma error', async ({
+    page,
+    request,
+  }) => {
+    const all = await request.get(adminApi('/resources/comments/actions/list?perPage=200'))
+    expect(all.status()).toBe(200)
+    const total = ((await all.json()).records as unknown[]).length
+    expect(total).toBeGreaterThan(0)
+
+    const nonEmpty = await request.get(
+      adminApi(
+        '/resources/comments/actions/list?filters%5BauthorId%5D%5Boperator%5D=nempty&perPage=200',
+      ),
+    )
+    expect(nonEmpty.status()).toBe(200)
+    expect(((await nonEmpty.json()).records as unknown[]).length).toBe(total)
+
+    await page.goto('/resources/comments?filters%5BauthorId%5D%5Boperator%5D=empty')
+
+    await expect(page.getByText('No records match your filters.')).toBeVisible({
+      timeout: 15_000,
+    })
+    await expect(page.getByText(/^Failed to load:/)).toHaveCount(0)
+  })
+
   test('date filter supports non-empty values', async ({ page, request }) => {
     const expected = await request.get(
       adminApi('/resources/posts/actions/list?perPage=200&filters[publishedAt]=nempty:'),
