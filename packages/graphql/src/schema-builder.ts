@@ -1,7 +1,7 @@
 // Builds a GraphQL schema dynamically from a ModernAdmin instance. Resources
 // are not known at compile time, so we use the `graphql` library directly
 // (rather than @nestjs/graphql code-first which expects classes) and emit one
-// Type / FilterInput / Query / Mutation set per resource.
+// Type / WhereInput / Query / Mutation set per resource.
 
 import {
   GraphQLBoolean,
@@ -208,17 +208,6 @@ const buildPropertyFields = (
       type: nonNull ? new GraphQLNonNull(baseType) : baseType,
       resolve: (src) => (src as Record<string, unknown> | undefined)?.[p.path()] ?? null,
     }
-  }
-  return fields
-}
-
-const buildFilterInputFields = (
-  properties: BaseProperty[],
-): Record<string, GraphQLInputFieldConfig> => {
-  const fields: Record<string, GraphQLInputFieldConfig> = {}
-  for (const p of properties) {
-    if (p.subProperties().length > 0) continue
-    fields[p.path()] = { type: GraphQLString }
   }
   return fields
 }
@@ -529,7 +518,6 @@ export const buildGraphqlSchema = (
   options: BuildGraphqlSchemaOptions = {},
 ): GraphQLSchema => {
   const objectTypes = new Map<string, GraphQLObjectType>()
-  const filterInputs = new Map<string, GraphQLInputObjectType>()
   const whereInputs = new Map<string, GraphQLInputObjectType>()
   const createInputs = new Map<string, GraphQLInputObjectType>()
   const updateInputs = new Map<string, GraphQLInputObjectType>()
@@ -544,13 +532,6 @@ export const buildGraphqlSchema = (
       new GraphQLObjectType<unknown, GraphqlContext>({
         name: typeName,
         fields: () => buildPropertyFields(resource.properties()),
-      }),
-    )
-    filterInputs.set(
-      id,
-      new GraphQLInputObjectType({
-        name: `${typeName}FilterInput`,
-        fields: () => buildFilterInputFields(resource.properties()),
       }),
     )
     whereInputs.set(
@@ -631,7 +612,6 @@ export const buildGraphqlSchema = (
     const id = resource.decorate().id
     const lower = id.charAt(0).toLowerCase() + id.slice(1)
     const objType = objectTypes.get(id)!
-    const filterInput = filterInputs.get(id)!
     const whereInput = whereInputs.get(id)!
     const createInput = createInputs.get(id)!
     const updateInput = updateInputs.get(id)!
@@ -639,11 +619,6 @@ export const buildGraphqlSchema = (
     queryFields[`${lower}List`] = {
       type: new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(objType))),
       args: {
-        filter: {
-          type: filterInput,
-          description: 'Legacy operator-prefixed string filters.',
-          deprecationReason: 'Use the typed where argument.',
-        },
         where: {
           type: whereInput,
           description: 'Typed, collision-free filter conditions.',
@@ -666,10 +641,7 @@ export const buildGraphqlSchema = (
               perPage: args.limit != null ? String(args.limit) : undefined,
               sortBy: args.sortBy ?? undefined,
               direction: args.sortDirection ?? undefined,
-              filters: {
-                ...((args.filter as Record<string, unknown> | undefined) ?? {}),
-                ...normalizeWhere(args.where),
-              },
+              filters: normalizeWhere(args.where),
             },
           },
           ctx.currentAdmin,
@@ -707,11 +679,6 @@ export const buildGraphqlSchema = (
     queryFields[`${lower}Count`] = {
       type: new GraphQLNonNull(GraphQLInt),
       args: {
-        filter: {
-          type: filterInput,
-          description: 'Legacy operator-prefixed string filters.',
-          deprecationReason: 'Use the typed where argument.',
-        },
         where: {
           type: whereInput,
           description: 'Typed, collision-free filter conditions.',
@@ -728,10 +695,7 @@ export const buildGraphqlSchema = (
             query: {
               page: '1',
               perPage: '1',
-              filters: {
-                ...((args.filter as Record<string, unknown> | undefined) ?? {}),
-                ...normalizeWhere(args.where),
-              },
+              filters: normalizeWhere(args.where),
             },
           },
           ctx.currentAdmin,

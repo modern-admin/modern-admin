@@ -64,20 +64,6 @@ export interface ModernAdminOptions {
      * client overrides it via `AdminAppProps.brand.title`.
      */
     companyName?: string
-    /**
-     * @deprecated Never had a reader in any package — it was serialised into
-     *   the wire payload and dropped. Set the logo client-side with
-     *   `AdminAppProps.brand.logoUrl` (the standalone bundle reads
-     *   `window.__MODERN_ADMIN__.brand.logoUrl`). Ignored; will be removed.
-     */
-    logo?: string
-    /**
-     * @deprecated Never had a reader in any package. Theming is done by
-     *   overriding the `:root` / `.dark` design tokens — see
-     *   `ModernAdminStaticUiOptions.themeCss` in `@modern-admin/nest`.
-     *   Ignored; will be removed.
-     */
-    theme?: string
   }
   auth?: IAuthProvider
   cache?: ICacheProvider

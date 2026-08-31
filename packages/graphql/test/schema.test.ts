@@ -80,6 +80,20 @@ describe('GraphQL schema', () => {
     expect(result.errors?.[0]?.message).toContain('exactly one field')
   })
 
+  test('does not expose the removed legacy filter argument', () => {
+    const fields = buildGraphqlSchema(makeAdmin()).getQueryType()!.getFields()
+
+    expect(fields.usersList!.args.map((argument) => argument.name)).toEqual([
+      'where',
+      'limit',
+      'offset',
+      'sortBy',
+      'sortDirection',
+    ])
+    expect(fields.usersCount!.args.map((argument) => argument.name)).toEqual(['where'])
+    expect(buildGraphqlSchema(makeAdmin()).getType('UsersFilterInput')).toBeUndefined()
+  })
+
   test('one/count enforce access through invoke (no raw findOne/count bypass)', async () => {
     // Deny the read actions; routing `usersOne`/`usersCount` through
     // `invoke()` means the gate fires instead of leaking rows via a direct

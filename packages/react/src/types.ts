@@ -168,16 +168,8 @@ export interface AdminBrand {
 
 export interface AdminConfig {
   rootPath: string
-  /**
-   * Server-side branding from `ModernAdminOptions.branding`. Only
-   * `companyName` is read by the SPA.
-   *
-   * @deprecated `logo` and `theme` have never had a reader in any package.
-   *   Use `AdminAppProps.brand.logoUrl` for the logo, and
-   *   `ModernAdminStaticUiOptions.themeCss` (or your own stylesheet) for the
-   *   theme. Both fields are ignored and will be removed.
-   */
-  branding?: { companyName?: string; logo?: string; theme?: string }
+  /** Server-side product name from `ModernAdminOptions.branding`. */
+  branding?: { companyName?: string }
   auth: Record<string, unknown>
   resources: ResourceJSON[]
   features?: Partial<AdminFeatures>

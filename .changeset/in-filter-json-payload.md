@@ -6,4 +6,4 @@
 '@modern-admin/feature-m2m': patch
 ---
 
-Add collision-free structured filter criteria across core, REST, React, dashboards, and GraphQL. New clients keep operators separate from user values, while core continues to read legacy operator-prefixed strings. GraphQL gains a typed `where` argument and retains the deprecated legacy `filter` argument.
+Add collision-free structured filter criteria across core, REST, React, dashboards, and GraphQL. New clients keep operators separate from user values, while core continues to read legacy operator-prefixed strings. GraphQL replaces the legacy `filter` argument with a typed `where` argument. Remove the unused server-branding `logo` and `theme` options.
