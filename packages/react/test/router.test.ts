@@ -36,6 +36,24 @@ describe('buildHref', () => {
     ])
   })
 
+  test('parses a structured numeric range from a browser URL', () => {
+    expect(
+      parseLocation(
+        '/resources/products',
+        '?filters%5Bname%5D%5Boperator%5D=co&filters%5Bname%5D%5Bvalue%5D=big&filters%5Bprice%5D%5Boperator%5D=between&filters%5Bprice%5D%5Bfrom%5D=150&filters%5Bprice%5D%5Bto%5D=420',
+      ),
+    ).toEqual({
+      name: 'list',
+      resourceId: 'products',
+      query: {
+        filters: {
+          name: { operator: 'co', value: 'big' },
+          price: { operator: 'between', from: '150', to: '420' },
+        },
+      },
+    })
+  })
+
   test('show', () => {
     expect(buildHref({ name: 'show', resourceId: 'users', recordId: '42' })).toBe(
       '/resources/users/42',

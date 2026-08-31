@@ -65,6 +65,16 @@ describe('filterToWhere', () => {
     expect(where).toBeDefined()
   })
 
+  it('handles a structured between criterion', () => {
+    const resource = makeResource()
+    const where = filterToWhere(
+      new Filter({ age: { operator: 'between', from: '150', to: '420' } }, resource),
+      users,
+    )
+
+    expect(paramValues(where)).toEqual([150, 420])
+  })
+
   it('checks only null for empty and non-empty operators on dates', () => {
     const resource = makeResource()
     const empty = filterToWhere(new Filter({ created_at: 'empty:' }, resource), users)

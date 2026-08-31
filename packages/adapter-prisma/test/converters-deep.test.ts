@@ -246,6 +246,12 @@ describe('filterToWhere — gt / lt operators', () => {
 })
 
 describe('filterToWhere — between operator', () => {
+  test('structured between criterion on float', () => {
+    expect(where({ price: { operator: 'between', from: '150', to: '420' } })).toEqual({
+      price: { gte: 150, lte: 420 },
+    })
+  })
+
   test('between with from + to on int', () => {
     expect(where({ age: 'between:18,65' })).toEqual({
       age: { gte: 18, lte: 65 },
