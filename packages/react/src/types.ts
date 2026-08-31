@@ -1,3 +1,5 @@
+import type { FilterMap } from '@modern-admin/core'
+
 // Wire-shape mirror of `ResourceDecorator#toJSON()` and friends. We re-declare
 // rather than re-import so the React bundle doesn't drag in the full core
 // (which references Node-only deps in a few corners).
@@ -50,7 +52,8 @@ export interface PropertyJSON {
   isArray: boolean
   reference: string | null
   availableValues: Array<{ value: string; label: string }> | null
-  components: { list?: string; edit?: string; show?: string; filter?: string } | Record<string, string>
+  components:
+    { list?: string; edit?: string; show?: string; filter?: string } | Record<string, string>
   /** `new` is optional so a newer SPA remains compatible with older servers. */
   visibility: Record<LegacyView, boolean> & Partial<Record<'new', boolean>>
   position: number
@@ -165,16 +168,8 @@ export interface AdminBrand {
 
 export interface AdminConfig {
   rootPath: string
-  /**
-   * Server-side branding from `ModernAdminOptions.branding`. Only
-   * `companyName` is read by the SPA.
-   *
-   * @deprecated `logo` and `theme` have never had a reader in any package.
-   *   Use `AdminAppProps.brand.logoUrl` for the logo, and
-   *   `ModernAdminStaticUiOptions.themeCss` (or your own stylesheet) for the
-   *   theme. Both fields are ignored and will be removed.
-   */
-  branding?: { companyName?: string; logo?: string; theme?: string }
+  /** Server-side product name from `ModernAdminOptions.branding`. */
+  branding?: { companyName?: string }
   auth: Record<string, unknown>
   resources: ResourceJSON[]
   features?: Partial<AdminFeatures>
@@ -201,7 +196,13 @@ export interface RecordJSON {
 
 export interface ListResponse {
   records: RecordJSON[]
-  meta: { total: number; page: number; perPage: number; sortBy?: string; direction?: 'asc' | 'desc' }
+  meta: {
+    total: number
+    page: number
+    perPage: number
+    sortBy?: string
+    direction?: 'asc' | 'desc'
+  }
 }
 
 export interface RecordResponse {
@@ -263,7 +264,7 @@ export interface ListQuery {
   perPage?: number
   sortBy?: string
   direction?: 'asc' | 'desc'
-  filters?: Record<string, string>
+  filters?: FilterMap
 }
 
 /**

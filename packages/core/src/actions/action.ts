@@ -11,10 +11,7 @@ export interface ActionGroup {
   icon?: string
 }
 
-export type ActionNesting =
-  | string
-  | ActionGroup
-  | ReadonlyArray<string | ActionGroup>
+export type ActionNesting = string | ActionGroup | ReadonlyArray<string | ActionGroup>
 
 export const normalizeActionNesting = (
   nesting: ActionNesting | undefined,
@@ -26,21 +23,14 @@ export const normalizeActionNesting = (
     typeof item === 'string'
       ? { name: item }
       : {
-        name: item.name,
-        ...(item.icon !== undefined ? { icon: item.icon } : {}),
-      },
+          name: item.name,
+          ...(item.icon !== undefined ? { icon: item.icon } : {}),
+        },
   )
 }
 
 export type BuiltInActionName =
-  | 'list'
-  | 'show'
-  | 'new'
-  | 'edit'
-  | 'delete'
-  | 'bulkDelete'
-  | 'search'
-  | 'values'
+  'list' | 'show' | 'new' | 'edit' | 'delete' | 'bulkDelete' | 'search' | 'values'
 
 export interface ActionContext {
   /** Owning ModernAdmin instance — useful for cross-resource lookups. */

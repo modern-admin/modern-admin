@@ -26,9 +26,7 @@ const adminApi = (path: string): string => `${API_URL}/admin/api${path}`
 const LOCAL_WALL_TIME = '2026-08-04 15:00'
 const EXPECTED_INSTANT = '2026-08-04T12:00:00.000Z'
 
-async function createCustomer(
-  request: APIRequestContext,
-): Promise<{ id: string; name: string }> {
+async function createCustomer(request: APIRequestContext): Promise<{ id: string; name: string }> {
   const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   const name = `TZ Test ${suffix}`
   const res = await request.post(adminApi('/resources/customers/actions/new'), {
@@ -38,21 +36,13 @@ async function createCustomer(
   return { id: String((await res.json()).record.id), name }
 }
 
-async function deleteCustomerSilently(
-  request: APIRequestContext,
-  id: string,
-): Promise<void> {
+async function deleteCustomerSilently(request: APIRequestContext, id: string): Promise<void> {
   await request.delete(adminApi(`/resources/customers/records/${id}/actions/delete`))
 }
 
 /** Raw stored value straight from the API, bypassing any browser formatting. */
-async function storedLastLoginAt(
-  request: APIRequestContext,
-  id: string,
-): Promise<string> {
-  const res = await request.get(
-    adminApi(`/resources/customers/records/${id}/actions/show`),
-  )
+async function storedLastLoginAt(request: APIRequestContext, id: string): Promise<string> {
+  const res = await request.get(adminApi(`/resources/customers/records/${id}/actions/show`))
   expect(res.ok()).toBeTruthy()
   return String((await res.json()).record.params.lastLoginAt)
 }
@@ -74,10 +64,7 @@ async function saveForm(page: Page): Promise<void> {
 }
 
 test.describe('DateTime timezone round-trip', () => {
-  test('stores the picked wall time as the matching UTC instant', async ({
-    page,
-    request,
-  }) => {
+  test('stores the picked wall time as the matching UTC instant', async ({ page, request }) => {
     const customer = await createCustomer(request)
     try {
       await page.goto(`/resources/customers/${customer.id}/edit`)
@@ -93,10 +80,7 @@ test.describe('DateTime timezone round-trip', () => {
     }
   })
 
-  test('re-saving an untouched record does not shift the instant', async ({
-    page,
-    request,
-  }) => {
+  test('re-saving an untouched record does not shift the instant', async ({ page, request }) => {
     const customer = await createCustomer(request)
     try {
       await page.goto(`/resources/customers/${customer.id}/edit`)

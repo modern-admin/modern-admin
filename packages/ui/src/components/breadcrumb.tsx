@@ -3,10 +3,9 @@ import { Slot } from '@radix-ui/react-slot'
 import { ChevronRight, MoreHorizontal } from 'lucide-react'
 import { cn } from '../lib/utils.js'
 
-export const Breadcrumb = React.forwardRef<
-  HTMLElement,
-  React.ComponentPropsWithoutRef<'nav'>
->((props, ref) => <nav ref={ref} aria-label="breadcrumb" {...props} />)
+export const Breadcrumb = React.forwardRef<HTMLElement, React.ComponentPropsWithoutRef<'nav'>>(
+  (props, ref) => <nav ref={ref} aria-label="breadcrumb" {...props} />,
+)
 Breadcrumb.displayName = 'Breadcrumb'
 
 export const BreadcrumbList = React.forwardRef<
@@ -24,16 +23,11 @@ export const BreadcrumbList = React.forwardRef<
 ))
 BreadcrumbList.displayName = 'BreadcrumbList'
 
-export const BreadcrumbItem = React.forwardRef<
-  HTMLLIElement,
-  React.ComponentPropsWithoutRef<'li'>
->(({ className, ...props }, ref) => (
-  <li
-    ref={ref}
-    className={cn('inline-flex items-center gap-1.5', className)}
-    {...props}
-  />
-))
+export const BreadcrumbItem = React.forwardRef<HTMLLIElement, React.ComponentPropsWithoutRef<'li'>>(
+  ({ className, ...props }, ref) => (
+    <li ref={ref} className={cn('inline-flex items-center gap-1.5', className)} {...props} />
+  ),
+)
 BreadcrumbItem.displayName = 'BreadcrumbItem'
 
 export const BreadcrumbLink = React.forwardRef<

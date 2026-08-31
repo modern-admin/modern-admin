@@ -5,5 +5,9 @@
 
 export { ModernAdminRealtimeModule, type ModernAdminRealtimeModuleOptions } from './module.js'
 export { RealtimeGateway } from './gateway.js'
-export { RedisRealtimeBus, type RealtimeRedisLike, type RedisRealtimeBusOptions } from './redis-bus.js'
+export {
+  RedisRealtimeBus,
+  type RealtimeRedisLike,
+  type RedisRealtimeBusOptions,
+} from './redis-bus.js'
 export { REALTIME_BUS, REALTIME_EVENT } from './tokens.js'

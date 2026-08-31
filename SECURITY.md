@@ -6,8 +6,8 @@ Modern Admin is pre-1.0 software. Security fixes land on the latest
 published `0.x` release line. Always run the most recent version before
 reporting an issue.
 
-| Version      | Supported         |
-|--------------|-------------------|
+| Version      | Supported          |
+| ------------ | ------------------ |
 | latest `0.x` | ✅                 |
 | older `0.x`  | ❌ (upgrade first) |
 

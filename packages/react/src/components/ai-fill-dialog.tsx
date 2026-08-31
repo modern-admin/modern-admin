@@ -80,10 +80,7 @@ export function AiFillDialog({
     } catch (err) {
       if (ac.signal.aborted) return // user-initiated close — silently ignore
       const { message } = parseApiError(err)
-      notify.error(
-        { key: 'aiFill:errorGeneric', params: { message } },
-        { description: message },
-      )
+      notify.error({ key: 'aiFill:errorGeneric', params: { message } }, { description: message })
     } finally {
       setBusy(false)
       abortRef.current = null
@@ -98,7 +95,12 @@ export function AiFillDialog({
   }
 
   return (
-    <Dialog open onOpenChange={(open) => { if (!open) handleClose() }}>
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) handleClose()
+      }}
+    >
       <DialogContent closeLabel={t('common:close')} className="w-full max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">

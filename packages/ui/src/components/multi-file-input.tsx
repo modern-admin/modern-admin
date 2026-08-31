@@ -177,9 +177,7 @@ export function MultiFileInput({
                 {items.length > 0 ? l.addMoreLink : l.chooseLink}
               </span>
             </span>
-            {accept && (
-              <span className="text-xs text-muted-foreground">{accept}</span>
-            )}
+            {accept && <span className="text-xs text-muted-foreground">{accept}</span>}
           </>
         )}
       </div>

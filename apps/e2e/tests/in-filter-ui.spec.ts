@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type APIRequestContext, type Page } from '@playwright/test'
 
 /**
  * Regression coverage for the "Is one of" (`in`) filter.
@@ -21,8 +21,8 @@ import { expect, test, type Page } from '@playwright/test'
  * Fixes:
  *   • `packages/adapter-prisma/src/converters.ts`: empty `in: []` → drop
  *     the field-level clause (`return undefined`), matching Drizzle.
- *   • `packages/react/src/pages/list-page.tsx`: `encodeFilter('in', '')`
- *     returns `''` so the draft cleans up to "no filter".
+ *   • `packages/react/src/pages/filter-codecs.ts`: an empty selection returns
+ *     `null` so the draft cleans up to "no filter".
  *
  * Resource pick for the auto-switch tests: `tags.color` — a plain
  * auto-detected string property with 6 distinct seed values, under the
@@ -36,14 +36,29 @@ import { expect, test, type Page } from '@playwright/test'
  *   • `admins.role` is overridden to `{type: 'reference'}` in the
  *     shared admin module → renders as a reference picker.
  *
- * API tests still target `customers.tier`: the bug surface is the URL
- * encoding `filters[col]=in:...` at the adapter layer, which is
- * UI-agnostic. Tier has 3 known values and short categorical names,
- * which makes the API assertions readable.
+ * API tests still target `customers.tier`: tier has 3 known values and short
+ * categorical names, which makes compatibility assertions readable.
  */
 
 const API_URL = process.env.E2E_API_URL ?? 'http://localhost:3001'
 const adminApi = (path: string): string => `${API_URL}/admin/api${path}`
+const structuredInQuery = (path: string, values: readonly string[]): URLSearchParams => {
+  const query = new URLSearchParams({ [`filters[${path}][operator]`]: 'in', perPage: '200' })
+  for (const value of values) query.append(`filters[${path}][values][]`, value)
+  return query
+}
+
+async function createCustomer(
+  request: APIRequestContext,
+  name: string,
+  email: string,
+): Promise<string> {
+  const response = await request.post(adminApi('/resources/customers/actions/new'), {
+    data: { email, name, tier: 'free' },
+  })
+  expect(response.ok()).toBeTruthy()
+  return String((await response.json()).record.id)
+}
 
 /** Filters trigger in the toolbar (icon + "Filters" label). */
 function filtersTrigger(page: Page) {
@@ -62,14 +77,16 @@ function filterSheet(page: Page) {
  * `apps/web/src/locales/en.json` renames the field to "Internal name".
  */
 function filterField(page: Page, labelText: string) {
-  return filterSheet(page).locator(
-    `xpath=.//label[normalize-space()="${labelText}"]/parent::div`,
-  )
+  return filterSheet(page).locator(`xpath=.//label[normalize-space()="${labelText}"]/parent::div`)
 }
 
 /** Read a `filters[<key>]` URL param. */
 function filterParam(page: Page, key: string): string | null {
   return new URL(page.url()).searchParams.get(`filters[${key}]`)
+}
+
+function structuredFilterParam(page: Page, key: string, member: string): string | null {
+  return new URL(page.url()).searchParams.get(`filters[${key}][${member}]`)
 }
 
 async function openCategoriesList(page: Page): Promise<void> {
@@ -88,7 +105,9 @@ async function openFilters(page: Page): Promise<void> {
 }
 
 async function applyFilters(page: Page): Promise<void> {
-  await filterSheet(page).getByRole('button', { name: /^Apply filters$/i }).click()
+  await filterSheet(page)
+    .getByRole('button', { name: /^Apply filters$/i })
+    .click()
   await expect(filterSheet(page)).toBeHidden({ timeout: 5_000 })
 }
 
@@ -118,9 +137,99 @@ test.describe('Filter — "Is one of" (in) operator: API', () => {
     }
   })
 
-  test('empty `in:` is treated as no filter (consistent across adapters)', async ({
+  test('legacy value starting with the former JSON marker remains literal', async ({ request }) => {
+    const suffix = Date.now()
+    const decodedName = `a-${suffix}`
+    const literalName = `json:["${decodedName}"]`
+    const customerIds: string[] = []
+
+    try {
+      customerIds.push(
+        await createCustomer(request, literalName, `legacy-json-literal-${suffix}@example.com`),
+      )
+      customerIds.push(
+        await createCustomer(request, decodedName, `legacy-json-decoded-${suffix}@example.com`),
+      )
+      const result = await request.get(
+        adminApi(
+          `/resources/customers/actions/list?${new URLSearchParams({
+            'filters[name]': `in:${literalName}`,
+            perPage: '200',
+          }).toString()}`,
+        ),
+      )
+
+      expect(result.status()).toBe(200)
+      const body = await result.json()
+      const names = (body.records as Array<{ params: { name: string } }>).map(
+        (record) => record.params.name,
+      )
+      expect(names).toEqual([literalName])
+    } finally {
+      for (const id of customerIds) {
+        await request.delete(adminApi(`/resources/customers/records/${id}/actions/delete`))
+      }
+    }
+  })
+
+  test('legacy value matching the former valid JSON frame remains constrained', async ({
     request,
   }) => {
+    const suffix = Date.now()
+    const literalName = `in-json:["literal-${suffix}"]`
+    const id = await createCustomer(
+      request,
+      literalName,
+      `legacy-in-json-prefix-${suffix}@example.com`,
+    )
+
+    try {
+      const query = new URLSearchParams({
+        'filters[name]': literalName,
+        perPage: '200',
+      })
+      const result = await request.get(
+        adminApi(`/resources/customers/actions/list?${query.toString()}`),
+      )
+
+      expect(result.status()).toBe(200)
+      const body = await result.json()
+      const names = (body.records as Array<{ params: { name: string } }>).map(
+        (record) => record.params.name,
+      )
+      expect(names).toEqual([literalName])
+    } finally {
+      await request.delete(adminApi(`/resources/customers/records/${id}/actions/delete`))
+    }
+  })
+
+  test('structured in payload preserves a comma inside one selected value', async ({ request }) => {
+    const suffix = Date.now()
+    const name = `Smith, John ${suffix}`
+    const created = await request.post(adminApi('/resources/customers/actions/new'), {
+      data: { email: `comma-filter-${suffix}@example.com`, name, tier: 'free' },
+    })
+    expect(created.ok()).toBeTruthy()
+    const createdBody = await created.json()
+    const id = String(createdBody.record.id)
+
+    try {
+      const query = structuredInQuery('name', [name])
+      const result = await request.get(
+        adminApi(`/resources/customers/actions/list?${query.toString()}`),
+      )
+      expect(result.status()).toBe(200)
+      const body = await result.json()
+      const names = (body.records as Array<{ params: { name: string } }>).map(
+        (record) => record.params.name,
+      )
+      expect(names).toEqual([name])
+    } finally {
+      await request.delete(adminApi(`/resources/customers/records/${id}/actions/delete`))
+    }
+  })
+
+  test('empty `in:` is treated as no filter (consistent across adapters)', async ({ request }) => {
     // Baseline: total rows in the resource.
     const all = await request.get(adminApi('/resources/customers/actions/list?perPage=200'))
     expect(all.status()).toBe(200)
@@ -141,9 +250,7 @@ test.describe('Filter — "Is one of" (in) operator: API', () => {
 })
 
 test.describe('Filter — "Is one of" (in) operator: UI', () => {
-  test('auto-switches to checkbox picker on low-cardinality string field', async ({
-    page,
-  }) => {
+  test('auto-switches to checkbox picker on low-cardinality string field', async ({ page }) => {
     await openTagsList(page)
     await openFilters(page)
 
@@ -192,10 +299,7 @@ test.describe('Filter — "Is one of" (in) operator: UI', () => {
     await expect(nameField.getByRole('checkbox', { name: 'DevOps' })).toBeVisible()
   })
 
-  test('selecting two values filters the list to that subset', async ({
-    page,
-    request,
-  }) => {
+  test('selecting two values filters the list to that subset', async ({ page, request }) => {
     // Strict-API expectation for the row count after the filter applies.
     const apiBody = await (
       await request.get(
@@ -219,18 +323,21 @@ test.describe('Filter — "Is one of" (in) operator: UI', () => {
 
     await applyFilters(page)
 
-    // URL carries `in:` prefix + the two selected values. Order matches
+    // Repeated structured values preserve delimiters. Array order matches
     // the click sequence (FilterValuePicker pushes onto `selected`).
-    await expect.poll(() => filterParam(page, 'color'), { timeout: 5_000 })
-      .toBe('in:blue,green')
+    await expect
+      .poll(() => structuredFilterParam(page, 'color', 'operator'), { timeout: 5_000 })
+      .toBe('in')
+    expect(new URL(page.url()).searchParams.getAll('filters[color][values][]')).toEqual([
+      'blue',
+      'green',
+    ])
 
     const pageSize = Math.min(50, expectedCount)
     await expect(page.locator('tbody tr')).toHaveCount(pageSize, { timeout: 10_000 })
   })
 
-  test('unchecking the last value clears the filter (no phantom in: in URL)', async ({
-    page,
-  }) => {
+  test('unchecking the last value clears the filter (no phantom in: in URL)', async ({ page }) => {
     // Land directly on a single-value `in` filter so the UI hydrates the
     // picker in "in" mode with one item selected.
     await page.goto('/resources/categories?perPage=50&filters[name]=in:Design')
@@ -253,11 +360,9 @@ test.describe('Filter — "Is one of" (in) operator: UI', () => {
 
     await applyFilters(page)
 
-    // After the fix, `encodeFilter('in', '')` returns '' → the filter is
-    // dropped from the draft and the URL. Pre-fix the URL would still
-    // carry `filters[name]=in:`.
-    await expect.poll(() => filterParam(page, 'name'), { timeout: 5_000 })
-      .toBeNull()
+    // An empty structured selection returns null, so the filter is dropped
+    // from both the draft and the URL.
+    await expect.poll(() => filterParam(page, 'name'), { timeout: 5_000 }).toBeNull()
 
     // Row count grows beyond the filtered subset (full list restored).
     await expect

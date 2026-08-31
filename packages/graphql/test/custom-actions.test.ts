@@ -40,9 +40,7 @@ const makeAdmin = (seenSink: Seen[] = []): ModernAdmin => {
               actionType: 'resource' as const,
               handler: async (request: ActionRequest, context: ActionContext) => {
                 seenSink.push({ request, context })
-                return request.method === 'post'
-                  ? { sent: 2 }
-                  : { templates: ['welcome'] }
+                return request.method === 'post' ? { sent: 2 } : { templates: ['welcome'] }
               },
             },
             ping: {
@@ -68,11 +66,7 @@ const makeAdmin = (seenSink: Seen[] = []): ModernAdmin => {
   })
 }
 
-const run = async (
-  admin: ModernAdmin,
-  query: string,
-  variables?: Record<string, unknown>,
-) =>
+const run = async (admin: ModernAdmin, query: string, variables?: Record<string, unknown>) =>
   execute({
     schema: buildGraphqlSchema(admin),
     document: parse(query),
@@ -200,11 +194,9 @@ describe('GraphQL custom actions — resolution', () => {
   test('variables carry through as the payload', async () => {
     const seen: Seen[] = []
     const admin = makeAdmin(seen)
-    const res = await run(
-      admin,
-      'mutation Run($p: JSON) { usersSendMassPush(payload: $p) }',
-      { p: { title: 'From variables' } },
-    )
+    const res = await run(admin, 'mutation Run($p: JSON) { usersSendMassPush(payload: $p) }', {
+      p: { title: 'From variables' },
+    })
     expect(res.errors).toBeUndefined()
     expect(seen[0]?.request.payload).toEqual({ title: 'From variables' })
   })

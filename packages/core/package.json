@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/core",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Core abstractions of the Modern Admin framework — adapters, resources, decorators, actions, ports.",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/core#readme",
   "keywords": [
@@ -48,15 +48,14 @@
   "scripts": {
     "build": "bun ../../scripts/clean.ts dist .tsbuildinfo && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "test": "bun test",
-    "lint": "eslint ."
+    "test": "bun test"
   },
   "dependencies": {
-    "zod": "^4.4.3"
+    "zod": "^4.5.2"
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
-    "@types/bun": "^1.3.14",
+    "@types/bun": "^1.4.0",
     "typescript": "^7.0.2"
   }
 }

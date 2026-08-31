@@ -42,7 +42,13 @@ describe('applyTransform', () => {
 describe('transformSeries', () => {
   it('maps every point of every series and keeps other fields', () => {
     const series = [
-      { key: 'a', points: [{ date: '2026-01-01', value: 100 }, { date: '2026-01-02', value: 250 }] },
+      {
+        key: 'a',
+        points: [
+          { date: '2026-01-01', value: 100 },
+          { date: '2026-01-02', value: 250 },
+        ],
+      },
       { key: 'b', points: [{ date: '2026-01-01', value: 0 }] },
     ]
     const out = transformSeries(series, [{ op: 'divide', value: 100 }])

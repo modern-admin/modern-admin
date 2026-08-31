@@ -34,10 +34,7 @@ export class ModernAdminRealtimeModule {
     return {
       module: ModernAdminRealtimeModule,
       global: options.global ?? false,
-      providers: [
-        { provide: REALTIME_BUS, useValue: bus },
-        RealtimeGateway,
-      ],
+      providers: [{ provide: REALTIME_BUS, useValue: bus }, RealtimeGateway],
       exports: [REALTIME_BUS, RealtimeGateway],
     }
   }

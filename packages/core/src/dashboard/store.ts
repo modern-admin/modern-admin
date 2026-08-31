@@ -6,6 +6,7 @@
 // to where the data actually lives.
 
 import { z } from 'zod'
+import { filterMapZ } from '../filter/filter.js'
 
 // Pie removed in Phase 10 — time-series first means category-only charts
 // don't fit the model.
@@ -105,7 +106,7 @@ export const chartDefZ = z
      */
     groupByLabelResource: z.string().min(1).optional(),
     width: chartWidthZ.default('half'),
-    filters: z.record(z.string(), z.string()).default({}),
+    filters: filterMapZ.default({}),
     /**
      * Property paths exposed as "quick filters" above the chart on the
      * dashboard tile. Their values are taken from `filters` but the widget

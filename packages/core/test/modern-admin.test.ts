@@ -1,11 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { ModernAdmin } from '../src/modern-admin.js'
 import { InMemoryRealtimeBus, MemoryCacheProvider, type RealtimeEvent } from '../src/ports'
-import {
-  ActionNotFoundError,
-  ResourceNotFoundError,
-  ForbiddenError,
-} from '../src/errors'
+import { ActionNotFoundError, ResourceNotFoundError, ForbiddenError } from '../src/errors'
 import type {
   Action,
   ActionRequest,
@@ -77,10 +73,7 @@ describe('ModernAdmin', () => {
 
   test('invoke runs before and after hooks', async () => {
     const admin = buildAdmin([{ name: 'users', rows: [] }])
-    const action = admin
-      .findResource('users')
-      .decorate()
-      .getAction('list')!
+    const action = admin.findResource('users').decorate().getAction('list')!
     const order: string[] = []
     const merged = action.merged as unknown as Action<ListActionResponse>
     merged.before = async (req) => {
@@ -145,7 +138,13 @@ describe('ModernAdmin', () => {
 
   test('bulkDelete routes each record through the delete hook chain', async () => {
     const admin = buildAdmin([
-      { name: 'users', rows: [{ id: '1', name: 'Ann' }, { id: '2', name: 'Bob' }] },
+      {
+        name: 'users',
+        rows: [
+          { id: '1', name: 'Ann' },
+          { id: '2', name: 'Bob' },
+        ],
+      },
     ])
     const deleteAction = admin.findResource('users').decorate().getAction('delete')!
     const merged = deleteAction.merged as unknown as Action<RecordActionResponse>
@@ -256,10 +255,10 @@ describe('ModernAdmin', () => {
       ],
       adapters: [adapter],
     })
-    const res = await admin.invoke<ListActionResponse>(
-      listRequest('users'),
-      { id: 'u1', role: 'viewer' },
-    )
+    const res = await admin.invoke<ListActionResponse>(listRequest('users'), {
+      id: 'u1',
+      role: 'viewer',
+    })
     expect(res.records[0]!.params).toEqual({ id: '1', name: 'Ann' })
   })
 })
@@ -273,7 +272,10 @@ describe('ModernAdmin api-key permission gate', () => {
 
   test('allows action when permissions include the resource and action', async () => {
     const admin = buildAdmin([{ name: 'users', rows: [{ id: '1', name: 'Ann' }] }])
-    const res = await admin.invoke<ListActionResponse>(listRequest('users'), adminWithKey({ users: ['list'] }))
+    const res = await admin.invoke<ListActionResponse>(
+      listRequest('users'),
+      adminWithKey({ users: ['list'] }),
+    )
     expect(res.records).toHaveLength(1)
   })
 
@@ -293,13 +295,19 @@ describe('ModernAdmin api-key permission gate', () => {
 
   test('wildcard "*" action key opens all actions of a resource', async () => {
     const admin = buildAdmin([{ name: 'users', rows: [{ id: '1' }] }])
-    const res = await admin.invoke<ListActionResponse>(listRequest('users'), adminWithKey({ users: ['*'] }))
+    const res = await admin.invoke<ListActionResponse>(
+      listRequest('users'),
+      adminWithKey({ users: ['*'] }),
+    )
     expect(res.records).toHaveLength(1)
   })
 
   test('wildcard "*" resource key opens all resources for the listed actions', async () => {
     const admin = buildAdmin([{ name: 'users', rows: [{ id: '1' }] }])
-    const res = await admin.invoke<ListActionResponse>(listRequest('users'), adminWithKey({ '*': ['list'] }))
+    const res = await admin.invoke<ListActionResponse>(
+      listRequest('users'),
+      adminWithKey({ '*': ['list'] }),
+    )
     expect(res.records).toHaveLength(1)
   })
 
@@ -329,7 +337,7 @@ describe('ModernAdmin role permission gate', () => {
       rolesResourceId: 'roles',
     })
 
-  test('allows when the principal\'s role grants the action', async () => {
+  test("allows when the principal's role grants the action", async () => {
     const admin = buildWithRoles([{ id: 'editor', permissions: { users: ['list'] } }])
     const res = await admin.invoke<ListActionResponse>(listRequest('users'), {
       id: 'u1',
@@ -340,9 +348,9 @@ describe('ModernAdmin role permission gate', () => {
 
   test('rejects when the role exists but does not list the action', async () => {
     const admin = buildWithRoles([{ id: 'editor', permissions: { users: ['show'] } }])
-    await expect(
-      admin.invoke(listRequest('users'), { id: 'u1', role: 'editor' }),
-    ).rejects.toThrow(ForbiddenError)
+    await expect(admin.invoke(listRequest('users'), { id: 'u1', role: 'editor' })).rejects.toThrow(
+      ForbiddenError,
+    )
   })
 
   test('wildcard "*" resource key matches every resource', async () => {
@@ -414,9 +422,9 @@ describe('ModernAdmin role permission gate', () => {
     )
 
     // Now `list` must be denied for editor — proves cache was invalidated.
-    await expect(
-      admin.invoke(listRequest('users'), { id: 'u1', role: 'editor' }),
-    ).rejects.toThrow(ForbiddenError)
+    await expect(admin.invoke(listRequest('users'), { id: 'u1', role: 'editor' })).rejects.toThrow(
+      ForbiddenError,
+    )
   })
 
   test('role permission invalidation reaches another instance through the shared provider', async () => {

@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/license",
-  "version": "0.6.0",
+  "version": "0.10.0",
   "description": "Ed25519/JWS license-key verification helpers for Modern Admin commercial packages.",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/license#readme",
   "keywords": [
@@ -45,15 +45,14 @@
   "scripts": {
     "build": "bun ../../scripts/clean.ts dist .tsbuildinfo && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "test": "bun test",
-    "lint": "eslint ."
+    "test": "bun test"
   },
   "dependencies": {
-    "jose": "^6.2.9"
+    "jose": "^6.2.10"
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
-    "@types/bun": "^1.3.14",
+    "@types/bun": "^1.4.0",
     "typescript": "^7.0.2"
   }
 }

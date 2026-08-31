@@ -55,7 +55,12 @@ export function ResourceActionPage({
           homeCrumb(t('common:home')),
           { label: resource?.name ?? resourceId, to: { name: 'list', resourceId } },
           ...(recordId
-            ? [{ label: recordLabel ?? recordId, to: { name: 'show' as const, resourceId, recordId } }]
+            ? [
+                {
+                  label: recordLabel ?? recordId,
+                  to: { name: 'show' as const, resourceId, recordId },
+                },
+              ]
             : []),
           { label: title },
         ]}

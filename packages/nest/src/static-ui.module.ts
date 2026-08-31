@@ -52,8 +52,10 @@ import {
 } from './static-ui.middleware.js'
 
 /** Factory contract for `forRootAsync`, mirroring `ModernAdminModule`. */
-export interface ModernAdminStaticUiAsyncOptions<TConfig = ModernAdminUiRuntimeConfig>
-  extends Pick<ModuleMetadata, 'imports'> {
+export interface ModernAdminStaticUiAsyncOptions<TConfig = ModernAdminUiRuntimeConfig> extends Pick<
+  ModuleMetadata,
+  'imports'
+> {
   useFactory: (
     ...args: never[]
   ) => ModernAdminStaticUiOptions<TConfig> | Promise<ModernAdminStaticUiOptions<TConfig>>

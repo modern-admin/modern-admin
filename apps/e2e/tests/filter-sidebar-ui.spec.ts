@@ -56,6 +56,10 @@ function filterParam(page: Page, key: string): string | null {
   return new URL(page.url()).searchParams.get(`filters[${key}]`)
 }
 
+function filterMember(page: Page, key: string, member: string): string | null {
+  return new URL(page.url()).searchParams.get(`filters[${key}][${member}]`)
+}
+
 /** The filter sheet (Radix Sheet → role="dialog"). */
 function filterSheet(page: Page) {
   return page.getByRole('dialog')
@@ -72,9 +76,7 @@ function filterSheet(page: Page) {
  * "Post title" (not "Title"), "Author" (override of "Author id").
  */
 function filterField(page: Page, labelText: string) {
-  return filterSheet(page).locator(
-    `xpath=.//label[normalize-space()="${labelText}"]/parent::div`,
-  )
+  return filterSheet(page).locator(`xpath=.//label[normalize-space()="${labelText}"]/parent::div`)
 }
 
 /**
@@ -102,12 +104,14 @@ async function openFilters(page: Page): Promise<void> {
 }
 
 async function applyFilters(page: Page): Promise<void> {
-  await filterSheet(page).getByRole('button', { name: /^Apply filters$/i }).click()
+  await filterSheet(page)
+    .getByRole('button', { name: /^Apply filters$/i })
+    .click()
   await expect(filterSheet(page)).toBeHidden({ timeout: 5_000 })
 }
 
 test.describe('FilterPanel — UI sidebar interactions', () => {
-  test('reference filter (Author) returns only that customer\'s posts', async ({
+  test("reference filter (Author) returns only that customer's posts", async ({
     page,
     request,
   }) => {
@@ -116,9 +120,7 @@ test.describe('FilterPanel — UI sidebar interactions', () => {
     // surface whenever the haystack column carries any ids that share a
     // prefix/suffix with the needle — UUIDs satisfy that trivially.
     const customers = (
-      await (
-        await request.get(adminApi('/resources/customers/actions/list?perPage=1'))
-      ).json()
+      await (await request.get(adminApi('/resources/customers/actions/list?perPage=1'))).json()
     ).records as Array<{ id: string; title: string }>
     expect(customers.length).toBeGreaterThan(0)
     const authorId = String(customers[0]!.id)
@@ -129,15 +131,13 @@ test.describe('FilterPanel — UI sidebar interactions', () => {
     // will show many more rows than this.
     const apiBody = await (
       await request.get(
-        adminApi(`/resources/posts/actions/list?perPage=200&filters[authorId]=${authorId}`),
+        adminApi(`/resources/posts/actions/list?perPage=200&filters[authorId]=eq:${authorId}`),
       )
     ).json()
     const expectedCount = apiBody.records.length as number
     const expectedAuthors = Array.from(
       new Set(
-        (apiBody.records as Array<{ params: { authorId: string } }>).map(
-          (r) => r.params.authorId,
-        ),
+        (apiBody.records as Array<{ params: { authorId: string } }>).map((r) => r.params.authorId),
       ),
     )
     expect(expectedAuthors).toEqual([authorId])
@@ -150,19 +150,111 @@ test.describe('FilterPanel — UI sidebar interactions', () => {
     // happens in a portal'd Popover that escapes the sheet, so the
     // trigger is scoped to the sheet but the dropdown items live at
     // the page root.
-    await filterField(page, 'Author').getByRole('combobox').click()
+    await filterField(page, 'Author').getByRole('combobox').nth(1).click()
     // Type the author's display name (not the raw UUID) — the combobox
     // filters by the resolved title, not by id.
-    await page.getByPlaceholder(/^Search\b/i).last().fill(authorName)
+    await page
+      .getByPlaceholder(/^Search\b/i)
+      .last()
+      .fill(authorName)
     await page.getByRole('option').first().click()
 
     await applyFilters(page)
 
-    await expect.poll(() => filterParam(page, 'authorId'), { timeout: 5_000 })
-      .toBe(authorId)
+    await expect
+      .poll(() => filterMember(page, 'authorId', 'operator'), { timeout: 5_000 })
+      .toBe('eq')
+    expect(filterMember(page, 'authorId', 'value')).toBe(authorId)
 
     const pageSize = Math.min(50, expectedCount)
     await expect(dataRows(page)).toHaveCount(pageSize, { timeout: 10_000 })
+  })
+
+  test('reference filter supports does-not-equal', async ({ page, request }) => {
+    const customers = (
+      await (await request.get(adminApi('/resources/customers/actions/list?perPage=1'))).json()
+    ).records as Array<{ id: string; title: string }>
+    const authorId = String(customers[0]!.id)
+    const authorName = String(customers[0]!.title)
+    const expected = await request.get(
+      adminApi(`/resources/posts/actions/list?perPage=200&filters[authorId]=neq:${authorId}`),
+    )
+    expect(expected.status()).toBe(200)
+    const expectedRecords = (await expected.json()).records as Array<{
+      params: { authorId: string }
+    }>
+    expect(expectedRecords.length).toBeGreaterThan(0)
+    expect(expectedRecords.every((record) => record.params.authorId !== authorId)).toBe(true)
+
+    await openList(page, 'posts')
+    await openFilters(page)
+    const authorField = filterField(page, 'Author')
+    await authorField.getByRole('combobox').first().click()
+    await page.getByRole('option', { name: 'Does not equal' }).click()
+    await authorField.getByRole('combobox').nth(1).click()
+    await page
+      .getByPlaceholder(/^Search\b/i)
+      .last()
+      .fill(authorName)
+    await page.getByRole('option').first().click()
+    await applyFilters(page)
+
+    await expect
+      .poll(() => filterMember(page, 'authorId', 'operator'), { timeout: 5_000 })
+      .toBe('neq')
+    expect(filterMember(page, 'authorId', 'value')).toBe(authorId)
+    await expect(dataRows(page)).toHaveCount(Math.min(50, expectedRecords.length), {
+      timeout: 10_000,
+    })
+  })
+
+  test('empty on a required reference returns no rows without a Prisma error', async ({
+    page,
+    request,
+  }) => {
+    const all = await request.get(adminApi('/resources/comments/actions/list?perPage=200'))
+    expect(all.status()).toBe(200)
+    const total = ((await all.json()).records as unknown[]).length
+    expect(total).toBeGreaterThan(0)
+
+    const nonEmpty = await request.get(
+      adminApi(
+        '/resources/comments/actions/list?filters%5BauthorId%5D%5Boperator%5D=nempty&perPage=200',
+      ),
+    )
+    expect(nonEmpty.status()).toBe(200)
+    expect(((await nonEmpty.json()).records as unknown[]).length).toBe(total)
+
+    await page.goto('/resources/comments?filters%5BauthorId%5D%5Boperator%5D=empty')
+
+    await expect(page.getByText('No records match your filters.')).toBeVisible({
+      timeout: 15_000,
+    })
+    await expect(page.getByText(/^Failed to load:/)).toHaveCount(0)
+  })
+
+  test('date filter supports non-empty values', async ({ page, request }) => {
+    const expected = await request.get(
+      adminApi('/resources/posts/actions/list?perPage=200&filters[publishedAt]=nempty:'),
+    )
+    expect(expected.status()).toBe(200)
+    const expectedCount = ((await expected.json()).records as unknown[]).length
+    expect(expectedCount).toBeGreaterThan(0)
+
+    await openList(page, 'posts')
+    await openFilters(page)
+    const publishedAtField = filterSheet(page)
+      .locator('label')
+      .filter({ hasText: /^Published At$/i })
+      .locator('..')
+    await publishedAtField.getByRole('combobox').click()
+    await page.getByRole('option', { name: 'Is not empty' }).click()
+    await applyFilters(page)
+
+    await expect
+      .poll(() => filterMember(page, 'publishedAt', 'operator'), { timeout: 5_000 })
+      .toBe('nempty')
+    await expect(dataRows(page)).toHaveCount(Math.min(50, expectedCount), { timeout: 10_000 })
   })
 
   test('enum filter (Tier = pro) returns only matching customers and updates the badge', async ({
@@ -170,19 +262,12 @@ test.describe('FilterPanel — UI sidebar interactions', () => {
     request,
   }) => {
     const apiBody = await (
-      await request.get(
-        adminApi('/resources/customers/actions/list?perPage=200&filters[tier]=pro'),
-      )
+      await request.get(adminApi('/resources/customers/actions/list?perPage=200&filters[tier]=pro'))
     ).json()
     const expectedCount = apiBody.records.length as number
-    expect(expectedCount, 'seed must include customers on the pro tier')
-      .toBeGreaterThan(0)
+    expect(expectedCount, 'seed must include customers on the pro tier').toBeGreaterThan(0)
     const distinctTiers = Array.from(
-      new Set(
-        (apiBody.records as Array<{ params: { tier: string } }>).map(
-          (r) => r.params.tier,
-        ),
-      ),
+      new Set((apiBody.records as Array<{ params: { tier: string } }>).map((r) => r.params.tier)),
     )
     expect(distinctTiers).toEqual(['pro'])
 
@@ -198,8 +283,8 @@ test.describe('FilterPanel — UI sidebar interactions', () => {
 
     await applyFilters(page)
 
-    await expect.poll(() => filterParam(page, 'tier'), { timeout: 5_000 })
-      .toBe('pro')
+    await expect.poll(() => filterMember(page, 'tier', 'operator'), { timeout: 5_000 }).toBe('eq')
+    expect(filterMember(page, 'tier', 'value')).toBe('pro')
 
     // Filtered row count matches the strict API count.
     const pageSize = Math.min(50, expectedCount)
@@ -212,9 +297,7 @@ test.describe('FilterPanel — UI sidebar interactions', () => {
     })
   })
 
-  test('Clear-all drops the filter from URL and restores the full list', async ({
-    page,
-  }) => {
+  test('Clear-all drops the filter from URL and restores the full list', async ({ page }) => {
     // Land directly on a filtered URL — quicker than driving the sheet
     // twice for setup + teardown.
     await page.goto('/resources/customers?perPage=50&filters[tier]=pro')
@@ -231,12 +314,13 @@ test.describe('FilterPanel — UI sidebar interactions', () => {
     // Open the sheet and hit Clear all — the header button is only
     // rendered when `draft.length > 0`, which it is now.
     await openFilters(page)
-    await filterSheet(page).getByRole('button', { name: /^Clear all$/i }).click()
+    await filterSheet(page)
+      .getByRole('button', { name: /^Clear all$/i })
+      .click()
 
     // Clear-all commits immediately (no Apply needed) — the URL drops
     // the filter param and the list reloads unfiltered.
-    await expect.poll(() => filterParam(page, 'tier'), { timeout: 5_000 })
-      .toBeNull()
+    await expect.poll(() => filterParam(page, 'tier'), { timeout: 5_000 }).toBeNull()
 
     // Close the sheet (Escape) and verify the row count grew back
     // beyond the filtered subset.

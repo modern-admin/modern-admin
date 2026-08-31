@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/feature-m2m",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Many-to-many relation property type for Modern Admin.",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/feature-m2m#readme",
   "keywords": [
@@ -47,16 +47,15 @@
   "scripts": {
     "build": "bun ../../scripts/clean.ts dist .tsbuildinfo && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "test": "bun test",
-    "lint": "eslint ."
+    "test": "bun test"
   },
   "dependencies": {
     "@modern-admin/core": "workspace:^",
-    "zod": "^4.4.3"
+    "zod": "^4.5.2"
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
-    "@types/bun": "^1.3.14",
+    "@types/bun": "^1.4.0",
     "typescript": "^7.0.2"
   }
 }

@@ -18,21 +18,43 @@ import {
   cn,
   dateFnsLocale,
 } from '@modern-admin/ui'
-import { ChevronDown, ChevronUp, ExternalLink, FilePlus, FileText, Key, KeyRound, Loader2, LogIn, Pencil, Trash2 } from 'lucide-react'
-import { useInfiniteAuditLog, useRecord, useRecordHistory, useResource, useResources } from '../hooks.js'
+import {
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+  FilePlus,
+  FileText,
+  Key,
+  KeyRound,
+  Loader2,
+  LogIn,
+  Pencil,
+  Trash2,
+} from 'lucide-react'
+import {
+  useInfiniteAuditLog,
+  useRecord,
+  useRecordHistory,
+  useResource,
+  useResources,
+} from '../hooks.js'
 import { useI18n } from '../i18n.js'
 import { Link } from '../router.js'
 import { USERS_RESOURCE_ID, useUserDirectory, userLabelOf } from '../user-directory.js'
-import type {
-  AuditLogEntry,
-  AuditLogQuery,
-  HistoryDiffEntry,
-  HistoryRevision,
-} from '../client.js'
+import type { AuditLogEntry, AuditLogQuery, HistoryDiffEntry, HistoryRevision } from '../client.js'
 import type { RecordJSON, ResourceJSON } from '../types.js'
 
 const ALL = '__all__'
-const ACTIONS = ['new', 'edit', 'delete', 'bulkDelete', 'login', 'apiKey.create', 'apiKey.update', 'apiKey.delete']
+const ACTIONS = [
+  'new',
+  'edit',
+  'delete',
+  'bulkDelete',
+  'login',
+  'apiKey.create',
+  'apiKey.update',
+  'apiKey.delete',
+]
 /** Virtual resource IDs that don't map to ORM resources. */
 const VIRTUAL_RESOURCE_LABELS: Record<string, string> = {
   __auth__: 'audit:virtualResource.auth',
@@ -106,9 +128,7 @@ const ACTION_STYLES: Record<string, ActionStyle> = {
 /** Format `entry.at` (unix-ms) as a relative phrase like "2m ago", falling
  *  back to absolute date for entries older than a week. Uses
  *  `Intl.RelativeTimeFormat` so output is locale-aware. */
-function useRelativeTimeFormatter(
-  locale: string,
-): (atMs: number, nowMs: number) => string {
+function useRelativeTimeFormatter(locale: string): (atMs: number, nowMs: number) => string {
   const rtf = React.useMemo(
     () => new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }),
     [locale],
@@ -150,8 +170,7 @@ export function AuditLogPage(): React.ReactElement {
 
   // Flatten all pages into one list, trimming the sentinel "+1" entry from each page
   const events = React.useMemo(
-    () =>
-      (log.data?.pages ?? []).flatMap((page) => page.events.slice(0, PAGE_SIZE)),
+    () => (log.data?.pages ?? []).flatMap((page) => page.events.slice(0, PAGE_SIZE)),
     [log.data],
   )
 
@@ -172,7 +191,9 @@ export function AuditLogPage(): React.ReactElement {
   const formatRelative = useRelativeTimeFormatter(locale)
   const formatAbsolute = React.useCallback(
     (value: number) =>
-      new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)),
+      new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(
+        new Date(value),
+      ),
     [locale],
   )
 
@@ -221,7 +242,9 @@ export function AuditLogPage(): React.ReactElement {
             <SelectContent>
               <SelectItem value={ALL}>{t('audit:allResources')}</SelectItem>
               {Object.entries(VIRTUAL_RESOURCE_LABELS).map(([id, key]) => (
-                <SelectItem key={id} value={id}>{t(key)}</SelectItem>
+                <SelectItem key={id} value={id}>
+                  {t(key)}
+                </SelectItem>
               ))}
               {resources.map((resource) => (
                 <SelectItem key={resource.id} value={resource.id}>
@@ -265,9 +288,7 @@ export function AuditLogPage(): React.ReactElement {
           <DateRangeInput
             from={filters.from}
             to={filters.to}
-            onChange={(from, to) =>
-              resetFilters({ from: from || undefined, to: to || undefined })
-            }
+            onChange={(from, to) => resetFilters({ from: from || undefined, to: to || undefined })}
             className="sm:col-span-2 md:col-span-4"
             locale={dateFnsLocale(locale)}
             labels={{
@@ -301,7 +322,7 @@ export function AuditLogPage(): React.ReactElement {
                   key={entry.id ?? `${entry.at}:${i}`}
                   entry={entry}
                   resource={resourceMap[entry.resourceId]}
-                  user={entry.userId ? users.get(entry.userId) ?? null : null}
+                  user={entry.userId ? (users.get(entry.userId) ?? null) : null}
                   userResourceId={userResourceExists ? USERS_RESOURCE_ID : undefined}
                   now={now}
                   formatRelative={formatRelative}

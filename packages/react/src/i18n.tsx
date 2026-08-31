@@ -56,8 +56,7 @@ export type MetadataTranslations = Record<string, MetadataLocaleTranslations>
 
 const isDefined = <T,>(value: T | undefined): value is T => value !== undefined
 
-const firstDefined = <T,>(...values: Array<T | undefined>): T | undefined =>
-  values.find(isDefined)
+const firstDefined = <T,>(...values: Array<T | undefined>): T | undefined => values.find(isDefined)
 
 const localizeAvailableValues = (
   availableValues: Array<{ value: string; label: string }> | null,
@@ -76,20 +75,30 @@ const localizeKeyValueField = (
 ): KeyValueFieldSpec => ({
   ...field,
   label: firstDefined(...translations.map((translation) => translation?.label), field.label),
-  description: firstDefined(...translations.map((translation) => translation?.description), field.description),
-  placeholder: firstDefined(...translations.map((translation) => translation?.placeholder), field.placeholder),
+  description: firstDefined(
+    ...translations.map((translation) => translation?.description),
+    field.description,
+  ),
+  placeholder: firstDefined(
+    ...translations.map((translation) => translation?.placeholder),
+    field.placeholder,
+  ),
   availableValues: field.availableValues?.map((option) => {
     if (typeof option === 'string') {
       const label =
-        firstDefined(...translations.map((translation) => translation?.availableValues?.[option]), option) ??
-        option
+        firstDefined(
+          ...translations.map((translation) => translation?.availableValues?.[option]),
+          option,
+        ) ?? option
       return { value: option, label }
     }
     return {
       ...option,
       label:
-        firstDefined(...translations.map((translation) => translation?.availableValues?.[option.value]), option.label) ??
-        option.label,
+        firstDefined(
+          ...translations.map((translation) => translation?.availableValues?.[option.value]),
+          option.label,
+        ) ?? option.label,
     }
   }),
 })
@@ -115,8 +124,13 @@ const localizeProperty = (
   ...translations: Array<MetadataPropertyTranslations | undefined>
 ): PropertyJSON => ({
   ...property,
-  label: firstDefined(...translations.map((translation) => translation?.label), property.label) ?? property.label,
-  description: firstDefined(...translations.map((translation) => translation?.description), property.description),
+  label:
+    firstDefined(...translations.map((translation) => translation?.label), property.label) ??
+    property.label,
+  description: firstDefined(
+    ...translations.map((translation) => translation?.description),
+    property.description,
+  ),
   availableValues: localizeAvailableValues(
     property.availableValues,
     ...translations.map((translation) => translation?.availableValues),
@@ -206,8 +220,7 @@ export function I18nProvider({
 
   const i18n = React.useMemo(() => {
     const enabled = new Set(locales.map((l) => l.code))
-    const persisted =
-      typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null
+    const persisted = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null
     // A persisted choice only wins while it is still one of the enabled
     // locales. Otherwise `defaultLocale` applies — previously a stale
     // persisted code fell through to `locales[0]`, silently ignoring the
@@ -251,8 +264,13 @@ export function I18nProvider({
       const resourceLocale = localeMeta?.resources?.[resource.id]
       const resourceFallback = fallbackMeta?.resources?.[resource.id]
       const localizedName =
-        firstDefined(resourceLocale?.label, resourceLocale?.name, resourceFallback?.label, resourceFallback?.name, resource.name) ??
-        resource.name
+        firstDefined(
+          resourceLocale?.label,
+          resourceLocale?.name,
+          resourceFallback?.label,
+          resourceFallback?.name,
+          resource.name,
+        ) ?? resource.name
       const group = resource.navigation?.group
       return {
         ...resource,
@@ -262,20 +280,20 @@ export function I18nProvider({
             ? null
             : resource.navigation
               ? {
-                ...resource.navigation,
-                name: firstDefined(
-                  resourceLocale?.navigation?.name,
-                  resourceFallback?.navigation?.name,
-                  resource.navigation.name,
-                ),
-                group: firstDefined(
-                  resourceLocale?.navigation?.group,
-                  resourceFallback?.navigation?.group,
-                  group ? localeMeta?.navigation?.groups?.[group] : undefined,
-                  group ? fallbackMeta?.navigation?.groups?.[group] : undefined,
-                  resource.navigation.group,
-                ),
-              }
+                  ...resource.navigation,
+                  name: firstDefined(
+                    resourceLocale?.navigation?.name,
+                    resourceFallback?.navigation?.name,
+                    resource.navigation.name,
+                  ),
+                  group: firstDefined(
+                    resourceLocale?.navigation?.group,
+                    resourceFallback?.navigation?.group,
+                    group ? localeMeta?.navigation?.groups?.[group] : undefined,
+                    group ? fallbackMeta?.navigation?.groups?.[group] : undefined,
+                    resource.navigation.group,
+                  ),
+                }
               : resource.navigation,
         properties: resource.properties.map((property) =>
           localizeProperty(

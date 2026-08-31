@@ -30,7 +30,10 @@ async function openExportDialog(page: Page): Promise<void> {
   await expect(page.getByRole('heading', { name: /customers/i }).first()).toBeVisible({
     timeout: 15_000,
   })
-  await page.getByRole('button', { name: /^export$/i }).first().click()
+  await page
+    .getByRole('button', { name: /^export$/i })
+    .first()
+    .click()
   await expect(page.getByRole('dialog', { name: /export records/i })).toBeVisible({
     timeout: 10_000,
   })
@@ -71,9 +74,7 @@ test.describe('Export dialog — list-page (`customers`)', () => {
     await expect(footerCloseButton(dialog)).toBeVisible()
   })
 
-  test('CSV download contains a header row and at least one data row', async ({
-    page,
-  }) => {
+  test('CSV download contains a header row and at least one data row', async ({ page }) => {
     await openExportDialog(page)
     const dialog = page.getByRole('dialog', { name: /export records/i })
 
@@ -94,9 +95,7 @@ test.describe('Export dialog — list-page (`customers`)', () => {
     expect(lines[0]!.toLowerCase()).toContain('name')
   })
 
-  test('JSON download is a valid array of record-shaped objects', async ({
-    page,
-  }) => {
+  test('JSON download is a valid array of record-shaped objects', async ({ page }) => {
     await openExportDialog(page)
     const dialog = page.getByRole('dialog', { name: /export records/i })
 
@@ -116,9 +115,7 @@ test.describe('Export dialog — list-page (`customers`)', () => {
     expect(first.id).toBeDefined()
   })
 
-  test('Close button dismisses the dialog without triggering a download', async ({
-    page,
-  }) => {
+  test('Close button dismisses the dialog without triggering a download', async ({ page }) => {
     await openExportDialog(page)
     const dialog = page.getByRole('dialog', { name: /export records/i })
 

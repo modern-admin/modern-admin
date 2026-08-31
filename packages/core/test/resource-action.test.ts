@@ -33,7 +33,13 @@ const buildAdmin = (opts: BuildOptions = {}): ModernAdmin =>
     adapters: [adapter],
     resources: [
       {
-        resource: { name: 'users', rows: [{ id: '1', name: 'Ann' }, { id: '2', name: 'Bob' }] },
+        resource: {
+          name: 'users',
+          rows: [
+            { id: '1', name: 'Ann' },
+            { id: '2', name: 'Bob' },
+          ],
+        },
         options: {
           actions: {
             sendMassPush: {
@@ -113,8 +119,7 @@ describe('resource-scoped custom actions', () => {
     // The AdminJS-style pattern: `if (request.method !== 'post') return {}`
     // renders the form, a post actually sends.
     const admin = buildAdmin({
-      handler: async (req) =>
-        req.method === 'post' ? { sent: true } : { templates: ['welcome'] },
+      handler: async (req) => (req.method === 'post' ? { sent: true } : { templates: ['welcome'] }),
     })
 
     const primed = await admin.invoke({

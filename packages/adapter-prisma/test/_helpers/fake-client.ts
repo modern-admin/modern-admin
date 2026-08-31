@@ -27,11 +27,18 @@ const matchesWhere = (row: FakeRow, where: Record<string, unknown> | undefined):
     }
     const c = cond as Record<string, unknown>
     if ('equals' in c && val !== c.equals) return false
-    if ('contains' in c && typeof val === 'string' && typeof c.contains === 'string'
-        && !val.toLowerCase().includes(c.contains.toLowerCase())) return false
+    if (
+      'contains' in c &&
+      typeof val === 'string' &&
+      typeof c.contains === 'string' &&
+      !val.toLowerCase().includes(c.contains.toLowerCase())
+    )
+      return false
     if ('in' in c && Array.isArray(c.in) && !c.in.includes(val)) return false
-    if ('gte' in c && typeof val === 'number' && typeof c.gte === 'number' && val < c.gte) return false
-    if ('lte' in c && typeof val === 'number' && typeof c.lte === 'number' && val > c.lte) return false
+    if ('gte' in c && typeof val === 'number' && typeof c.gte === 'number' && val < c.gte)
+      return false
+    if ('lte' in c && typeof val === 'number' && typeof c.lte === 'number' && val > c.lte)
+      return false
   }
   return true
 }
@@ -44,7 +51,12 @@ export const createDelegate = (initial: FakeRow[] = [], idField = 'id'): FakeDel
     calls,
     async findMany(args: unknown) {
       calls.push({ method: 'findMany', args })
-      const a = (args ?? {}) as { where?: Record<string, unknown>; take?: number; skip?: number; orderBy?: Record<string, 'asc' | 'desc'> }
+      const a = (args ?? {}) as {
+        where?: Record<string, unknown>
+        take?: number
+        skip?: number
+        orderBy?: Record<string, 'asc' | 'desc'>
+      }
       let result = rows.filter((r) => matchesWhere(r, a.where))
       if (a.orderBy) {
         const [key, dir] = Object.entries(a.orderBy)[0]!

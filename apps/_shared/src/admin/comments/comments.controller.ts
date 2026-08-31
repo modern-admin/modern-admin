@@ -3,12 +3,7 @@
 // so admins can inspect who deleted what (in the demo it just logs to
 // stdout).
 
-import {
-  AdminController,
-  AdminResource,
-  After,
-  type AdminActionContext,
-} from '@modern-admin/nest'
+import { AdminController, AdminResource, After, type AdminActionContext } from '@modern-admin/nest'
 import { adminSource } from '../source-registry.js'
 import { AuditLogService } from '../audit-log.service.js'
 import type { CommentRow } from '../types.js'

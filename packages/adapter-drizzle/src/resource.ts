@@ -1,5 +1,19 @@
 import { AsyncLocalStorage } from 'node:async_hooks'
-import { and, asc, count as countFn, eq, gte, ilike, inArray, isNotNull, like, lte, ne, or, sql } from 'drizzle-orm'
+import {
+  and,
+  asc,
+  count as countFn,
+  eq,
+  gte,
+  ilike,
+  inArray,
+  isNotNull,
+  like,
+  lte,
+  ne,
+  or,
+  sql,
+} from 'drizzle-orm'
 import {
   BaseRecord,
   BaseResource,
@@ -18,7 +32,7 @@ import {
   type TimeSeriesStep,
 } from '@modern-admin/core'
 import { DrizzleProperty, extractForeignKeys, findPrimaryColumn } from './property.js'
-import { filterToWhere, findOptionsToDrizzle } from './converters.js'
+import { filterToWhere, findOptionsToDrizzle, findTableColumn } from './converters.js'
 import type {
   DrizzleClientLike,
   DrizzleColumn,
@@ -152,16 +166,13 @@ export class DrizzleResource extends BaseResource {
     field: string,
     options?: { limit?: number; search?: string },
   ): Promise<string[]> {
-    const column = this.table[field] as DrizzleColumn | undefined
+    const column = findTableColumn(this.table, field)
     if (!column) return []
     const prop = this.property(field)
     if (!prop || prop.type() !== 'string') return []
 
     const limit = options?.limit ?? 100
-    const conds: unknown[] = [
-      isNotNull(column as never),
-      ne(column as never, '' as never),
-    ]
+    const conds: unknown[] = [isNotNull(column as never), ne(column as never, '' as never)]
     if (options?.search) {
       const op = (column as DrizzleColumn).columnType?.startsWith('Pg') ? ilike : like
       conds.push(op(column as never, `%${options.search}%` as never))
@@ -178,9 +189,7 @@ export class DrizzleResource extends BaseResource {
       .orderBy(asc(column as never))
       .limit(limit)) as Array<{ value: unknown }>
 
-    return rows
-      .map((r) => r.value)
-      .filter((v): v is string => typeof v === 'string')
+    return rows.map((r) => r.value).filter((v): v is string => typeof v === 'string')
   }
 
   override async count(filter: Filter): Promise<number> {
@@ -217,7 +226,7 @@ export class DrizzleResource extends BaseResource {
     const isPg = this.dialect === 'pg'
     const conds: unknown[] = []
     for (const field of fields) {
-      const col = this.table[field] as DrizzleColumn | undefined
+      const col = findTableColumn(this.table, field)
       if (!col) continue
       const prop = this.property(field)
       if (!prop || prop.type() !== 'string') continue
@@ -225,8 +234,7 @@ export class DrizzleResource extends BaseResource {
       conds.push(op(col as never, `%${query}%` as never))
     }
     if (conds.length === 0) return []
-    const where =
-      conds.length === 1 ? conds[0] : or(...(conds as never[]))
+    const where = conds.length === 1 ? conds[0] : or(...(conds as never[]))
     const rows = (await this.db()
       .select()
       .from(this.table)
@@ -256,10 +264,7 @@ export class DrizzleResource extends BaseResource {
   }
 
   override async create(params: ParamsType): Promise<ParamsType> {
-    const rows = await this.db()
-      .insert(this.table)
-      .values(this.writableData(params))
-      .returning()
+    const rows = await this.db().insert(this.table).values(this.writableData(params)).returning()
     return (rows[0] ?? {}) as ParamsType
   }
 
@@ -285,9 +290,7 @@ export class DrizzleResource extends BaseResource {
     // the dialects this adapter targets (Postgres/SQLite), mirroring the
     // `create`/`update` paths above.
     const rows =
-      where !== undefined
-        ? await builder.where(where).returning()
-        : await builder.returning()
+      where !== undefined ? await builder.where(where).returning() : await builder.returning()
     return rows.length
   }
 
@@ -305,9 +308,8 @@ export class DrizzleResource extends BaseResource {
       const span = query.to.getTime() - query.from.getTime()
       const prevTo = new Date(query.from.getTime())
       const prevFrom = new Date(query.from.getTime() - span)
-      previous = (
-        await this.runTimeSeriesQuery(filter, { ...query, from: prevFrom, to: prevTo })
-      ).series
+      previous = (await this.runTimeSeriesQuery(filter, { ...query, from: prevFrom, to: prevTo }))
+        .series
     }
     return {
       series: series.series,
@@ -320,7 +322,7 @@ export class DrizzleResource extends BaseResource {
     filter: Filter,
     query: TimeSeriesQuery,
   ): Promise<{ series: TimeSeriesSeries[]; sql: string }> {
-    const dateCol = this.table[query.dateField] as DrizzleColumn | undefined
+    const dateCol = findTableColumn(this.table, query.dateField)
     if (!dateCol) {
       throw new Error(
         `aggregateTimeSeries: dateField "${query.dateField}" not found on resource "${this._id}"`,
@@ -331,14 +333,14 @@ export class DrizzleResource extends BaseResource {
       if (!query.field) {
         throw new Error(`aggregateTimeSeries: metric "${query.metric}" requires "field"`)
       }
-      fieldCol = this.table[query.field] as DrizzleColumn | undefined
+      fieldCol = findTableColumn(this.table, query.field)
       if (!fieldCol) {
         throw new Error(`aggregateTimeSeries: field "${query.field}" not found`)
       }
     }
     let groupCol: DrizzleColumn | undefined
     if (query.groupBy) {
-      groupCol = this.table[query.groupBy] as DrizzleColumn | undefined
+      groupCol = findTableColumn(this.table, query.groupBy)
       if (!groupCol) {
         throw new Error(`aggregateTimeSeries: groupBy "${query.groupBy}" not found`)
       }
@@ -361,7 +363,10 @@ export class DrizzleResource extends BaseResource {
     if (query.step !== 'all') select.bucket = bucketSql
     if (groupCol) select.series_key = groupCol
 
-    let qb = this.db().select(select).from(this.table).where(where as unknown)
+    let qb = this.db()
+      .select(select)
+      .from(this.table)
+      .where(where as unknown)
     const groupKeys: unknown[] = []
     if (query.step !== 'all') groupKeys.push(bucketSql)
     if (groupCol) groupKeys.push(groupCol)
@@ -399,9 +404,7 @@ export class DrizzleResource extends BaseResource {
 
     // Top-N truncation: rank series by total, keep top N, collapse rest into '__other__'.
     const topN = query.topN ?? 10
-    const totals = Array.from(seriesMap.entries()).map(
-      ([k, m]) => [k, sumValues(m)] as const,
-    )
+    const totals = Array.from(seriesMap.entries()).map(([k, m]) => [k, sumValues(m)] as const)
     totals.sort((a, b) => b[1] - a[1])
     const keep = new Set(totals.slice(0, topN).map(([k]) => k))
     const otherInner = new Map<string, number>()
@@ -435,9 +438,7 @@ export class DrizzleResource extends BaseResource {
     // Already inside a transaction on this client — join it.
     if (active && active.base === this.client) return fn()
     if (typeof this.client.transaction !== 'function') return fn()
-    return this.client.transaction((tx) =>
-      txStorage.run({ base: this.client, tx }, fn),
-    )
+    return this.client.transaction((tx) => txStorage.run({ base: this.client, tx }, fn))
   }
 }
 
@@ -482,14 +483,13 @@ const metricExpr = (
     throw new Error(`metric "${op}" requires field`)
   }
   switch (op) {
-  case 'sum':
-    return sql`SUM(${fieldCol})`
-  case 'avg':
-    return sql`AVG(${fieldCol})`
-  case 'min':
-    return sql`MIN(${fieldCol})`
-  case 'max':
-    return sql`MAX(${fieldCol})`
+    case 'sum':
+      return sql`SUM(${fieldCol})`
+    case 'avg':
+      return sql`AVG(${fieldCol})`
+    case 'min':
+      return sql`MIN(${fieldCol})`
+    case 'max':
+      return sql`MAX(${fieldCol})`
   }
 }
-

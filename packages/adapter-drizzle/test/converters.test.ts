@@ -10,6 +10,21 @@ const makeResource = () => {
   return new DrizzleResource({ client, table: users, tableKey: 'users' })
 }
 
+const paramValues = (node: unknown, acc: unknown[] = []): unknown[] => {
+  if (node == null || typeof node !== 'object') return acc
+  if (Array.isArray(node)) {
+    for (const item of node) paramValues(item, acc)
+    return acc
+  }
+  if ('value' in node && 'encoder' in node) {
+    acc.push((node as { value: unknown }).value)
+    return acc
+  }
+  const chunks = (node as { queryChunks?: unknown[] }).queryChunks
+  if (Array.isArray(chunks)) for (const chunk of chunks) paramValues(chunk, acc)
+  return acc
+}
+
 describe('filterToWhere', () => {
   it('returns undefined for empty filter', () => {
     const resource = makeResource()
@@ -24,11 +39,18 @@ describe('filterToWhere', () => {
 
   it('combines multiple fields with AND', () => {
     const resource = makeResource()
+    const where = filterToWhere(new Filter({ email: 'foo', role: 'admin' }, resource), users)
+    expect(where).toBeDefined()
+  })
+
+  it('preserves commas inside structured in-filter values', () => {
+    const resource = makeResource()
     const where = filterToWhere(
-      new Filter({ email: 'foo', role: 'admin' }, resource),
+      new Filter({ name: { operator: 'in', values: ['Smith, John'] } }, resource),
       users,
     )
-    expect(where).toBeDefined()
+
+    expect(paramValues(where)).toEqual(['Smith, John'])
   })
 
   it('skips fields whose property is unknown', () => {
@@ -39,20 +61,44 @@ describe('filterToWhere', () => {
 
   it('handles range inputs via PARAM_SEPARATOR', () => {
     const resource = makeResource()
+    const where = filterToWhere(new Filter({ 'age~~from': '10', 'age~~to': '50' }, resource), users)
+    expect(where).toBeDefined()
+  })
+
+  it('handles a structured between criterion', () => {
+    const resource = makeResource()
     const where = filterToWhere(
-      new Filter({ 'age~~from': '10', 'age~~to': '50' }, resource),
+      new Filter({ age: { operator: 'between', from: '150', to: '420' } }, resource),
       users,
     )
-    expect(where).toBeDefined()
+
+    expect(paramValues(where)).toEqual([150, 420])
+  })
+
+  it('checks only null for empty and non-empty operators on dates', () => {
+    const resource = makeResource()
+    const empty = filterToWhere(new Filter({ created_at: 'empty:' }, resource), users)
+    const nonEmpty = filterToWhere(new Filter({ created_at: 'nempty:' }, resource), users)
+
+    expect(empty).toBeDefined()
+    expect(nonEmpty).toBeDefined()
+    expect(paramValues(empty)).toEqual([])
+    expect(paramValues(nonEmpty)).toEqual([])
+  })
+
+  it('keeps empty-string checks for nullable strings', () => {
+    const resource = makeResource()
+    const empty = filterToWhere(new Filter({ name: 'empty:' }, resource), users)
+    const nonEmpty = filterToWhere(new Filter({ name: 'nempty:' }, resource), users)
+
+    expect(paramValues(empty)).toEqual([''])
+    expect(paramValues(nonEmpty)).toEqual([''])
   })
 
   it('uses array-contains for scalar-list columns with a single needle', () => {
     const client = createFakeClient()
     const resource = new DrizzleResource({ client, table: posts, tableKey: 'posts' })
-    const where = filterToWhere(
-      new Filter({ tagIds: 'turing' }, resource),
-      posts,
-    )
+    const where = filterToWhere(new Filter({ tagIds: 'turing' }, resource), posts)
     // Sanity check: the produced SQL fragment is drizzle's `arrayContains`
     // helper, which emits Postgres' `@>` operator on a `text[]` column.
     expect(where).toBeDefined()
@@ -78,10 +124,7 @@ describe('findOptionsToDrizzle', () => {
   })
 
   it('produces orderBy when sortBy is a known column', () => {
-    const result = findOptionsToDrizzle(
-      { sort: { sortBy: 'email', direction: 'desc' } },
-      users,
-    )
+    const result = findOptionsToDrizzle({ sort: { sortBy: 'email', direction: 'desc' } }, users)
     expect(result.orderBy).toBeDefined()
   })
 

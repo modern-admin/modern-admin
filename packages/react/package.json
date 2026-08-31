@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/react",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "React 19 frontend layer for Modern Admin — translation boundary, routing, hooks.",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/react#readme",
   "keywords": [
@@ -51,27 +51,26 @@
   "scripts": {
     "build": "bun ../../scripts/clean.ts dist .tsbuildinfo && tsc -p tsconfig.build.json && bun ../../scripts/copy.ts src/styles.css dist/styles.css",
     "typecheck": "tsc --noEmit",
-    "test": "bun test",
-    "lint": "eslint ."
+    "test": "bun test"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
     "@modern-admin/core": "workspace:^",
     "@modern-admin/i18n": "workspace:^",
     "@modern-admin/ui": "workspace:^",
-    "@tanstack/react-query": "^5.101.4",
-    "@tanstack/react-router": "^1.170.29",
-    "@tanstack/react-table": "^9.1.2",
-    "lucide-react": "^1.31.0",
-    "react-hook-form": "^7.85.0",
+    "@tanstack/react-query": "^5.102.8",
+    "@tanstack/react-router": "^1.170.32",
+    "@tanstack/react-table": "^9.2.4",
+    "lucide-react": "^1.37.0",
+    "react-hook-form": "^7.86.0",
     "socket.io-client": "^4.8.3",
-    "zod": "^4.4.3"
+    "zod": "^4.5.2"
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
-    "@types/bun": "^1.3.14",
+    "@types/bun": "^1.4.0",
     "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.4",
+    "@types/react-dom": "^19.2.5",
     "typescript": "^7.0.2"
   },
   "peerDependencies": {

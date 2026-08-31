@@ -33,8 +33,7 @@ export class DrizzleProperty extends BaseProperty {
       isId: column.primary === true,
       isArray,
       isSortable: type !== 'json' && type !== 'mixed' && !isArray,
-      isRequired:
-        column.notNull === true && column.hasDefault !== true && column.primary !== true,
+      isRequired: column.notNull === true && column.hasDefault !== true && column.primary !== true,
       position,
       reference,
       availableValues: isEnum ? Array.from(column.enumValues!) : null,

@@ -95,9 +95,7 @@ test.describe('i18n — language switcher', () => {
     await page.keyboard.press('Escape')
   })
 
-  test('toggling the switcher updates the trigger label round-trip', async ({
-    page,
-  }) => {
+  test('toggling the switcher updates the trigger label round-trip', async ({ page }) => {
     await page.goto('/')
     await expect(localeTrigger(page)).toHaveText('en')
     await switchLocale(page, 'ru')
@@ -212,9 +210,7 @@ test.describe('i18n — resource metadata translations', () => {
     await expect(aside.getByRole('link', { name: 'Посты', exact: true }).first()).toBeVisible()
   })
 
-  test('home-page resource tile reflects the localized label and id', async ({
-    page,
-  }) => {
+  test('home-page resource tile reflects the localized label and id', async ({ page }) => {
     await page.goto('/')
 
     // Home page lists resource tiles via `useResources()` → each card
@@ -286,9 +282,7 @@ test.describe('i18n — list page property labels', () => {
     await expect(page.getByRole('columnheader', { name: 'В наличии' })).toBeVisible()
   })
 
-  test('switching locale on the customers list flips toolbar chrome', async ({
-    page,
-  }) => {
+  test('switching locale on the customers list flips toolbar chrome', async ({ page }) => {
     await page.goto('/resources/customers')
     await expect(page.locator('tbody tr').first()).toBeVisible({ timeout: 15_000 })
 
@@ -304,9 +298,7 @@ test.describe('i18n — list page property labels', () => {
 })
 
 test.describe('i18n — action labels', () => {
-  test('row action menu labels follow the active locale (posts.publish)', async ({
-    page,
-  }) => {
+  test('row action menu labels follow the active locale (posts.publish)', async ({ page }) => {
     await page.goto('/resources/posts')
     const firstRow = page.locator('tbody tr').first()
     await expect(firstRow).toBeVisible({ timeout: 15_000 })
@@ -368,28 +360,20 @@ test.describe('i18n — persistence', () => {
     await page.goto('/')
 
     // Default boot is en (no `modern-admin:locale` in fresh storage state).
-    expect(
-      await page.evaluate(() => localStorage.getItem('modern-admin:locale')),
-    ).toBeNull()
+    expect(await page.evaluate(() => localStorage.getItem('modern-admin:locale'))).toBeNull()
 
     await switchLocale(page, 'ru')
-    await expect(
-      sidebar(page).getByRole('link', { name: 'Главная', exact: true }),
-    ).toBeVisible()
+    await expect(sidebar(page).getByRole('link', { name: 'Главная', exact: true })).toBeVisible()
 
     // The provider writes the choice to localStorage under a well-known key
     // (`STORAGE_KEY` in `packages/react/src/i18n.tsx`).
-    const stored = await page.evaluate(() =>
-      localStorage.getItem('modern-admin:locale'),
-    )
+    const stored = await page.evaluate(() => localStorage.getItem('modern-admin:locale'))
     expect(stored).toBe('ru')
 
     await page.reload()
 
     // After reload the trigger and chrome must come back up in Russian.
     await expect(localeTrigger(page)).toHaveText('ru')
-    await expect(
-      sidebar(page).getByRole('link', { name: 'Главная', exact: true }),
-    ).toBeVisible()
+    await expect(sidebar(page).getByRole('link', { name: 'Главная', exact: true })).toBeVisible()
   })
 })

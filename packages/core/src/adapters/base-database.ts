@@ -2,7 +2,6 @@ import { NotImplementedError } from '../errors'
 import type { BaseResource } from './base-resource.js'
 
 export abstract class BaseDatabase {
-
   constructor(_database: unknown) {}
 
   /**

@@ -130,10 +130,7 @@ export const resourceOptionsZ = z.object({
   cache: cacheOptionsZ.optional(),
 })
 
-export type ResourceOptions = Omit<
-  z.infer<typeof resourceOptionsZ>,
-  'properties'
-> & {
+export type ResourceOptions = Omit<z.infer<typeof resourceOptionsZ>, 'properties'> & {
   /** Per-property overrides keyed by property path. */
   properties?: Record<string, PropertyOptions>
 }

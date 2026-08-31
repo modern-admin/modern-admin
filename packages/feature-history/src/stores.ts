@@ -5,8 +5,7 @@ export { MemoryHistoryStore } from '@modern-admin/core'
 let warnedMemoryFallback = false
 
 /** `bun test` and most runners set `NODE_ENV=test`; stay quiet there. */
-const isTestEnv = (): boolean =>
-  typeof process !== 'undefined' && process.env?.NODE_ENV === 'test'
+const isTestEnv = (): boolean => typeof process !== 'undefined' && process.env?.NODE_ENV === 'test'
 
 /**
  * Resolve the store to use. When the host hasn't wired a persistent

@@ -13,7 +13,12 @@ const seed = async (count: number) => {
   const { logStore } = setupPrismaSystem(prisma as never)
   const base = 1_700_000_000_000
   for (let i = 0; i < count; i++) {
-    await logStore.record({ resourceId: 'users', action: 'edit', recordId: String(i), at: base + i })
+    await logStore.record({
+      resourceId: 'users',
+      action: 'edit',
+      recordId: String(i),
+      at: base + i,
+    })
   }
   return { logStore, base }
 }
@@ -33,7 +38,10 @@ describe('PrismaLogStore paging', () => {
     const seen: number[] = []
     let cursor: number | undefined
     for (let guard = 0; guard < 10; guard++) {
-      const page = await logStore.list({ limit: 3, ...(cursor !== undefined ? { before: cursor } : {}) })
+      const page = await logStore.list({
+        limit: 3,
+        ...(cursor !== undefined ? { before: cursor } : {}),
+      })
       if (page.length === 0) break
       seen.push(...page.map((e) => e.at))
       cursor = page[page.length - 1]!.at

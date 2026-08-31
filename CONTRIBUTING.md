@@ -16,12 +16,12 @@ feature/* -> pull request -> develop -> version PR -> develop
                                       release PR -> main -> npm
 ```
 
-| Branch | Purpose | Normal merge method |
-| --- | --- | --- |
-| `main` | Release snapshots and the only publish source | Merge commit from `develop` |
-| `develop` | Feature, fix, docs, and chore integration | Squash merge |
-| `feature/*`, `fix/*`, `chore/*` | Short-lived work branched from `develop` | Deleted after merge |
-| `changeset-release/develop` | Bot-maintained package-version PR | Squash merge at release cutoff |
+| Branch                          | Purpose                                       | Normal merge method            |
+| ------------------------------- | --------------------------------------------- | ------------------------------ |
+| `main`                          | Release snapshots and the only publish source | Merge commit from `develop`    |
+| `develop`                       | Feature, fix, docs, and chore integration     | Squash merge                   |
+| `feature/*`, `fix/*`, `chore/*` | Short-lived work branched from `develop`      | Deleted after merge            |
+| `changeset-release/develop`     | Bot-maintained package-version PR             | Squash merge at release cutoff |
 
 Do not push directly to `develop` or `main`. Ordinary work must not target
 `main`; the branch-policy workflow rejects it.

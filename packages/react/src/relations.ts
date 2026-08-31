@@ -37,9 +37,10 @@ export const visibleRecordProperties = (
       )
   }
   return properties.filter((property) => {
-    const isVisible = view === 'new'
-      ? (property.visibility.new ?? property.visibility.edit)
-      : property.visibility[view]
+    const isVisible =
+      view === 'new'
+        ? (property.visibility.new ?? property.visibility.edit)
+        : property.visibility[view]
     return isVisible && !isToManyReferenceProperty(property)
   })
 }
@@ -66,8 +67,8 @@ export const resolveRelatedResources = (
     const target = byId.get(property.reference)
     if (!target) continue
 
-    const foreignKey = target.properties.find((candidate) =>
-      !candidate.isArray && candidate.reference === resource.id,
+    const foreignKey = target.properties.find(
+      (candidate) => !candidate.isArray && candidate.reference === resource.id,
     )
     if (!foreignKey) continue
 

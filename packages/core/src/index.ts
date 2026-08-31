@@ -19,7 +19,7 @@
 declare const __MODERN_ADMIN_VERSION__: string | undefined
 
 /** Synced from `package.json#version` by `scripts/sync-lock-workspace-versions.ts`. */
-const FALLBACK_VERSION = '0.9.0'
+const FALLBACK_VERSION = '0.10.0'
 
 export const VERSION: string =
   typeof __MODERN_ADMIN_VERSION__ === 'string' ? __MODERN_ADMIN_VERSION__ : FALLBACK_VERSION
@@ -64,12 +64,19 @@ export {
 export {
   Filter,
   FILTER_OPERATORS,
+  filterCriterionZ,
+  filterInputZ,
+  filterMapZ,
   MATCHING_PATTERNS,
   PARAM_SEPARATOR,
   parseOperatorValue,
+  type FilterCriterion,
   type FilterElement,
+  type FilterInput,
+  type FilterMap,
   type FilterOperator,
   type FilterValue,
+  type InFilterScalar,
   type RawFilters,
 } from './filter'
 
@@ -298,11 +305,7 @@ export { uuidv7 } from './utils/uuid.js'
 // Commercial feature-flag registry. Populated by `new ModernAdmin({
 // featureFlags })`, consulted by `@modern-admin-pro/*` packages to gate
 // their `apply()` bodies.
-export {
-  setActiveFeatureFlags,
-  isFeatureActive,
-  getActiveFeatureFlags,
-} from './feature-flags.js'
+export { setActiveFeatureFlags, isFeatureActive, getActiveFeatureFlags } from './feature-flags.js'
 
 // `unflatten` converts BaseRecord's internal flat dot-notation params back
 // to a nested object. Exposed so features (e.g. feature-history) can

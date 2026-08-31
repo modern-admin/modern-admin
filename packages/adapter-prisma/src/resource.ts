@@ -114,7 +114,8 @@ export class PrismaResource extends BaseResource {
     const foreignKeyReferences = buildForeignKeyReferenceMap(config.model)
     this.writableForeignKeys = new Set(Object.keys(foreignKeyReferences))
     this._properties = config.model.fields.map(
-      (field, index) => new PrismaProperty(field, this.enums, index + 1, foreignKeyReferences[field.name] ?? null),
+      (field, index) =>
+        new PrismaProperty(field, this.enums, index + 1, foreignKeyReferences[field.name] ?? null),
     )
   }
 
@@ -208,8 +209,7 @@ export class PrismaResource extends BaseResource {
       // gate below drop the key on required columns (so the DB @default
       // fires instead of erroring).
       const isEnumLike = field.kind === 'enum'
-      const normalised =
-        raw === '' && (field.type === 'DateTime' || isEnumLike) ? null : raw
+      const normalised = raw === '' && (field.type === 'DateTime' || isEnumLike) ? null : raw
       // Required (non-nullable) fields must not receive null — Prisma 7 treats
       // that as a validation error.  Omitting the key lets the DB @default fire
       // (e.g. enum defaults) or surfaces a clear "missing required field" error
@@ -255,11 +255,10 @@ export class PrismaResource extends BaseResource {
     const isNullable = !modelField.isRequired
     const conditions: Record<string, unknown>[] = []
     if (isNullable) conditions.push({ [field]: { not: null } })
-    if (options?.search) conditions.push({ [field]: { contains: options.search, ...this.insensitive() } })
+    if (options?.search)
+      conditions.push({ [field]: { contains: options.search, ...this.insensitive() } })
     const where: Record<string, unknown> =
-      conditions.length === 0 ? {}
-        : conditions.length === 1 ? conditions[0]!
-          : { AND: conditions }
+      conditions.length === 0 ? {} : conditions.length === 1 ? conditions[0]! : { AND: conditions }
 
     const rows = (await this.delegate().findMany({
       where,
@@ -269,9 +268,7 @@ export class PrismaResource extends BaseResource {
       take: limit,
     })) as Array<Record<string, unknown>>
 
-    return rows
-      .map((r) => r[field])
-      .filter((v): v is string => typeof v === 'string' && v !== '')
+    return rows.map((r) => r[field]).filter((v): v is string => typeof v === 'string' && v !== '')
   }
 
   override async count(filter: Filter): Promise<number> {
@@ -315,9 +312,7 @@ export class PrismaResource extends BaseResource {
       [field]: { contains: query, ...this.insensitive() },
     })
     const where =
-      stringFields.length === 1
-        ? contains(stringFields[0]!)
-        : { OR: stringFields.map(contains) }
+      stringFields.length === 1 ? contains(stringFields[0]!) : { OR: stringFields.map(contains) }
     try {
       const rows = (await this.delegate().findMany({
         where,
@@ -464,7 +459,10 @@ export class PrismaResource extends BaseResource {
     const truncated = fetched.length > cap
     const rows = truncated ? fetched.slice(0, cap) : fetched
 
-    const seriesMap = new Map<string, Map<string, { sum: number; count: number; min: number; max: number }>>()
+    const seriesMap = new Map<
+      string,
+      Map<string, { sum: number; count: number; min: number; max: number }>
+    >()
     const fromIso = isoDate(query.from)
 
     for (const row of rows) {
@@ -503,20 +501,18 @@ export class PrismaResource extends BaseResource {
     }
 
     // Reduce per-bucket entry to scalar based on metric.
-    const reduce = (
-      e: { sum: number; count: number; min: number; max: number },
-    ): number => {
+    const reduce = (e: { sum: number; count: number; min: number; max: number }): number => {
       switch (query.metric) {
-      case 'count':
-        return e.count
-      case 'sum':
-        return e.sum
-      case 'avg':
-        return e.count === 0 ? 0 : e.sum / e.count
-      case 'min':
-        return e.min
-      case 'max':
-        return e.max
+        case 'count':
+          return e.count
+        case 'sum':
+          return e.sum
+        case 'avg':
+          return e.count === 0 ? 0 : e.sum / e.count
+        case 'min':
+          return e.min
+        case 'max':
+          return e.max
       }
     }
 
@@ -568,9 +564,7 @@ export class PrismaResource extends BaseResource {
     // interactive transactions don't nest).
     if (active && active.base === this.client) return fn()
     if (typeof this.client.$transaction !== 'function') return fn()
-    return this.client.$transaction((tx) =>
-      txStorage.run({ base: this.client, tx }, fn),
-    )
+    return this.client.$transaction((tx) => txStorage.run({ base: this.client, tx }, fn))
   }
 
   /**
@@ -654,7 +648,10 @@ export class PrismaResource extends BaseResource {
       if (fields.length === 0) {
         // Constraint details unavailable (`{ foreignKey: true }`, or an index
         // we can't map) — still a 400, just without a field anchor.
-        return new ValidationError({}, { type: 'unique', message: 'a record with these values already exists' })
+        return new ValidationError(
+          {},
+          { type: 'unique', message: 'a record with these values already exists' },
+        )
       }
       return new ValidationError(
         Object.fromEntries(
@@ -675,7 +672,10 @@ export class PrismaResource extends BaseResource {
         // The constraint sits on another table: something still points at
         // this record (delete-restrict), rather than this record pointing at
         // a missing one.
-        return new ValidationError({}, { type: 'foreignKey', message: 'this record is still referenced by related records' })
+        return new ValidationError(
+          {},
+          { type: 'foreignKey', message: 'this record is still referenced by related records' },
+        )
       }
       return new ValidationError(
         Object.fromEntries(
@@ -704,7 +704,10 @@ export class PrismaResource extends BaseResource {
         })
       }
       // Generic fallback so the user still gets a 400 with a hint.
-      return new ValidationError({}, { type: 'validation', message: message.split('\n').slice(-2).join(' ').trim() })
+      return new ValidationError(
+        {},
+        { type: 'validation', message: message.split('\n').slice(-2).join(' ').trim() },
+      )
     }
     return err
   }
@@ -720,26 +723,25 @@ export class PrismaResource extends BaseResource {
  */
 const coerceFormScalar = (value: string, prismaType: string): unknown => {
   switch (prismaType) {
-  case 'Boolean': {
-    if (value === 'true' || value === '1' || value === 'on') return true
-    if (value === 'false' || value === '0' || value === 'off') return false
-    return value
-  }
-  case 'Int':
-  case 'BigInt': {
-    if (value === '') return value
-    const n = Number(value)
-    if (!Number.isFinite(n) || !Number.isInteger(n)) return value
-    return prismaType === 'BigInt' ? BigInt(value) : n
-  }
-  case 'Float':
-  case 'Decimal': {
-    if (value === '') return value
-    const n = Number(value)
-    return Number.isFinite(n) ? n : value
-  }
-  default:
-    return value
+    case 'Boolean': {
+      if (value === 'true' || value === '1' || value === 'on') return true
+      if (value === 'false' || value === '0' || value === 'off') return false
+      return value
+    }
+    case 'Int':
+    case 'BigInt': {
+      if (value === '') return value
+      const n = Number(value)
+      if (!Number.isFinite(n) || !Number.isInteger(n)) return value
+      return prismaType === 'BigInt' ? BigInt(value) : n
+    }
+    case 'Float':
+    case 'Decimal': {
+      if (value === '') return value
+      const n = Number(value)
+      return Number.isFinite(n) ? n : value
+    }
+    default:
+      return value
   }
 }
-

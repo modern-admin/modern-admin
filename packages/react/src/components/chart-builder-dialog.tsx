@@ -6,14 +6,7 @@
 // `width` lets the chart take half or full row on the dashboard grid.
 
 import * as React from 'react'
-import {
-  BarChart2,
-  LineChart,
-  AreaChart,
-  Activity,
-  Plus,
-  X,
-} from 'lucide-react'
+import { BarChart2, LineChart, AreaChart, Activity, Plus, X } from 'lucide-react'
 import {
   Button,
   CHART_COLOR_PRESETS,
@@ -46,14 +39,16 @@ import {
   type ChartFormat,
   type ChartTransformStep,
   type ChartVisualisation,
+  type FilterCriterion,
+  type FilterMap,
   type TimeRange,
   type TimeRangePreset,
 } from '@modern-admin/core'
 import { applyTransform, makeValueFormatter } from '../dashboard/value-format.js'
 import { useI18n } from '../i18n.js'
 import { useResources } from '../hooks.js'
-import { ReferenceCombobox } from '../reference.js'
 import type { PropertyJSON } from '../types.js'
+import { PropertyFilterInput } from './property-filter-input.js'
 
 export interface ChartBuilderDialogProps {
   /** Pre-populate for editing an existing chart. */
@@ -63,10 +58,10 @@ export interface ChartBuilderDialogProps {
 }
 
 const VIS_OPTIONS: { value: ChartVisualisation; icon: React.ReactElement; labelKey: string }[] = [
-  { value: 'kpi',  icon: <Activity   className="size-4" />, labelKey: 'dashboard:visKpi'  },
-  { value: 'line', icon: <LineChart  className="size-4" />, labelKey: 'dashboard:visLine' },
-  { value: 'area', icon: <AreaChart  className="size-4" />, labelKey: 'dashboard:visArea' },
-  { value: 'bar',  icon: <BarChart2  className="size-4" />, labelKey: 'dashboard:visBar'  },
+  { value: 'kpi', icon: <Activity className="size-4" />, labelKey: 'dashboard:visKpi' },
+  { value: 'line', icon: <LineChart className="size-4" />, labelKey: 'dashboard:visLine' },
+  { value: 'area', icon: <AreaChart className="size-4" />, labelKey: 'dashboard:visArea' },
+  { value: 'bar', icon: <BarChart2 className="size-4" />, labelKey: 'dashboard:visBar' },
 ]
 
 const NONE = '__none__'
@@ -118,9 +113,7 @@ export function ChartBuilderDialog({
   const [visualisation, setVisualisation] = React.useState<ChartVisualisation>(
     initial?.visualisation ?? 'area',
   )
-  const [resourceId, setResourceId] = React.useState(
-    initial?.resource ?? resources[0]?.id ?? '',
-  )
+  const [resourceId, setResourceId] = React.useState(initial?.resource ?? resources[0]?.id ?? '')
   const [dateField, setDateField] = React.useState(initial?.dateField ?? '')
   const [metric, setMetric] = React.useState<AggregationOpName>(initial?.metric ?? 'count')
   const [field, setField] = React.useState(initial?.field ?? '')
@@ -135,16 +128,10 @@ export function ChartBuilderDialog({
   const [preset, setPreset] = React.useState<Exclude<TimeRangePreset, 'custom'>>(
     initial && initial.timeRange.preset !== 'custom' ? initial.timeRange.preset : '30d',
   )
-  const [filters, setFilters] = React.useState<Record<string, string>>(
-    initial?.filters ?? {},
-  )
-  const [quickFilters, setQuickFilters] = React.useState<string[]>(
-    initial?.quickFilters ?? [],
-  )
+  const [filters, setFilters] = React.useState<FilterMap>(initial?.filters ?? {})
+  const [quickFilters, setQuickFilters] = React.useState<string[]>(initial?.quickFilters ?? [])
   const [order, setOrder] = React.useState<number>(initial?.order ?? 0)
-  const [comparePrevious, setComparePrevious] = React.useState(
-    initial?.comparePrevious ?? false,
-  )
+  const [comparePrevious, setComparePrevious] = React.useState(initial?.comparePrevious ?? false)
   const [transform, setTransform] = React.useState<ChartTransformStep[]>(
     () => initial?.transform?.map((s) => ({ ...s })) ?? [],
   )
@@ -235,10 +222,10 @@ export function ChartBuilderDialog({
   const PREVIEW_SAMPLE = 1234
   const previewText = `${PREVIEW_SAMPLE} → ${previewFormat(applyTransform(PREVIEW_SAMPLE, transform))}`
 
-  const handleFilterChange = (path: string, value: string): void => {
+  const handleFilterChange = (path: string, value: FilterCriterion | null): void => {
     setFilters((prev) => {
       const next = { ...prev }
-      if (value === '') delete next[path]
+      if (value === null) delete next[path]
       else next[path] = value
       return next
     })
@@ -255,11 +242,7 @@ export function ChartBuilderDialog({
     // step is not user-editable in the builder; keep the previous value (or
     // pick a sane default) so chartDefZ stays valid. The widget toolbar
     // remains the place to tweak step on the fly.
-    const savedStep = isKpi
-      ? 'all'
-      : initial && initial.step !== 'all'
-        ? initial.step
-        : 'day'
+    const savedStep = isKpi ? 'all' : initial && initial.step !== 'all' ? initial.step : 'day'
     const candidate: ChartDefInput = {
       id: initial?.id ?? uuidv7(),
       title: title.trim() || resource?.name || resourceId,
@@ -306,12 +289,18 @@ export function ChartBuilderDialog({
   }
 
   return (
-    <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
-      <DialogContent closeLabel={t('common:close')} className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
+    >
+      <DialogContent
+        closeLabel={t('common:close')}
+        className="w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+      >
         <DialogHeader>
-          <DialogTitle>
-            {initial ? t('chart:editChart') : t('chart:newChart')}
-          </DialogTitle>
+          <DialogTitle>{initial ? t('chart:editChart') : t('chart:newChart')}</DialogTitle>
         </DialogHeader>
 
         <Tabs
@@ -347,7 +336,13 @@ export function ChartBuilderDialog({
                   type="number"
                   step={1}
                   value={order}
-                  onChange={(e) => setOrder(Number.isFinite(Number(e.target.value)) ? Math.trunc(Number(e.target.value)) : 0)}
+                  onChange={(e) =>
+                    setOrder(
+                      Number.isFinite(Number(e.target.value))
+                        ? Math.trunc(Number(e.target.value))
+                        : 0,
+                    )
+                  }
                 />
               </div>
             </div>
@@ -390,9 +385,7 @@ export function ChartBuilderDialog({
                   ))}
                 </SelectContent>
               </Select>
-              {errors.resource && (
-                <p className="text-xs text-destructive">{errors.resource}</p>
-              )}
+              {errors.resource && <p className="text-xs text-destructive">{errors.resource}</p>}
             </div>
 
             {/* Date field — required, drives the X-axis bucketing */}
@@ -408,16 +401,16 @@ export function ChartBuilderDialog({
                 <SelectContent>
                   <SelectItem value={NONE}>{t('chart:selectField')}</SelectItem>
                   {(dateProps.length > 0 ? dateProps : properties).map((p) => (
-                    <SelectItem key={p.path} value={p.path}>{p.label}</SelectItem>
+                    <SelectItem key={p.path} value={p.path}>
+                      {p.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
                 {t('dashboard:builder.dateFieldHint')}
               </p>
-              {errors.dateField && (
-                <p className="text-xs text-destructive">{errors.dateField}</p>
-              )}
+              {errors.dateField && <p className="text-xs text-destructive">{errors.dateField}</p>}
             </div>
 
             {/* Metric + field */}
@@ -430,7 +423,9 @@ export function ChartBuilderDialog({
                   </SelectTrigger>
                   <SelectContent>
                     {METRICS.map((m) => (
-                      <SelectItem key={m} value={m}>{t(`dashboard:metric${cap(m)}`)}</SelectItem>
+                      <SelectItem key={m} value={m}>
+                        {t(`dashboard:metric${cap(m)}`)}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -449,13 +444,13 @@ export function ChartBuilderDialog({
                     <SelectContent>
                       <SelectItem value={NONE}>{t('chart:selectField')}</SelectItem>
                       {numericProps.map((p) => (
-                        <SelectItem key={p.path} value={p.path}>{p.label}</SelectItem>
+                        <SelectItem key={p.path} value={p.path}>
+                          {p.label}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  {errors.field && (
-                    <p className="text-xs text-destructive">{errors.field}</p>
-                  )}
+                  {errors.field && <p className="text-xs text-destructive">{errors.field}</p>}
                 </div>
               )}
             </div>
@@ -464,9 +459,7 @@ export function ChartBuilderDialog({
             {!isKpi && (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="chart-groupby">
-                    {t('dashboard:builder.secondaryGroupBy')}
-                  </Label>
+                  <Label htmlFor="chart-groupby">{t('dashboard:builder.secondaryGroupBy')}</Label>
                   <Select
                     value={groupBy || NONE}
                     onValueChange={(v) => {
@@ -483,7 +476,9 @@ export function ChartBuilderDialog({
                       {properties
                         .filter((p) => isGroupable(p) && p.path !== dateField)
                         .map((p) => (
-                          <SelectItem key={p.path} value={p.path}>{p.label}</SelectItem>
+                          <SelectItem key={p.path} value={p.path}>
+                            {p.label}
+                          </SelectItem>
                         ))}
                     </SelectContent>
                   </Select>
@@ -534,9 +529,7 @@ export function ChartBuilderDialog({
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5">
-                    <Label htmlFor="chart-compare">
-                      {t('dashboard:builder.comparePrevious')}
-                    </Label>
+                    <Label htmlFor="chart-compare">{t('dashboard:builder.comparePrevious')}</Label>
                     <InfoTooltip content={t('dashboard:builder.comparePreviousHint')} />
                   </div>
                   <Switch
@@ -590,9 +583,7 @@ export function ChartBuilderDialog({
                     value={Number.isFinite(step.value) ? step.value : ''}
                     onChange={(e) =>
                       setTransform((prev) =>
-                        prev.map((s, j) =>
-                          j === i ? { ...s, value: Number(e.target.value) } : s,
-                        ),
+                        prev.map((s, j) => (j === i ? { ...s, value: Number(e.target.value) } : s)),
                       )
                     }
                   />
@@ -601,9 +592,7 @@ export function ChartBuilderDialog({
                     variant="ghost"
                     size="icon"
                     className="size-8"
-                    onClick={() =>
-                      setTransform((prev) => prev.filter((_, j) => j !== i))
-                    }
+                    onClick={() => setTransform((prev) => prev.filter((_, j) => j !== i))}
                     aria-label={t('dashboard:builder.transformRemove')}
                   >
                     <X className="size-4" />
@@ -615,9 +604,7 @@ export function ChartBuilderDialog({
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() =>
-                    setTransform((prev) => [...prev, { op: 'divide', value: 100 }])
-                  }
+                  onClick={() => setTransform((prev) => [...prev, { op: 'divide', value: 100 }])}
                 >
                   <Plus className="size-4 mr-1" />
                   {t('dashboard:builder.transformAdd')}
@@ -630,10 +617,7 @@ export function ChartBuilderDialog({
               <Label>{t('dashboard:builder.format')}</Label>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1">
-                  <Label
-                    htmlFor="chart-format-style"
-                    className="text-xs text-muted-foreground"
-                  >
+                  <Label htmlFor="chart-format-style" className="text-xs text-muted-foreground">
                     {t('dashboard:builder.formatStyle')}
                   </Label>
                   <Select
@@ -670,10 +654,7 @@ export function ChartBuilderDialog({
                   </div>
                 )}
                 <div className="space-y-1">
-                  <Label
-                    htmlFor="chart-format-decimals"
-                    className="text-xs text-muted-foreground"
-                  >
+                  <Label htmlFor="chart-format-decimals" className="text-xs text-muted-foreground">
                     {t('dashboard:builder.formatDecimals')}
                   </Label>
                   <Input
@@ -686,10 +667,7 @@ export function ChartBuilderDialog({
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label
-                    htmlFor="chart-format-prefix"
-                    className="text-xs text-muted-foreground"
-                  >
+                  <Label htmlFor="chart-format-prefix" className="text-xs text-muted-foreground">
                     {t('dashboard:builder.formatPrefix')} / {t('dashboard:builder.formatSuffix')}
                   </Label>
                   <div className="flex gap-2">
@@ -774,10 +752,12 @@ export function ChartBuilderDialog({
                             title={t('dashboard:builder.quickFilterHint')}
                           />
                         </div>
-                        <FilterInput
+                        <PropertyFilterInput
                           property={p}
-                          value={filters[p.path] ?? ''}
+                          resourceId={resourceId}
+                          value={filters[p.path]}
                           onChange={(v) => handleFilterChange(p.path, v)}
+                          inputId={`flt-${p.path}`}
                         />
                       </div>
                     )
@@ -785,15 +765,15 @@ export function ChartBuilderDialog({
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                {t('dashboard:builder.filtersEmpty')}
-              </p>
+              <p className="text-sm text-muted-foreground">{t('dashboard:builder.filtersEmpty')}</p>
             )}
           </TabsContent>
         </Tabs>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>{t('common:cancel')}</Button>
+          <Button variant="outline" onClick={onClose}>
+            {t('common:cancel')}
+          </Button>
           <Button onClick={handleSave} disabled={!resourceId || !dateField}>
             {t('chart:saveChart')}
           </Button>
@@ -823,77 +803,6 @@ function isFilterable(p: PropertyJSON): boolean {
     if (!(path.endsWith('Id') || path.endsWith('_id'))) return false
   }
   return true
-}
-
-/**
- * Renders an inline input for one filter row in the builder. Reference
- * properties get the same combobox the resource forms use; enums/booleans
- * get a Select; numerics get a number input; everything else falls back to
- * a plain text input.
- */
-function FilterInput({
-  property,
-  value,
-  onChange,
-}: {
-  property: PropertyJSON
-  value: string
-  onChange(next: string): void
-}): React.ReactElement {
-  if (property.reference) {
-    return (
-      <ReferenceCombobox
-        referenceResourceId={property.reference}
-        value={value || null}
-        onChange={(next) => onChange(next == null ? '' : String(next))}
-      />
-    )
-  }
-  if (property.availableValues && property.availableValues.length > 0) {
-    return (
-      <Select
-        value={value || NONE}
-        onValueChange={(v) => onChange(v === NONE ? '' : v)}
-      >
-        <SelectTrigger id={`flt-${property.path}`}>
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={NONE}>—</SelectItem>
-          {property.availableValues.map((opt) => (
-            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    )
-  }
-  if (property.type === 'boolean') {
-    return (
-      <Select
-        value={value || NONE}
-        onValueChange={(v) => onChange(v === NONE ? '' : v)}
-      >
-        <SelectTrigger id={`flt-${property.path}`}>
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={NONE}>—</SelectItem>
-          <SelectItem value="true">true</SelectItem>
-          <SelectItem value="false">false</SelectItem>
-        </SelectContent>
-      </Select>
-    )
-  }
-  const isNumeric =
-    property.type === 'number' || property.type === 'float' || property.type === 'currency'
-  return (
-    <Input
-      id={`flt-${property.path}`}
-      type={isNumeric ? 'number' : 'text'}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-    />
-  )
 }
 
 /**

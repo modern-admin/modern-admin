@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test'
 import { ModernAdmin } from '@modern-admin/core'
-import { _resetInstanceId, _resetReported, collectTelemetryInfo, reportTelemetry } from '../src/index.js'
+import {
+  _resetInstanceId,
+  _resetReported,
+  collectTelemetryInfo,
+  reportTelemetry,
+} from '../src/index.js'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -60,7 +65,13 @@ describe('collectTelemetryInfo', () => {
 
   test('features contains only enabled (true) capability names', () => {
     const admin = buildAdmin({
-      features: { auditLog: true, history: false, webhooks: true, apiKeys: false, aiAssistant: false },
+      features: {
+        auditLog: true,
+        history: false,
+        webhooks: true,
+        apiKeys: false,
+        aiAssistant: false,
+      },
     })
     const info = collectTelemetryInfo(admin)
     expect(info.features.sort()).toEqual(['auditLog', 'webhooks'])
@@ -146,13 +157,14 @@ describe('reportTelemetry', () => {
     process.env.MODERN_ADMIN_TELEMETRY = '1'
     let capturedUrl = ''
     let capturedBody = ''
-    const fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(
-      (async (url: string | URL | Request, init?: RequestInit) => {
-        capturedUrl = String(url)
-        capturedBody = String(init?.body ?? '')
-        return new Response()
-      }) as unknown as typeof fetch,
-    )
+    const fetchSpy = spyOn(globalThis, 'fetch').mockImplementation((async (
+      url: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      capturedUrl = String(url)
+      capturedBody = String(init?.body ?? '')
+      return new Response()
+    }) as unknown as typeof fetch)
     const info = collectTelemetryInfo(buildAdmin({ featureFlags: ['ai-fill'] }))
     await reportTelemetry(info, { endpoint: 'http://test.local/t' })
 
@@ -164,12 +176,12 @@ describe('reportTelemetry', () => {
 
   test('is silent when fetch throws (network error)', async () => {
     process.env.MODERN_ADMIN_TELEMETRY = '1'
-    const fetchSpy = spyOn(globalThis, 'fetch').mockRejectedValue(
-      new Error('ECONNREFUSED'),
-    )
+    const fetchSpy = spyOn(globalThis, 'fetch').mockRejectedValue(new Error('ECONNREFUSED'))
     const info = collectTelemetryInfo(buildAdmin())
     // Must not throw
-    await expect(reportTelemetry(info, { endpoint: 'http://test.local/t' })).resolves.toBeUndefined()
+    await expect(
+      reportTelemetry(info, { endpoint: 'http://test.local/t' }),
+    ).resolves.toBeUndefined()
     fetchSpy.mockRestore()
   })
 })

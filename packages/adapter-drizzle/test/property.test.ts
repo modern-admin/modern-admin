@@ -3,8 +3,7 @@ import { DrizzleProperty, extractForeignKeys, findPrimaryColumn } from '../src/p
 import { posts, users } from './_helpers/schema.js'
 import type { DrizzleColumn, DrizzleTable } from '../src/types.js'
 
-const colOf = (table: DrizzleTable, key: string): DrizzleColumn =>
-  table[key] as DrizzleColumn
+const colOf = (table: DrizzleTable, key: string): DrizzleColumn => table[key] as DrizzleColumn
 
 describe('DrizzleProperty', () => {
   it('maps a text primary key to uuid type', () => {

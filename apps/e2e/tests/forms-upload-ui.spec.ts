@@ -51,10 +51,7 @@ async function createProduct(
   return { id: String(body.record.id), name }
 }
 
-async function deleteProductSilently(
-  request: APIRequestContext,
-  id: string,
-): Promise<void> {
+async function deleteProductSilently(request: APIRequestContext, id: string): Promise<void> {
   await request.delete(adminApi(`/resources/products/records/${id}/actions/delete`))
 }
 
@@ -94,10 +91,7 @@ async function waitForUploadComplete(
 }
 
 test.describe('Upload UI — single-value file (products.thumbnail)', () => {
-  test('upload → file row appears → Save persists the storage key', async ({
-    page,
-    request,
-  }) => {
+  test('upload → file row appears → Save persists the storage key', async ({ page, request }) => {
     const product = await createProduct(request)
     try {
       await openProductEdit(page, product.id)
@@ -118,9 +112,8 @@ test.describe('Upload UI — single-value file (products.thumbnail)', () => {
       // before the field re-renders.
       const uploadPromise = page.waitForResponse(
         (res) =>
-          res.url().includes(
-            `/admin/api/resources/products/actions/upload`,
-          ) && res.request().method() === 'POST',
+          res.url().includes(`/admin/api/resources/products/actions/upload`) &&
+          res.request().method() === 'POST',
       )
       await fileInput.setInputFiles({
         name: filename,
@@ -137,11 +130,13 @@ test.describe('Upload UI — single-value file (products.thumbnail)', () => {
 
       const patchPromise = page.waitForResponse(
         (res) =>
-          res.url().includes(
-            `/admin/api/resources/products/records/${product.id}/actions/edit`,
-          ) && res.request().method() === 'PATCH',
+          res.url().includes(`/admin/api/resources/products/records/${product.id}/actions/edit`) &&
+          res.request().method() === 'PATCH',
       )
-      await page.getByRole('button', { name: /^save$/i }).first().click()
+      await page
+        .getByRole('button', { name: /^save$/i })
+        .first()
+        .click()
       const patchRes = await patchPromise
       expect(patchRes.ok(), `PATCH failed: ${await patchRes.text()}`).toBeTruthy()
       const patchBody = await patchRes.json()
@@ -161,8 +156,7 @@ test.describe('Upload UI — single-value file (products.thumbnail)', () => {
       const filename = `to-remove-${Date.now()}.png`
 
       const uploadPromise = page.waitForResponse(
-        (res) =>
-          res.url().includes('/actions/upload') && res.request().method() === 'POST',
+        (res) => res.url().includes('/actions/upload') && res.request().method() === 'POST',
       )
       await fileInput.setInputFiles({
         name: filename,
@@ -176,21 +170,24 @@ test.describe('Upload UI — single-value file (products.thumbnail)', () => {
       // resets the field's value to null. Clicking Save after that
       // persists the null.
       const cancelPromise = page.waitForResponse(
-        (res) =>
-          res.url().includes('/actions/upload') &&
-          res.request().method() === 'DELETE',
+        (res) => res.url().includes('/actions/upload') && res.request().method() === 'DELETE',
       )
-      await field.getByRole('button', { name: /^remove file$/i }).first().click()
+      await field
+        .getByRole('button', { name: /^remove file$/i })
+        .first()
+        .click()
       const cancelRes = await cancelPromise
       expect(cancelRes.status()).toBe(204)
 
       const patchPromise = page.waitForResponse(
         (res) =>
-          res.url().includes(
-            `/admin/api/resources/products/records/${product.id}/actions/edit`,
-          ) && res.request().method() === 'PATCH',
+          res.url().includes(`/admin/api/resources/products/records/${product.id}/actions/edit`) &&
+          res.request().method() === 'PATCH',
       )
-      await page.getByRole('button', { name: /^save$/i }).first().click()
+      await page
+        .getByRole('button', { name: /^save$/i })
+        .first()
+        .click()
       const patchRes = await patchPromise
       expect(patchRes.ok()).toBeTruthy()
       const patchBody = await patchRes.json()
@@ -273,14 +270,10 @@ test.describe('Upload UI — multi-value gallery (products.gallery)', () => {
       // by awaiting until two POSTs have completed.
       const uploads: Array<Promise<unknown>> = [
         page.waitForResponse(
-          (res) =>
-            res.url().includes('/actions/upload') &&
-            res.request().method() === 'POST',
+          (res) => res.url().includes('/actions/upload') && res.request().method() === 'POST',
         ),
         page.waitForResponse(
-          (res) =>
-            res.url().includes('/actions/upload') &&
-            res.request().method() === 'POST',
+          (res) => res.url().includes('/actions/upload') && res.request().method() === 'POST',
           { timeout: 15_000 },
         ),
       ]
@@ -296,20 +289,21 @@ test.describe('Upload UI — multi-value gallery (products.gallery)', () => {
       // Two persistent file rows should be on screen once both uploads
       // settle. The list is a <ul> of rows; each row contains the
       // filename. Match by filename suffix.
-      await expect(field.locator('li').filter({ hasText: /\.png$/ })).toHaveCount(
-        2,
-        { timeout: 15_000 },
-      )
+      await expect(field.locator('li').filter({ hasText: /\.png$/ })).toHaveCount(2, {
+        timeout: 15_000,
+      })
       // No pending rows left.
       await expect(field.locator('[role="progressbar"]')).toHaveCount(0)
 
       const patchPromise = page.waitForResponse(
         (res) =>
-          res.url().includes(
-            `/admin/api/resources/products/records/${product.id}/actions/edit`,
-          ) && res.request().method() === 'PATCH',
+          res.url().includes(`/admin/api/resources/products/records/${product.id}/actions/edit`) &&
+          res.request().method() === 'PATCH',
       )
-      await page.getByRole('button', { name: /^save$/i }).first().click()
+      await page
+        .getByRole('button', { name: /^save$/i })
+        .first()
+        .click()
       const patchRes = await patchPromise
       expect(patchRes.ok(), `PATCH failed: ${await patchRes.text()}`).toBeTruthy()
       const patchBody = await patchRes.json()

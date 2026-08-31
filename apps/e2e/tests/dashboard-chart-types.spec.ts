@@ -43,10 +43,7 @@ function makeChartDef(overrides: Record<string, unknown>): Record<string, unknow
   }
 }
 
-async function seed(
-  request: APIRequestContext,
-  charts: Record<string, unknown>[],
-): Promise<void> {
+async function seed(request: APIRequestContext, charts: Record<string, unknown>[]): Promise<void> {
   const res = await request.put(adminApi('/dashboard'), {
     data: { version: 1, charts, groups: [] },
   })
@@ -100,7 +97,9 @@ test.describe('Dashboard chart visualisations — rendered types', () => {
     await resetDashboard(request)
   })
 
-  test('renders KPI as a big-number card, Line/Area/Bar as the matching Recharts SVG type', async ({ page }) => {
+  test('renders KPI as a big-number card, Line/Area/Bar as the matching Recharts SVG type', async ({
+    page,
+  }) => {
     await page.goto('/')
     await waitForChart(page, 'KPI variant')
     await waitForChart(page, 'Line variant')
@@ -112,10 +111,26 @@ test.describe('Dashboard chart visualisations — rendered types', () => {
 
     // Take per-widget screenshots so the user can compare visually.
     const cards: Record<string, ReturnType<Page['locator']>> = {
-      kpi: page.locator('div').filter({ hasText: /^KPI variant$/ }).locator('xpath=ancestor::*[contains(@class,"flex flex-col")][1]').first(),
-      line: page.locator('div').filter({ hasText: /^Line variant$/ }).locator('xpath=ancestor::*[contains(@class,"flex flex-col")][1]').first(),
-      area: page.locator('div').filter({ hasText: /^Area variant$/ }).locator('xpath=ancestor::*[contains(@class,"flex flex-col")][1]').first(),
-      bar: page.locator('div').filter({ hasText: /^Bar variant$/ }).locator('xpath=ancestor::*[contains(@class,"flex flex-col")][1]').first(),
+      kpi: page
+        .locator('div')
+        .filter({ hasText: /^KPI variant$/ })
+        .locator('xpath=ancestor::*[contains(@class,"flex flex-col")][1]')
+        .first(),
+      line: page
+        .locator('div')
+        .filter({ hasText: /^Line variant$/ })
+        .locator('xpath=ancestor::*[contains(@class,"flex flex-col")][1]')
+        .first(),
+      area: page
+        .locator('div')
+        .filter({ hasText: /^Area variant$/ })
+        .locator('xpath=ancestor::*[contains(@class,"flex flex-col")][1]')
+        .first(),
+      bar: page
+        .locator('div')
+        .filter({ hasText: /^Bar variant$/ })
+        .locator('xpath=ancestor::*[contains(@class,"flex flex-col")][1]')
+        .first(),
     }
 
     for (const [name, card] of Object.entries(cards)) {

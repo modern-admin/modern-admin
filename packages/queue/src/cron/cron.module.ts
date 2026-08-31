@@ -23,10 +23,7 @@ import { CronProcessor } from './cron.processor.js'
  */
 @Global()
 @Module({
-  imports: [
-    DiscoveryModule,
-    QueueModule.register({ queues: [CRON_QUEUE] }),
-  ],
+  imports: [DiscoveryModule, QueueModule.register({ queues: [CRON_QUEUE] })],
   providers: [CronService, CronProcessor],
   exports: [CronService],
 })

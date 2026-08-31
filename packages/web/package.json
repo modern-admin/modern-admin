@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/web",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "type": "module",
   "sideEffects": false,
   "description": "Pre-built React admin SPA. Mount it into a host page or let @modern-admin/nest serve the standalone bundle.",
@@ -68,34 +68,33 @@
     "build:config": "tsc -p tsconfig.config.json",
     "build:standalone": "vite build --mode standalone",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint ."
+    "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "@tailwindcss/vite": "^4.3.3",
-    "@vitejs/plugin-react": "^6.0.5",
-    "vite": "^8.2.1"
+    "@vitejs/plugin-react": "^6.1.1",
+    "vite": "^8.2.2"
   },
   "dependencies": {
     "@modern-admin/core": "workspace:^",
     "@modern-admin/i18n": "workspace:^",
     "@modern-admin/react": "workspace:^",
     "@modern-admin/ui": "workspace:^",
-    "@tanstack/react-query": "^5.101.4"
+    "@tanstack/react-query": "^5.102.8"
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
     "@tailwindcss/vite": "^4.3.3",
     "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.4",
-    "@vitejs/plugin-react": "^6.0.5",
+    "@types/react-dom": "^19.2.5",
+    "@vitejs/plugin-react": "^6.1.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
-    "vite": "^8.2.1",
+    "vite": "^8.2.2",
     "vite-plugin-dts": "^5.0.3"
   },
   "peerDependenciesMeta": {

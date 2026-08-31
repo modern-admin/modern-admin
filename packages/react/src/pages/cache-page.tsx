@@ -53,9 +53,9 @@ export function CachePage(): React.ReactElement {
   const hitRate = requests > 0 ? (hits / requests) * 100 : 0
   const computes = sum(entries.map((entry) => entry.computes))
   const computeMs = sum(entries.map((entry) => entry.computeMs))
-  const errors = sum(entries.map((entry) =>
-    entry.readErrors + entry.writeErrors + entry.invalidationErrors,
-  ))
+  const errors = sum(
+    entries.map((entry) => entry.readErrors + entry.writeErrors + entry.invalidationErrors),
+  )
   const number = React.useMemo(() => new Intl.NumberFormat(locale), [locale])
 
   const invalidateSelected = (): void => {
@@ -118,9 +118,14 @@ export function CachePage(): React.ReactElement {
           <Metric label={t('cache:metric.requests')} value={number.format(requests)} />
           <Metric
             label={t('cache:metric.avgCompute')}
-            value={computes > 0
-              ? t('cache:unit.ms').replace('{value}', number.format(Math.round(computeMs / computes)))
-              : '—'}
+            value={
+              computes > 0
+                ? t('cache:unit.ms').replace(
+                    '{value}',
+                    number.format(Math.round(computeMs / computes)),
+                  )
+                : '—'
+            }
           />
           <Metric label={t('cache:metric.errors')} value={number.format(errors)} />
         </CardContent>
@@ -134,7 +139,9 @@ export function CachePage(): React.ReactElement {
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2">
             {stats.data?.dirtyTags.map((tag) => (
-              <Badge key={tag} variant="destructive">{tag}</Badge>
+              <Badge key={tag} variant="destructive">
+                {tag}
+              </Badge>
             ))}
           </CardContent>
         </Card>
@@ -153,7 +160,9 @@ export function CachePage(): React.ReactElement {
             <SelectContent>
               <SelectGroup>
                 {resources.map((resource) => (
-                  <SelectItem key={resource.id} value={resource.id}>{resource.name}</SelectItem>
+                  <SelectItem key={resource.id} value={resource.id}>
+                    {resource.name}
+                  </SelectItem>
                 ))}
               </SelectGroup>
             </SelectContent>
@@ -199,7 +208,9 @@ export function CachePage(): React.ReactElement {
               )}
               {entries.map((entry) => (
                 <TableRow key={`${entry.namespace}:${entry.resourceId ?? '*'}`}>
-                  <TableCell><Badge variant="outline">{entry.namespace}</Badge></TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{entry.namespace}</Badge>
+                  </TableCell>
                   <TableCell>{entry.resourceId ?? '—'}</TableCell>
                   <TableCell>{number.format(entry.hits)}</TableCell>
                   <TableCell>{number.format(entry.misses)}</TableCell>

@@ -36,7 +36,11 @@ describe('filterToWhere dialect gating', () => {
 
   test('explicit operators are gated as well, not just the implicit branch', () => {
     const resource = buildResource()
-    const cases = [['sw', 'startsWith'], ['ew', 'endsWith'], ['co', 'contains']] as const
+    const cases = [
+      ['sw', 'startsWith'],
+      ['ew', 'endsWith'],
+      ['co', 'contains'],
+    ] as const
     for (const [op, key] of cases) {
       const filter = new Filter({ email: `${op}:foo` }, resource)
       expect(filterToWhere(filter, 'mysql')).toEqual({ email: { [key]: 'foo' } })

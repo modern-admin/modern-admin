@@ -29,8 +29,19 @@ const require_ = createRequire(import.meta.url)
 export interface RedisLike {
   get(key: string): Promise<string | null>
   set(key: string, value: string | number | Buffer): Promise<unknown>
-  set(key: string, value: string | number | Buffer, mode: 'EX', ttl: number | string): Promise<unknown>
-  set(key: string, value: string | number | Buffer, mode: 'PX', ttl: number | string, condition: 'NX'): Promise<unknown>
+  set(
+    key: string,
+    value: string | number | Buffer,
+    mode: 'EX',
+    ttl: number | string,
+  ): Promise<unknown>
+  set(
+    key: string,
+    value: string | number | Buffer,
+    mode: 'PX',
+    ttl: number | string,
+    condition: 'NX',
+  ): Promise<unknown>
   del(...keys: string[]): Promise<unknown>
   sadd(key: string, ...values: (string | number | Buffer)[]): Promise<unknown>
   smembers(key: string): Promise<string[]>
@@ -294,10 +305,11 @@ export class RedisCacheProvider implements ICacheProvider {
   }
 
   async getTagEpochs(tags: string[]): Promise<CacheTagEpochs> {
-    const pairs = await Promise.all(tags.map(async (tag) => [
-      tag,
-      await this.client.get(this.tagEpochKey(tag)) ?? '0',
-    ] as const))
+    const pairs = await Promise.all(
+      tags.map(
+        async (tag) => [tag, (await this.client.get(this.tagEpochKey(tag))) ?? '0'] as const,
+      ),
+    )
     return Object.fromEntries(pairs)
   }
 
@@ -347,7 +359,7 @@ export class RedisCacheProvider implements ICacheProvider {
     for (let i = 0; i < tagKeys.length; i += 2) {
       const tagKey = tagKeys[i]!
       const epochKey = tagKeys[i + 1]!
-      const epoch = Number(await this.client.get(epochKey) ?? 0) + 1
+      const epoch = Number((await this.client.get(epochKey)) ?? 0) + 1
       await this.client.set(epochKey, epoch)
       const members = await this.client.smembers(tagKey)
       for (const member of members) {
@@ -372,7 +384,7 @@ export class RedisCacheProvider implements ICacheProvider {
       await this.client.eval(RELEASE_LOCK_SCRIPT, 1, lockKey, token)
       return
     }
-    if (await this.client.get(lockKey) === token) await this.client.del(lockKey)
+    if ((await this.client.get(lockKey)) === token) await this.client.del(lockKey)
   }
 
   async subscribe(channel: string, handler: (message: string) => void): Promise<() => void> {
@@ -389,7 +401,10 @@ export class RedisCacheProvider implements ICacheProvider {
     return async () => {
       // ioredis exposes `unsubscribe` on the same client; we keep the cleanup
       // best-effort to avoid coupling to the full ioredis surface.
-      const anySub = sub as unknown as { unsubscribe?: (channel: string) => Promise<unknown>; off?: (event: string, fn: unknown) => unknown }
+      const anySub = sub as unknown as {
+        unsubscribe?: (channel: string) => Promise<unknown>
+        off?: (event: string, fn: unknown) => unknown
+      }
       if (typeof anySub.unsubscribe === 'function') await anySub.unsubscribe(fullChannel)
       if (typeof anySub.off === 'function') anySub.off('message', listener)
     }

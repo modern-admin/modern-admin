@@ -40,10 +40,7 @@ export function RevisionsButton({
   const dialogs = useDialogs()
   const notify = useNotify()
   const [open, setOpen] = React.useState(false)
-  const revisions = React.useMemo(
-    () => history.data?.revisions ?? [],
-    [history.data?.revisions],
-  )
+  const revisions = React.useMemo(() => history.data?.revisions ?? [], [history.data?.revisions])
   // Resolve revision authors to human-readable labels (email / name)
   // instead of showing raw user UUIDs.
   const userIds = React.useMemo(
@@ -59,9 +56,7 @@ export function RevisionsButton({
   const [selectedId, setSelectedId] = React.useState<string | undefined>()
   const [compareToId, setCompareToId] = React.useState<string>('')
   const selected = revisions.find((r) => r.id === selectedId) ?? revisions[0]
-  const compareTo = compareToId
-    ? revisions.find((r) => r.id === compareToId)
-    : undefined
+  const compareTo = compareToId ? revisions.find((r) => r.id === compareToId) : undefined
 
   // Build a path → label map from the resource schema so each diff field
   // can show a human-readable name before its technical path.
@@ -79,10 +74,8 @@ export function RevisionsButton({
 
   const visibleFields = selected
     ? withLabels(
-      compareTo
-        ? diffSnapshots(compareTo.snapshot, selected.snapshot)
-        : fieldsFor(selected),
-    )
+        compareTo ? diffSnapshots(compareTo.snapshot, selected.snapshot) : fieldsFor(selected),
+      )
     : []
 
   React.useEffect(() => {
@@ -94,10 +87,11 @@ export function RevisionsButton({
   }, [compareToId, selected?.id])
 
   const formatDate = React.useCallback(
-    (value: string) => new Intl.DateTimeFormat(locale, {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-    }).format(new Date(value)),
+    (value: string) =>
+      new Intl.DateTimeFormat(locale, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      }).format(new Date(value)),
     [locale],
   )
 
@@ -130,7 +124,11 @@ export function RevisionsButton({
           <span className="hidden sm:inline">{t('history:revisions')}</span>
         </Button>
       </SheetTrigger>
-      <SheetContent closeLabel={t('common:close')} side="right" className="w-full overflow-y-auto sm:max-w-5xl">
+      <SheetContent
+        closeLabel={t('common:close')}
+        side="right"
+        className="w-full overflow-y-auto sm:max-w-5xl"
+      >
         <SheetHeader>
           <SheetTitle>{t('history:revisions')}</SheetTitle>
         </SheetHeader>

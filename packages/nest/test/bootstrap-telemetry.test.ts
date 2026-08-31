@@ -1,10 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { HttpAdapterHost } from '@nestjs/core'
 import { ModernAdmin } from '@modern-admin/core'
-import {
-  AdminControllerScanner,
-  ModernAdminBootstrapService,
-} from '../src/admin'
+import { AdminControllerScanner, ModernAdminBootstrapService } from '../src/admin'
 
 const buildService = (telemetry: () => void | Promise<void>): ModernAdminBootstrapService =>
   new ModernAdminBootstrapService(

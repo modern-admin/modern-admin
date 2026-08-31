@@ -43,7 +43,6 @@ export async function seedDemoUser({
     // on re-runs. Anything else gets surfaced for visibility.
     const message = err instanceof Error ? err.message : String(err)
     if (/exists|duplicate|UNIQUE/i.test(message)) {
-
       console.log(`[${label}] demo admin already present: ${email}`)
       return
     }

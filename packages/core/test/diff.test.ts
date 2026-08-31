@@ -36,10 +36,7 @@ describe('valuesEqual', () => {
 
 describe('computeFieldDiff', () => {
   it('returns added/removed/changed entries sorted by path', () => {
-    const diff = computeFieldDiff(
-      { name: 'Alice', age: 30 },
-      { name: 'Alicia', email: 'a@b' },
-    )
+    const diff = computeFieldDiff({ name: 'Alice', age: 30 }, { name: 'Alicia', email: 'a@b' })
     expect(diff).toEqual([
       { path: 'age', before: 30, kind: 'removed' },
       { path: 'email', after: 'a@b', kind: 'added' },
@@ -53,15 +50,11 @@ describe('computeFieldDiff', () => {
       { name: 'Alicia', password: 'secret2' },
       new Set(['password']),
     )
-    expect(diff).toEqual([
-      { path: 'name', before: 'Alice', after: 'Alicia', kind: 'changed' },
-    ])
+    expect(diff).toEqual([{ path: 'name', before: 'Alice', after: 'Alicia', kind: 'changed' }])
   })
 
   it('treats structurally equal nested values as unchanged', () => {
-    expect(
-      computeFieldDiff({ tags: ['a', 'b'] }, { tags: ['a', 'b'] }),
-    ).toEqual([])
+    expect(computeFieldDiff({ tags: ['a', 'b'] }, { tags: ['a', 'b'] })).toEqual([])
   })
 
   it('exposes diffSnapshots as an alias', () => {
@@ -86,9 +79,7 @@ describe('uuidv7', () => {
   it('produces RFC 9562 v7 strings', () => {
     const id = uuidv7()
     // 8-4-4-4-12 hex with version `7` and variant `8|9|a|b`.
-    expect(id).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
-    )
+    expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
   })
 
   it('is monotonic by timestamp prefix across rapid calls', () => {

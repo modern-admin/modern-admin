@@ -23,8 +23,10 @@ const prop = (overrides: Partial<PropertyJSON>): PropertyJSON => ({
   ...overrides,
 })
 
-const message = (result: { success: boolean; error?: { issues: { message: string }[] } }): string =>
-  result.success ? '' : (result.error?.issues[0]?.message ?? '')
+const message = (result: {
+  success: boolean
+  error?: { issues: { message: string }[] }
+}): string => (result.success ? '' : (result.error?.issues[0]?.message ?? ''))
 
 describe('buildPropertySchema', () => {
   test('required string rejects blanks with localized message', () => {
@@ -43,7 +45,10 @@ describe('buildPropertySchema', () => {
 
   test('email rejects malformed input', () => {
     const s = buildPropertySchema(prop({ type: 'email', isRequired: true }), t)
-    const r = s.safeParse('not-an-email') as { success: boolean; error?: { issues: { message: string }[] } }
+    const r = s.safeParse('not-an-email') as {
+      success: boolean
+      error?: { issues: { message: string }[] }
+    }
     expect(r.success).toBe(false)
     expect(message(r)).toContain('validation:invalidEmail')
   })
@@ -56,7 +61,10 @@ describe('buildPropertySchema', () => {
   test('number coerces string and rejects non-numbers', () => {
     const s = buildPropertySchema(prop({ type: 'number', isRequired: true }), t)
     expect(s.safeParse('42').success).toBe(true)
-    const r = s.safeParse('not-a-number') as { success: boolean; error?: { issues: { message: string }[] } }
+    const r = s.safeParse('not-a-number') as {
+      success: boolean
+      error?: { issues: { message: string }[] }
+    }
     expect(r.success).toBe(false)
     expect(message(r)).toContain('validation:invalidNumber')
   })
@@ -79,7 +87,10 @@ describe('buildPropertySchema', () => {
   test('url rejects non-http inputs', () => {
     const s = buildPropertySchema(prop({ type: 'url', isRequired: true }), t)
     expect(s.safeParse('https://example.com').success).toBe(true)
-    const r = s.safeParse('not a url') as { success: boolean; error?: { issues: { message: string }[] } }
+    const r = s.safeParse('not a url') as {
+      success: boolean
+      error?: { issues: { message: string }[] }
+    }
     expect(r.success).toBe(false)
     expect(message(r)).toContain('validation:invalidUrl')
   })
@@ -87,7 +98,10 @@ describe('buildPropertySchema', () => {
   test('date rejects unparseable input', () => {
     const s = buildPropertySchema(prop({ type: 'date', isRequired: true }), t)
     expect(s.safeParse('2024-01-15').success).toBe(true)
-    const r = s.safeParse('garbage') as { success: boolean; error?: { issues: { message: string }[] } }
+    const r = s.safeParse('garbage') as {
+      success: boolean
+      error?: { issues: { message: string }[] }
+    }
     expect(r.success).toBe(false)
     expect(message(r)).toContain('validation:invalidDate')
   })
@@ -104,7 +118,10 @@ describe('buildPropertySchema', () => {
       t,
     )
     expect(s.safeParse('draft').success).toBe(true)
-    const r = s.safeParse('archived') as { success: boolean; error?: { issues: { message: string }[] } }
+    const r = s.safeParse('archived') as {
+      success: boolean
+      error?: { issues: { message: string }[] }
+    }
     expect(r.success).toBe(false)
     expect(message(r)).toContain('validation:notInList')
   })
@@ -122,7 +139,13 @@ describe('buildPropertySchema', () => {
 
   test('multi-reference requires non-empty array when required', () => {
     const s = buildPropertySchema(
-      prop({ type: 'reference', reference: 'tags', isArray: true, isRequired: true, label: 'Tags' }),
+      prop({
+        type: 'reference',
+        reference: 'tags',
+        isArray: true,
+        isRequired: true,
+        label: 'Tags',
+      }),
       t,
     )
     expect(s.safeParse(['1', '2']).success).toBe(true)

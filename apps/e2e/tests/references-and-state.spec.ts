@@ -15,8 +15,7 @@ import { expect, test, type Page } from '@playwright/test'
  *      first render, not just write-after-click.
  */
 
-const UUID_RE =
-  /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/
+const UUID_RE = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/
 
 async function waitForRows(page: Page, min = 1): Promise<void> {
   await expect(page.locator('tbody tr').nth(min - 1)).toBeVisible({
@@ -25,9 +24,7 @@ async function waitForRows(page: Page, min = 1): Promise<void> {
 }
 
 test.describe('Reference rendering', () => {
-  test('posts list shows the author as a readable badge, not a raw UUID', async ({
-    page,
-  }) => {
+  test('posts list shows the author as a readable badge, not a raw UUID', async ({ page }) => {
     await page.goto('/resources/posts')
     await waitForRows(page)
 
@@ -36,11 +33,11 @@ test.describe('Reference rendering', () => {
     // know which column index to read on data rows.
     const headerRow = page.locator('thead tr').first()
     const headers = await headerRow.locator('th').allInnerTexts()
-    const authorIdx = headers.findIndex((h) =>
-      /author/i.test(h.trim()),
-    )
-    expect(authorIdx, `no Author column found in headers: ${headers.join(' | ')}`)
-      .toBeGreaterThanOrEqual(0)
+    const authorIdx = headers.findIndex((h) => /author/i.test(h.trim()))
+    expect(
+      authorIdx,
+      `no Author column found in headers: ${headers.join(' | ')}`,
+    ).toBeGreaterThanOrEqual(0)
 
     // Read every visible data row's authorId cell and assert each one
     // resolved to a non-empty, non-UUID label. The reference cell renders
@@ -55,9 +52,7 @@ test.describe('Reference rendering', () => {
       ).trim()
       // Empty cell, raw UUID, or `#<uuid>` fallback would all fail this.
       expect(txt, `row ${i} authorId cell text`).not.toEqual('')
-      expect(txt, `row ${i} authorId cell text "${txt}" looks like a UUID`).not.toMatch(
-        UUID_RE,
-      )
+      expect(txt, `row ${i} authorId cell text "${txt}" looks like a UUID`).not.toMatch(UUID_RE)
       expect(txt, `row ${i} authorId cell text "${txt}" is unresolved #<id>`).not.toMatch(
         /^#[0-9a-f]{6,}/i,
       )
@@ -86,9 +81,9 @@ test.describe('Reference rendering', () => {
     await link.click()
     await expect(page).toHaveURL(/\/resources\/customers\/[^/]+$/, { timeout: 10_000 })
     // Confirm we're on a customer show page — heading carries the resource id.
-    await expect(
-      page.getByRole('heading', { name: /customers\s*#/i }),
-    ).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByRole('heading', { name: /customers\s*#/i })).toBeVisible({
+      timeout: 10_000,
+    })
   })
 })
 
@@ -109,9 +104,7 @@ test.describe('List page — deep-link URL state', () => {
     await expect(page.locator('tbody tr')).toHaveCount(10)
   })
 
-  test('opening with ?sortBy=name&direction=desc orders rows server-side', async ({
-    page,
-  }) => {
+  test('opening with ?sortBy=name&direction=desc orders rows server-side', async ({ page }) => {
     // Sorted desc, the first row's Name should be alphabetically >= the
     // last row's Name (string compare). We don't pin a specific name
     // because the seed list can evolve.
@@ -132,7 +125,8 @@ test.describe('List page — deep-link URL state', () => {
     expect(firstName).not.toEqual('')
     expect(lastName).not.toEqual('')
     // Case-insensitive descending compare: first ≥ last.
-    expect(firstName.localeCompare(lastName, undefined, { sensitivity: 'base' }))
-      .toBeGreaterThanOrEqual(0)
+    expect(
+      firstName.localeCompare(lastName, undefined, { sensitivity: 'base' }),
+    ).toBeGreaterThanOrEqual(0)
   })
 })

@@ -135,13 +135,11 @@ const parseSetupUi = (argv: string[]): SetupUiArgs => {
 
 const runScaffold = async (args: ScaffoldArgs): Promise<number> => {
   if (args.help) {
-
     console.log(usage())
     return 0
   }
   const name = args.name?.trim()
   if (!name) {
-
     console.error(usage())
     return 1
   }
@@ -150,7 +148,6 @@ const runScaffold = async (args: ScaffoldArgs): Promise<number> => {
   try {
     validateProjectName(name)
   } catch (err) {
-
     console.error((err as Error).message)
     return 1
   }
@@ -183,7 +180,6 @@ const runScaffold = async (args: ScaffoldArgs): Promise<number> => {
 
 const runGenerate = async (args: GenerateArgs): Promise<number> => {
   if (args.help) {
-
     console.log(usage())
     return 0
   }
@@ -197,14 +193,11 @@ const runGenerate = async (args: GenerateArgs): Promise<number> => {
 
   console.log(`Target (${result.orm}): ${result.schemaPath}`)
   if (result.added.length > 0) {
-
     console.log(`${verb} (${result.added.length}): ${result.added.join(', ')}`)
   } else {
-
     console.log('Already up to date — nothing to add.')
   }
   if (result.skipped.length > 0) {
-
     console.log(`Skipped (${result.skipped.length}): ${result.skipped.join(', ')}`)
   }
   return 0
@@ -243,12 +236,10 @@ const main = async (argv: string[]): Promise<number> => {
   try {
     parsed = parse(argv)
   } catch (err) {
-
     console.error((err as Error).message)
     return 1
   }
   if (parsed.command === 'help') {
-
     console.log(usage())
     return 0
   }

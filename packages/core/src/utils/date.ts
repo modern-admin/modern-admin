@@ -21,7 +21,5 @@ const OFFSETLESS_DATETIME = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d{1,9})
  */
 export const parseDateValue = (value: string): Date => {
   const trimmed = value.trim()
-  return new Date(
-    OFFSETLESS_DATETIME.test(trimmed) ? `${trimmed.replace(' ', 'T')}Z` : trimmed,
-  )
+  return new Date(OFFSETLESS_DATETIME.test(trimmed) ? `${trimmed.replace(' ', 'T')}Z` : trimmed)
 }

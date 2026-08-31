@@ -156,9 +156,7 @@ describe('AdminClient — custom actions', () => {
   })
 
   it('encodes ids and action names into the path', async () => {
-    const [req] = await captureRequests((c) =>
-      c.fetchRecordAction('a b', 'x/y', 'send push'),
-    )
+    const [req] = await captureRequests((c) => c.fetchRecordAction('a b', 'x/y', 'send push'))
     expect(req?.url).toBe(
       'https://example.test/admin/api/resources/a%20b/records/x%2Fy/actions/send%20push',
     )
@@ -166,6 +164,22 @@ describe('AdminClient — custom actions', () => {
 })
 
 describe('AdminClient.list', () => {
+  it('serializes structured filters with repeated values intact', async () => {
+    const [req] = await captureRequests((client) =>
+      client.list('users', {
+        filters: {
+          name: { operator: 'in', values: ['Smith, John', 'Alice'] },
+          deletedAt: { operator: 'empty' },
+        },
+      }),
+    )
+    const url = new URL(req!.url)
+
+    expect(url.searchParams.get('filters[name][operator]')).toBe('in')
+    expect(url.searchParams.getAll('filters[name][values][]')).toEqual(['Smith, John', 'Alice'])
+    expect(url.searchParams.get('filters[deletedAt][operator]')).toBe('empty')
+  })
+
   it('sends no cache-busting hints by default', async () => {
     const [req] = await captureRequests((c) => c.list('users', { page: 2 }))
     expect(req?.url).toBe('https://example.test/admin/api/resources/users/actions/list?page=2')

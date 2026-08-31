@@ -12,7 +12,13 @@ import {
   getModKeyLabel,
 } from '@modern-admin/ui'
 import { AlertCircle, Pencil, Trash2, Zap } from 'lucide-react'
-import { useDeleteRecord, useFeatures, useInvokeRecordAction, useRecord, useResource } from '../hooks.js'
+import {
+  useDeleteRecord,
+  useFeatures,
+  useInvokeRecordAction,
+  useRecord,
+  useResource,
+} from '../hooks.js'
 import { confirmGuard } from '../action-guard.js'
 import { showActionNotice } from '../action-notice.js'
 import { hasActionComponent, useActionLauncher } from '../action-launcher.js'
@@ -130,18 +136,19 @@ export function ResourceShowPage({
           </CardTitle>
           {record.data && (
             <div className="flex shrink-0 flex-wrap gap-2">
-              {features.history && (
-                <RevisionsButton resourceId={resourceId} recordId={recordId} />
-              )}
+              {features.history && <RevisionsButton resourceId={resourceId} recordId={recordId} />}
               {canEdit && (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     {/* `asChild` + Link-as-Button keeps the rendered DOM a
-                   *  single `<a>` so it picks up the Button's `h-8` from
-                   *  `size="sm"` instead of stacking a Link wrapper that
-                   *  collapses to its anchor default height. */}
+                     *  single `<a>` so it picks up the Button's `h-8` from
+                     *  `size="sm"` instead of stacking a Link wrapper that
+                     *  collapses to its anchor default height. */}
                     <Button variant="outline-primary" size="sm" asChild>
-                      <Link to={{ name: 'edit', resourceId, recordId }} aria-label={t('common:edit')}>
+                      <Link
+                        to={{ name: 'edit', resourceId, recordId }}
+                        aria-label={t('common:edit')}
+                      >
                         <Pencil className="size-4" />
                         <span className="hidden sm:inline">{t('common:edit')}</span>
                       </Link>
@@ -177,16 +184,14 @@ export function ResourceShowPage({
                       openActionComponent(action, { recordId })
                       return
                     }
-                    if (!await confirmGuard(action, dialogs)) return
+                    if (!(await confirmGuard(action, dialogs))) return
                     void invokeRecord
                       .mutateAsync({ recordId, actionName: action.name })
                       .then((res) => showActionNotice(notify, res.notice))
-                      .catch((err: Error) =>
-                        notify.error({ message: err.message }),
-                      )
+                      .catch((err: Error) => notify.error({ message: err.message }))
                   }}
                   t={t}
-                  trigger={(
+                  trigger={
                     <Button
                       variant="outline"
                       size="sm"
@@ -196,7 +201,7 @@ export function ResourceShowPage({
                       <Zap className="size-4" />
                       <span className="hidden sm:inline">{t('common:actions')}</span>
                     </Button>
-                  )}
+                  }
                 />
               )}
             </div>
@@ -208,22 +213,27 @@ export function ResourceShowPage({
             {record.isError && <PageError error={record.error} t={t} />}
             {record.data && (
               <dl className="[column-fill:_balance] md:columns-2">
-                {visibleRecordProperties(resource.properties, 'show', resource.propertyOrder?.show)
-                  .map((p) => (
-                    <div key={p.path} className="mb-8 break-inside-avoid">
-                      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        {p.label}
-                      </dt>
-                      <dd className="mt-1">
-                        <PropertyDisplay
-                          property={p}
-                          value={record.data!.record.params[p.path]}
-                          view="show"
-                          populated={record.data!.record.populated as Record<string, unknown> | undefined}
-                        />
-                      </dd>
-                    </div>
-                  ))}
+                {visibleRecordProperties(
+                  resource.properties,
+                  'show',
+                  resource.propertyOrder?.show,
+                ).map((p) => (
+                  <div key={p.path} className="mb-8 break-inside-avoid">
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {p.label}
+                    </dt>
+                    <dd className="mt-1">
+                      <PropertyDisplay
+                        property={p}
+                        value={record.data!.record.params[p.path]}
+                        view="show"
+                        populated={
+                          record.data!.record.populated as Record<string, unknown> | undefined
+                        }
+                      />
+                    </dd>
+                  </div>
+                ))}
               </dl>
             )}
           </div>

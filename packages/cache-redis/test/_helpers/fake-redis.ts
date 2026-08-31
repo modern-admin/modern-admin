@@ -24,9 +24,26 @@ export class FakeRedis {
   }
 
   async set(key: string, value: string | number | Buffer): Promise<'OK'>
-  async set(key: string, value: string | number | Buffer, mode: 'EX', ttl: number | string): Promise<'OK'>
-  async set(key: string, value: string | number | Buffer, mode: 'PX', ttl: number | string, condition: 'NX'): Promise<'OK' | null>
-  async set(key: string, value: string | number | Buffer, mode?: 'EX' | 'PX', ttl?: number | string, condition?: 'NX'): Promise<'OK' | null> {
+  async set(
+    key: string,
+    value: string | number | Buffer,
+    mode: 'EX',
+    ttl: number | string,
+  ): Promise<'OK'>
+  async set(
+    key: string,
+    value: string | number | Buffer,
+    mode: 'PX',
+    ttl: number | string,
+    condition: 'NX',
+  ): Promise<'OK' | null>
+  async set(
+    key: string,
+    value: string | number | Buffer,
+    mode?: 'EX' | 'PX',
+    ttl?: number | string,
+    condition?: 'NX',
+  ): Promise<'OK' | null> {
     const v = typeof value === 'string' ? value : String(value)
     this.record('set', mode ? [key, v, mode, ttl, ...(condition ? [condition] : [])] : [key, v])
     if (condition === 'NX' && this.store.has(key)) return null
@@ -48,7 +65,7 @@ export class FakeRedis {
   }
 
   async sadd(key: string, ...values: (string | number | Buffer)[]): Promise<number> {
-    const stringValues = values.map((v) => typeof v === 'string' ? v : String(v))
+    const stringValues = values.map((v) => (typeof v === 'string' ? v : String(v)))
     this.record('sadd', [key, ...stringValues])
     const set = this.sets.get(key) ?? new Set<string>()
     let added = 0
@@ -218,7 +235,10 @@ export class FakeRedis {
   off(event: string, handler: (channel: string, message: string) => void): this {
     this.record('off', [event])
     for (const [channel, listeners] of this.channels) {
-      this.channels.set(channel, listeners.filter((fn) => fn !== handler))
+      this.channels.set(
+        channel,
+        listeners.filter((fn) => fn !== handler),
+      )
     }
     return this
   }

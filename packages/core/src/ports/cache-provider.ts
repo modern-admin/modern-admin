@@ -121,9 +121,10 @@ export class MemoryCacheProvider implements ICacheProvider {
     if (this.maxEntries === 0) return
     const baseTtl = options.ttl
     const ratio = Math.max(0, options.jitterRatio ?? 0)
-    const ttl = baseTtl != null && baseTtl > 0
-      ? baseTtl + Math.floor(Math.random() * ratio * baseTtl)
-      : baseTtl
+    const ttl =
+      baseTtl != null && baseTtl > 0
+        ? baseTtl + Math.floor(Math.random() * ratio * baseTtl)
+        : baseTtl
     const ttlMs = ttl != null && ttl > 0 ? ttl * 1000 : Number.POSITIVE_INFINITY
     const tags = Array.from(new Set(options.tags ?? []))
     this.entries.set(key, { value, tags, expiresAt: Date.now() + ttlMs })

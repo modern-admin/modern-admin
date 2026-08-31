@@ -3,6 +3,8 @@ import { z } from 'zod/v4'
 import {
   chartDefZ,
   type CurrentAdmin,
+  type FilterMap,
+  filterMapZ,
   type IDashboardStore,
   type ModernAdmin,
   type RecordJSON,
@@ -113,7 +115,8 @@ const formatForLog = (value: unknown): string => {
  * object preserving all other properties (description, inputSchema).
  */
 const decorateWithDebugLogging = (name: string, value: AiTool): AiTool => {
-  const original = (value as { execute?: (input: unknown, ctx?: unknown) => Promise<unknown> }).execute
+  const original = (value as { execute?: (input: unknown, ctx?: unknown) => Promise<unknown> })
+    .execute
   if (typeof original !== 'function') return value
   return {
     ...value,
@@ -136,9 +139,10 @@ const decorateWithDebugLogging = (name: string, value: AiTool): AiTool => {
 }
 
 const sanitizeToolName = (value: string): string =>
-  value.replace(/[^a-zA-Z0-9_]+/g, '_').replace(/^_+|_+$/g, '').toLowerCase()
-
-const filterValueZ = z.union([z.string(), z.number(), z.boolean()])
+  value
+    .replace(/[^a-zA-Z0-9_]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .toLowerCase()
 
 interface RecordSummary {
   id: string
@@ -192,7 +196,10 @@ const scoreResourceCandidate = (candidate: ResourceCandidate): number => {
   return score
 }
 
-const pickResourceCandidates = (candidates: ResourceCandidate[], debug: boolean): ResourceCandidate[] => {
+const pickResourceCandidates = (
+  candidates: ResourceCandidate[],
+  debug: boolean,
+): ResourceCandidate[] => {
   const byDatabaseName = new Map<string, ResourceCandidate[]>()
   for (const candidate of candidates) {
     const key = `${candidate.resource.databaseType()}:${candidate.resource.databaseName()}`
@@ -209,7 +216,10 @@ const pickResourceCandidates = (candidates: ResourceCandidate[], debug: boolean)
     if (debug && list.length > 1) {
       logger.debug(
         `AI tool database resource collision for "${key}"; selected "${winner.resourceId}", skipped ` +
-        list.slice(1).map((candidate) => `"${candidate.resourceId}"`).join(', '),
+          list
+            .slice(1)
+            .map((candidate) => `"${candidate.resourceId}"`)
+            .join(', '),
       )
     }
   }
@@ -229,7 +239,10 @@ const pickResourceCandidates = (candidates: ResourceCandidate[], debug: boolean)
     if (debug && list.length > 1) {
       logger.debug(
         `AI tool resource collision for "${winner.baseName}"; selected "${winner.resourceId}", skipped ` +
-        list.slice(1).map((candidate) => `"${candidate.resourceId}"`).join(', '),
+          list
+            .slice(1)
+            .map((candidate) => `"${candidate.resourceId}"`)
+            .join(', '),
       )
     }
   }
@@ -237,7 +250,8 @@ const pickResourceCandidates = (candidates: ResourceCandidate[], debug: boolean)
 }
 
 const buildSqlResource = (candidate: ResourceCandidate): AiAssistantSqlResource => {
-  const columns = candidate.resource.properties()
+  const columns = candidate.resource
+    .properties()
     .filter((property) => {
       const field = (property as { field?: { kind?: string } }).field
       return field?.kind !== 'object'
@@ -295,7 +309,9 @@ const toJsonSafe = (value: unknown): unknown => {
 
 const hintSqlError = (message: string, sqlResources: AiAssistantSqlResource[]): string => {
   const relation = /relation "([^"]+)" does not exist/i.exec(message)?.[1]
-  const column = /column (?:[a-zA-Z_][a-zA-Z0-9_]*\.)?([a-zA-Z0-9_]+) does not exist/i.exec(message)?.[1]
+  const column = /column (?:[a-zA-Z_][a-zA-Z0-9_]*\.)?([a-zA-Z0-9_]+) does not exist/i.exec(
+    message,
+  )?.[1]
   if (!relation && !column) return message
   const tables = sqlResources.map((resource) => resource.tableName)
   if (column) {
@@ -307,7 +323,9 @@ const hintSqlError = (message: string, sqlResources: AiAssistantSqlResource[]): 
     }
     return `${message}\nHint: PostgreSQL folds unquoted identifiers to lowercase. Use the exact column names from SQL schema hints and wrap camelCase identifiers in double quotes.`
   }
-  const resource = sqlResources.find((item) => item.resourceId === relation || item.tableName === relation)
+  const resource = sqlResources.find(
+    (item) => item.resourceId === relation || item.tableName === relation,
+  )
   const hint = resource
     ? `Use table "${resource.tableName}" for resource "${resource.resourceId}".`
     : `Known tables: ${tables.map((table) => `"${table}"`).join(', ')}.`
@@ -354,7 +372,8 @@ export function buildAiAssistantTools({
   const DATE_PROP_TYPES = new Set(['date', 'datetime'])
   const resourceDateFields = new Map<string, string[]>()
   for (const candidate of candidates) {
-    const dateProps = candidate.resource.properties()
+    const dateProps = candidate.resource
+      .properties()
       .filter((p) => DATE_PROP_TYPES.has(String(p.type())))
       .map((p) => p.path())
     if (dateProps.length > 0) {
@@ -365,7 +384,9 @@ export function buildAiAssistantTools({
   const allowedActions = new Map<string, Set<'list' | 'show' | 'search'>>()
   for (const candidate of pickResourceCandidates(candidates, debug)) {
     const { resourceId, actionNames } = candidate
-    const actions = (['list', 'show', 'search'] as const).filter((action) => actionNames.has(action))
+    const actions = (['list', 'show', 'search'] as const).filter((action) =>
+      actionNames.has(action),
+    )
     if (actions.length > 0) {
       allowedActions.set(resourceId, new Set(actions))
       for (const action of actions) descriptors.push({ name: 'query_resource', resourceId, action })
@@ -388,10 +409,10 @@ export function buildAiAssistantTools({
         perPage?: number
         sortBy?: string
         direction?: 'asc' | 'desc'
-        filters?: Record<string, string | number | boolean>
+        filters?: FilterMap
       },
     ) => {
-      const result = await admin.invoke(
+      const result = (await admin.invoke(
         {
           params: { resourceId, action: 'list' },
           method: 'get',
@@ -400,15 +421,11 @@ export function buildAiAssistantTools({
             ...(opts.perPage !== undefined ? { perPage: opts.perPage } : {}),
             ...(opts.sortBy ? { sortBy: opts.sortBy } : {}),
             ...(opts.direction ? { direction: opts.direction } : {}),
-            ...(opts.filters
-              ? Object.fromEntries(
-                Object.entries(opts.filters).map(([key, value]) => [`filters.${key}`, value]),
-              )
-              : {}),
+            ...(opts.filters ? { filters: opts.filters } : {}),
           },
         },
         currentAdmin,
-      ) as { records?: RecordJSON[]; meta?: { total?: number } }
+      )) as { records?: RecordJSON[]; meta?: { total?: number } }
       const records = (result.records ?? [])
         .slice(0, maxRecordsPerTool)
         .map((record) => summarizeRecord(record, maxFieldsPerRecord))
@@ -418,15 +435,19 @@ export function buildAiAssistantTools({
         summary: `listed ${records.length} ${resourceId}`,
         total: result.meta?.total ?? records.length,
         records,
-        citations: records.map((record) => ({ resourceId, recordId: record.id, label: record.title })),
+        citations: records.map((record) => ({
+          resourceId,
+          recordId: record.id,
+          label: record.title,
+        })),
       }
     }
 
     const runShow = async (resourceId: string, recordId: string) => {
-      const result = await admin.invoke(
+      const result = (await admin.invoke(
         { params: { resourceId, recordId, action: 'show' }, method: 'get' },
         currentAdmin,
-      ) as { record?: RecordJSON }
+      )) as { record?: RecordJSON }
       const record = result.record ? summarizeRecord(result.record, maxFieldsPerRecord) : null
       return {
         resourceId,
@@ -440,10 +461,10 @@ export function buildAiAssistantTools({
     }
 
     const runSearch = async (resourceId: string, query: string) => {
-      const result = await admin.invoke(
+      const result = (await admin.invoke(
         { params: { resourceId, action: 'search' }, method: 'get', query: { q: query } },
         currentAdmin,
-      ) as { records?: RecordJSON[] }
+      )) as { records?: RecordJSON[] }
       const records = (result.records ?? [])
         .slice(0, maxRecordsPerTool)
         .map((record) => summarizeRecord(record, maxFieldsPerRecord))
@@ -452,7 +473,11 @@ export function buildAiAssistantTools({
         action: 'search' as const,
         summary: `searched ${resourceId}: ${records.length} results`,
         records,
-        citations: records.map((record) => ({ resourceId, recordId: record.id, label: record.title })),
+        citations: records.map((record) => ({
+          resourceId,
+          recordId: record.id,
+          label: record.title,
+        })),
       }
     }
 
@@ -464,7 +489,10 @@ export function buildAiAssistantTools({
         '- action="show": fetch one record (requires `recordId`);\n' +
         '- action="search": free-text search (requires `query`).',
       inputSchema: z.object({
-        resourceId: z.string().min(1).describe('Resource id from "Available resources and actions"'),
+        resourceId: z
+          .string()
+          .min(1)
+          .describe('Resource id from "Available resources and actions"'),
         action: z.enum(['list', 'show', 'search']),
         recordId: z.string().optional().describe('Record primary key; required when action="show"'),
         query: z.string().optional().describe('Free-text query; required when action="search"'),
@@ -472,15 +500,31 @@ export function buildAiAssistantTools({
         perPage: z.number().int().positive().max(maxRecordsPerTool).optional(),
         sortBy: z.string().optional(),
         direction: z.enum(['asc', 'desc']).optional(),
-        filters: z.record(z.string(), filterValueZ).optional(),
+        filters: filterMapZ.optional(),
       }),
-      execute: async ({ resourceId, action, recordId, query, page, perPage, sortBy, direction, filters }) => {
+      execute: async ({
+        resourceId,
+        action,
+        recordId,
+        query,
+        page,
+        perPage,
+        sortBy,
+        direction,
+        filters,
+      }) => {
         const allowed = allowedActions.get(resourceId)
         if (!allowed) {
-          return { error: `Unknown resource "${resourceId}". Use one from "Available resources and actions".`, citations: [] }
+          return {
+            error: `Unknown resource "${resourceId}". Use one from "Available resources and actions".`,
+            citations: [],
+          }
         }
         if (!allowed.has(action)) {
-          return { error: `Resource "${resourceId}" does not support action "${action}". Supported: ${[...allowed].join(', ')}.`, citations: [] }
+          return {
+            error: `Resource "${resourceId}" does not support action "${action}". Supported: ${[...allowed].join(', ')}.`,
+            citations: [],
+          }
         }
         if (action === 'show') {
           if (!recordId) return { error: 'action="show" requires "recordId".', citations: [] }
@@ -503,11 +547,15 @@ export function buildAiAssistantTools({
         'sorting (ORDER BY), and JOINs across tables that individual ' +
         'list/show tools cannot express in a single call. ' +
         'Only SELECT queries are permitted. Results are capped at ' +
-        SQL_MAX_ROWS + ' rows.',
+        SQL_MAX_ROWS +
+        ' rows.',
       inputSchema: z.object({
-        query: z.string().min(1).describe(
-          'A SQL SELECT query using database table names from the SQL schema hints. No INSERT, UPDATE, DELETE, DROP, or multiple statements.',
-        ),
+        query: z
+          .string()
+          .min(1)
+          .describe(
+            'A SQL SELECT query using database table names from the SQL schema hints. No INSERT, UPDATE, DELETE, DROP, or multiple statements.',
+          ),
       }),
       execute: async ({ query }) => {
         const normalizedQuery = normalizeSqlInput(query)
@@ -544,41 +592,59 @@ export function buildAiAssistantTools({
     // timestamps are generated by the tool itself.
     const chartInputZ = z.object({
       title: z.string().min(1).max(120).describe('Human-readable chart title'),
-      resource: z.string().min(1).describe('Resource id (snake_case, matches a registered admin resource)'),
-      visualisation: z.enum(['kpi', 'line', 'area', 'bar']).describe(
-        'kpi = single KPI tile; line/area/bar = time-series chart',
-      ),
-      dateField: z.string().min(1).describe(
-        'Property path of a date/datetime column to bucket by. ' +
-        'MUST be an actual date/datetime property of the chosen resource — ' +
-        'never assume "createdAt". ' +
-        'See "Available date fields per resource" in the create_dashboard_chart ' +
-        'description for the exact valid paths for each resource.',
-      ),
-      step: z.enum(['day', 'week', 'month', 'year', 'all']).describe(
-        'Bucket granularity. Must be "all" for kpi. Use "day"/"week"/"month"/"year" for time-series.',
-      ),
+      resource: z
+        .string()
+        .min(1)
+        .describe('Resource id (snake_case, matches a registered admin resource)'),
+      visualisation: z
+        .enum(['kpi', 'line', 'area', 'bar'])
+        .describe('kpi = single KPI tile; line/area/bar = time-series chart'),
+      dateField: z
+        .string()
+        .min(1)
+        .describe(
+          'Property path of a date/datetime column to bucket by. ' +
+            'MUST be an actual date/datetime property of the chosen resource — ' +
+            'never assume "createdAt". ' +
+            'See "Available date fields per resource" in the create_dashboard_chart ' +
+            'description for the exact valid paths for each resource.',
+        ),
+      step: z
+        .enum(['day', 'week', 'month', 'year', 'all'])
+        .describe(
+          'Bucket granularity. Must be "all" for kpi. Use "day"/"week"/"month"/"year" for time-series.',
+        ),
       metric: z.enum(['count', 'sum', 'avg', 'min', 'max']).describe('Aggregation function'),
-      field: z.string().optional().describe('Property path to aggregate (required for sum/avg/min/max)'),
-      groupBy: z.string().optional().describe('Optional secondary breakdown field (produces one series per value)'),
-      timeRange: z.enum(['7d', '30d', '90d', '1y', 'all']).default('30d').describe('Default time window'),
-      width: z.enum(['half', 'full']).default('half').describe('Tile width: half = 1 of 2 columns, full = full row'),
-      filters: z
-        .record(z.string(), z.string())
+      field: z
+        .string()
+        .optional()
+        .describe('Property path to aggregate (required for sum/avg/min/max)'),
+      groupBy: z
+        .string()
+        .optional()
+        .describe('Optional secondary breakdown field (produces one series per value)'),
+      timeRange: z
+        .enum(['7d', '30d', '90d', '1y', 'all'])
+        .default('30d')
+        .describe('Default time window'),
+      width: z
+        .enum(['half', 'full'])
+        .default('half')
+        .describe('Tile width: half = 1 of 2 columns, full = full row'),
+      filters: filterMapZ
         .optional()
         .describe(
-          'Exact-match filters as { "<propertyPath>": "<value>" }. ' +
-          'Values MUST be strings — convert numbers/booleans/ids with String(...). ' +
-          'Use this whenever the user scopes the chart to a specific entity ' +
-          '(e.g. comments for one post: { "postId": "00000000-0004-4000-8000-000000000076" }, ' +
-          'orders for one customer: { "customerId": "..." }, posts in a category: { "categoryId": "..." }).',
+          'Structured filters keyed by property path, for example ' +
+            '{ "status": { "operator": "eq", "value": "paid" } }. ' +
+            'Use this whenever the user scopes the chart to a specific entity ' +
+            '(e.g. comments for one post: { "postId": { "operator": "eq", "value": "..." } }).',
         ),
       quickFilters: z
         .array(z.string())
         .optional()
         .describe(
           'Property paths from `filters` to expose as editable quick-filter controls above the chart. ' +
-          'Optional — omit for one-off scoped charts; include when the dashboard user should be able to retarget the filter.',
+            'Optional — omit for one-off scoped charts; include when the dashboard user should be able to retarget the filter.',
         ),
       groupId: z
         .string()
@@ -586,8 +652,8 @@ export function buildAiAssistantTools({
         .optional()
         .describe(
           'Id of an existing dashboard group to place the chart in. ' +
-          'Call list_dashboard_charts first to get available group ids. ' +
-          'If omitted the chart goes into the first group (or ungrouped when no groups exist).',
+            'Call list_dashboard_charts first to get available group ids. ' +
+            'If omitted the chart goes into the first group (or ungrouped when no groups exist).',
         ),
     })
 
@@ -633,11 +699,11 @@ export function buildAiAssistantTools({
     if (dashboardWritable) {
       tools['create_dashboard_chart'] = tool({
         description:
-        'Create a new chart on the shared dashboard. The chart becomes visible to all admins immediately. ' +
-        'Pick a clear title, match resource/dateField/metric to what the user is asking for. ' +
-        'Use step="all" + visualisation="kpi" for single-number KPI widgets.\n\n' +
-        'Available date fields per resource (use one of these for dateField — never guess):\n' +
-        (dateFieldsHint || '  (none detected)'),
+          'Create a new chart on the shared dashboard. The chart becomes visible to all admins immediately. ' +
+          'Pick a clear title, match resource/dateField/metric to what the user is asking for. ' +
+          'Use step="all" + visualisation="kpi" for single-number KPI widgets.\n\n' +
+          'Available date fields per resource (use one of these for dateField — never guess):\n' +
+          (dateFieldsHint || '  (none detected)'),
         inputSchema: chartInputZ,
         execute: async (input) => {
           const now = new Date().toISOString()
@@ -645,9 +711,9 @@ export function buildAiAssistantTools({
           const sortedGroups = [...blob.groups].sort((a, b) => a.order - b.order)
           // Prefer the explicitly requested group; fall back to first group.
           const resolvedGroupId =
-          (input.groupId && sortedGroups.some((g) => g.id === input.groupId))
-            ? input.groupId
-            : sortedGroups[0]?.id
+            input.groupId && sortedGroups.some((g) => g.id === input.groupId)
+              ? input.groupId
+              : sortedGroups[0]?.id
           // Auto-correct dateField: if the AI provided a path that isn't a
           // known date/datetime property, silently use the first known one.
           const knownDateFields = resourceDateFields.get(input.resource) ?? []
@@ -658,7 +724,7 @@ export function buildAiAssistantTools({
             const fallback = knownDateFields[0]!
             logger.warn(
               `AI chart: dateField "${input.dateField}" not found on resource ` +
-            `"${input.resource}"; auto-using "${fallback}"`,
+                `"${input.resource}"; auto-using "${fallback}"`,
             )
             return fallback
           })()
@@ -698,8 +764,8 @@ export function buildAiAssistantTools({
 
       tools['update_dashboard_chart'] = tool({
         description:
-        'Update an existing dashboard chart by id. Use list_dashboard_charts first to find the id. ' +
-        'Only the fields you pass are changed — omit a field to keep its current value.',
+          'Update an existing dashboard chart by id. Use list_dashboard_charts first to find the id. ' +
+          'Only the fields you pass are changed — omit a field to keep its current value.',
         inputSchema: z.object({
           id: z.string().min(1).describe('Chart id from list_dashboard_charts'),
           patch: chartInputZ.partial().describe('Fields to update'),
@@ -711,7 +777,9 @@ export function buildAiAssistantTools({
           const prev = blob.charts[idx]!
           // Validate groupId patch against existing groups.
           const patchGroupId = patch.groupId
-            ? (blob.groups.some((g) => g.id === patch.groupId) ? patch.groupId : undefined)
+            ? blob.groups.some((g) => g.id === patch.groupId)
+              ? patch.groupId
+              : undefined
             : undefined
           // Auto-correct dateField patch for the same reason as in create.
           const patchDateField = (() => {
@@ -721,7 +789,7 @@ export function buildAiAssistantTools({
             const fallback = known[0]!
             logger.warn(
               `AI chart update: dateField "${patch.dateField}" not found on ` +
-            `"${prev.resource}"; auto-using "${fallback}"`,
+                `"${prev.resource}"; auto-using "${fallback}"`,
             )
             return fallback
           })()
@@ -811,8 +879,14 @@ export function buildAiAssistantTools({
         description:
           'Open a client-side media generation draft with a prompt. This never starts a paid request; the user must review the model, confirm the cost, and submit it in the UI.',
         inputSchema: z.object({
-          prompt: z.string().min(1).max(10_000).describe('Prompt to prefill in the media generation form'),
-          mediaType: z.enum(['image', 'video', 'music']).optional()
+          prompt: z
+            .string()
+            .min(1)
+            .max(10_000)
+            .describe('Prompt to prefill in the media generation form'),
+          mediaType: z
+            .enum(['image', 'video', 'music'])
+            .optional()
             .describe('Preferred output type. Defaults to image.'),
         }),
         execute: async ({ prompt, mediaType }) => {

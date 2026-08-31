@@ -13,9 +13,7 @@ import { expect, test } from '@playwright/test'
 const NONEXISTENT_ID = '99999999'
 
 test.describe('Not-found handling', () => {
-  test('show page with a missing record renders the not-found card', async ({
-    page,
-  }) => {
+  test('show page with a missing record renders the not-found card', async ({ page }) => {
     await page.goto(`/resources/customers/${NONEXISTENT_ID}`)
 
     // Header anchored to the requested id (we never throw — breadcrumb chain
@@ -32,14 +30,10 @@ test.describe('Not-found handling', () => {
     // No data field renders — the record's `<dl>` is omitted when the query
     // is in error state.
     await expect(page.locator('dl')).toHaveCount(0)
-    await expect(page).toHaveURL(
-      new RegExp(`/resources/customers/${NONEXISTENT_ID}$`),
-    )
+    await expect(page).toHaveURL(new RegExp(`/resources/customers/${NONEXISTENT_ID}$`))
   })
 
-  test('edit page with a missing record renders the not-found card', async ({
-    page,
-  }) => {
+  test('edit page with a missing record renders the not-found card', async ({ page }) => {
     await page.goto(`/resources/customers/${NONEXISTENT_ID}/edit`)
 
     // Same chrome as show-page error path — heading + inline error.
@@ -57,9 +51,7 @@ test.describe('Not-found handling', () => {
     await expect(page.getByRole('button', { name: 'Back' })).toBeVisible()
   })
 
-  test('unrouted path falls through to the router not-found page', async ({
-    page,
-  }) => {
+  test('unrouted path falls through to the router not-found page', async ({ page }) => {
     await page.goto('/this-route-does-not-exist')
     // Don't assert on TSR's internal default-component text (subject to
     // change between minor versions). Instead, assert that no expected app
@@ -75,9 +67,7 @@ test.describe('Not-found handling', () => {
     await expect(page.locator('body')).toContainText(/not found/i)
   })
 
-  test('unknown sub-segment under a valid resource also routes to not-found', async ({
-    page,
-  }) => {
+  test('unknown sub-segment under a valid resource also routes to not-found', async ({ page }) => {
     // `$resourceId/$recordId/edit` is the deepest matching pattern; an
     // unknown action segment falls through.
     await page.goto('/resources/customers/1/bogus-segment')

@@ -1,6 +1,6 @@
 import { Body, Controller, Inject, Optional, Post, Req, UseGuards } from '@nestjs/common'
 import { ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
-import { Filter, type ModernAdmin, NotImplementedError } from '@modern-admin/core'
+import { Filter, filterMapZ, type ModernAdmin, NotImplementedError } from '@modern-admin/core'
 import type {
   AggregationOp,
   CurrentAdmin,
@@ -26,7 +26,7 @@ const requestZ = z.object({
   topN: z.number().int().min(1).max(50).optional(),
   from: z.iso.datetime(),
   to: z.iso.datetime(),
-  filters: z.record(z.string(), z.string()).optional(),
+  filters: filterMapZ.optional(),
   comparePrevious: z.boolean().optional(),
   /** Resource id whose records the groupBy series keys (FK ids) belong to. */
   groupByLabelResource: z.string().min(1).optional(),
@@ -76,10 +76,7 @@ export class AnalyticsController {
 
   @ApiOperation({ summary: 'Aggregate time-series for a resource (KPI = step:"all")' })
   @Post('timeseries')
-  async timeseries(
-    @Body() body: unknown,
-    @Req() req: AdminRequest,
-  ): Promise<TimeSeriesResponse> {
+  async timeseries(@Body() body: unknown, @Req() req: AdminRequest): Promise<TimeSeriesResponse> {
     const parsed = requestZ.parse(body)
 
     let resource
@@ -93,7 +90,7 @@ export class AnalyticsController {
       return { series: [], supported: false }
     }
 
-    const filter = new Filter((parsed.filters ?? {}) as never, resource)
+    const filter = new Filter(parsed.filters ?? {}, resource)
 
     const query: TimeSeriesQuery = {
       dateField: parsed.dateField,

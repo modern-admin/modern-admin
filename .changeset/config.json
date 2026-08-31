@@ -1,9 +1,6 @@
 {
   "$schema": "https://unpkg.com/@changesets/config@3.0.0/schema.json",
-  "changelog": [
-    "@changesets/changelog-github",
-    { "repo": "modern-admin/modern-admin" }
-  ],
+  "changelog": ["@changesets/changelog-github", { "repo": "modern-admin/modern-admin" }],
   "commit": false,
   "fixed": [],
   "linked": [["@modern-admin/*"]],

@@ -35,37 +35,39 @@ const populateReferences = async (
   admin: ModernAdmin,
 ): Promise<void> => {
   if (records.length === 0) return
-  const refs = resource.properties().filter((p) =>
-    p.reference() !== null && !p.isArray() && !p.isId(),
-  )
+  const refs = resource
+    .properties()
+    .filter((p) => p.reference() !== null && !p.isArray() && !p.isId())
   if (refs.length === 0) return
 
-  await Promise.all(refs.map(async (prop) => {
-    const referencedId = prop.reference()
-    if (!referencedId) return
-    let referenced: BaseResource
-    try {
-      referenced = admin.findResource(referencedId)
-    } catch {
-      return
-    }
-    const path = prop.path()
-    const ids = new Set<string>()
-    for (const record of records) {
-      const value = record.get(path)
-      if (value == null || value === '') continue
-      ids.add(String(value))
-    }
-    if (ids.size === 0) return
-    const related = await referenced.findMany(Array.from(ids))
-    const byId = new Map(related.map((r) => [String(r.id()), r]))
-    for (const record of records) {
-      const value = record.get(path)
-      if (value == null || value === '') continue
-      const found = byId.get(String(value))
-      if (found) record.populate(path, found)
-    }
-  }))
+  await Promise.all(
+    refs.map(async (prop) => {
+      const referencedId = prop.reference()
+      if (!referencedId) return
+      let referenced: BaseResource
+      try {
+        referenced = admin.findResource(referencedId)
+      } catch {
+        return
+      }
+      const path = prop.path()
+      const ids = new Set<string>()
+      for (const record of records) {
+        const value = record.get(path)
+        if (value == null || value === '') continue
+        ids.add(String(value))
+      }
+      if (ids.size === 0) return
+      const related = await referenced.findMany(Array.from(ids))
+      const byId = new Map(related.map((r) => [String(r.id()), r]))
+      for (const record of records) {
+        const value = record.get(path)
+        if (value == null || value === '') continue
+        const found = byId.get(String(value))
+        if (found) record.populate(path, found)
+      }
+    }),
+  )
 }
 
 const handler = async (
@@ -142,9 +144,7 @@ const handler = async (
     },
     async () => {
       const sortOption =
-        sortBy != null
-          ? { sort: { sortBy, ...(direction ? { direction } : {}) } }
-          : {}
+        sortBy != null ? { sort: { sortBy, ...(direction ? { direction } : {}) } } : {}
       const [records, total] = await Promise.all([
         resource.find(filter, { limit: perPage, offset: (page - 1) * perPage, ...sortOption }),
         resource.count(filter),

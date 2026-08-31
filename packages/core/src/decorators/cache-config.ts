@@ -63,9 +63,7 @@ export function resolveResourceCacheConfig(
   // then the action default.
   const ttl =
     perAction?.ttl ??
-    (strategy === 'tag-only'
-      ? TAG_ONLY_TTL_SECONDS
-      : (cfg?.ttl ?? DEFAULT_TTL_SECONDS[action]))
+    (strategy === 'tag-only' ? TAG_ONLY_TTL_SECONDS : (cfg?.ttl ?? DEFAULT_TTL_SECONDS[action]))
 
   return {
     enabled: true,

@@ -1,11 +1,18 @@
 export {
   Filter,
   FILTER_OPERATORS,
+  filterCriterionZ,
+  filterInputZ,
+  filterMapZ,
   MATCHING_PATTERNS,
   PARAM_SEPARATOR,
   parseOperatorValue,
+  type FilterCriterion,
   type FilterElement,
+  type FilterInput,
+  type FilterMap,
   type FilterOperator,
   type FilterValue,
+  type InFilterScalar,
   type RawFilters,
 } from './filter.js'

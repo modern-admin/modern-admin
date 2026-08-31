@@ -78,6 +78,23 @@ async function seedDashboard(
   expect(res.ok(), 'seed dashboard').toBeTruthy()
 }
 
+async function createCustomerWithName(request: APIRequestContext, name: string): Promise<string> {
+  const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const response = await request.post(adminApi('/resources/customers/actions/new'), {
+    data: { email: `chart-filter-${suffix}@example.com`, name, tier: 'free' },
+  })
+  expect(response.ok(), 'create chart filter customer').toBeTruthy()
+  return String((await response.json()).record.id)
+}
+
+async function deleteCustomerSilently(request: APIRequestContext, id: string): Promise<void> {
+  try {
+    await request.delete(adminApi(`/resources/customers/records/${id}/actions/delete`))
+  } catch {
+    // A timed-out Playwright test may dispose its request context before cleanup.
+  }
+}
+
 /** Locate a Radix select trigger by its `id` attribute. */
 function selectTriggerById(page: Page, id: string) {
   return page.locator(`#${id}`)
@@ -113,6 +130,38 @@ test.describe('Dashboard chart builder — UI', () => {
     await expect(page.getByRole('button', { name: /^Add group$/ })).toBeVisible()
   })
 
+  test('renders builder tooltips outside the scroll-clipped dialog', async ({ page }) => {
+    await page.goto('/')
+    await page.getByRole('button', { name: /^Add chart$/ }).click()
+    await page.setViewportSize({ width: 375, height: 812 })
+
+    const dialog = page.getByRole('dialog')
+    const orderTooltipTrigger = dialog.locator('button:has(svg.lucide-info)').first()
+    await orderTooltipTrigger.hover()
+
+    const tooltip = page.getByRole('tooltip')
+    await expect(tooltip).toBeVisible()
+    await expect(tooltip).toHaveText('Lower numbers come first.')
+    expect(await tooltip.evaluate((element) => element.closest('[role="dialog"]'))).toBeNull()
+
+    const bounds = await tooltip.boundingBox()
+    expect(bounds).not.toBeNull()
+    expect(bounds!.x).toBeGreaterThanOrEqual(0)
+    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(
+      await page.evaluate(() => window.innerWidth),
+    )
+    expect(
+      await tooltip.evaluate((element) => {
+        const rect = element.getBoundingClientRect()
+        const topmost = document.elementFromPoint(
+          rect.left + rect.width / 2,
+          rect.top + rect.height / 2,
+        )
+        return topmost === element || element.contains(topmost)
+      }),
+    ).toBe(true)
+  })
+
   test('creates a KPI chart through the builder and persists across reload', async ({ page }) => {
     await page.goto('/')
     await page.getByRole('button', { name: /^Add chart$/ }).click()
@@ -140,6 +189,73 @@ test.describe('Dashboard chart builder — UI', () => {
     // Reload — ServerDashboardStore round-trip must keep the chart visible.
     await page.reload()
     await expect(page.getByText('E2E KPI Posts')).toBeVisible({ timeout: 15_000 })
+  })
+
+  test('persists operator-based chart filters', async ({ page, request }) => {
+    await page.goto('/')
+    await page.getByRole('button', { name: /^Add chart$/ }).click()
+    const dialog = page.getByRole('dialog')
+
+    await dialog.locator('#chart-title').fill('Filtered posts')
+    await selectTriggerById(page, 'chart-resource').click()
+    await pickOption(page, /^Posts/)
+    await selectTriggerById(page, 'chart-datefield').click()
+    await pickOption(page, 'Published At')
+    await dialog.getByRole('tab', { name: 'Filters' }).click()
+
+    await selectTriggerById(page, 'flt-publishedAt').click()
+    await pickOption(page, 'Is empty')
+    await selectTriggerById(page, 'flt-title').click()
+    await pickOption(page, 'Is not empty')
+
+    await dialog.getByRole('button', { name: /^Save chart$/ }).click()
+    await expect(dialog).toBeHidden()
+
+    const response = await request.get(adminApi('/dashboard'))
+    expect(response.status()).toBe(200)
+    const body = (await response.json()) as {
+      dashboard: { charts: Array<{ title: string; filters: Record<string, unknown> }> }
+    }
+    const chart = body.dashboard.charts.find((item) => item.title === 'Filtered posts')
+    expect(chart?.filters).toMatchObject({
+      publishedAt: { operator: 'empty' },
+      title: { operator: 'nempty' },
+    })
+  })
+
+  test('preserves commas inside chart filter selections', async ({ page, request }) => {
+    const name = `Smith, John ${Date.now()}`
+    const customerId = await createCustomerWithName(request, name)
+
+    try {
+      await page.goto('/')
+      await page.getByRole('button', { name: /^Add chart$/ }).click()
+      const dialog = page.getByRole('dialog')
+
+      await dialog.locator('#chart-title').fill('Comma-safe filter')
+      await selectTriggerById(page, 'chart-resource').click()
+      await pickOption(page, /^Customers/)
+      await selectTriggerById(page, 'chart-datefield').click()
+      await pickOption(page, 'Member since')
+      await dialog.getByRole('tab', { name: 'Filters' }).click()
+
+      await selectTriggerById(page, 'flt-name').click()
+      await pickOption(page, 'Is one of')
+      await dialog.getByRole('checkbox', { name }).click()
+
+      await dialog.getByRole('button', { name: /^Save chart$/ }).click()
+      await expect(dialog).toBeHidden()
+
+      const response = await request.get(adminApi('/dashboard'))
+      expect(response.status()).toBe(200)
+      const body = (await response.json()) as {
+        dashboard: { charts: Array<{ title: string; filters: Record<string, unknown> }> }
+      }
+      const chart = body.dashboard.charts.find((item) => item.title === 'Comma-safe filter')
+      expect(chart?.filters.name).toEqual({ operator: 'in', values: [name] })
+    } finally {
+      await deleteCustomerSilently(request, customerId)
+    }
   })
 
   test('Save is disabled when the date field is cleared', async ({ page }) => {

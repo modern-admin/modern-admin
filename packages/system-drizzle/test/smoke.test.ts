@@ -20,7 +20,10 @@ import { join } from 'node:path'
 import { setupDrizzleSystem } from '../src/index.js'
 import { systemTables } from '../src/schema/pg.js'
 
-interface Call { method: string; args: unknown[] }
+interface Call {
+  method: string
+  args: unknown[]
+}
 
 function fakeDb(): { calls: Call[]; db: any } {
   const calls: Call[] = []
@@ -41,13 +44,27 @@ function fakeDb(): { calls: Call[]; db: any } {
         return chain
       }
     },
-    apply() { return chain },
+    apply() {
+      return chain
+    },
   })
   const db: any = {
-    insert: (t: unknown) => { calls.push({ method: 'insert', args: [t] }); return chain },
-    select: (f?: unknown) => { calls.push({ method: 'select', args: f === undefined ? [] : [f] }); return chain },
-    update: (t: unknown) => { calls.push({ method: 'update', args: [t] }); return chain },
-    delete: (t: unknown) => { calls.push({ method: 'delete', args: [t] }); return chain },
+    insert: (t: unknown) => {
+      calls.push({ method: 'insert', args: [t] })
+      return chain
+    },
+    select: (f?: unknown) => {
+      calls.push({ method: 'select', args: f === undefined ? [] : [f] })
+      return chain
+    },
+    update: (t: unknown) => {
+      calls.push({ method: 'update', args: [t] })
+      return chain
+    },
+    delete: (t: unknown) => {
+      calls.push({ method: 'delete', args: [t] })
+      return chain
+    },
   }
   return { calls, db }
 }
@@ -69,8 +86,12 @@ describe('setupDrizzleSystem', () => {
     const sys = setupDrizzleSystem(db, systemTables)
     // Compile-time check via runtime keys.
     const keys: (keyof typeof sys)[] = [
-      'logStore', 'webhookStore', 'configStore',
-      'historyStore', 'aiTaskStore', 'cacheStore',
+      'logStore',
+      'webhookStore',
+      'configStore',
+      'historyStore',
+      'aiTaskStore',
+      'cacheStore',
     ]
     for (const k of keys) expect(sys[k]).toBeTruthy()
   })

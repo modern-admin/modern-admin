@@ -48,20 +48,21 @@ const richModel: DmmfModel = {
   fields: [
     field({ name: 'id', type: 'String', isId: true, isRequired: true, hasDefaultValue: true }),
     field({ name: 'name', type: 'String', isRequired: true }),
-    field({ name: 'nick', type: 'String' }),                       // nullable string
-    field({ name: 'age', type: 'Int' }),                           // number
-    field({ name: 'price', type: 'Float' }),                       // float
-    field({ name: 'big', type: 'BigInt' }),                        // number (BigInt)
-    field({ name: 'paid', type: 'Decimal' }),                      // float
-    field({ name: 'active', type: 'Boolean' }),                    // boolean
-    field({ name: 'createdAt', type: 'DateTime' }),                // datetime
-    field({ name: 'meta', type: 'Json' }),                         // json
-    field({ name: 'region', kind: 'enum', type: 'Region' }),       // enum
-    field({ name: 'tags', type: 'String', isList: true }),         // String[] (scalar list)
-    field({ name: 'scores', type: 'Int', isList: true }),          // Int[]
+    field({ name: 'nick', type: 'String' }), // nullable string
+    field({ name: 'age', type: 'Int' }), // number
+    field({ name: 'price', type: 'Float' }), // float
+    field({ name: 'big', type: 'BigInt' }), // number (BigInt)
+    field({ name: 'paid', type: 'Decimal' }), // float
+    field({ name: 'active', type: 'Boolean' }), // boolean
+    field({ name: 'createdAt', type: 'DateTime' }), // datetime
+    field({ name: 'meta', type: 'Json' }), // json
+    field({ name: 'region', kind: 'enum', type: 'Region' }), // enum
+    field({ name: 'tags', type: 'String', isList: true }), // String[] (scalar list)
+    field({ name: 'scores', type: 'Int', isList: true }), // Int[]
     field({
       name: 'authorId',
       type: 'String',
+      isRequired: true,
       isReadOnly: true,
     }),
     field({
@@ -184,19 +185,13 @@ describe('filterToWhere — co operator', () => {
 describe('filterToWhere — nco operator', () => {
   test('nco emits a top-level NOT clause', () => {
     expect(where({ name: 'nco:spam' })).toEqual({
-      AND: [
-        {},
-        { NOT: { name: { contains: 'spam', mode: 'insensitive' } } },
-      ],
+      AND: [{}, { NOT: { name: { contains: 'spam', mode: 'insensitive' } } }],
     })
   })
 
   test('nco combined with another filter merges via AND', () => {
     expect(where({ name: 'nco:spam', age: 'eq:30' })).toEqual({
-      AND: [
-        { age: { equals: 30 } },
-        { NOT: { name: { contains: 'spam', mode: 'insensitive' } } },
-      ],
+      AND: [{ age: { equals: 30 } }, { NOT: { name: { contains: 'spam', mode: 'insensitive' } } }],
     })
   })
 })
@@ -246,12 +241,18 @@ describe('filterToWhere — gt / lt operators', () => {
     // Documents that BigInt fields lose precision because converter uses Number().
     // For Postgres BIGINT this matters past 2^53.
     expect(where({ big: 'gt:9007199254740993' })).toEqual({
-      big: { gt: 9007199254740992 },                                 // off by 1
+      big: { gt: 9007199254740992 }, // off by 1
     })
   })
 })
 
 describe('filterToWhere — between operator', () => {
+  test('structured between criterion on float', () => {
+    expect(where({ price: { operator: 'between', from: '150', to: '420' } })).toEqual({
+      price: { gte: 150, lte: 420 },
+    })
+  })
+
   test('between with from + to on int', () => {
     expect(where({ age: 'between:18,65' })).toEqual({
       age: { gte: 18, lte: 65 },
@@ -307,6 +308,12 @@ describe('filterToWhere — in operator', () => {
     expect(where({ name: 'in:Alice' })).toEqual({ name: { in: ['Alice'] } })
   })
 
+  test('structured in preserves commas inside string values', () => {
+    expect(where({ name: { operator: 'in', values: ['Smith, John'] } })).toEqual({
+      name: { in: ['Smith, John'] },
+    })
+  })
+
   test('in with empty string after operator → no filter applied', () => {
     // `field=in:` arrives when the user unchecks the last item in the
     // "Is one of" picker. The adapter drops the clause entirely so the
@@ -330,12 +337,15 @@ describe('filterToWhere — in operator', () => {
 })
 
 describe('filterToWhere — empty / nempty operators', () => {
-  test('empty on string → OR(null, "")', () => {
+  test('empty on required string checks only the empty string', () => {
     expect(where({ name: 'empty:' })).toEqual({
-      AND: [
-        {},
-        { OR: [{ name: null }, { name: '' }] },
-      ],
+      name: { equals: '', mode: 'insensitive' },
+    })
+  })
+
+  test('empty on nullable string checks null or the empty string', () => {
+    expect(where({ nick: 'empty:' })).toEqual({
+      AND: [{}, { OR: [{ nick: null }, { nick: '' }] }],
     })
   })
 
@@ -345,13 +355,15 @@ describe('filterToWhere — empty / nempty operators', () => {
     })
   })
 
-  test('nempty on string → both NOT(null) and NOT("")', () => {
+  test('nempty on required string excludes only the empty string', () => {
     expect(where({ name: 'nempty:' })).toEqual({
-      AND: [
-        {},
-        { NOT: { name: null } },
-        { NOT: { name: '' } },
-      ],
+      AND: [{}, { NOT: { name: '' } }],
+    })
+  })
+
+  test('nempty on nullable string excludes null and the empty string', () => {
+    expect(where({ nick: 'nempty:' })).toEqual({
+      AND: [{}, { NOT: { nick: null } }, { NOT: { nick: '' } }],
     })
   })
 
@@ -369,6 +381,14 @@ describe('filterToWhere — empty / nempty operators', () => {
 
   test('nempty on array field uses Prisma `isEmpty: false`', () => {
     expect(where({ tags: 'nempty:' })).toEqual({ tags: { isEmpty: false } })
+  })
+
+  test('empty on a required reference produces an impossible valid predicate', () => {
+    expect(where({ authorId: { operator: 'empty' } })).toEqual({ id: { in: [] } })
+  })
+
+  test('nempty on a required reference is a no-op', () => {
+    expect(where({ authorId: { operator: 'nempty' } })).toEqual({})
   })
 })
 
@@ -556,12 +576,10 @@ describe('filterToWhere — multi-field combinations', () => {
     })
   })
 
-  test('field-level + top-level operator merged via AND', () => {
+  test('field-level filters on required fields share the same where object', () => {
     expect(where({ age: 'gt:18', name: 'empty:' })).toEqual({
-      AND: [
-        { age: { gt: 18 } },
-        { OR: [{ name: null }, { name: '' }] },
-      ],
+      age: { gt: 18 },
+      name: { equals: '', mode: 'insensitive' },
     })
   })
 })

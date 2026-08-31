@@ -50,7 +50,11 @@ function keyToCode(key: string): string | null {
 }
 
 function parseCombo(s: string): ParsedCombo {
-  const parts = s.toLowerCase().split('+').map((p) => p.trim()).filter(Boolean)
+  const parts = s
+    .toLowerCase()
+    .split('+')
+    .map((p) => p.trim())
+    .filter(Boolean)
   const last = parts[parts.length - 1] ?? ''
   const key = KEY_ALIASES[last] ?? last
   const code = keyToCode(key)

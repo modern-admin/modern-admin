@@ -26,10 +26,7 @@ export {
 export { migrateAuth } from './auth/migrate.js'
 export { seedDemoUser, type SeedDemoUserOptions } from './auth/seed-demo-user.js'
 
-export {
-  buildBetterAuthProvider,
-  buildApiKeyService,
-} from './admin/build-auth-provider.js'
+export { buildBetterAuthProvider, buildApiKeyService } from './admin/build-auth-provider.js'
 export {
   buildAiAssistantConfig,
   type BuildAiAssistantConfigOptions,

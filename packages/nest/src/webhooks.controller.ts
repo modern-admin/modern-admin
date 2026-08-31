@@ -68,10 +68,7 @@ export class WebhooksController {
   }
 
   @Post()
-  async create(
-    @Body() body: unknown,
-    @Req() req: AdminRequest,
-  ): Promise<WebhookResponse> {
+  async create(@Body() body: unknown, @Req() req: AdminRequest): Promise<WebhookResponse> {
     this.assertAllowed(req.currentAdmin)
     const input = inputZ.parse(body) as WebhookInput
     return { webhook: await this.requireStore().create(input) }
@@ -91,10 +88,7 @@ export class WebhooksController {
   }
 
   @Delete(':id')
-  async delete(
-    @Param('id') id: string,
-    @Req() req: AdminRequest,
-  ): Promise<{ success: true }> {
+  async delete(@Param('id') id: string, @Req() req: AdminRequest): Promise<{ success: true }> {
     this.assertAllowed(req.currentAdmin)
     const store = this.requireStore()
     if (!(await store.get(id))) throw new NotFoundException('Webhook not found')
@@ -116,10 +110,7 @@ export class WebhooksController {
   }
 
   @Post(':id/test')
-  async test(
-    @Param('id') id: string,
-    @Req() req: AdminRequest,
-  ): Promise<{ success: true }> {
+  async test(@Param('id') id: string, @Req() req: AdminRequest): Promise<{ success: true }> {
     this.assertAllowed(req.currentAdmin)
     const store = this.requireStore()
     const webhook = await store.get(id)

@@ -122,8 +122,7 @@ export async function setupOpenApi(
   }
 
   if (options.bearer) {
-    const cfg: OpenApiBearerOption =
-      typeof options.bearer === 'object' ? options.bearer : {}
+    const cfg: OpenApiBearerOption = typeof options.bearer === 'object' ? options.bearer : {}
     builder.addBearerAuth(
       {
         type: 'http',
@@ -136,8 +135,7 @@ export async function setupOpenApi(
   }
 
   if (options.cookie) {
-    const cfg: OpenApiCookieOption =
-      typeof options.cookie === 'object' ? options.cookie : {}
+    const cfg: OpenApiCookieOption = typeof options.cookie === 'object' ? options.cookie : {}
     builder.addCookieAuth(
       cfg.cookieName ?? 'better-auth.session_token',
       {
@@ -175,16 +173,16 @@ export async function setupOpenApi(
 
   if (options.swaggerPath !== false) {
     const swaggerPath = normalisePath(
-      typeof options.swaggerPath === 'string' ? options.swaggerPath : DEFAULTS.swaggerPath as string,
+      typeof options.swaggerPath === 'string'
+        ? options.swaggerPath
+        : (DEFAULTS.swaggerPath as string),
     )
     SwaggerModule.setup(swaggerPath, app, document, options.swaggerOptions)
   }
 
   if (options.scalarPath !== false && options.scalar !== false) {
     const scalarPath = normalisePath(
-      typeof options.scalarPath === 'string'
-        ? options.scalarPath
-        : (DEFAULTS.scalarPath as string),
+      typeof options.scalarPath === 'string' ? options.scalarPath : (DEFAULTS.scalarPath as string),
     )
     const scalarCfg: ScalarOptions =
       typeof options.scalar === 'object' && options.scalar !== null ? options.scalar : {}
@@ -210,9 +208,7 @@ async function mountScalar(
     }
     apiReference = mod.apiReference ?? null
   } catch {
-    log.log(
-      `Scalar UI not mounted: install @scalar/nestjs-api-reference to enable it at ${path}`,
-    )
+    log.log(`Scalar UI not mounted: install @scalar/nestjs-api-reference to enable it at ${path}`)
     return
   }
   if (!apiReference) return
@@ -231,9 +227,7 @@ async function mountScalar(
   if (typeof instance.use === 'function') {
     instance.use(path, handler)
   } else {
-    log.warn(
-      `Scalar UI requested but http adapter does not expose .use(path, mw); skipping`,
-    )
+    log.warn(`Scalar UI requested but http adapter does not expose .use(path, mw); skipping`)
   }
 }
 

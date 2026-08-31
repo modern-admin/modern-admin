@@ -1,9 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import {
-  BadRequestException,
-  ForbiddenException,
-  NotFoundException,
-} from '@nestjs/common'
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common'
 import { MemoryCacheProvider, ModernAdmin } from '@modern-admin/core'
 import { CacheController } from '../src/cache.controller.js'
 import { FakeDatabase, FakeResource } from './_helpers/fake-adapter.js'
@@ -47,36 +43,43 @@ describe('CacheController', () => {
       async () => ({ ok: true }),
     )
     expect(await admin.cache.get('v1:list:users:test')).not.toBeNull()
-    await expect(controller.invalidate({ resourceId: 'users' }, adminRequest))
-      .resolves.toEqual({ ok: true })
+    await expect(controller.invalidate({ resourceId: 'users' }, adminRequest)).resolves.toEqual({
+      ok: true,
+    })
     expect(await admin.cache.get('v1:list:users:test')).toBeNull()
   })
 
   test('rejects malformed and unknown resources', async () => {
     const { controller } = build()
-    await expect(controller.invalidate({ resourceId: '' }, adminRequest))
-      .rejects.toThrow(BadRequestException)
-    await expect(controller.invalidate({ resourceId: 'missing' }, adminRequest))
-      .rejects.toThrow(NotFoundException)
+    await expect(controller.invalidate({ resourceId: '' }, adminRequest)).rejects.toThrow(
+      BadRequestException,
+    )
+    await expect(controller.invalidate({ resourceId: 'missing' }, adminRequest)).rejects.toThrow(
+      NotFoundException,
+    )
   })
 
   test('defaults to admin-only and rejects API-key principals', () => {
     const { controller } = build()
-    expect(() => controller.stats({ currentAdmin: { id: 'u2', role: 'viewer' } }))
-      .toThrow(ForbiddenException)
-    expect(() => controller.stats({
-      currentAdmin: {
-        id: 'u3',
-        role: 'admin',
-        apiKey: { id: 'key-1', permissions: { '*': ['*'] } },
-      },
-    })).toThrow(ForbiddenException)
+    expect(() => controller.stats({ currentAdmin: { id: 'u2', role: 'viewer' } })).toThrow(
+      ForbiddenException,
+    )
+    expect(() =>
+      controller.stats({
+        currentAdmin: {
+          id: 'u3',
+          role: 'admin',
+          apiKey: { id: 'key-1', permissions: { '*': ['*'] } },
+        },
+      }),
+    ).toThrow(ForbiddenException)
   })
 
   test('supports an explicit operator role allowlist', () => {
     const { admin } = build()
     const controller = new CacheController(admin, { cacheRoles: ['operator'] })
-    expect(controller.stats({ currentAdmin: { id: 'u4', role: 'operator' } }).instanceId)
-      .toBe(admin.cacheRuntime.instanceId)
+    expect(controller.stats({ currentAdmin: { id: 'u4', role: 'operator' } }).instanceId).toBe(
+      admin.cacheRuntime.instanceId,
+    )
   })
 })

@@ -13,9 +13,7 @@ let publicKeyPem: string
 
 async function sign(payload: unknown): Promise<string> {
   const body = new TextEncoder().encode(JSON.stringify(payload))
-  return new CompactSign(body)
-    .setProtectedHeader({ alg: 'EdDSA', typ: 'JWT' })
-    .sign(privateKey)
+  return new CompactSign(body).setProtectedHeader({ alg: 'EdDSA', typ: 'JWT' }).sign(privateKey)
 }
 
 function fullPayload(overrides: Partial<LicensePayload> = {}): LicensePayload {
@@ -203,7 +201,11 @@ describe('verifyLicense', () => {
     const token = await new CompactSign(body)
       .setProtectedHeader({ alg: 'EdDSA', typ: 'JWT' })
       .sign(kp.privateKey)
-    const r = await verifyLicense(token, { feature: 'ai-fill', publicKey: jwk as unknown as Record<string, unknown>, now })
+    const r = await verifyLicense(token, {
+      feature: 'ai-fill',
+      publicKey: jwk as unknown as Record<string, unknown>,
+      now,
+    })
     expect(r.valid).toBe(true)
   })
 })

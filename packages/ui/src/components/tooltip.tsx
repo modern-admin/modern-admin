@@ -1,16 +1,17 @@
 import * as React from 'react'
 import * as TooltipPrimitive from '@radix-ui/react-tooltip'
 import { cn } from '../lib/utils.js'
-import { usePortalContainer, useViewportCollisionPadding } from '../lib/floating-layer.js'
+import { useViewportCollisionPadding } from '../lib/floating-layer.js'
 
 export const TooltipProvider = TooltipPrimitive.Provider
 export const Tooltip = TooltipPrimitive.Root
 export const TooltipTrigger = TooltipPrimitive.Trigger
 
-export interface TooltipContentProps
-  extends React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Content> {
-  /** Override the portal target. Defaults to the enclosing Dialog/Sheet
-   *  content, or `document.body`. */
+export interface TooltipContentProps extends React.ComponentPropsWithoutRef<
+  typeof TooltipPrimitive.Content
+> {
+  /** Override the portal target. Defaults to `document.body` so tooltips can
+   *  escape clipping and scrolling containers such as Dialog and Sheet. */
   container?: HTMLElement | null
 }
 
@@ -18,10 +19,9 @@ export const TooltipContent = React.forwardRef<
   React.ElementRef<typeof TooltipPrimitive.Content>,
   TooltipContentProps
 >(({ className, sideOffset = 4, collisionPadding, container, ...props }, ref) => {
-  const portalContainer = usePortalContainer()
   const viewportPadding = useViewportCollisionPadding()
   return (
-    <TooltipPrimitive.Portal container={container ?? portalContainer}>
+    <TooltipPrimitive.Portal container={container}>
       <TooltipPrimitive.Content
         ref={ref}
         sideOffset={sideOffset}

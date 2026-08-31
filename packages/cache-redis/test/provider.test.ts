@@ -131,12 +131,9 @@ describe('RedisCacheProvider', () => {
     const cache = new RedisCacheProvider({ client })
     const before = await cache.getTagEpochs(['list:users'])
     await cache.invalidateTag('list:users')
-    expect(await cache.setIfTagEpochsMatch(
-      'k',
-      { stale: true },
-      before,
-      { tags: ['list:users'] },
-    )).toBe(false)
+    expect(
+      await cache.setIfTagEpochsMatch('k', { stale: true }, before, { tags: ['list:users'] }),
+    ).toBe(false)
     expect(await cache.get('k')).toBeNull()
   })
 

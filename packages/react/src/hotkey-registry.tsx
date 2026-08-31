@@ -40,15 +40,8 @@ export function HotkeyRegistryProvider({
       setList((prev) => prev.filter((x) => x !== d))
     }
   }).current
-  const value = React.useMemo<HotkeyRegistryApi>(
-    () => ({ register, list }),
-    [register, list],
-  )
-  return (
-    <HotkeyRegistryContext.Provider value={value}>
-      {children}
-    </HotkeyRegistryContext.Provider>
-  )
+  const value = React.useMemo<HotkeyRegistryApi>(() => ({ register, list }), [register, list])
+  return <HotkeyRegistryContext.Provider value={value}>{children}</HotkeyRegistryContext.Provider>
 }
 
 export function useRegisteredHotkeys(): HotkeyDescriptor[] {

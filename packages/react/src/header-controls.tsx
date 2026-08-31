@@ -39,7 +39,11 @@ function MenuOption({
       }}
       className="gap-3 px-3 py-2"
     >
-      {icon && <span className="flex size-4 items-center justify-center text-muted-foreground">{icon}</span>}
+      {icon && (
+        <span className="flex size-4 items-center justify-center text-muted-foreground">
+          {icon}
+        </span>
+      )}
       <span className="flex-1 truncate">{label}</span>
       {active && <Check className="size-4 text-primary" />}
     </DropdownMenuItem>

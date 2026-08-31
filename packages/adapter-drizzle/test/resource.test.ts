@@ -22,7 +22,8 @@ describe('DrizzleResource construction', () => {
   it('throws when the table has no primary key', () => {
     const tableWithoutPk = { col: { name: 'col', dataType: 'string' } } as never
     expect(
-      () => new DrizzleResource({ client: createFakeClient(), table: tableWithoutPk, tableKey: 't' }),
+      () =>
+        new DrizzleResource({ client: createFakeClient(), table: tableWithoutPk, tableKey: 't' }),
     ).toThrow(/primary-key/)
   })
 
@@ -38,7 +39,10 @@ describe('DrizzleResource construction', () => {
 describe('DrizzleResource.find', () => {
   it('forwards limit/offset/orderBy to drizzle', async () => {
     const { client, resource } = makeResource({
-      selectRows: [{ id: '1', email: 'a@b.c' }, { id: '2', email: 'd@e.f' }],
+      selectRows: [
+        { id: '1', email: 'a@b.c' },
+        { id: '2', email: 'd@e.f' },
+      ],
     })
     const filter = new Filter({}, resource)
     const records = await resource.find(filter, {
@@ -179,7 +183,10 @@ describe('DrizzleResource.transaction', () => {
 })
 
 describe('DrizzleResource.transaction tx-client propagation', () => {
-  const withTxClient = (base: ReturnType<typeof createFakeClient>, tx: ReturnType<typeof createFakeClient>) => {
+  const withTxClient = (
+    base: ReturnType<typeof createFakeClient>,
+    tx: ReturnType<typeof createFakeClient>,
+  ) => {
     let txCalls = 0
     base.transaction = async <T>(fn: (t: typeof tx) => Promise<T>): Promise<T> => {
       txCalls += 1
@@ -210,7 +217,12 @@ describe('DrizzleResource.transaction tx-client propagation', () => {
     const tx = createFakeClient({ insertRow: { id: '1' } })
     withTxClient(base, tx)
     const parent = new DrizzleResource({ client: base, table: users, tableKey: 'users' })
-    const junction = new DrizzleResource({ client: base, table: users, tableKey: 'users', id: 'junction' })
+    const junction = new DrizzleResource({
+      client: base,
+      table: users,
+      tableKey: 'users',
+      id: 'junction',
+    })
 
     await parent.transaction(async () => {
       await junction.create({ id: 'j1', email: 'x@y.z' } as never)
@@ -330,6 +342,18 @@ describe('DrizzleResource.aggregateTimeSeries', () => {
       { date: '2026-01-05', value: 3 },
       { date: '2026-01-12', value: 2 },
     ])
+  })
+
+  it('resolves the metadata path when it differs from the TypeScript table key', async () => {
+    const { resource } = makeResource({
+      selectRows: [{ bucket: '2026-01-05', value: 1 }],
+    })
+    const result = await resource.aggregateTimeSeries(new Filter({}, resource), {
+      ...tsQuery,
+      dateField: 'created_at',
+    })
+
+    expect(result.series[0]?.points).toEqual([{ date: '2026-01-05', value: 1 }])
   })
 
   it('skips NULL-valued buckets so all-NULL aggregates match the Prisma adapter', async () => {

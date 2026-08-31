@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'bun:test'
 import { ApiStockMediaGenerationProvider, ApiStockRequestError } from '../src/index.js'
 
-const jsonResponse = (body: unknown, status = 200): Response => new Response(
-  JSON.stringify(body),
-  { status, headers: { 'content-type': 'application/json' } },
-)
+const jsonResponse = (body: unknown, status = 200): Response =>
+  new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
 
 const asFetch = (
   implementation: (input: string | URL | Request, init?: RequestInit) => Promise<Response>,
@@ -18,19 +16,37 @@ describe('ApiStockMediaGenerationProvider', () => {
         calls++
         return jsonResponse([
           {
-            id: 'flux', name: 'Flux', type: 'IMAGE', kind: 'media',
-            tags: [], capabilities: [],
+            id: 'flux',
+            name: 'Flux',
+            type: 'IMAGE',
+            kind: 'media',
+            tags: [],
+            capabilities: [],
             pricing: [{ key: 'default', price: '0.20', isDefault: true, unitPrice: '0.10' }],
             priceMultiplier: { param: 'count', catalogValue: 2 },
-            params: [{
-              name: 'prompt', label: 'Prompt', kind: 'string', isArray: false,
-              required: true, isMedia: false, isPrompt: true, multiline: true,
-              deprecated: false,
-            }],
+            params: [
+              {
+                name: 'prompt',
+                label: 'Prompt',
+                kind: 'string',
+                isArray: false,
+                required: true,
+                isMedia: false,
+                isPrompt: true,
+                multiline: true,
+                deprecated: false,
+              },
+            ],
           },
           {
-            id: 'chat', name: 'Chat', type: 'text', kind: 'llm',
-            tags: [], capabilities: [], pricing: [], params: [],
+            id: 'chat',
+            name: 'Chat',
+            type: 'text',
+            kind: 'llm',
+            tags: [],
+            capabilities: [],
+            pricing: [],
+            params: [],
           },
         ])
       }),
@@ -58,19 +74,23 @@ describe('ApiStockMediaGenerationProvider', () => {
           data: {
             taskId: 'provider-task-1',
             status: requests.length === 1 ? 'not_started' : 'finished',
-            files: requests.length === 1
-              ? []
-              : [{ fileUrl: 'https://cdn.example/result.png', fileType: 'image' }],
+            files:
+              requests.length === 1
+                ? []
+                : [{ fileUrl: 'https://cdn.example/result.png', fileType: 'image' }],
           },
         })
       }),
     })
 
-    const created = await provider.create({
-      model: 'flux',
-      input: { prompt: 'A ceramic cup' },
-      webhookUrl: 'https://admin.example/webhook/token',
-    }, { apiKey: 'api-key-value' })
+    const created = await provider.create(
+      {
+        model: 'flux',
+        input: { prompt: 'A ceramic cup' },
+        webhookUrl: 'https://admin.example/webhook/token',
+      },
+      { apiKey: 'api-key-value' },
+    )
     const finished = await provider.getStatus('provider-task-1', { apiKey: 'api-key-value' })
 
     expect(created.status).toBe('pending')
@@ -88,10 +108,13 @@ describe('ApiStockMediaGenerationProvider', () => {
 
   it('surfaces bounded HTTP error metadata', async () => {
     const provider = new ApiStockMediaGenerationProvider({
-      fetch: asFetch(async () => new Response('provider unavailable', {
-        status: 503,
-        headers: { 'retry-after': '10' },
-      })),
+      fetch: asFetch(
+        async () =>
+          new Response('provider unavailable', {
+            status: 503,
+            headers: { 'retry-after': '10' },
+          }),
+      ),
     })
 
     const error = await provider.getStatus('task', { apiKey: 'secret' }).catch((caught) => caught)

@@ -9,10 +9,7 @@
 
 import * as React from 'react'
 import { useWatch, type Control, type UseFormTrigger } from 'react-hook-form'
-import {
-  Button,
-  cn,
-} from '@modern-admin/ui'
+import { Button, cn } from '@modern-admin/ui'
 import { Check, ChevronLeft, ChevronRight, Plus, X } from 'lucide-react'
 import { RecordFormField } from './record-form-field.js'
 import { evaluateShowWhen } from '../show-when.js'
@@ -101,9 +98,7 @@ export function WizardForm({
   const handleNext = async (): Promise<void> => {
     const paths = (stepProperties[currentStep] ?? []).map((p) => p.path)
     // When the step has no properties, advance without validation.
-    const valid =
-      paths.length === 0 ||
-      (await trigger(paths as Parameters<typeof trigger>[0]))
+    const valid = paths.length === 0 || (await trigger(paths as Parameters<typeof trigger>[0]))
     if (valid) setCurrentStep((s) => Math.min(s + 1, totalSteps - 1))
   }
 
@@ -126,19 +121,12 @@ export function WizardForm({
                 <div
                   className={cn(
                     'flex h-8 w-8 items-center justify-center rounded-full border-2 text-sm font-semibold transition-colors',
-                    index < currentStep &&
-                      'border-primary bg-primary text-primary-foreground',
-                    index === currentStep &&
-                      'border-primary bg-background text-primary',
-                    index > currentStep &&
-                      'border-border bg-background text-muted-foreground',
+                    index < currentStep && 'border-primary bg-primary text-primary-foreground',
+                    index === currentStep && 'border-primary bg-background text-primary',
+                    index > currentStep && 'border-border bg-background text-muted-foreground',
                   )}
                 >
-                  {index < currentStep ? (
-                    <Check className="size-3.5" />
-                  ) : (
-                    index + 1
-                  )}
+                  {index < currentStep ? <Check className="size-3.5" /> : index + 1}
                 </div>
                 <span
                   className={cn(
@@ -174,19 +162,13 @@ export function WizardForm({
 
       {/* ── Step description ────────────────────────────────────────── */}
       {currentStepDef.description && (
-        <p className="px-6 pb-2 text-sm text-muted-foreground">
-          {currentStepDef.description}
-        </p>
+        <p className="px-6 pb-2 text-sm text-muted-foreground">{currentStepDef.description}</p>
       )}
 
       {/* ── Fields ──────────────────────────────────────────────────── */}
       <div className="gap-4 px-6 pb-4 [column-fill:_balance] md:columns-2">
         {currentProperties.map((property) => (
-          <WizardConditionalField
-            key={property.path}
-            control={control}
-            property={property}
-          >
+          <WizardConditionalField key={property.path} control={control} property={property}>
             <RecordFormField
               control={control}
               property={property}
@@ -200,19 +182,10 @@ export function WizardForm({
 
       {/* ── Navigation footer ───────────────────────────────────────── */}
       <div className="flex items-center justify-between border-t border-border px-6 py-4">
-        <div>
-          {submitError && (
-            <span className="text-sm text-destructive">{submitError}</span>
-          )}
-        </div>
+        <div>{submitError && <span className="text-sm text-destructive">{submitError}</span>}</div>
         <div className="flex gap-2">
           {isFirst ? (
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={onCancel}
-              disabled={isSubmitting}
-            >
+            <Button type="button" variant="ghost" onClick={onCancel} disabled={isSubmitting}>
               <X className="size-4" />
               {cancelLabel}
             </Button>
@@ -233,11 +206,7 @@ export function WizardForm({
               {submitLabel}
             </Button>
           ) : (
-            <Button
-              type="button"
-              onClick={() => void handleNext()}
-              disabled={isSubmitting}
-            >
+            <Button type="button" onClick={() => void handleNext()} disabled={isSubmitting}>
               {nextLabel}
               <ChevronRight className="size-4" />
             </Button>

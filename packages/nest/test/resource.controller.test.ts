@@ -1,10 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import {
-  Filter,
-  MemoryCacheProvider,
-  ModernAdmin,
-  type ActionRequest,
-} from '@modern-admin/core'
+import { Filter, MemoryCacheProvider, ModernAdmin, type ActionRequest } from '@modern-admin/core'
 import { ResourceController } from '../src/resource.controller.js'
 import { FakeDatabase, FakeResource, type FakeTable } from './_helpers/fake-adapter.js'
 
@@ -15,7 +10,9 @@ interface Adapter {
 
 const adapter = { Database: FakeDatabase, Resource: FakeResource } as unknown as Adapter
 
-const buildController = (tables: FakeTable[]): { controller: ResourceController; admin: ModernAdmin } => {
+const buildController = (
+  tables: FakeTable[],
+): { controller: ResourceController; admin: ModernAdmin } => {
   const admin = new ModernAdmin({ databases: [tables], adapters: [adapter] as never })
   return { controller: new ResourceController(admin), admin }
 }
@@ -33,7 +30,13 @@ const buildCustomActionController = (): {
     adapters: [adapter] as never,
     resources: [
       {
-        resource: { name: 'users', rows: [{ id: '1', name: 'Ann' }, { id: '2', name: 'Bob' }] },
+        resource: {
+          name: 'users',
+          rows: [
+            { id: '1', name: 'Ann' },
+            { id: '2', name: 'Bob' },
+          ],
+        },
         options: {
           actions: {
             sendMassPush: {
@@ -86,7 +89,12 @@ describe('ResourceController — custom actions', () => {
 
   test('POST actions/:action lifts recordIds out of the body for bulk actions', async () => {
     const { controller, seen } = buildCustomActionController()
-    await controller.invokeResourceAction('users', 'tagAll', { recordIds: ['1', '2'], tag: 'vip' }, req)
+    await controller.invokeResourceAction(
+      'users',
+      'tagAll',
+      { recordIds: ['1', '2'], tag: 'vip' },
+      req,
+    )
     expect(seen[0]?.params.recordIds).toBe('1,2')
     expect(seen[0]?.payload).toEqual({ tag: 'vip' })
   })
@@ -134,7 +142,13 @@ describe('ResourceController — custom actions', () => {
 describe('ResourceController', () => {
   test('list returns paginated records', async () => {
     const { controller } = buildController([
-      { name: 'users', rows: [{ id: '1', name: 'Ann' }, { id: '2', name: 'Bob' }] },
+      {
+        name: 'users',
+        rows: [
+          { id: '1', name: 'Ann' },
+          { id: '2', name: 'Bob' },
+        ],
+      },
     ])
     const res = (await controller.list('users', { page: '1', perPage: '10' }, req)) as {
       records: Array<{ id: string }>
@@ -157,14 +171,18 @@ describe('ResourceController', () => {
   })
 
   test('edit updates fields', async () => {
-    const { controller, admin } = buildController([{ name: 'users', rows: [{ id: '1', name: 'Ann' }] }])
+    const { controller, admin } = buildController([
+      { name: 'users', rows: [{ id: '1', name: 'Ann' }] },
+    ])
     await controller.edit('users', '1', { name: 'Renamed' }, req)
     const rec = await admin.findResource('users').findOne('1')
     expect(rec?.get('name')).toBe('Renamed')
   })
 
   test('remove deletes a record', async () => {
-    const { controller, admin } = buildController([{ name: 'users', rows: [{ id: '1', name: 'A' }] }])
+    const { controller, admin } = buildController([
+      { name: 'users', rows: [{ id: '1', name: 'A' }] },
+    ])
     await controller.remove('users', '1', req)
     expect(await admin.findResource('users').findOne('1')).toBeNull()
   })
@@ -181,9 +199,7 @@ describe('ResourceController', () => {
 
   test('list rejects malformed query through Zod', async () => {
     const { controller } = buildController([{ name: 'users', rows: [] }])
-    await expect(
-      controller.list('users', { page: 'not-a-number' }, req),
-    ).rejects.toBeDefined()
+    await expect(controller.list('users', { page: 'not-a-number' }, req)).rejects.toBeDefined()
   })
 
   test('unknown action maps to NotFoundException', async () => {

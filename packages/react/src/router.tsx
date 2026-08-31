@@ -18,6 +18,8 @@
 
 import * as React from 'react'
 import { useRouter, useRouterState } from '@tanstack/react-router'
+import type { FilterMap } from '@modern-admin/core'
+import { appendFilterQuery, parseFilterQuery } from './filter-query.js'
 
 /**
  * Provides the SPA mount basepath (e.g. `/admin`) to all navigation
@@ -37,7 +39,7 @@ export interface ListQueryState {
   sortBy?: string
   direction?: 'asc' | 'desc'
   /** Per-column filter values keyed by property path. */
-  filters?: Record<string, string>
+  filters?: FilterMap
 }
 
 export type Route =
@@ -88,12 +90,8 @@ const parseListQuery = (search: string): ListQueryState | undefined => {
   if (sortBy) out.sortBy = sortBy
   const direction = params.get('direction')
   if (direction === 'asc' || direction === 'desc') out.direction = direction
-  const filters: Record<string, string> = {}
-  params.forEach((value, key) => {
-    const m = key.match(/^filters\[(.+)\]$/)
-    if (m && m[1] != null && value !== '') filters[m[1]] = value
-  })
-  if (Object.keys(filters).length > 0) out.filters = filters
+  const filters = parseFilterQuery(params)
+  if (filters) out.filters = filters
   return Object.keys(out).length > 0 ? out : undefined
 }
 
@@ -104,11 +102,7 @@ const buildListQuery = (q: ListQueryState | undefined): string => {
   if (q.perPage != null && q.perPage !== 20) params.set('perPage', String(q.perPage))
   if (q.sortBy) params.set('sortBy', q.sortBy)
   if (q.direction) params.set('direction', q.direction)
-  if (q.filters) {
-    for (const [k, v] of Object.entries(q.filters)) {
-      if (v != null && v !== '') params.set(`filters[${k}]`, v)
-    }
-  }
+  if (q.filters) appendFilterQuery(params, q.filters)
   const s = params.toString()
   return s ? `?${s}` : ''
 }
@@ -177,32 +171,32 @@ export const parseLocation = (pathname: string, searchStr: string): Route => {
  *  `<Link>` href generation. */
 export const buildHref = (route: Route): string => {
   switch (route.name) {
-  case 'home':
-    return '/'
-  case 'audit-log':
-    return '/audit-log'
-  case 'cache':
-    return '/cache'
-  case 'list':
-    return `/resources/${encodeURIComponent(route.resourceId)}${buildListQuery(route.query)}`
-  case 'show':
-    return `/resources/${encodeURIComponent(route.resourceId)}/${encodeURIComponent(route.recordId)}`
-  case 'edit':
-    return `/resources/${encodeURIComponent(route.resourceId)}/${encodeURIComponent(route.recordId)}/edit`
-  case 'new':
-    return `/resources/${encodeURIComponent(route.resourceId)}/new`
-  case 'action': {
-    const base = `/resources/${encodeURIComponent(route.resourceId)}`
-    const scope = route.recordId ? `${base}/${encodeURIComponent(route.recordId)}` : base
-    const path = `${scope}/actions/${encodeURIComponent(route.actionName)}`
-    if (!route.recordIds?.length) return path
-    const params = new URLSearchParams({ recordIds: route.recordIds.join(',') })
-    return `${path}?${params.toString()}`
-  }
-  case 'settings':
-    return route.section ? `/settings/${encodeURIComponent(route.section)}` : '/settings'
-  case 'extension':
-    return `/ext/${encodeURIComponent(route.key)}`
+    case 'home':
+      return '/'
+    case 'audit-log':
+      return '/audit-log'
+    case 'cache':
+      return '/cache'
+    case 'list':
+      return `/resources/${encodeURIComponent(route.resourceId)}${buildListQuery(route.query)}`
+    case 'show':
+      return `/resources/${encodeURIComponent(route.resourceId)}/${encodeURIComponent(route.recordId)}`
+    case 'edit':
+      return `/resources/${encodeURIComponent(route.resourceId)}/${encodeURIComponent(route.recordId)}/edit`
+    case 'new':
+      return `/resources/${encodeURIComponent(route.resourceId)}/new`
+    case 'action': {
+      const base = `/resources/${encodeURIComponent(route.resourceId)}`
+      const scope = route.recordId ? `${base}/${encodeURIComponent(route.recordId)}` : base
+      const path = `${scope}/actions/${encodeURIComponent(route.actionName)}`
+      if (!route.recordIds?.length) return path
+      const params = new URLSearchParams({ recordIds: route.recordIds.join(',') })
+      return `${path}?${params.toString()}`
+    }
+    case 'settings':
+      return route.section ? `/settings/${encodeURIComponent(route.section)}` : '/settings'
+    case 'extension':
+      return `/ext/${encodeURIComponent(route.key)}`
   }
 }
 
@@ -236,10 +230,13 @@ export const useNavigate = (): ((route: Route) => void) => {
  *  `/admin/resources/...`). */
 export const useOpenInNewTab = (): ((route: Route) => void) => {
   const basepath = useBasepath()
-  return React.useCallback((route: Route) => {
-    if (typeof window === 'undefined') return
-    window.open(basepath + buildHref(route), '_blank', 'noopener,noreferrer')
-  }, [basepath])
+  return React.useCallback(
+    (route: Route) => {
+      if (typeof window === 'undefined') return
+      window.open(basepath + buildHref(route), '_blank', 'noopener,noreferrer')
+    },
+    [basepath],
+  )
 }
 
 export interface LinkProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {

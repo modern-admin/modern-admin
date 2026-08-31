@@ -1,5 +1,29 @@
 # @modern-admin/create
 
+## 0.10.0
+
+### Patch Changes
+
+- [#42](https://github.com/modern-admin/modern-admin/pull/42) [`d7ba345`](https://github.com/modern-admin/modern-admin/commit/d7ba3455830e56f86409c912609e22014e04f802) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Move the toolchain to TypeScript 7 and replace ESLint with oxlint + Prettier.
+  Dropping `typescript-eslint` (whose peer pinned `typescript <6.1`) unblocked the
+  TypeScript 7 native compiler, which now handles both typecheck and build emit.
+  This is a build-time change only — no runtime or public API changes; packages
+  are rebuilt with the TS 7 compiler.
+
+- [#40](https://github.com/modern-admin/modern-admin/pull/40) [`cd7e365`](https://github.com/modern-admin/modern-admin/commit/cd7e3659dd1a9c08438edbce726694e4244db32c) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Refresh the monorepo to the latest stable dependency lines. Headline: NestJS
+  11 -> 12 across every transport package (`nest`, `graphql`, `queue`,
+  `realtime`, `feature-upload`) — including `@nestjs/swagger` 12 and
+  `@nestjs/bullmq` 12 — which raises the `@nestjs/*` peer range to `^12`, so
+  consumers must move to NestJS 12 as well. Also on bun 1.4 (`@types/bun` 1.4).
+  
+  Other lines bumped to current stable: Prisma 7.10, BullMQ 6.3, better-auth
+  1.7.2, Zod 4.5, jose 6.2, TanStack Query/Router/Table, lucide-react 1.37,
+  react-hook-form 7.86, TipTap 3.30.5, Vite 8.2.2, and the AI SDK (`ai` 7.0.84).
+  Prisma stays on the 7.x stable line (8.0 is still a release candidate).
+- Updated dependencies [[`d7ba345`](https://github.com/modern-admin/modern-admin/commit/d7ba3455830e56f86409c912609e22014e04f802), [`cd7e365`](https://github.com/modern-admin/modern-admin/commit/cd7e3659dd1a9c08438edbce726694e4244db32c)]:
+  - @modern-admin/system-drizzle@0.10.0
+  - @modern-admin/system-prisma@0.10.0
+
 ## 0.9.0
 
 ### Minor Changes

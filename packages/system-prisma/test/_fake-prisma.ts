@@ -9,8 +9,6 @@
 
 import { uuidv7 } from '@modern-admin/core'
 
-
-
 type Where = Record<string, any>
 
 const matches = (row: any, where: Where | undefined): boolean => {
@@ -25,7 +23,16 @@ const matches = (row: any, where: Where | undefined): boolean => {
       continue
     }
     // composite-key shortcut, e.g. { scope_scopeId_key: { ... } }
-    if (k.includes('_') && typeof v === 'object' && v !== null && !('in' in v) && !('gte' in v) && !('lte' in v) && !('lt' in v) && !('gt' in v)) {
+    if (
+      k.includes('_') &&
+      typeof v === 'object' &&
+      v !== null &&
+      !('in' in v) &&
+      !('gte' in v) &&
+      !('lte' in v) &&
+      !('lt' in v) &&
+      !('gt' in v)
+    ) {
       for (const [ck, cv] of Object.entries(v)) {
         if (row[ck] !== cv) return false
       }
@@ -85,8 +92,8 @@ export class FakeDelegate {
   }
   async create(args: { data: any }): Promise<any> {
     if (
-      args.data.idempotencyKey
-      && this.rows.some((row) => row.idempotencyKey === args.data.idempotencyKey)
+      args.data.idempotencyKey &&
+      this.rows.some((row) => row.idempotencyKey === args.data.idempotencyKey)
     ) {
       throw new Error('unique constraint failed: idempotencyKey')
     }
@@ -141,17 +148,31 @@ export class FakeDelegate {
 export function fakePrisma() {
   return {
     maLog: new FakeDelegate(() => ({
-      recordId: null, recordIds: null, userId: null, payload: null, result: null,
+      recordId: null,
+      recordIds: null,
+      userId: null,
+      payload: null,
+      result: null,
     })),
     maWebhook: new FakeDelegate(() => ({ secret: null, headers: {}, enabled: true })),
     maWebhookDelivery: new FakeDelegate(() => ({
-      responseStatus: null, responseBody: null, error: null, attempt: 1, deliveredAt: null,
+      responseStatus: null,
+      responseBody: null,
+      error: null,
+      attempt: 1,
+      deliveredAt: null,
     })),
     maConfig: new FakeDelegate(),
     maHistory: new FakeDelegate(() => ({ userId: null })),
     maAiTask: new FakeDelegate(() => ({
-      resourceId: null, recordId: null, userId: null, output: null,
-      error: null, startedAt: null, finishedAt: null, progress: null,
+      resourceId: null,
+      recordId: null,
+      userId: null,
+      output: null,
+      error: null,
+      startedAt: null,
+      finishedAt: null,
+      progress: null,
     })),
     maAiTaskEvent: new FakeDelegate(),
     maCache: new FakeDelegate(() => ({ tags: [], expiresAt: null })),

@@ -9,8 +9,6 @@
  * it satisfies this shape structurally.
  */
 
-
-
 import type { SystemTables } from './schema/pg.js'
 
 /**

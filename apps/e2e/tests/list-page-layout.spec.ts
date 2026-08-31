@@ -57,9 +57,7 @@ test.describe('List page layout — mobile (375 × 700)', () => {
   test('records-count and per-page select live on a single row', async ({ page }) => {
     await gotoPostsList(page)
     const recordsLabel = page.locator('.sticky.bottom-0').getByText(/\b\d+\b\s+records?\b/i)
-    const perPageTrigger = page
-      .locator('.sticky.bottom-0 button[role="combobox"]')
-      .first()
+    const perPageTrigger = page.locator('.sticky.bottom-0 button[role="combobox"]').first()
     await expect(recordsLabel).toBeVisible()
     await expect(perPageTrigger).toBeVisible()
     const [labelBox, triggerBox] = await Promise.all([
@@ -190,8 +188,7 @@ test.describe('List page layout — desktop (1280 × 800)', () => {
         'div.overflow-x-auto.cursor-grab',
       ) as HTMLDivElement | null
       if (!wrapper) return { error: 'no table wrapper' }
-      if (wrapper.scrollWidth <= wrapper.clientWidth)
-        return { error: 'wrapper not overflowing' }
+      if (wrapper.scrollWidth <= wrapper.clientWidth) return { error: 'wrapper not overflowing' }
       wrapper.scrollLeft = 0
       const r = wrapper.getBoundingClientRect()
       const startX = r.left + 200

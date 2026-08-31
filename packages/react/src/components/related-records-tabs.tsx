@@ -87,8 +87,8 @@ export function RelatedRecordsTabs({
     [enabled, resource, allResources],
   )
   // Hooks must run before any early return — call useState unconditionally.
-  const [active, setActive] = React.useState<string>(
-    () => tabs[0] ? `${tabs[0].resourceId}::${tabs[0].foreignKey}` : '',
+  const [active, setActive] = React.useState<string>(() =>
+    tabs[0] ? `${tabs[0].resourceId}::${tabs[0].foreignKey}` : '',
   )
   React.useEffect(() => {
     if (tabs.length === 0) return
@@ -121,11 +121,7 @@ export function RelatedRecordsTabs({
             const key = `${r.resourceId}::${r.foreignKey}`
             return (
               <TabsContent key={key} value={key} className="mt-4">
-                <RelatedRecordsTab
-                  parentRecordId={recordId}
-                  related={r}
-                  active={active === key}
-                />
+                <RelatedRecordsTab parentRecordId={recordId} related={r} active={active === key} />
               </TabsContent>
             )
           })}

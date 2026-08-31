@@ -33,9 +33,7 @@ interface Row {
 }
 
 test.describe('List filters — date-range operators (customers.createdAt)', () => {
-  test('~~from / ~~to range returns only rows inside the window (no 500)', async ({
-    request,
-  }) => {
+  test('~~from / ~~to range returns only rows inside the window (no 500)', async ({ request }) => {
     // Pull a sample to find the actual date span seeded into the demo DB.
     const sample = await request.get(adminApi(`/resources/customers/actions/list?perPage=200`))
     expect(sample.status(), await sample.text().catch(() => '')).toBe(200)
@@ -49,9 +47,7 @@ test.describe('List filters — date-range operators (customers.createdAt)', () 
     // latest by ~1 day. Using a window past today (well after seed dates)
     // guarantees a strictly-smaller subset.
     const earliest = all[0]!.slice(0, 10) // yyyy-MM-dd
-    const tomorrowIso = new Date(Date.now() + 24 * 60 * 60 * 1000)
-      .toISOString()
-      .slice(0, 10)
+    const tomorrowIso = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
 
     const res = await request.get(
       adminApi(
@@ -100,9 +96,7 @@ test.describe('List filters — date-range operators (customers.createdAt)', () 
       .filter((v): v is string => !!v)
       .sort()
     const earliest = all[0]!.slice(0, 10)
-    const tomorrowIso = new Date(Date.now() + 24 * 60 * 60 * 1000)
-      .toISOString()
-      .slice(0, 10)
+    const tomorrowIso = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
 
     const res = await request.get(
       adminApi(
@@ -180,5 +174,31 @@ test.describe('List filters — date-range operators (customers.createdAt)', () 
       adminApi(`/resources/customers/actions/list?filters[${COL}]=gt:not-a-date&perPage=200`),
     )
     expect(res.status(), `unexpected 5xx: ${await res.text().catch(() => '')}`).toBeLessThan(500)
+  })
+
+  test('empty and non-empty operators partition a nullable date column', async ({ request }) => {
+    const allResponse = await request.get(adminApi('/resources/posts/actions/list?perPage=200'))
+    const emptyResponse = await request.get(
+      adminApi('/resources/posts/actions/list?filters[publishedAt]=empty:&perPage=200'),
+    )
+    const nonEmptyResponse = await request.get(
+      adminApi('/resources/posts/actions/list?filters[publishedAt]=nempty:&perPage=200'),
+    )
+    expect(allResponse.status()).toBe(200)
+    expect(emptyResponse.status()).toBe(200)
+    expect(nonEmptyResponse.status()).toBe(200)
+
+    const all = (await allResponse.json()).records as Array<{
+      params: { publishedAt: string | null }
+    }>
+    const empty = (await emptyResponse.json()).records as Array<{
+      params: { publishedAt: string | null }
+    }>
+    const nonEmpty = (await nonEmptyResponse.json()).records as Array<{
+      params: { publishedAt: string | null }
+    }>
+    expect(empty.every((record) => !record.params.publishedAt)).toBe(true)
+    expect(nonEmpty.every((record) => !!record.params.publishedAt)).toBe(true)
+    expect(empty.length + nonEmpty.length).toBe(all.length)
   })
 })

@@ -139,9 +139,7 @@ export class ModernAdminCacheInterceptor implements NestInterceptor {
       const actionName = req.params.recordId ? 'show' : 'list'
       const hasDynamicAccess =
         typeof decorator.getAction(actionName)?.merged.isAccessible === 'function' ||
-        decorator.properties.some((property) =>
-          typeof property.options.isAccessible === 'function',
-        )
+        decorator.properties.some((property) => typeof property.options.isAccessible === 'function')
       if (hasDynamicAccess) {
         setHeader('BYPASS')
         return next.handle()
@@ -173,18 +171,23 @@ export class ModernAdminCacheInterceptor implements NestInterceptor {
       principalScope(req.currentAdmin),
     )
 
-    return defer(() => from(this.admin.cacheRuntime.read(
-      key,
-      {
-        enabled: true,
-        ttl: cfg.ttl,
-        jitterRatio: cfg.jitterRatio,
-        crossReplicaLock: cfg.crossReplicaLock,
-        tags,
-        refresh: wantsRevalidation(req.headers),
-        onStatus: (status) => setHeader(status.toUpperCase() as 'HIT' | 'MISS' | 'BYPASS' | 'REVALIDATED'),
-      },
-      () => firstValueFrom(next.handle()),
-    )))
+    return defer(() =>
+      from(
+        this.admin.cacheRuntime.read(
+          key,
+          {
+            enabled: true,
+            ttl: cfg.ttl,
+            jitterRatio: cfg.jitterRatio,
+            crossReplicaLock: cfg.crossReplicaLock,
+            tags,
+            refresh: wantsRevalidation(req.headers),
+            onStatus: (status) =>
+              setHeader(status.toUpperCase() as 'HIT' | 'MISS' | 'BYPASS' | 'REVALIDATED'),
+          },
+          () => firstValueFrom(next.handle()),
+        ),
+      ),
+    )
   }
 }

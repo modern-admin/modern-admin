@@ -26,11 +26,7 @@ import { PageBreadcrumbs, homeCrumb } from '../breadcrumbs.js'
 import { buildValidationSchema, defaultValueFor } from '../validation.js'
 import type { PropertyJSON } from '../types.js'
 import { visibleRecordProperties } from '../relations.js'
-import {
-  WizardForm,
-  type WizardStep,
-  type WizardFormLabels,
-} from '../components/wizard-form.js'
+import { WizardForm, type WizardStep, type WizardFormLabels } from '../components/wizard-form.js'
 
 export interface ResourceWizardCreatePageProps {
   resourceId: string
@@ -60,12 +56,10 @@ export function ResourceWizardCreatePage({
     () =>
       resource
         ? visibleRecordProperties(
-          resource.properties,
-          'new',
-          resource.propertyOrder?.new ?? resource.propertyOrder?.edit,
-        ).filter(
-          (p) => !p.isDisabled,
-        )
+            resource.properties,
+            'new',
+            resource.propertyOrder?.new ?? resource.propertyOrder?.edit,
+          ).filter((p) => !p.isDisabled)
         : [],
     [resource],
   )
@@ -104,14 +98,10 @@ export function ResourceWizardCreatePage({
     setSubmitError(null)
     try {
       const result = await create.mutateAsync(values)
-      const errors = result.record.errors as Record<
-        string,
-        { message?: string } | string
-      >
+      const errors = result.record.errors as Record<string, { message?: string } | string>
       if (errors && Object.keys(errors).length > 0) {
         for (const [path, err] of Object.entries(errors)) {
-          const message =
-            typeof err === 'string' ? err : (err?.message ?? 'Invalid value')
+          const message = typeof err === 'string' ? err : (err?.message ?? 'Invalid value')
           form.setError(path, { type: 'server', message })
         }
         if (result.record.baseError) setSubmitError(String(result.record.baseError))

@@ -97,10 +97,9 @@ describe('recordsToJson', () => {
   })
 
   it('restricts keys to the given properties', () => {
-    const out = recordsToJson(
-      [rec('1', { name: 'Alice', secret: 'x' })],
-      { properties: [prop('name')] },
-    )
+    const out = recordsToJson([rec('1', { name: 'Alice', secret: 'x' })], {
+      properties: [prop('name')],
+    })
     expect(JSON.parse(out)).toEqual([{ id: '1', name: 'Alice' }])
   })
 })
@@ -125,8 +124,12 @@ describe('fetchAllRecords', () => {
   })
 
   it('reports progress through onProgress', async () => {
-    const list = mock(async () =>
-      ({ records: [rec('1', {}), rec('2', {})], meta: { total: 2, page: 1, perPage: 2 } }) satisfies ListResponse,
+    const list = mock(
+      async () =>
+        ({
+          records: [rec('1', {}), rec('2', {})],
+          meta: { total: 2, page: 1, perPage: 2 },
+        }) satisfies ListResponse,
     )
     const client = { list } as unknown as AdminClient
     const calls: Array<[number, number]> = []
@@ -138,8 +141,8 @@ describe('fetchAllRecords', () => {
   })
 
   it('throws AbortError when signal is already aborted', async () => {
-    const list = mock(async () =>
-      ({ records: [], meta: { total: 0, page: 1, perPage: 1 } }) satisfies ListResponse,
+    const list = mock(
+      async () => ({ records: [], meta: { total: 0, page: 1, perPage: 1 } }) satisfies ListResponse,
     )
     const client = { list } as unknown as AdminClient
     const ctrl = new AbortController()

@@ -47,7 +47,12 @@ export function DiffView({ fields, labels, className }: DiffViewProps): React.Re
   const l = { ...DEFAULT_LABELS, ...labels }
   if (fields.length === 0) {
     return (
-      <div className={cn('rounded-md border border-dashed border-border p-4 text-sm text-muted-foreground', className)}>
+      <div
+        className={cn(
+          'rounded-md border border-dashed border-border p-4 text-sm text-muted-foreground',
+          className,
+        )}
+      >
         {l.noChanges}
       </div>
     )
@@ -84,27 +89,14 @@ function FieldDiff({
             {field.label}
           </p>
         )}
-        <code
-          className="truncate font-mono text-[10px] text-muted-foreground"
-          title={field.path}
-        >
+        <code className="truncate font-mono text-[10px] text-muted-foreground" title={field.path}>
           {field.path}
         </code>
       </div>
       {compact ? (
-        <CompactValues
-          kind={field.kind}
-          before={beforeText}
-          after={afterText}
-          labels={labels}
-        />
+        <CompactValues kind={field.kind} before={beforeText} after={afterText} labels={labels} />
       ) : (
-        <StackedValues
-          kind={field.kind}
-          before={beforeText}
-          after={afterText}
-          labels={labels}
-        />
+        <StackedValues kind={field.kind} before={beforeText} after={afterText} labels={labels} />
       )}
     </li>
   )
@@ -179,4 +171,7 @@ function StackedValues({
 }
 
 const prefixed = (sign: '+' | '-', text: string): string =>
-  text.split('\n').map((l) => `${sign} ${l}`).join('\n')
+  text
+    .split('\n')
+    .map((l) => `${sign} ${l}`)
+    .join('\n')

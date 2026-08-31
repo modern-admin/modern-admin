@@ -114,105 +114,105 @@ const buildOperatorClause = (
   // adapter never produces an invalid where clause.
   if (isArray) {
     switch (operator) {
-    case 'eq':
-      return { has: coerceScalar(value, property) }
-    case 'in': {
-      if (Array.isArray(value)) {
-        const list = value.map((v) => coerceScalar(v as FilterValue, property))
-        // Empty selection ⇒ "no filter" (see scalar branch below).
-        if (!list.length) return undefined
-        return { hasSome: list }
+      case 'eq':
+        return { has: coerceScalar(value, property) }
+      case 'in': {
+        if (Array.isArray(value)) {
+          const list = value.map((v) => coerceScalar(v as FilterValue, property))
+          // Empty selection ⇒ "no filter" (see scalar branch below).
+          if (!list.length) return undefined
+          return { hasSome: list }
+        }
+        return { hasSome: [coerceScalar(value, property)] }
       }
-      return { hasSome: [coerceScalar(value, property)] }
-    }
-    // `co`/`sw`/`ew`/`gt`/`lt`/`between`/`neq` have no list equivalent
-    // in Prisma. Dropping the clause is preferable to a 500.
-    default:
-      return undefined
+      // `co`/`sw`/`ew`/`gt`/`lt`/`between`/`neq` have no list equivalent
+      // in Prisma. Dropping the clause is preferable to a 500.
+      default:
+        return undefined
     }
   }
 
   switch (operator) {
-  case 'eq': {
-    const coerced = coerceScalar(value, property)
-    if (isString && typeof coerced === 'string') {
-      return { equals: coerced, ...insensitive(dialect) }
+    case 'eq': {
+      const coerced = coerceScalar(value, property)
+      if (isString && typeof coerced === 'string') {
+        return { equals: coerced, ...insensitive(dialect) }
+      }
+      return { equals: coerced }
     }
-    return { equals: coerced }
-  }
-  case 'neq': {
-    const coerced = coerceScalar(value, property)
-    if (isString && typeof coerced === 'string') {
-      // `notIn` + `mode` is valid at field level; `not: { equals, mode }` is NOT
-      // because NestedStringFilter has no `mode`.
-      return { notIn: [coerced], ...insensitive(dialect) }
+    case 'neq': {
+      const coerced = coerceScalar(value, property)
+      if (isString && typeof coerced === 'string') {
+        // `notIn` + `mode` is valid at field level; `not: { equals, mode }` is NOT
+        // because NestedStringFilter has no `mode`.
+        return { notIn: [coerced], ...insensitive(dialect) }
+      }
+      return { not: coerced }
     }
-    return { not: coerced }
-  }
-  case 'co': {
-    // `contains`/`startsWith`/`endsWith` are only valid on string columns.
-    // Drop the clause on anything else instead of emitting an invalid
-    // where that crashes Prisma.
-    if (!canSubstring) return undefined
-    const coerced = coerceScalar(value, property)
-    return { contains: String(coerced), ...insensitive(dialect) }
-  }
-  case 'sw': {
-    if (!canSubstring) return undefined
-    const coerced = coerceScalar(value, property)
-    return { startsWith: String(coerced), ...insensitive(dialect) }
-  }
-  case 'ew': {
-    if (!canSubstring) return undefined
-    const coerced = coerceScalar(value, property)
-    return { endsWith: String(coerced), ...insensitive(dialect) }
-  }
-  case 'in': {
-    if (Array.isArray(value)) {
-      const list = value.map((v) => coerceScalar(v as FilterValue, property))
-      // Empty selection ⇒ "no filter applied", matching the Drizzle
-      // adapter. Without this guard Prisma executes `{ in: [] }` as
-      // "match nothing", which surprised users who unchecked the last
-      // item in the "Is one of" picker and expected the full list back.
-      if (!list.length) return undefined
-      return { in: list }
+    case 'co': {
+      // `contains`/`startsWith`/`endsWith` are only valid on string columns.
+      // Drop the clause on anything else instead of emitting an invalid
+      // where that crashes Prisma.
+      if (!canSubstring) return undefined
+      const coerced = coerceScalar(value, property)
+      return { contains: String(coerced), ...insensitive(dialect) }
     }
-    // Single string passed for `in` — coerce to single-element array
-    const coerced = coerceScalar(value, property)
-    return { in: [coerced] }
-  }
-  case 'gt': {
-    const coerced = coerceScalar(value, property)
-    return { gt: coerced }
-  }
-  case 'lt': {
-    const coerced = coerceScalar(value, property)
-    return { lt: coerced }
-  }
-  case 'between': {
-    const { fromStr, toStr } = parseBetween(value)
-    const clause: Record<string, unknown> = {}
-    if (fromStr) clause.gte = coerceScalar(fromStr, property)
-    if (toStr) {
-      const upper = coerceScalar(toStr, property)
-      // For date-only `yyyy-MM-dd` upper bounds on DateTime columns the
-      // raw `new Date('2025-12-31')` lands at midnight UTC — excluding
-      // everything timestamped later that day. Bump to end-of-day so the
-      // user-visible "to 2025-12-31" actually includes 2025-12-31.
-      if (
-        upper instanceof Date &&
+    case 'sw': {
+      if (!canSubstring) return undefined
+      const coerced = coerceScalar(value, property)
+      return { startsWith: String(coerced), ...insensitive(dialect) }
+    }
+    case 'ew': {
+      if (!canSubstring) return undefined
+      const coerced = coerceScalar(value, property)
+      return { endsWith: String(coerced), ...insensitive(dialect) }
+    }
+    case 'in': {
+      if (Array.isArray(value)) {
+        const list = value.map((v) => coerceScalar(v as FilterValue, property))
+        // Empty selection ⇒ "no filter applied", matching the Drizzle
+        // adapter. Without this guard Prisma executes `{ in: [] }` as
+        // "match nothing", which surprised users who unchecked the last
+        // item in the "Is one of" picker and expected the full list back.
+        if (!list.length) return undefined
+        return { in: list }
+      }
+      // Single string passed for `in` — coerce to single-element array
+      const coerced = coerceScalar(value, property)
+      return { in: [coerced] }
+    }
+    case 'gt': {
+      const coerced = coerceScalar(value, property)
+      return { gt: coerced }
+    }
+    case 'lt': {
+      const coerced = coerceScalar(value, property)
+      return { lt: coerced }
+    }
+    case 'between': {
+      const { fromStr, toStr } = parseBetween(value)
+      const clause: Record<string, unknown> = {}
+      if (fromStr) clause.gte = coerceScalar(fromStr, property)
+      if (toStr) {
+        const upper = coerceScalar(toStr, property)
+        // For date-only `yyyy-MM-dd` upper bounds on DateTime columns the
+        // raw `new Date('2025-12-31')` lands at midnight UTC — excluding
+        // everything timestamped later that day. Bump to end-of-day so the
+        // user-visible "to 2025-12-31" actually includes 2025-12-31.
+        if (
+          upper instanceof Date &&
           /^\d{4}-\d{2}-\d{2}$/.test(toStr) &&
           (property?.type() === 'date' || property?.type() === 'datetime')
-      ) {
-        clause.lte = new Date(upper.getTime() + 24 * 60 * 60 * 1000 - 1)
-      } else {
-        clause.lte = upper
+        ) {
+          clause.lte = new Date(upper.getTime() + 24 * 60 * 60 * 1000 - 1)
+        } else {
+          clause.lte = upper
+        }
       }
+      return Object.keys(clause).length ? clause : undefined
     }
-    return Object.keys(clause).length ? clause : undefined
-  }
-  default:
-    return undefined
+    default:
+      return undefined
   }
 }
 
@@ -230,6 +230,10 @@ export const filterToWhere = (
 ): Record<string, unknown> => {
   const where: Record<string, unknown> = {}
   const topLevel: unknown[] = []
+  const primaryPath = filter.resource
+    .properties()
+    .find((property) => property.isId())
+    ?.path()
 
   filter.reduce<null>((_, element) => {
     if (!element.property) return null
@@ -238,6 +242,7 @@ export const filterToWhere = (
     const isString = property != null && property.type() === 'string'
 
     const isArray = property?.isArray() ?? false
+    const isRequired = property?.field.isRequired === true && !isArray
 
     // ── Operators that need top-level WHERE clauses ──────────────────
     if (operator === 'empty') {
@@ -245,6 +250,14 @@ export const filterToWhere = (
         // Prisma's only valid empty-check for scalar lists; `null` is
         // rejected because list columns are non-nullable in Postgres.
         where[path] = { isEmpty: true }
+      } else if (isRequired && isString) {
+        // A required string cannot be null, but it can still contain `''`.
+        where[path] = { equals: '', ...insensitive(dialect) }
+      } else if (isRequired) {
+        // `field: null` is invalid for required Prisma scalars and relations.
+        // Express the impossible match through the model's primary key so
+        // every required type (including JSON/reference fields) stays valid.
+        where[primaryPath ?? path] = { in: [] }
       } else if (isString) {
         topLevel.push({ OR: [{ [path]: null }, { [path]: '' }] })
       } else {
@@ -255,6 +268,12 @@ export const filterToWhere = (
     if (operator === 'nempty') {
       if (isArray) {
         where[path] = { isEmpty: false }
+        return null
+      }
+      if (isRequired) {
+        // Every required non-string value is inherently non-empty. Required
+        // strings still need to exclude the representable empty string.
+        if (isString) topLevel.push({ NOT: { [path]: '' } })
         return null
       }
       topLevel.push({ NOT: { [path]: null } })
@@ -287,9 +306,10 @@ export const filterToWhere = (
         const inner: Record<string, unknown> = {}
         for (const [innerKey, innerValue] of Object.entries(value as Record<string, unknown>)) {
           if (innerValue == null || innerValue === '') continue
-          inner[innerKey] = typeof innerValue === 'string'
-            ? { contains: innerValue, ...insensitive(dialect) }
-            : { equals: innerValue }
+          inner[innerKey] =
+            typeof innerValue === 'string'
+              ? { contains: innerValue, ...insensitive(dialect) }
+              : { equals: innerValue }
         }
         if (Object.keys(inner).length === 0) return null
         where[path] = { is: inner }

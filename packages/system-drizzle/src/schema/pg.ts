@@ -29,7 +29,19 @@
  */
 
 import { sql } from 'drizzle-orm'
-import { bigint, boolean, index, integer, jsonb, pgTable, text, timestamp, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import {
+  bigint,
+  boolean,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  unique,
+  uniqueIndex,
+  uuid,
+} from 'drizzle-orm/pg-core'
 
 // ─── Better Auth ──────────────────────────────────────────────────────────
 
@@ -160,7 +172,9 @@ export const maApiKey = pgTable('ma_apikey', {
 export const maRole = pgTable('ma_role', {
   id: text('id').primaryKey(),
   description: text('description'),
-  permissions: jsonb('permissions').notNull().default(sql`'{}'::jsonb`),
+  permissions: jsonb('permissions')
+    .notNull()
+    .default(sql`'{}'::jsonb`),
   /** Built-in roles are seeded on boot and cannot be deleted via the UI. */
   isBuiltin: boolean('is_builtin').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
@@ -197,9 +211,15 @@ export const maWebhook = pgTable('ma_webhook', {
   resourceId: text('resource_id'),
   enabled: boolean('enabled').notNull().default(true),
   secret: text('secret'),
-  headers: jsonb('headers').notNull().default(sql`'{}'::jsonb`),
-  filters: jsonb('filters').notNull().default(sql`'{}'::jsonb`),
-  payloadFields: jsonb('payload_fields').notNull().default(sql`'[]'::jsonb`),
+  headers: jsonb('headers')
+    .notNull()
+    .default(sql`'{}'::jsonb`),
+  filters: jsonb('filters')
+    .notNull()
+    .default(sql`'{}'::jsonb`),
+  payloadFields: jsonb('payload_fields')
+    .notNull()
+    .default(sql`'[]'::jsonb`),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 })
@@ -273,11 +293,7 @@ export const maHistory = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => ({
-    recordIdx: index('ma_history_record_idx').on(
-      t.resourceId,
-      t.recordId,
-      t.createdAt,
-    ),
+    recordIdx: index('ma_history_record_idx').on(t.resourceId, t.recordId, t.createdAt),
   }),
 )
 
@@ -291,7 +307,9 @@ export const maAiTask = pgTable(
     recordId: text('record_id'),
     userId: text('user_id'),
     status: text('status').notNull(),
-    input: jsonb('input').notNull().default(sql`'{}'::jsonb`),
+    input: jsonb('input')
+      .notNull()
+      .default(sql`'{}'::jsonb`),
     output: jsonb('output'),
     error: text('error'),
     progress: integer('progress'),
@@ -316,14 +334,13 @@ export const maAiTaskEvent = pgTable(
       .notNull()
       .references(() => maAiTask.id, { onDelete: 'cascade' }),
     type: text('type').notNull(),
-    data: jsonb('data').notNull().default(sql`'{}'::jsonb`),
+    data: jsonb('data')
+      .notNull()
+      .default(sql`'{}'::jsonb`),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => ({
-    taskCreatedIdx: index('ma_ai_task_event_task_created_idx').on(
-      t.taskId,
-      t.createdAt,
-    ),
+    taskCreatedIdx: index('ma_ai_task_event_task_created_idx').on(t.taskId, t.createdAt),
   }),
 )
 
@@ -332,7 +349,9 @@ export const maCache = pgTable(
   {
     key: text('key').primaryKey(),
     value: jsonb('value'),
-    tags: jsonb('tags').notNull().default(sql`'[]'::jsonb`),
+    tags: jsonb('tags')
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     expiresAt: timestamp('expires_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),

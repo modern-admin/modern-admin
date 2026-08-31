@@ -23,6 +23,34 @@ const adminApi = (path: string): string => `${API_URL}/admin/api${path}`
 const RATING = 'rating'
 
 test.describe('List filters — numeric operators', () => {
+  test('structured browser filters combine contains and numeric range', async ({ request }) => {
+    const all = await request.get(adminApi('/resources/products/actions/list?perPage=200'))
+    expect(all.status()).toBe(200)
+    const allRecords = (await all.json()).records as Array<{
+      id: string
+      params: { name: string; price: number }
+    }>
+    const expectedIds = allRecords
+      .filter(
+        ({ params }) =>
+          params.name.toLowerCase().includes('big') && params.price >= 150 && params.price <= 420,
+      )
+      .map(({ id }) => id)
+      .sort()
+
+    const res = await request.get(
+      adminApi(
+        '/resources/products/actions/list?filters%5Bname%5D%5Boperator%5D=co&filters%5Bname%5D%5Bvalue%5D=big&filters%5Bprice%5D%5Boperator%5D=between&filters%5Bprice%5D%5Bfrom%5D=150&filters%5Bprice%5D%5Bto%5D=420&perPage=200',
+      ),
+    )
+    expect(res.status(), await res.text().catch(() => '')).toBe(200)
+    const filteredIds = ((await res.json()).records as Array<{ id: string }>)
+      .map(({ id }) => id)
+      .sort()
+
+    expect(filteredIds).toEqual(expectedIds)
+  })
+
   test('between:from,to returns rows inside the range (no 500)', async ({ request }) => {
     const res = await request.get(
       adminApi(`/resources/posts/actions/list?filters[${RATING}]=between:3,3.1&perPage=200`),

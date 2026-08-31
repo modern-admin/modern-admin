@@ -51,9 +51,7 @@ export class DrizzleHistoryStore implements IHistoryStore {
     let q = this.db
       .select()
       .from(this.table)
-      .where(
-        and(eq(this.table.resourceId, resourceId), eq(this.table.recordId, recordId)),
-      )
+      .where(and(eq(this.table.resourceId, resourceId), eq(this.table.recordId, recordId)))
       .orderBy(desc(this.table.createdAt))
       .limit(limit)
     if (offset > 0) q = q.offset(offset)
@@ -61,7 +59,11 @@ export class DrizzleHistoryStore implements IHistoryStore {
     return rows.map(rowToEntry)
   }
 
-  async get(resourceId: string, recordId: string, revisionId: string): Promise<HistoryEntry | null> {
+  async get(
+    resourceId: string,
+    recordId: string,
+    revisionId: string,
+  ): Promise<HistoryEntry | null> {
     const rows = (await this.db
       .select()
       .from(this.table)
@@ -111,10 +113,12 @@ export class DrizzleHistoryStore implements IHistoryStore {
           let query = this.db
             .select({ id: this.table.id })
             .from(this.table)
-            .where(and(
-              eq(this.table.resourceId, group.resourceId),
-              eq(this.table.recordId, group.recordId),
-            ))
+            .where(
+              and(
+                eq(this.table.resourceId, group.resourceId),
+                eq(this.table.recordId, group.recordId),
+              ),
+            )
             .orderBy(desc(this.table.createdAt), desc(this.table.id))
           if (keep > 0) query = query.offset(keep)
           const obsolete = (await query.limit(PRUNE_BATCH_SIZE)) as Array<{ id: string }>
@@ -122,7 +126,12 @@ export class DrizzleHistoryStore implements IHistoryStore {
 
           const rows = (await this.db
             .delete(this.table)
-            .where(inArray(this.table.id, obsolete.map((row) => row.id)))
+            .where(
+              inArray(
+                this.table.id,
+                obsolete.map((row) => row.id),
+              ),
+            )
             .returning({ id: this.table.id })) as Array<{ id: string }>
           removed += rows.length
         }

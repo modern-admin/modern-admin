@@ -34,4 +34,47 @@ describe('Filter', () => {
     const paths = f.reduce<string[]>((acc, el) => [...acc, el.path], [])
     expect(paths.sort()).toEqual(['id', 'name'])
   })
+
+  test('structured in criterion preserves commas and other string delimiters', () => {
+    const values = ['Smith, John', 'quoted "value"', 'path\\segment', '']
+    const filter = new Filter({ name: { operator: 'in', values } }, resource)
+
+    expect(filter.get('name')).toMatchObject({ operator: 'in', value: values })
+    expect(filter.toJSON()).toEqual({ name: { operator: 'in', values } })
+  })
+
+  test('legacy comma-separated in payload remains supported', () => {
+    expect(new Filter({ name: 'in:a,b,c' }, resource).get('name')?.value).toEqual(['a', 'b', 'c'])
+  })
+
+  test('all strings using the removed in-json prefix remain literal', () => {
+    for (const legacy of ['in-json:not-a-json-array', 'in-json:["a"]']) {
+      const filter = new Filter({ name: legacy }, resource).get('name')
+
+      expect(filter?.operator).toBeNull()
+      expect(filter?.value).toBe(legacy)
+    }
+  })
+
+  test('supports structured value, range, and nullary criteria', () => {
+    const filter = new Filter(
+      {
+        name: { operator: 'nco', value: 'robot' },
+        age: { operator: 'between', from: '18', to: '65' },
+        deletedAt: { operator: 'empty' },
+      },
+      resource,
+    )
+
+    expect(filter.get('name')).toMatchObject({ operator: 'nco', value: 'robot' })
+    expect(filter.get('age')).toMatchObject({
+      operator: 'between',
+      value: { from: '18', to: '65' },
+    })
+    expect(filter.get('deletedAt')).toMatchObject({ operator: 'empty', value: '' })
+  })
+
+  test('malformed structured criteria are rejected instead of silently dropped', () => {
+    expect(() => new Filter({ name: { operator: 'in', values: 'a,b' } }, resource)).toThrow()
+  })
 })

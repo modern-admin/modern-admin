@@ -6,6 +6,7 @@
 // visibility, plus a paginator with page-size selector.
 
 import * as React from 'react'
+import type { FilterCriterion, FilterInput, FilterMap } from '@modern-admin/core'
 import {
   columnFilteringFeature,
   columnResizingFeature,
@@ -57,6 +58,7 @@ import {
   ScrollArea,
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -110,13 +112,7 @@ import {
 } from '../hooks.js'
 import { PropertyDisplay } from '../property-renderer.js'
 import { ReferenceCombobox, ReferenceLink, ReferenceLinkList } from '../reference.js'
-import {
-  Link,
-  type ListQueryState,
-  useNavigate,
-  useOpenInNewTab,
-  useRoute,
-} from '../router.js'
+import { Link, type ListQueryState, useNavigate, useOpenInNewTab, useRoute } from '../router.js'
 import { useI18n } from '../i18n.js'
 import { useNotify } from '../notify.js'
 import { useDialogs } from '../dialogs.js'
@@ -124,16 +120,27 @@ import { useHotkey } from '../use-hotkey.js'
 import { homeCrumb, PageBreadcrumbs } from '../breadcrumbs.js'
 import { ExportDialog } from './export-dialog.js'
 import {
+  ALL_DATE_OPS,
   ALL_NUMERIC_OPS,
+  ALL_REFERENCE_OPS,
   ALL_STRING_OPS,
+  type DateFilterOp,
+  DATE_NULLARY,
+  encodeDateFilter,
   encodeFilter,
+  encodeInFilterValues,
   encodeNumericFilter,
+  encodeReferenceFilter,
   type NumericFilterOp,
   NUMERIC_NULLARY,
   NULLARY_OPS,
   ONE_OF_DEFAULT_MAX,
+  parseDateFilter,
   parseFilterString,
   parseNumericFilter,
+  parseReferenceFilter,
+  type ReferenceFilterOp,
+  REFERENCE_NULLARY,
   type StringFilterOp,
 } from './filter-codecs.js'
 import {
@@ -144,12 +151,7 @@ import {
   visibleRecordActions,
 } from '../action-menu.js'
 import { visibleRecordProperties } from '../relations.js'
-import type {
-  ActionDescriptor,
-  ListQuery,
-  PropertyJSON,
-  RecordJSON,
-} from '../types.js'
+import type { ActionDescriptor, ListQuery, PropertyJSON, RecordJSON } from '../types.js'
 import { confirmGuard } from '../action-guard.js'
 import { showActionNotice } from '../action-notice.js'
 import { hasActionComponent, useActionLauncher } from '../action-launcher.js'
@@ -256,26 +258,26 @@ function attachDragScroll(el: HTMLElement): () => void {
 function defaultColumnSize(property: PropertyJSON): number {
   if (property.isId) return 100
   switch (property.type) {
-  case 'boolean':
-    return 110
-  case 'date':
-    return 140
-  case 'datetime':
-    return 180
-  case 'number':
-  case 'float':
-  case 'money':
-  case 'currency':
-    return 120
-  case 'color':
-    return 140
-  case 'reference':
-    return 200
-  case 'richtext':
-  case 'textarea':
-    return 320
-  default:
-    return 200
+    case 'boolean':
+      return 110
+    case 'date':
+      return 140
+    case 'datetime':
+      return 180
+    case 'number':
+    case 'float':
+    case 'money':
+    case 'currency':
+      return 120
+    case 'color':
+      return 140
+    case 'reference':
+      return 200
+    case 'richtext':
+    case 'textarea':
+      return 320
+    default:
+      return 200
   }
 }
 
@@ -302,7 +304,8 @@ function saveColumnSizing(resourceId: string, sizing: ColumnSizingState): void {
   try {
     const toSave = Object.fromEntries(Object.entries(sizing).filter(([k]) => !isSystemCol(k)))
     window.localStorage.setItem(COLUMN_SIZE_STORAGE_PREFIX + resourceId, JSON.stringify(toSave))
-  } catch { /* quota / private mode — ignore */
+  } catch {
+    /* quota / private mode — ignore */
   }
 }
 
@@ -334,7 +337,7 @@ export interface ResourceListPageProps {
   /** Filters always applied to the data query but hidden from the filter UI
    *  and never written to the URL. Used to embed the list as a related-records
    *  view filtered by a parent record's id. */
-  lockedFilters?: Record<string, string>
+  lockedFilters?: FilterMap
   features?: ResourceListFeatures
   /** When provided, row selection is controlled from outside. The
    *  internal bulk action bar should be hidden (`features.bulk = false`)
@@ -378,7 +381,8 @@ export function ResourceListPage({
   const dialogs = useDialogs()
   const openActionComponent = useActionLauncher(resourceId)
 
-  const isSelectionControlled = controlledSelectedIds !== undefined && onSelectionChange !== undefined
+  const isSelectionControlled =
+    controlledSelectedIds !== undefined && onSelectionChange !== undefined
   const [internalRowSelection, setInternalRowSelection] = React.useState<RowSelectionState>({})
   const controlledRowSelection = React.useMemo<RowSelectionState>(() => {
     if (!isSelectionControlled) return {}
@@ -388,16 +392,13 @@ export function ResourceListPage({
   }, [isSelectionControlled, controlledSelectedIds])
   const rowSelection = isSelectionControlled ? controlledRowSelection : internalRowSelection
   const setRowSelection = React.useCallback(
-    (
-      updater:
-        | RowSelectionState
-        | ((prev: RowSelectionState) => RowSelectionState),
-    ) => {
+    (updater: RowSelectionState | ((prev: RowSelectionState) => RowSelectionState)) => {
       if (isSelectionControlled) {
         const prev = controlledRowSelection
-        const next = typeof updater === 'function'
-          ? (updater as (p: RowSelectionState) => RowSelectionState)(prev)
-          : updater
+        const next =
+          typeof updater === 'function'
+            ? (updater as (p: RowSelectionState) => RowSelectionState)(prev)
+            : updater
         onSelectionChange!(Object.keys(next).filter((id) => next[id]))
         return
       }
@@ -430,18 +431,12 @@ export function ResourceListPage({
   // so they survive refresh, back, and link sharing. In embedded mode, the
   // parent component owns the same state shape and passes it via `query`.
   const urlQuery = React.useMemo<ListQueryState>(
-    () =>
-      isControlled
-        ? (controlledQuery ?? {})
-        : ((route.name === 'list' && route.query) || {}),
+    () => (isControlled ? (controlledQuery ?? {}) : (route.name === 'list' && route.query) || {}),
     [isControlled, controlledQuery, route],
   )
 
   const sorting = React.useMemo<SortingState>(
-    () =>
-      urlQuery.sortBy
-        ? [{ id: urlQuery.sortBy, desc: urlQuery.direction === 'desc' }]
-        : [],
+    () => (urlQuery.sortBy ? [{ id: urlQuery.sortBy, desc: urlQuery.direction === 'desc' }] : []),
     [urlQuery.sortBy, urlQuery.direction],
   )
   const columnFilters = React.useMemo<ColumnFiltersState>(
@@ -502,24 +497,27 @@ export function ResourceListPage({
   // whenever the wrapper mounts. (Plain useRef + useEffect runs only once,
   // so if the wrapper is initially unmounted due to conditional rendering,
   // the observer never attaches.)
-  const tableWrapperRef = React.useCallback((el: HTMLDivElement | null) => {
-    if (roRef.current) {
-      roRef.current.disconnect()
-      roRef.current = null
-    }
-    if (dragCleanupRef.current) {
-      dragCleanupRef.current()
-      dragCleanupRef.current = null
-    }
-    if (!el) return
-    const ro = new ResizeObserver((entries) => {
-      commitWrapperWidth(entries[0]?.contentRect.width ?? 0)
-    })
-    ro.observe(el)
-    roRef.current = ro
-    commitWrapperWidth(el.clientWidth)
-    dragCleanupRef.current = attachDragScroll(el)
-  }, [commitWrapperWidth])
+  const tableWrapperRef = React.useCallback(
+    (el: HTMLDivElement | null) => {
+      if (roRef.current) {
+        roRef.current.disconnect()
+        roRef.current = null
+      }
+      if (dragCleanupRef.current) {
+        dragCleanupRef.current()
+        dragCleanupRef.current = null
+      }
+      if (!el) return
+      const ro = new ResizeObserver((entries) => {
+        commitWrapperWidth(entries[0]?.contentRect.width ?? 0)
+      })
+      ro.observe(el)
+      roRef.current = ro
+      commitWrapperWidth(el.clientWidth)
+      dragCleanupRef.current = attachDragScroll(el)
+    },
+    [commitWrapperWidth],
+  )
 
   const updateUrlQuery = React.useCallback(
     (changes: Partial<ListQueryState>) => {
@@ -557,15 +555,11 @@ export function ResourceListPage({
   )
 
   const handleFilterChange = React.useCallback(
-    (
-      updater:
-        | ColumnFiltersState
-        | ((prev: ColumnFiltersState) => ColumnFiltersState),
-    ) => {
+    (updater: ColumnFiltersState | ((prev: ColumnFiltersState) => ColumnFiltersState)) => {
       const next = typeof updater === 'function' ? updater(columnFilters) : updater
-      const filters: Record<string, string> = {}
+      const filters: FilterMap = {}
       for (const f of next) {
-        if (f.value != null && f.value !== '') filters[f.id] = String(f.value)
+        if (f.value != null && f.value !== '') filters[f.id] = f.value as FilterInput
       }
       updateUrlQuery({
         filters: Object.keys(filters).length > 0 ? filters : undefined,
@@ -584,10 +578,10 @@ export function ResourceListPage({
   }, [columnFilters])
 
   const handleColumnFilterApply = React.useCallback(
-    (updates: Record<string, string>) => {
+    (updates: Record<string, FilterInput | null>) => {
       const next = columnFiltersRef.current.filter((f) => !(f.id in updates))
       for (const [id, value] of Object.entries(updates)) {
-        if (value) next.push({ id, value })
+        if (value != null && value !== '') next.push({ id, value })
       }
       handleFilterChange(next)
     },
@@ -599,9 +593,9 @@ export function ResourceListPage({
       updater:
         | { pageIndex: number; pageSize: number }
         | ((prev: { pageIndex: number; pageSize: number }) => {
-        pageIndex: number
-        pageSize: number
-      }),
+            pageIndex: number
+            pageSize: number
+          }),
     ) => {
       const next = typeof updater === 'function' ? updater(pagination) : updater
       updateUrlQuery({
@@ -620,9 +614,9 @@ export function ResourceListPage({
       perPage: urlQuery.perPage ?? 20,
       ...(urlQuery.sortBy
         ? {
-          sortBy: urlQuery.sortBy,
-          ...(urlQuery.direction ? { direction: urlQuery.direction } : {}),
-        }
+            sortBy: urlQuery.sortBy,
+            ...(urlQuery.direction ? { direction: urlQuery.direction } : {}),
+          }
         : {}),
       ...(Object.keys(mergedFilters).length > 0 ? { filters: mergedFilters } : {}),
     }
@@ -671,10 +665,7 @@ export function ResourceListPage({
 
   // Header (per-column) filters answer the same question as the panel, so they
   // follow the same view: a column that isn't filterable gets no filter icon.
-  const filterablePaths = React.useMemo(
-    () => new Set(filterable.map((p) => p.path)),
-    [filterable],
-  )
+  const filterablePaths = React.useMemo(() => new Set(filterable.map((p) => p.path)), [filterable])
 
   const { customResourceActions, customRecordActions, customBulkActions } = React.useMemo(() => {
     const builtInActionNames = new Set([
@@ -733,7 +724,7 @@ export function ResourceListPage({
         openActionComponent(action, { recordId: record.id })
         return
       }
-      if (!await confirmGuard(action, dialogs)) return
+      if (!(await confirmGuard(action, dialogs))) return
       invokeRecord.mutate(
         { recordId: record.id, actionName: action.name },
         {
@@ -777,76 +768,75 @@ export function ResourceListPage({
         ),
       })
     }
-    cols.push(...visible.map<ListColumnDef>((property) => ({
-      id: property.path,
-      accessorFn: (row) => row.params[property.path],
-      size: defaultColumnSize(property),
-      minSize: 80,
-      header: ({ column }) => (
-        <div className="flex items-center gap-0.5">
-          <SortHeader
-            property={property}
-            state={
-              column.getIsSorted() === 'asc'
-                ? 'asc'
-                : column.getIsSorted() === 'desc'
-                  ? 'desc'
-                  : 'none'
-            }
-            onSort={() => {
-              if (!property.isSortable) return
-              const cur = column.getIsSorted()
-              if (cur === false) column.toggleSorting(false)
-              else if (cur === 'asc') column.toggleSorting(true)
-              else column.clearSorting()
-            }}
-          />
-          {f.headerFilters && filterablePaths.has(property.path) && (
-            <ColumnFilterPopover
+    cols.push(
+      ...visible.map<ListColumnDef>((property) => ({
+        id: property.path,
+        accessorFn: (row) => row.params[property.path],
+        size: defaultColumnSize(property),
+        minSize: 80,
+        header: ({ column }) => (
+          <div className="flex items-center gap-0.5">
+            <SortHeader
               property={property}
-              getFilters={() => columnFiltersRef.current}
-              onApply={handleColumnFilterApply}
-              resourceId={resourceId}
-              t={t}
+              state={
+                column.getIsSorted() === 'asc'
+                  ? 'asc'
+                  : column.getIsSorted() === 'desc'
+                    ? 'desc'
+                    : 'none'
+              }
+              onSort={() => {
+                if (!property.isSortable) return
+                const cur = column.getIsSorted()
+                if (cur === false) column.toggleSorting(false)
+                else if (cur === 'asc') column.toggleSorting(true)
+                else column.clearSorting()
+              }}
             />
-          )}
-        </div>
-      ),
-      enableSorting: property.isSortable,
-      cell: ({ row }) => (
-        <CellContent
-          resourceId={resourceId}
-          recordId={row.original.id}
-          property={property}
-          value={row.original.params[property.path]}
-          populated={row.original.populated}
-        />
-      ),
-    })))
-    if (!disableRowNavigation) cols.push({
-      id: '_actions',
-      header: () => null,
-      enableSorting: false,
-      enableHiding: false,
-      enableResizing: false,
-      size: 44,
-      minSize: 0,
-      cell: ({ row }) => (
-        <RowActions
-          t={t}
-          record={row.original}
-          customActions={customRecordActions}
-          onView={() =>
-            navigate({ name: 'show', resourceId, recordId: row.original.id })
-          }
-          onEdit={() =>
-            navigate({ name: 'edit', resourceId, recordId: row.original.id })
-          }
-          onDelete={makeDeleteHandler(row.original)}
-          onInvokeAction={makeInvokeRecordHandler(row.original)}
-        />
-      ),
-    })
+            {f.headerFilters && filterablePaths.has(property.path) && (
+              <ColumnFilterPopover
+                property={property}
+                getFilters={() => columnFiltersRef.current}
+                onApply={handleColumnFilterApply}
+                resourceId={resourceId}
+                t={t}
+              />
+            )}
+          </div>
+        ),
+        enableSorting: property.isSortable,
+        cell: ({ row }) => (
+          <CellContent
+            resourceId={resourceId}
+            recordId={row.original.id}
+            property={property}
+            value={row.original.params[property.path]}
+            populated={row.original.populated}
+          />
+        ),
+      })),
+    )
+    if (!disableRowNavigation)
+      cols.push({
+        id: '_actions',
+        header: () => null,
+        enableSorting: false,
+        enableHiding: false,
+        enableResizing: false,
+        size: 44,
+        minSize: 0,
+        cell: ({ row }) => (
+          <RowActions
+            t={t}
+            record={row.original}
+            customActions={customRecordActions}
+            onView={() => navigate({ name: 'show', resourceId, recordId: row.original.id })}
+            onEdit={() => navigate({ name: 'edit', resourceId, recordId: row.original.id })}
+            onDelete={makeDeleteHandler(row.original)}
+            onInvokeAction={makeInvokeRecordHandler(row.original)}
+          />
+        ),
+      })
     return cols
   }, [
     visible,
@@ -896,12 +886,14 @@ export function ResourceListPage({
   const selectedIds = React.useMemo(() => Object.keys(rowSelection), [rowSelection])
   const selectedCount = selectedIds.length
   // An empty result set has two flavours. When there are NO active filters the
-  // resource is genuinely empty, so we swap the whole toolbar for a "create your
-  // first record" empty state. When filters ARE active the resource may well
-  // hold records — the current filters just match none — so we must KEEP the
-  // toolbar (and its filter button) reachable, otherwise the user is stranded
-  // with no way to relax the filters. This bites the related-records embed,
-  // where a filter that matches nothing would otherwise hide the filter button.
+  // resource is genuinely empty, so we replace the table controls with a
+  // "create your first record" empty state while retaining controls that act on
+  // the resource itself (refresh and custom resource actions). When filters ARE
+  // active the resource may well hold records — the current filters just match
+  // none — so we must KEEP the toolbar (and its filter button) reachable,
+  // otherwise the user is stranded with no way to relax the filters. This bites
+  // the related-records embed, where a filter that matches nothing would
+  // otherwise hide the filter button.
   const isEmpty = !records.isPending && !records.isError && total === 0
   const hasActiveFilters = columnFilters.length > 0
   const showStandaloneEmptyState = isEmpty && !hasActiveFilters
@@ -956,17 +948,20 @@ export function ResourceListPage({
     return (
       <Card>
         <CardContent className="p-6">
-          <Skeleton className="h-6 w-1/3"/>
+          <Skeleton className="h-6 w-1/3" />
         </CardContent>
       </Card>
     )
   }
 
   const showCustomResourceActions = f.actions && customResourceActions.length > 0
-  const hasToolbarActions = !showStandaloneEmptyState && (
-    f.refresh || f.filters || f.columns || f.export || f.create || showCustomResourceActions
-  )
-  const hasHeader = f.title || hasToolbarActions || (!showStandaloneEmptyState && visible.some((p) => p.isSortable))
+  const showListControls = !showStandaloneEmptyState
+  const hasToolbarActions =
+    f.refresh ||
+    showCustomResourceActions ||
+    (showListControls && (f.filters || f.columns || f.export || f.create))
+  const hasHeader =
+    f.title || hasToolbarActions || (showListControls && visible.some((p) => p.isSortable))
 
   // CardHeader/Content add their own padding. When `card: false` we're embedded
   // inside another container that already provides spacing, so use a bare div
@@ -980,12 +975,12 @@ export function ResourceListPage({
 
   const inner = (
     <>
-      {/* The trigger + panel normally live together inside the toolbar (see
-          `FilterControl`), which keeps the open/close state out of this
-          component so toggling doesn't re-render the whole list body. The
-          toolbar is suppressed in the standalone empty state, so mount a
+      {/* The trigger + panel normally live together inside the list controls
+          (see `FilterControl`), which keeps the open/close state out of this
+          component so toggling doesn't re-render the whole list body. Those
+          controls are suppressed in the standalone empty state, so mount a
           trigger-less instance here to keep the `F` hotkey working. */}
-      {f.filters && !hasToolbarActions && (
+      {f.filters && !showListControls && (
         <FilterControl
           showTrigger={false}
           properties={filterable}
@@ -997,7 +992,7 @@ export function ResourceListPage({
       )}
       {hasHeader && (
         <HeaderEl className={headerCls}>
-          {f.title ? <CardTitle>{resource.name}</CardTitle> : <span/>}
+          {f.title ? <CardTitle>{resource.name}</CardTitle> : <span />}
           {hasToolbarActions && (
             <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
               {f.refresh && (
@@ -1010,7 +1005,9 @@ export function ResourceListPage({
                       disabled={records.isFetching}
                       aria-label={t('common:refresh')}
                     >
-                      <RefreshCw className={records.isFetching ? 'size-4 animate-spin' : 'size-4'}/>
+                      <RefreshCw
+                        className={records.isFetching ? 'size-4 animate-spin' : 'size-4'}
+                      />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent className="flex items-center gap-1.5">
@@ -1019,7 +1016,7 @@ export function ResourceListPage({
                   </TooltipContent>
                 </Tooltip>
               )}
-              {f.filters && (
+              {showListControls && f.filters && (
                 <FilterControl
                   showTrigger
                   properties={filterable}
@@ -1029,10 +1026,10 @@ export function ResourceListPage({
                   t={t}
                 />
               )}
-              {f.columns && (
-                <ColumnVisibilityMenu table={table} properties={visible} t={t}/>
+              {showListControls && f.columns && (
+                <ColumnVisibilityMenu table={table} properties={visible} t={t} />
               )}
-              {f.export && (
+              {showListControls && f.export && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -1050,7 +1047,7 @@ export function ResourceListPage({
                     })
                   }
                 >
-                  <Download className="size-4"/>
+                  <Download className="size-4" />
                   <span className="hidden sm:inline">{t('common:export')}</span>
                 </Button>
               )}
@@ -1062,7 +1059,7 @@ export function ResourceListPage({
                       openActionComponent(action)
                       return
                     }
-                    if (!await confirmGuard(action, dialogs)) return
+                    if (!(await confirmGuard(action, dialogs))) return
                     invokeResource.mutate(
                       { actionName: action.name },
                       {
@@ -1072,19 +1069,19 @@ export function ResourceListPage({
                     )
                   }}
                   t={t}
-                  trigger={(
+                  trigger={
                     <Button variant="outline" size="sm" disabled={invokeResource.isPending}>
-                      <Zap className="size-4"/>
+                      <Zap className="size-4" />
                       <span className="hidden sm:inline">{t('common:actions')}</span>
                     </Button>
-                  )}
+                  }
                 />
               )}
-              {f.create && (
+              {showListControls && f.create && (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button size="sm" onClick={() => navigate({ name: 'new', resourceId })}>
-                      <Plus className="size-4"/>
+                      <Plus className="size-4" />
                       <span className="hidden sm:inline">{t('common:new')}</span>
                     </Button>
                   </TooltipTrigger>
@@ -1097,14 +1094,12 @@ export function ResourceListPage({
             </div>
           )}
           {/* Mobile-only sort selector — desktop uses column header clicks */}
-          {visible.some((p) => p.isSortable) && (
+          {showListControls && visible.some((p) => p.isSortable) && (
             <div className="flex w-full items-center gap-2 sm:hidden">
-              <ArrowUpDown className="size-4 shrink-0 text-muted-foreground"/>
+              <ArrowUpDown className="size-4 shrink-0 text-muted-foreground" />
               <Select
                 value={
-                  sorting[0]
-                    ? `${sorting[0].id}:${sorting[0].desc ? 'desc' : 'asc'}`
-                    : '_none_'
+                  sorting[0] ? `${sorting[0].id}:${sorting[0].desc ? 'desc' : 'asc'}` : '_none_'
                 }
                 onValueChange={(v) => {
                   if (v === '_none_') {
@@ -1116,7 +1111,7 @@ export function ResourceListPage({
                 }}
               >
                 <SelectTrigger className="h-8 flex-1">
-                  <SelectValue placeholder={t('common:sortBy')}/>
+                  <SelectValue placeholder={t('common:sortBy')} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="_none_">{t('common:sortBy')}: —</SelectItem>
@@ -1141,7 +1136,7 @@ export function ResourceListPage({
           <Empty>
             <EmptyHeader>
               <EmptyMedia>
-                <Inbox/>
+                <Inbox />
               </EmptyMedia>
               <EmptyTitle>{t('common:noRecords')}</EmptyTitle>
               {f.create && (
@@ -1153,7 +1148,7 @@ export function ResourceListPage({
             {f.create && (
               <EmptyContent>
                 <Button size="sm" onClick={() => navigate({ name: 'new', resourceId })}>
-                  <Plus className="size-4"/>
+                  <Plus className="size-4" />
                   {t('common:new')}
                 </Button>
               </EmptyContent>
@@ -1165,13 +1160,13 @@ export function ResourceListPage({
           <Empty>
             <EmptyHeader>
               <EmptyMedia>
-                <ListFilter/>
+                <ListFilter />
               </EmptyMedia>
               <EmptyTitle>{t('common:noMatchingRecords')}</EmptyTitle>
             </EmptyHeader>
             <EmptyContent>
               <Button variant="outline" size="sm" onClick={() => handleFilterChange([])}>
-                <X className="size-4"/>
+                <X className="size-4" />
                 {t('common:clearFilters')}
               </Button>
             </EmptyContent>
@@ -1182,8 +1177,7 @@ export function ResourceListPage({
                 Sits above the list so the user can act on the selection without
                 having to scroll. Mirrors a typical email-client multi-select. */}
             {f.bulk && selectedCount > 0 && (
-              <div
-                className="flex flex-row items-center justify-between gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2">
+              <div className="flex flex-row items-center justify-between gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2">
                 <div className="min-w-0 truncate text-sm font-medium">
                   {t('common:selectedCount', { count: selectedCount })}
                 </div>
@@ -1194,7 +1188,7 @@ export function ResourceListPage({
                     onClick={() => setRowSelection({})}
                     disabled={bulkRemove.isPending}
                   >
-                    <X className="size-4"/>
+                    <X className="size-4" />
                     <span className="hidden sm:inline">{t('common:clearSelection')}</span>
                   </Button>
                   {customBulkActions.length > 0 && (
@@ -1211,7 +1205,7 @@ export function ResourceListPage({
                           })
                           return
                         }
-                        if (!await confirmGuard(action, dialogs)) return
+                        if (!(await confirmGuard(action, dialogs))) return
                         invokeBulk.mutate(
                           { actionName: action.name, ids: selectedIds },
                           {
@@ -1224,12 +1218,12 @@ export function ResourceListPage({
                         )
                       }}
                       t={t}
-                      trigger={(
+                      trigger={
                         <Button variant="outline" size="sm" disabled={invokeBulk.isPending}>
-                          <Zap className="size-4"/>
+                          <Zap className="size-4" />
                           <span className="hidden sm:inline">{t('common:actions')}</span>
                         </Button>
-                      )}
+                      }
                     />
                   )}
                   <Button
@@ -1238,7 +1232,7 @@ export function ResourceListPage({
                     onClick={handleBulkDelete}
                     disabled={bulkRemove.isPending}
                   >
-                    <Trash2 className="size-4"/>
+                    <Trash2 className="size-4" />
                     <span className="hidden sm:inline">{t('common:deleteSelected')}</span>
                   </Button>
                 </div>
@@ -1246,54 +1240,67 @@ export function ResourceListPage({
             )}
             {/* Mobile: card-per-record stack. Hidden ≥ sm. */}
             <div className="space-y-2 sm:hidden">
-              {showSkeletons && Array.from({ length: pagination.pageSize }, (_, i) => (
-                <div key={`skel-card-${i}`} className="rounded-lg border border-border bg-card p-3">
-                  <div className="flex items-start gap-3">
-                    <Skeleton className="mt-1 h-4 w-4 flex-none rounded"/>
-                    <div className="flex-1 space-y-2">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 space-y-1.5">
-                          <Skeleton className="h-4 w-32"/>
-                          <Skeleton className="h-3 w-16"/>
-                        </div>
-                        <Skeleton className="h-7 w-7 shrink-0 rounded"/>
-                      </div>
-                      <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2">
-                        {Array.from({ length: 4 }, (_, j) => (
-                          <div key={j} className="space-y-1">
-                            <Skeleton className="h-2.5 w-14"/>
-                            <Skeleton className={`h-4 ${SKEL_WIDTHS[(i * 3 + j) % SKEL_WIDTHS.length]}`}/>
+              {showSkeletons &&
+                Array.from({ length: pagination.pageSize }, (_, i) => (
+                  <div
+                    key={`skel-card-${i}`}
+                    className="rounded-lg border border-border bg-card p-3"
+                  >
+                    <div className="flex items-start gap-3">
+                      <Skeleton className="mt-1 h-4 w-4 flex-none rounded" />
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 space-y-1.5">
+                            <Skeleton className="h-4 w-32" />
+                            <Skeleton className="h-3 w-16" />
                           </div>
-                        ))}
+                          <Skeleton className="h-7 w-7 shrink-0 rounded" />
+                        </div>
+                        <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2">
+                          {Array.from({ length: 4 }, (_, j) => (
+                            <div key={j} className="space-y-1">
+                              <Skeleton className="h-2.5 w-14" />
+                              <Skeleton
+                                className={`h-4 ${SKEL_WIDTHS[(i * 3 + j) % SKEL_WIDTHS.length]}`}
+                              />
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
               {!showSkeletons && records.isError && (
                 <div className="rounded-md border border-border px-4 py-8 text-left text-destructive">
                   {t('common:loadFailed', { error: String(records.error) })}
                 </div>
               )}
-              {!showSkeletons && table.getRowModel().rows.map((row) => (
-                <RecordCard
-                  key={row.id}
-                  record={row.original}
-                  properties={visible.filter((p) =>
-                    table.getColumn(p.path)?.getIsVisible() ?? true,
-                  )}
-                  resourceId={resourceId}
-                  showSelect={showSelectColumn}
-                  selected={row.getIsSelected()}
-                  onToggleSelect={(v) => row.toggleSelected(v)}
-                  onView={() => navigate({ name: 'show', resourceId, recordId: row.original.id })}
-                  onEdit={() => navigate({ name: 'edit', resourceId, recordId: row.original.id })}
-                  onDelete={makeDeleteHandler(row.original)}
-                  customActions={customRecordActions}
-                  onInvokeAction={makeInvokeRecordHandler(row.original)}
-                  t={t}
-                />
-              ))}
+              {!showSkeletons &&
+                table
+                  .getRowModel()
+                  .rows.map((row) => (
+                    <RecordCard
+                      key={row.id}
+                      record={row.original}
+                      properties={visible.filter(
+                        (p) => table.getColumn(p.path)?.getIsVisible() ?? true,
+                      )}
+                      resourceId={resourceId}
+                      showSelect={showSelectColumn}
+                      selected={row.getIsSelected()}
+                      onToggleSelect={(v) => row.toggleSelected(v)}
+                      onView={() =>
+                        navigate({ name: 'show', resourceId, recordId: row.original.id })
+                      }
+                      onEdit={() =>
+                        navigate({ name: 'edit', resourceId, recordId: row.original.id })
+                      }
+                      onDelete={makeDeleteHandler(row.original)}
+                      customActions={customRecordActions}
+                      onInvokeAction={makeInvokeRecordHandler(row.original)}
+                      t={t}
+                    />
+                  ))}
             </div>
 
             {/* Desktop: tabular layout. Hidden < sm.
@@ -1342,18 +1349,16 @@ export function ResourceListPage({
                   renderedWidth.get(colId) ?? base
 
                 // Resize guide: compute left offset using rendered (boosted) widths.
-                const resizingHeader = table.getHeaderGroups()
+                const resizingHeader = table
+                  .getHeaderGroups()
                   .flatMap((hg) => hg.headers)
                   .find((h) => h.column.getIsResizing())
                 const deltaOffset = table.state.columnResizing.deltaOffset ?? 0
                 const resizeLeft = resizingHeader
                   ? leafCols
-                    .slice(
-                      0,
-                      leafCols.findIndex((c) => c.id === resizingHeader.column.id) + 1,
-                    )
-                    .reduce((s, c) => s + (renderedWidth.get(c.id) ?? c.getSize()), 0) +
-                  deltaOffset
+                      .slice(0, leafCols.findIndex((c) => c.id === resizingHeader.column.id) + 1)
+                      .reduce((s, c) => s + (renderedWidth.get(c.id) ?? c.getSize()), 0) +
+                    deltaOffset
                   : 0
 
                 return (
@@ -1424,11 +1429,13 @@ export function ResourceListPage({
                                   )}
                                 >
                                   {col.id === '_select' ? (
-                                    <Skeleton className="h-4 w-4 rounded"/>
+                                    <Skeleton className="h-4 w-4 rounded" />
                                   ) : col.id === '_actions' ? (
-                                    <Skeleton className="h-8 w-8 rounded"/>
+                                    <Skeleton className="h-8 w-8 rounded" />
                                   ) : (
-                                    <Skeleton className={`h-4 ${SKEL_WIDTHS[(i * 3 + j) % SKEL_WIDTHS.length]}`}/>
+                                    <Skeleton
+                                      className={`h-4 ${SKEL_WIDTHS[(i * 3 + j) % SKEL_WIDTHS.length]}`}
+                                    />
                                   )}
                                 </TableCell>
                               ))}
@@ -1450,7 +1457,10 @@ export function ResourceListPage({
                               className="group cursor-pointer"
                               onClick={(e) => {
                                 const target = e.target as HTMLElement
-                                if (target.closest('a, button, [role="menuitem"], [role="checkbox"]')) return
+                                if (
+                                  target.closest('a, button, [role="menuitem"], [role="checkbox"]')
+                                )
+                                  return
                                 if (disableRowNavigation) {
                                   row.toggleSelected(!row.getIsSelected())
                                   return
@@ -1463,7 +1473,11 @@ export function ResourceListPage({
                                 if (target.closest('a, button, [role="menuitem"]')) return
                                 if (disableRowNavigation) return
                                 e.preventDefault()
-                                openInNewTab({ name: 'edit', resourceId, recordId: row.original.id })
+                                openInNewTab({
+                                  name: 'edit',
+                                  resourceId,
+                                  recordId: row.original.id,
+                                })
                               }}
                               onMouseDown={(e) => {
                                 if (e.button === 1) {
@@ -1568,7 +1582,7 @@ export function ResourceListPage({
               : cn('shrink-0', embedPadding && 'px-6'),
           )}
         >
-          <Paginator table={table} total={total} t={t}/>
+          <Paginator table={table} total={total} t={t} />
         </div>
       )}
     </div>
@@ -1595,7 +1609,7 @@ function SortHeader({
       className="-ml-2 inline-flex h-8 items-center gap-1 rounded-md px-2 font-semibold hover:bg-accent hover:text-accent-foreground"
     >
       {property.label}
-      <Icon className="size-3.5 opacity-60"/>
+      <Icon className="size-3.5 opacity-60" />
     </button>
   )
 }
@@ -1643,8 +1657,7 @@ function CellContent({
     // (`record.populated[property.path]`), so we hand the inline record to
     // <ReferenceLink> and avoid the per-row `show` request.
     const populatedRecord = populated?.[property.path] as
-      | { id?: string; title?: string }
-      | undefined
+      { id?: string; title?: string } | undefined
     return (
       <ReferenceLink
         resourceId={property.reference}
@@ -1653,7 +1666,7 @@ function CellContent({
       />
     )
   }
-  return <PropertyDisplay property={property} value={value} view="list" populated={populated}/>
+  return <PropertyDisplay property={property} value={value} view="list" populated={populated} />
 }
 
 function RowActions({
@@ -1684,7 +1697,7 @@ function RowActions({
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="size-8">
-            <MoreHorizontal className="size-4"/>
+            <MoreHorizontal className="size-4" />
             <span className="sr-only">{t('common:openMenu')}</span>
           </Button>
         </DropdownMenuTrigger>
@@ -1692,17 +1705,17 @@ function RowActions({
           <DropdownMenuLabel>{t('common:actions')}</DropdownMenuLabel>
           {canShow && (
             <DropdownMenuItem onSelect={onView}>
-              <Eye className="size-4"/> {t('common:show')}
+              <Eye className="size-4" /> {t('common:show')}
             </DropdownMenuItem>
           )}
           {canEdit && (
             <DropdownMenuItem onSelect={onEdit}>
-              <Pencil className="size-4"/> {t('common:edit')}
+              <Pencil className="size-4" /> {t('common:edit')}
             </DropdownMenuItem>
           )}
           {rowActions.length > 0 && (
             <>
-              <DropdownMenuSeparator/>
+              <DropdownMenuSeparator />
               <ActionMenuItems
                 actions={rowActions}
                 onAction={(action) => onInvokeAction?.(action)}
@@ -1711,9 +1724,12 @@ function RowActions({
           )}
           {canDelete && (
             <>
-              <DropdownMenuSeparator/>
-              <DropdownMenuItem onSelect={onDelete} className="text-destructive focus:text-destructive">
-                <Trash2 className="size-4"/> {t('common:delete')}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onSelect={onDelete}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="size-4" /> {t('common:delete')}
               </DropdownMenuItem>
             </>
           )}
@@ -1737,13 +1753,13 @@ function ColumnVisibilityMenu({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm">
-          <SlidersHorizontal className="size-4"/>
+          <SlidersHorizontal className="size-4" />
           <span className="hidden sm:inline">{t('common:columns')}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
         <DropdownMenuLabel>{t('common:toggleColumns')}</DropdownMenuLabel>
-        <DropdownMenuSeparator/>
+        <DropdownMenuSeparator />
         {table
           .getAllColumns()
           .filter((c) => c.getCanHide())
@@ -1799,12 +1815,9 @@ function Paginator({
     return attachDragScroll(el)
   }, [])
   const perPageSelect = (
-    <Select
-      value={String(pageSize)}
-      onValueChange={(v) => table.setPageSize(Number(v))}
-    >
+    <Select value={String(pageSize)} onValueChange={(v) => table.setPageSize(Number(v))}>
       <SelectTrigger className="h-8 w-[72px]">
-        <SelectValue/>
+        <SelectValue />
       </SelectTrigger>
       <SelectContent>
         {PAGE_SIZES.map((s) => (
@@ -1832,9 +1845,7 @@ function Paginator({
       <div className="flex min-w-0 flex-col items-center gap-2 sm:flex-row">
         {/* Desktop-only per-page label + select next to the pagination buttons. */}
         <div className="hidden items-center gap-2 sm:flex">
-          <span className="text-sm text-muted-foreground">
-            {t('common:rowsPerPage')}
-          </span>
+          <span className="text-sm text-muted-foreground">{t('common:rowsPerPage')}</span>
           {perPageSelect}
         </div>
         {/* Page navigation — scrollable + drag-scrollable on narrow screens.
@@ -1851,7 +1862,7 @@ function Paginator({
               disabled={!table.getCanPreviousPage()}
               aria-label={t('common:firstPage')}
             >
-              <ChevronsLeft className="size-4"/>
+              <ChevronsLeft className="size-4" />
             </Button>
             <Button
               variant="outline"
@@ -1860,7 +1871,7 @@ function Paginator({
               disabled={!table.getCanPreviousPage()}
               aria-label={t('common:previousPage')}
             >
-              <ChevronLeft className="size-4"/>
+              <ChevronLeft className="size-4" />
             </Button>
             {pages.map((p) => (
               <Button
@@ -1881,7 +1892,7 @@ function Paginator({
               disabled={!table.getCanNextPage()}
               aria-label={t('common:nextPage')}
             >
-              <ChevronRight className="size-4"/>
+              <ChevronRight className="size-4" />
             </Button>
             <Button
               variant="outline"
@@ -1890,7 +1901,7 @@ function Paginator({
               disabled={!table.getCanNextPage()}
               aria-label={t('common:lastPage')}
             >
-              <ChevronsRight className="size-4"/>
+              <ChevronsRight className="size-4" />
             </Button>
           </div>
         </div>
@@ -1906,7 +1917,7 @@ function NumericFilterField({
   onChange,
   t,
 }: {
-  value: string
+  value?: FilterInput
   onChange(v: unknown): void
   t: (key: string, params?: Record<string, string | number>) => string
 }): React.ReactElement {
@@ -2023,12 +2034,10 @@ function FilterControl({
         <Tooltip>
           <TooltipTrigger asChild>
             <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-              <ListFilter className="size-4"/>
+              <ListFilter className="size-4" />
               <span className="hidden sm:inline">{t('common:filters')}</span>
               {filters.length > 0 && (
-                <Badge className="ml-1 h-5 rounded-full px-1.5 text-xs">
-                  {filters.length}
-                </Badge>
+                <Badge className="ml-1 h-5 rounded-full px-1.5 text-xs">{filters.length}</Badge>
               )}
             </Button>
           </TooltipTrigger>
@@ -2102,8 +2111,21 @@ function FilterPanel({
   }, [open, mountedCount, properties.length])
 
   const setDraftFilter = (id: string, value: unknown) => {
-    const without = draft.filter((f) => f.id !== id)
-    setDraft(value != null && value !== '' ? [...without, { id, value }] : without)
+    setDraft((current) => {
+      const without = current.filter((f) => f.id !== id)
+      return value != null && value !== '' ? [...without, { id, value }] : without
+    })
+  }
+
+  const setDraftDateFilter = (path: string, value: FilterCriterion | null) => {
+    setDraft((current) => {
+      const legacyFrom = path + '~~from'
+      const legacyTo = path + '~~to'
+      const without = current.filter(
+        (filter) => filter.id !== path && filter.id !== legacyFrom && filter.id !== legacyTo,
+      )
+      return value ? [...without, { id: path, value }] : without
+    })
   }
 
   const handleApply = () => {
@@ -2124,8 +2146,7 @@ function FilterPanel({
         className="flex w-full flex-col gap-0 p-0 sm:max-w-md"
         aria-describedby={undefined}
       >
-        <SheetHeader
-          className="flex-none flex-row items-center justify-between space-y-0 border-b border-border px-4 py-3 pr-12">
+        <SheetHeader className="flex-none flex-row items-center justify-between space-y-0 border-b border-border px-4 py-3 pr-12">
           <div className="flex items-center gap-2">
             <SheetTitle>{t('common:filters')}</SheetTitle>
             {draft.length > 0 && (
@@ -2146,19 +2167,18 @@ function FilterPanel({
                 <FilterField
                   key={p.path}
                   property={p}
-                  value={draftMap.get(p.path) as string | undefined}
+                  value={draftMap.get(p.path) as FilterInput | undefined}
                   onChange={(v) => setDraftFilter(p.path, v)}
                   valueFrom={draftMap.get(p.path + '~~from') as string | undefined}
                   valueTo={draftMap.get(p.path + '~~to') as string | undefined}
-                  onChangeFrom={(v) => setDraftFilter(p.path + '~~from', v)}
-                  onChangeTo={(v) => setDraftFilter(p.path + '~~to', v)}
+                  onDateChange={(v) => setDraftDateFilter(p.path, v)}
                   resourceId={resourceId}
                   t={t}
                 />
               ) : (
                 <div key={p.path} className="space-y-1.5">
-                  <Skeleton className="h-4 w-24"/>
-                  <Skeleton className="h-8 w-full"/>
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-8 w-full" />
                 </div>
               ),
             )}
@@ -2183,18 +2203,16 @@ function FilterField({
   onChange,
   valueFrom,
   valueTo,
-  onChangeFrom,
-  onChangeTo,
+  onDateChange,
   resourceId,
   t,
 }: {
   property: PropertyJSON
-  value: string | undefined
+  value: FilterInput | undefined
   onChange(v: unknown): void
   valueFrom?: string
   valueTo?: string
-  onChangeFrom?(v: unknown): void
-  onChangeTo?(v: unknown): void
+  onDateChange?(v: FilterCriterion | null): void
   resourceId: string
   t: (key: string, params?: Record<string, string | number>) => string
 }): React.ReactElement {
@@ -2203,18 +2221,18 @@ function FilterField({
     <div className="space-y-1.5">
       <Label className="text-sm font-medium">{property.label}</Label>
       {isDateType ? (
-        <DateRangeFilter
+        <DateFilterField
           mode={property.type as 'date' | 'datetime'}
-          from={valueFrom}
-          to={valueTo}
-          onFromChange={onChangeFrom ?? onChange}
-          onToChange={onChangeTo ?? onChange}
+          value={value}
+          legacyFrom={valueFrom}
+          legacyTo={valueTo}
+          onChange={onDateChange ?? ((next) => onChange(next))}
           t={t}
         />
       ) : (
         <FilterInput
           property={property}
-          value={value ?? ''}
+          value={value}
           onChange={onChange}
           resourceId={resourceId}
           t={t}
@@ -2224,47 +2242,82 @@ function FilterField({
   )
 }
 
-function DateRangeFilter({
+function DateFilterField({
   mode,
-  from,
-  to,
-  onFromChange,
-  onToChange,
+  value,
+  legacyFrom,
+  legacyTo,
+  onChange,
   t,
 }: {
   mode: 'date' | 'datetime'
-  from: string | undefined
-  to: string | undefined
-  onFromChange(v: unknown): void
-  onToChange(v: unknown): void
+  value?: FilterInput
+  legacyFrom?: string
+  legacyTo?: string
+  onChange(v: FilterCriterion | null): void
   t: (key: string, params?: Record<string, string | number>) => string
 }): React.ReactElement {
   // The calendar popover needs a date-fns locale of its own — the `t` prop
   // only covers the surrounding labels.
   const { locale: uiLocale } = useI18n()
   const locale = dateFnsLocale(uiLocale)
+  const initial = parseDateFilter(
+    value ?? encodeDateFilter('between', legacyFrom ?? '', legacyTo ?? '') ?? undefined,
+  )
+  const [op, setOp] = React.useState<DateFilterOp>(initial.op)
+  const [from, setFrom] = React.useState(initial.from)
+  const [to, setTo] = React.useState(initial.to)
+
+  React.useEffect(() => {
+    const next = parseDateFilter(
+      value ?? encodeDateFilter('between', legacyFrom ?? '', legacyTo ?? '') ?? undefined,
+    )
+    setOp(next.op)
+    setFrom(next.from)
+    setTo(next.to)
+  }, [value, legacyFrom, legacyTo])
+
+  const emit = (nextOp: DateFilterOp, nextFrom: string, nextTo: string) => {
+    setOp(nextOp)
+    setFrom(nextFrom)
+    setTo(nextTo)
+    onChange(encodeDateFilter(nextOp, nextFrom, nextTo))
+  }
+
   return (
     <div className="space-y-2">
-      <div className="space-y-1">
-        <span className="text-xs text-muted-foreground">{t('common:from')}</span>
-        <DatePicker
-          mode={mode}
-          value={from ?? ''}
-          onChange={(v) => onFromChange(v)}
-          ariaLabel={t('common:from')}
-          locale={locale}
-        />
-      </div>
-      <div className="space-y-1">
-        <span className="text-xs text-muted-foreground">{t('common:to')}</span>
-        <DatePicker
-          mode={mode}
-          value={to ?? ''}
-          onChange={(v) => onToChange(v)}
-          ariaLabel={t('common:to')}
-          locale={locale}
-        />
-      </div>
+      <Select value={op} onValueChange={(next) => emit(next as DateFilterOp, from, to)}>
+        <SelectTrigger className="h-7 text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            {ALL_DATE_OPS.map((option) => (
+              <SelectItem key={option} value={option} className="text-xs">
+                {t(`filter:op.${option}`)}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+      {!DATE_NULLARY.has(op) && (
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <DatePicker
+            mode={mode}
+            value={from}
+            onChange={(next) => emit('between', next, to)}
+            ariaLabel={t('common:from')}
+            locale={locale}
+          />
+          <DatePicker
+            mode={mode}
+            value={to}
+            onChange={(next) => emit('between', from, next)}
+            ariaLabel={t('common:to')}
+            locale={locale}
+          />
+        </div>
+      )}
     </div>
   )
 }
@@ -2279,7 +2332,7 @@ function FilterInput({
   t,
 }: {
   property: PropertyJSON
-  value: string
+  value?: FilterInput
   onChange(v: unknown): void
   resourceId: string
   t: (key: string, params?: Record<string, string | number>) => string
@@ -2287,11 +2340,11 @@ function FilterInput({
   // Reference field → combobox backed by the referenced resource's search action
   if (property.reference && !property.isArray) {
     return (
-      <ReferenceCombobox
+      <ReferenceFilterField
         referenceResourceId={property.reference}
-        value={value || null}
-        onChange={(v) => onChange(v ?? '')}
-        placeholder={t('common:any')}
+        value={value}
+        onChange={onChange}
+        t={t}
       />
     )
   }
@@ -2299,9 +2352,12 @@ function FilterInput({
   // Enum / available values → Select
   if (property.availableValues?.length) {
     return (
-      <Select value={value || '_any_'} onValueChange={(v) => onChange(v === '_any_' ? '' : v)}>
+      <Select
+        value={parseReferenceFilter(value).val || '_any_'}
+        onValueChange={(v) => onChange(v === '_any_' ? null : encodeReferenceFilter('eq', v))}
+      >
         <SelectTrigger className="h-8">
-          <SelectValue placeholder={t('common:any')}/>
+          <SelectValue placeholder={t('common:any')} />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="_any_">{t('common:any')}</SelectItem>
@@ -2316,44 +2372,101 @@ function FilterInput({
   }
 
   switch (property.type) {
-  case 'boolean':
-    return (
-      <Select value={value || '_any_'} onValueChange={(v) => onChange(v === '_any_' ? '' : v)}>
-        <SelectTrigger className="h-8">
-          <SelectValue placeholder={t('common:any')}/>
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="_any_">{t('common:any')}</SelectItem>
-          <SelectItem value="true">{t('common:yes')}</SelectItem>
-          <SelectItem value="false">{t('common:no')}</SelectItem>
-        </SelectContent>
-      </Select>
-    )
-  case 'number':
-  case 'float':
-  case 'money':
-  case 'currency':
-    return (
-      <NumericFilterField
-        value={value}
-        onChange={onChange}
-        t={t}
-      />
-    )
-  default:
-    return (
-      <StringFilterField
-        property={property}
-        value={value}
-        onChange={onChange}
-        resourceId={resourceId}
-        t={t}
-      />
-    )
+    case 'boolean':
+      return (
+        <Select
+          value={parseReferenceFilter(value).val || '_any_'}
+          onValueChange={(v) => onChange(v === '_any_' ? null : encodeReferenceFilter('eq', v))}
+        >
+          <SelectTrigger className="h-8">
+            <SelectValue placeholder={t('common:any')} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="_any_">{t('common:any')}</SelectItem>
+            <SelectItem value="true">{t('common:yes')}</SelectItem>
+            <SelectItem value="false">{t('common:no')}</SelectItem>
+          </SelectContent>
+        </Select>
+      )
+    case 'number':
+    case 'float':
+    case 'money':
+    case 'currency':
+      return <NumericFilterField value={value} onChange={onChange} t={t} />
+    default:
+      return (
+        <StringFilterField
+          property={property}
+          value={value}
+          onChange={onChange}
+          resourceId={resourceId}
+          t={t}
+        />
+      )
   }
 }
 
 // ─── String filter with operator selector + value picker ─────────────────────
+
+function ReferenceFilterField({
+  referenceResourceId,
+  value,
+  onChange,
+  t,
+}: {
+  referenceResourceId: string
+  value?: FilterInput
+  onChange(v: unknown): void
+  t: (key: string, params?: Record<string, string | number>) => string
+}): React.ReactElement {
+  const parsed = parseReferenceFilter(value)
+  const [op, setOp] = React.useState<ReferenceFilterOp>(parsed.op)
+  const [selected, setSelected] = React.useState(parsed.val)
+
+  React.useEffect(() => {
+    const next = parseReferenceFilter(value)
+    setOp(next.op)
+    setSelected(next.val)
+  }, [value])
+
+  const emit = (nextOp: ReferenceFilterOp, nextValue: string) => {
+    setOp(nextOp)
+    setSelected(nextValue)
+    onChange(encodeReferenceFilter(nextOp, nextValue))
+  }
+
+  return (
+    <div className="space-y-2">
+      <Select
+        value={op}
+        onValueChange={(next) =>
+          emit(next as ReferenceFilterOp, REFERENCE_NULLARY.has(next) ? '' : selected)
+        }
+      >
+        <SelectTrigger className="h-7 text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            {ALL_REFERENCE_OPS.map((option) => (
+              <SelectItem key={option} value={option} className="text-xs">
+                {t(`filter:op.${option}`)}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+      {!REFERENCE_NULLARY.has(op) && (
+        <ReferenceCombobox
+          referenceResourceId={referenceResourceId}
+          value={selected || null}
+          onChange={(next) => emit(op, next == null ? '' : String(next))}
+          placeholder={t('common:any')}
+        />
+      )}
+    </div>
+  )
+}
 
 function StringFilterField({
   property,
@@ -2363,7 +2476,7 @@ function StringFilterField({
   t,
 }: {
   property: PropertyJSON
-  value: string
+  value?: FilterInput
   onChange(v: unknown): void
   resourceId: string
   t: (key: string, params?: Record<string, string | number>) => string
@@ -2393,9 +2506,7 @@ function StringFilterField({
   // to a checkbox picker with nothing to check leaves the user unable to type
   // the value they came to filter by.
   const shouldDefaultToOneOf =
-    isLowCardinality
-    && distinctValues.length > 0
-    && distinctValues.length <= ONE_OF_DEFAULT_MAX
+    isLowCardinality && distinctValues.length > 0 && distinctValues.length <= ONE_OF_DEFAULT_MAX
 
   // If few distinct values, no existing filter, and default op (co with empty
   // val): auto-switch to "is one of" mode to match Metabase behavior.
@@ -2431,7 +2542,7 @@ function StringFilterField({
       {/* Operator selector */}
       <Select value={op} onValueChange={(v) => handleOpChange(v as StringFilterOp)}>
         <SelectTrigger className="h-7 text-xs">
-          <SelectValue/>
+          <SelectValue />
         </SelectTrigger>
         <SelectContent>
           {ALL_STRING_OPS.map((o) => (
@@ -2447,8 +2558,12 @@ function StringFilterField({
         <FilterValuePicker
           resourceId={resourceId}
           field={property.path}
-          selected={val ? val.split(',') : []}
-          onChange={(selected) => emit('in', selected.join(','))}
+          selected={parsed.values}
+          onChange={(selected) => {
+            setOp('in')
+            setVal('')
+            onChange(encodeInFilterValues(selected))
+          }}
           preloadedValues={isLowCardinality ? distinctValues : undefined}
           t={t}
         />
@@ -2487,11 +2602,11 @@ function FilterValuePicker({
 
   // Fetch values from server (skipped when preloaded values are available).
   const needsServerSearch = preloadedValues == null
-  const { data: serverData, isLoading } = useDistinctValues(
-    resourceId,
-    field,
-    { search: needsServerSearch ? search : undefined, limit: 100, enabled: needsServerSearch },
-  )
+  const { data: serverData, isLoading } = useDistinctValues(resourceId, field, {
+    search: needsServerSearch ? search : undefined,
+    limit: 100,
+    enabled: needsServerSearch,
+  })
 
   // Client-side filter when using preloaded values, falling back to the
   // server-fetched distinct values otherwise.
@@ -2526,8 +2641,7 @@ function FilterValuePicker({
     <div className="space-y-2">
       {/* Search input */}
       <div className="relative">
-        <Search
-          className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"/>
+        <Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
         <Input
           className="h-7 pl-7 text-xs"
           value={search}
@@ -2600,7 +2714,12 @@ function FilterValuePicker({
                   }
                 }}
               >
-                <Checkbox className="pointer-events-none size-3.5" tabIndex={-1} aria-hidden="true" checked={selectedSet.has(v)}/>
+                <Checkbox
+                  className="pointer-events-none size-3.5"
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  checked={selectedSet.has(v)}
+                />
                 <span className="truncate">{v}</span>
               </div>
             ))
@@ -2631,57 +2750,68 @@ function ColumnFilterPopover({
 }: {
   property: PropertyJSON
   getFilters(): ColumnFiltersState
-  onApply(updates: Record<string, string>): void
+  onApply(updates: Record<string, FilterInput | null>): void
   resourceId: string
   t: (key: string, params?: Record<string, string | number>) => string
 }): React.ReactElement {
   const [open, setOpen] = React.useState(false)
   const isDateType = property.type === 'date' || property.type === 'datetime'
 
-  const [value, setValue] = React.useState('')
+  const [value, setValue] = React.useState<FilterInput | undefined>()
   const [valueFrom, setValueFrom] = React.useState('')
   const [valueTo, setValueTo] = React.useState('')
 
   // Initialise draft from current URL filters each time the popover opens.
   React.useEffect(() => {
     if (!open) return
-    const map = new Map(getFilters().map((f) => [f.id, String(f.value ?? '')]))
+    const map = new Map(getFilters().map((f) => [f.id, f.value as FilterInput | undefined]))
     if (isDateType) {
-      setValueFrom(map.get(property.path + '~~from') ?? '')
-      setValueTo(map.get(property.path + '~~to') ?? '')
+      const legacyFrom = map.get(property.path + '~~from')
+      const legacyTo = map.get(property.path + '~~to')
+      const from = typeof legacyFrom === 'string' ? legacyFrom : ''
+      const to = typeof legacyTo === 'string' ? legacyTo : ''
+      setValue(map.get(property.path) ?? encodeDateFilter('between', from, to) ?? undefined)
+      setValueFrom(from)
+      setValueTo(to)
     } else {
-      setValue(map.get(property.path) ?? '')
+      setValue(map.get(property.path))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   // Icon is highlighted when any filter for this property is set.
   const isActive = (() => {
-    const map = new Map(getFilters().map((f) => [f.id, String(f.value ?? '')]))
+    const map = new Map(getFilters().map((f) => [f.id, f.value]))
     return isDateType
-      ? !!(map.get(property.path + '~~from') || map.get(property.path + '~~to'))
+      ? !!(
+          map.get(property.path) ||
+          map.get(property.path + '~~from') ||
+          map.get(property.path + '~~to')
+        )
       : !!map.get(property.path)
   })()
 
   const handleApply = () => {
-    const updates: Record<string, string> = {}
+    const updates: Record<string, FilterInput | null> = {}
     if (isDateType) {
-      updates[property.path + '~~from'] = valueFrom
-      updates[property.path + '~~to'] = valueTo
+      updates[property.path] = value ?? null
+      updates[property.path + '~~from'] = null
+      updates[property.path + '~~to'] = null
     } else {
-      updates[property.path] = value
+      updates[property.path] = value ?? null
     }
     onApply(updates)
     setOpen(false)
   }
 
   const handleClear = () => {
-    const updates: Record<string, string> = {}
+    const updates: Record<string, FilterInput | null> = {}
     if (isDateType) {
-      updates[property.path + '~~from'] = ''
-      updates[property.path + '~~to'] = ''
+      updates[property.path] = null
+      updates[property.path + '~~from'] = null
+      updates[property.path + '~~to'] = null
     } else {
-      updates[property.path] = ''
+      updates[property.path] = null
     }
     onApply(updates)
     setOpen(false)
@@ -2698,7 +2828,7 @@ function ColumnFilterPopover({
           )}
           aria-label={t('common:filter', { label: property.label })}
         >
-          <ListFilter className="size-3.5"/>
+          <ListFilter className="size-3.5" />
         </button>
       </PopoverTrigger>
       <PopoverContent
@@ -2709,11 +2839,10 @@ function ColumnFilterPopover({
           <FilterField
             property={property}
             value={value}
-            onChange={(v) => setValue(String(v ?? ''))}
+            onChange={(v) => setValue((v as FilterInput | null) ?? undefined)}
             valueFrom={valueFrom}
             valueTo={valueTo}
-            onChangeFrom={(v) => setValueFrom(String(v ?? ''))}
-            onChangeTo={(v) => setValueTo(String(v ?? ''))}
+            onDateChange={(next) => setValue(next ?? undefined)}
             resourceId={resourceId}
             t={t}
           />
@@ -2772,9 +2901,7 @@ function RecordCard({
   // Body shows non-id, non-title properties. On mobile we want maximum
   // information density, so render up to 8 — enough to surface most fields
   // without scrolling each card.
-  const bodyProps = properties
-    .filter((p) => !p.isId && p.path !== titleProperty?.path)
-    .slice(0, 8)
+  const bodyProps = properties.filter((p) => !p.isId && p.path !== titleProperty?.path).slice(0, 8)
 
   // Card uses a clickable div (not <button>) because it nests interactive
   // children (the RowActions DropdownMenuTrigger and reference links). HTML
@@ -2818,10 +2945,7 @@ function RecordCard({
     >
       <div className="flex items-start gap-2">
         {showSelect && (
-          <div
-            className="flex flex-none items-center pt-0.5"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="flex flex-none items-center pt-0.5" onClick={(e) => e.stopPropagation()}>
             <Checkbox
               checked={selected}
               onCheckedChange={(v) => onToggleSelect(!!v)}

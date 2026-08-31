@@ -100,8 +100,7 @@ export function passwordsFeature(options: PasswordsFeatureOptions): FeatureFn {
 
     // --- Action hooks ---
     const existingActions = resourceOptions.actions as
-      | Record<string, Record<string, unknown>>
-      | undefined
+      Record<string, Record<string, unknown>> | undefined
     const existingNew = existingActions?.new
     const existingEdit = existingActions?.edit
 
