@@ -1,11 +1,8 @@
-import { describe, expect, mock, test } from 'bun:test'
+import { describe, expect, mock } from 'bun:test'
 import { createMemorySystem, ModernAdmin } from '@modern-admin/core'
 import { AiAssistantProcessor } from '../src/ai-assistant.processor.js'
 import { AiAssistantService } from '../src/ai-assistant.service.js'
-import type {
-  AiAssistantChatJobData,
-  IAiAssistantQueueDispatcher,
-} from '../src/ai-assistant.types.js'
+import type { AiAssistantChatJobData, IAiAssistantQueueDispatcher } from '../src/ai-assistant.types.js'
 import type { ILlmProvider } from '../src/llm-provider.js'
 import { ApiStockLlmProvider, defaultLlmProvider } from '../src/llm-provider.js'
 import { ModernAdminModule, type ModernAdminModuleOptions } from '../src/module.js'
@@ -41,7 +38,7 @@ describe('AI assistant dependency boundaries', () => {
       provider: 'api-stock',
       providerName: 'api-stock',
       apiKeyUrl: 'https://api-stock.com',
-      model: 'gemini-3.5-flash',
+      model: 'gemini-3.6-flash',
       configured: false,
     })
   })
@@ -59,7 +56,7 @@ describe('AI assistant dependency boundaries', () => {
 
     const settings = await service.getSettings({ id: 'admin', role: 'admin' })
 
-    expect(settings.model).toBe('gemini-3.5-flash')
+    expect(settings.model).toBe('gemini-3.6-flash')
     expect(settings.configured).toBeFalse()
     expect(settings.maskedApiKey).toBeNull()
   })
