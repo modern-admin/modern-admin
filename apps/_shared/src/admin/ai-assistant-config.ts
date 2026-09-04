@@ -3,7 +3,7 @@
 // settings UI behind the `admin` role; only the optional `rawQuery` slot
 // (host SQL executor) and the API key source typically differ.
 
-import type { ILlmProvider, IAiAssistantQueueDispatcher } from '@modern-admin/nest'
+import type { IAiAssistantQueueDispatcher, ILlmProvider } from '@modern-admin/nest'
 
 export interface AiAssistantConfigBase {
   provider?: ILlmProvider
@@ -31,7 +31,7 @@ export interface AiAssistantConfigBase {
 }
 
 export interface BuildAiAssistantConfigOptions {
-  /** Override model id. Defaults to `gemini-3.5-flash`. */
+  /** Override model id. Defaults to `gemini-3.6-flash`. */
   defaultModel?: string
   /** Roles allowed to view/edit AI assistant settings. Defaults to `['admin']`. */
   manageRoles?: string[]
@@ -66,7 +66,7 @@ const DEFAULT_EXCLUDED_RESOURCE_IDS = [
 /**
  * Builds an `aiAssistant` config block with the project defaults.
  *
- * - `defaultModel`: `gemini-3.5-flash`
+ * - `defaultModel`: `gemini-3.6-flash`
  * - `manageRoles`: `['admin']`
  * - `apiKey` from `process.env.API_STOCK_KEY` when set (UI-stored
  *   value from configStore takes precedence once configured).
@@ -76,7 +76,7 @@ export const buildAiAssistantConfig = (
   options: BuildAiAssistantConfigOptions = {},
 ): AiAssistantConfigBase => {
   const {
-    defaultModel = 'gemini-3.5-flash',
+    defaultModel = 'gemini-3.6-flash',
     manageRoles = ['admin'],
     rawQuery,
     overrides = {},
