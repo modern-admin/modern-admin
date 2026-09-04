@@ -39,9 +39,7 @@ export interface ILlmProvider {
   readonly displayName?: string
   readonly apiKeyUrl?: string
   readonly defaultModel: string
-
   isConfigured(apiKey?: string): boolean
-
   generate(input: LlmGenerateInput): Promise<LlmGenerateResult>
 }
 

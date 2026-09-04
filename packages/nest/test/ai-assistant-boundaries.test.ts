@@ -1,8 +1,11 @@
-import { describe, expect, mock } from 'bun:test'
+import { describe, expect, mock, test } from 'bun:test'
 import { createMemorySystem, ModernAdmin } from '@modern-admin/core'
 import { AiAssistantProcessor } from '../src/ai-assistant.processor.js'
 import { AiAssistantService } from '../src/ai-assistant.service.js'
-import type { AiAssistantChatJobData, IAiAssistantQueueDispatcher } from '../src/ai-assistant.types.js'
+import type {
+  AiAssistantChatJobData,
+  IAiAssistantQueueDispatcher,
+} from '../src/ai-assistant.types.js'
 import type { ILlmProvider } from '../src/llm-provider.js'
 import { ApiStockLlmProvider, defaultLlmProvider } from '../src/llm-provider.js'
 import { ModernAdminModule, type ModernAdminModuleOptions } from '../src/module.js'
