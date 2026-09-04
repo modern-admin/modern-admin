@@ -380,7 +380,7 @@
     },
     "packages/nest": {
       "name": "@modern-admin/nest",
-      "version": "0.10.0",
+      "version": "0.10.1",
       "dependencies": {
         "@modern-admin/core": "workspace:^",
         "@modern-admin/feature-upload": "workspace:^",
@@ -475,7 +475,7 @@
     },
     "packages/realtime": {
       "name": "@modern-admin/realtime",
-      "version": "0.10.0",
+      "version": "0.10.1",
       "dependencies": {
         "@modern-admin/core": "workspace:^",
         "@modern-admin/nest": "workspace:^",

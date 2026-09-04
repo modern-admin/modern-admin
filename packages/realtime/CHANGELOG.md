@@ -1,5 +1,12 @@
 # @modern-admin/realtime
 
+## 0.10.1
+
+### Patch Changes
+
+- Updated dependencies [[`29cf9a8`](https://github.com/modern-admin/modern-admin/commit/29cf9a8293a94f3288ce5b372326187212cfd35c)]:
+  - @modern-admin/nest@0.10.1
+
 ## 0.10.0
 
 ### Minor Changes
