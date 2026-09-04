@@ -50,7 +50,7 @@ export interface ILlmProvider {
 export class ApiStockLlmProvider implements ILlmProvider {
   readonly id = 'api-stock'
   readonly apiKeyUrl = 'https://api-stock.com'
-  readonly defaultModel = 'gemini-3.5-flash'
+  readonly defaultModel = 'gemini-3.6-flash'
 
   isConfigured(apiKey?: string): boolean {
     return Boolean(apiKey?.trim())
@@ -137,7 +137,7 @@ export class ApiStockLlmProvider implements ILlmProvider {
  */
 export class OpenRouterLlmProvider implements ILlmProvider {
   readonly id = 'openrouter'
-  readonly defaultModel = 'google/gemini-3.1-flash-lite-preview'
+  readonly defaultModel = 'google/gemini-3.6-flash'
 
   isConfigured(apiKey?: string): boolean {
     return Boolean(apiKey?.trim())
