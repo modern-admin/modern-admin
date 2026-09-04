@@ -51,7 +51,7 @@
   },
   "dependencies": {
     "@modern-admin/core": "workspace:^",
-    "zod": "^4.5.2"
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@modern-admin/feature-upload": "workspace:*",

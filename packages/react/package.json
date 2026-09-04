@@ -61,10 +61,10 @@
     "@tanstack/react-query": "^5.102.8",
     "@tanstack/react-router": "^1.170.32",
     "@tanstack/react-table": "^9.2.4",
-    "lucide-react": "^1.37.0",
+    "lucide-react": "^1.38.0",
     "react-hook-form": "^7.86.0",
     "socket.io-client": "^4.8.3",
-    "zod": "^4.5.2"
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
