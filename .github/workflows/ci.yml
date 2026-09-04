@@ -62,11 +62,15 @@ jobs:
 
       # Published-package changes must carry release intent. Changesets exits
       # successfully when the PR does not touch a publishable package, so
-      # docs/CI-only PRs do not need an empty changeset.
+      # docs/CI-only PRs do not need an empty changeset. Dependabot is exempt:
+      # it cannot author a changeset, and its bumps touch nearly every
+      # publishable package.json. Add one by hand before merging when the bump
+      # matters to consumers (a runtime dependency of a published package).
       - name: Verify changeset
         if: >-
           github.event_name == 'pull_request' &&
           github.base_ref == 'develop' &&
+          github.actor != 'dependabot[bot]' &&
           !startsWith(github.head_ref, 'changeset-release/')
         run: bun changeset status --since origin/develop
 
@@ -156,9 +160,14 @@ jobs:
     # to the installed @playwright/test version (1.62.1).
     container:
       image: mcr.microsoft.com/playwright:v1.62.1-noble
+    # This job runs inside a container, so `docker compose up` (used by the
+    # `e2e` job) is not available here — the same services are declared as job
+    # service containers instead. Keep these two images in step with
+    # docker-compose.yml by hand: Dependabot's docker-compose ecosystem updates
+    # that file, but no ecosystem touches image tags inside a workflow.
     services:
       postgres:
-        image: postgres:16
+        image: postgres:18-alpine
         env:
           POSTGRES_USER: admin
           POSTGRES_PASSWORD: admin
@@ -167,7 +176,7 @@ jobs:
           --health-cmd "pg_isready -U admin -d modern_admin"
           --health-interval 10s --health-timeout 5s --health-retries 10
       redis:
-        image: redis:7
+        image: redis:8-alpine
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s --health-timeout 5s --health-retries 10
