@@ -80,7 +80,7 @@
     "cmdk": "^1.1.1",
     "date-fns": "^4.4.0",
     "dompurify": "^3.4.14",
-    "lucide-react": "^1.37.0",
+    "lucide-react": "^1.41.0",
     "marked": "^18.0.11",
     "react-day-picker": "^10.0.1",
     "react-hook-form": "^7.86.0",
@@ -92,7 +92,7 @@
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
-    "@types/bun": "^1.4.0",
+    "@types/bun": "^1.4.1",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.5",
     "tailwindcss": "^4.3.3",

@@ -13,8 +13,8 @@
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
     "@playwright/test": "^1.62.1",
-    "@types/bun": "^1.4.0",
-    "@types/node": "^26.4.0",
+    "@types/bun": "^1.4.1",
+    "@types/node": "^26.4.1",
     "postgres": "^3.4.9",
     "typescript": "^7.0.2"
   }

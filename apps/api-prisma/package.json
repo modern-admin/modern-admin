@@ -47,7 +47,7 @@
     "@prisma/internals": "^7.10.0",
     "better-auth": "^1.7.2",
     "ai": "^7.0.84",
-    "bullmq": "^6.3.2",
+    "bullmq": "^6.3.4",
     "dotenv": "^17.4.2",
     "dotenv-expand": "^1000.0.0",
     "graphql": "^17.0.2",
@@ -57,7 +57,7 @@
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
-    "@types/bun": "^1.4.0",
+    "@types/bun": "^1.4.1",
     "prisma": "^7.10.0",
     "typescript": "^7.0.2"
   }
