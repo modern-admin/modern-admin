@@ -48,11 +48,11 @@
     "test": "bun test"
   },
   "dependencies": {
-    "jose": "^6.2.10"
+    "jose": "6.2.12"
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
-    "@types/bun": "^1.4.0",
+    "@types/bun": "1.4.2",
     "typescript": "^7.0.2"
   }
 }
