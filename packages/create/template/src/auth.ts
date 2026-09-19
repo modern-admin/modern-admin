@@ -17,6 +17,7 @@ import { apiKey } from '@better-auth/api-key'
 import { admin } from 'better-auth/plugins'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
 import { uuidv7, type ILogStore } from '@modern-admin/core'
+import { accountIdentityPlugin } from '@modern-admin/auth-better-auth'
 import { prisma } from './db.js'
 
 const port = Number(process.env.PORT ?? 3001)
@@ -42,10 +43,10 @@ export const auth = betterAuth({
   // `@@map("ma_user")` directives in schema.prisma take care of the
   // physical table names. Better Auth's prismaAdapter resolves these
   // strings against the Prisma client's delegate keys, not the
-  // underlying tables — so PascalCase (Prisma model names) is correct.
-  user: { modelName: 'MaUser' },
-  session: { modelName: 'MaSession' },
-  verification: { modelName: 'MaVerification' },
+  // underlying tables — use the lower-camel-case delegate names.
+  user: { modelName: 'maUser' },
+  session: { modelName: 'maSession' },
+  verification: { modelName: 'maVerification' },
   emailAndPassword: {
     enabled: true,
     // Public registration disabled. New admins are added from inside
@@ -57,7 +58,7 @@ export const auth = betterAuth({
   // to create a fresh one. Combined with the `user.create.before` hook
   // below, this makes `ma_user` itself the allowlist.
   account: {
-    modelName: 'MaAccount',
+    modelName: 'maAccount',
     accountLinking: {
       enabled: true,
       // Defaults to every active OAuth provider. Narrow this list if
@@ -66,13 +67,15 @@ export const auth = betterAuth({
     },
   },
   trustedOrigins: process.env.WEB_ORIGIN?.split(',') ?? [],
+  advanced: { database: { generateId: () => uuidv7() } },
   plugins: [
+    accountIdentityPlugin(),
     apiKey({
       apiKeyHeaders: 'x-api-key',
       requireName: true,
       enableSessionForAPIKeys: true,
       rateLimit: { enabled: false },
-      schema: { apikey: { modelName: 'MaApiKey' } },
+      schema: { apikey: { modelName: 'maApiKey' } },
     }),
     // Admin plugin — required for role-based gating. It both declares
     // the `role` column on MaUser and (crucially) attaches `role` to

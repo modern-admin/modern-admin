@@ -21,7 +21,7 @@
 #           checked-in `*-chromium-linux.png` baselines match byte-for-byte.
 #           Isolated from the main e2e job so a container/service hiccup can't
 #           take the other specs down. Baselines are regenerated in the same
-#           image (`mcr.microsoft.com/playwright:v1.62.1-noble`).
+#           image (`mcr.microsoft.com/playwright:v1.63.0-noble`).
 
 name: CI
 
@@ -189,9 +189,9 @@ jobs:
     timeout-minutes: 15
     # Run inside the official Playwright image so chromium + its fonts match
     # the environment the checked-in baselines were generated in. Pin the tag
-    # to the installed @playwright/test version (1.62.1).
+    # to the installed @playwright/test version (1.63.0).
     container:
-      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
     # This job runs inside a container, so `docker compose up` (used by the
     # `e2e` job) is not available here — the same services are declared as job
     # service containers instead. Keep these two images in step with
