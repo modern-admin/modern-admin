@@ -23,7 +23,7 @@
     "@modern-admin/nest": "^{{modernAdminVersion}}",
     "@modern-admin/system-prisma": "^{{modernAdminVersion}}",
     "@modern-admin/web": "^{{modernAdminVersion}}",
-    "@better-auth/api-key": "^1.7.2",
+    "@better-auth/api-key": "1.7.5",
     "@nestjs/common": "^12.0.1",
     "@nestjs/core": "^12.0.1",
     "@nestjs/platform-express": "^12.0.1",
@@ -31,7 +31,7 @@
     "@prisma/client": "^7.10.0",
     "@prisma/client-runtime-utils": "^7.10.0",
     "@prisma/internals": "^7.10.0",
-    "better-auth": "^1.7.2",
+    "better-auth": "1.7.5",
     "ioredis": "^6.0.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2"
