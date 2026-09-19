@@ -16,13 +16,13 @@
     "@modern-admin/ui": "workspace:*",
     "@modern-admin/web": "workspace:*",
     "@tanstack/react-query": "^5.102.8",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
-    "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
     "@tailwindcss/vite": "^4.3.3",
     "@vitejs/plugin-react": "^6.1.1",
     "tailwindcss": "^4.3.3",
