@@ -75,7 +75,7 @@
     "react-dom": "^19.2.8",
     "@tailwindcss/vite": "^4.3.3",
     "@vitejs/plugin-react": "^6.1.1",
-    "vite": "^8.3.0"
+    "vite": "8.3.0"
   },
   "dependencies": {
     "@modern-admin/core": "workspace:^",
@@ -94,8 +94,8 @@
     "react-dom": "^19.2.8",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
-    "vite": "^8.3.0",
-    "vite-plugin-dts": "^5.1.0"
+    "vite": "8.3.0",
+    "vite-plugin-dts": "5.1.0"
   },
   "peerDependenciesMeta": {
     "@tailwindcss/vite": {
