@@ -17,7 +17,7 @@
     "db:clean-e2e:apply": "bun run src/clean-e2e.ts --apply"
   },
   "dependencies": {
-    "@better-auth/api-key": "^1.7.2",
+    "@better-auth/api-key": "1.7.5",
     "@modern-admin/adapter-prisma": "workspace:*",
     "@modern-admin/api-stock": "workspace:*",
     "@modern-admin/app-shared": "workspace:*",
@@ -45,7 +45,7 @@
     "@prisma/client": "^7.10.0",
     "@prisma/client-runtime-utils": "^7.10.0",
     "@prisma/internals": "^7.10.0",
-    "better-auth": "^1.7.2",
+    "better-auth": "1.7.5",
     "ai": "7.0.107",
     "bullmq": "^6.3.2",
     "dotenv": "^17.4.2",
