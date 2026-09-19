@@ -63,7 +63,7 @@ jobs:
       # or workflow retries after every version is already present on npm.
       - name: Select release mode
         id: release-mode
-        uses: changesets/action/select-mode@8488615a623b1b9c987934bb89eae8af6a946ac1 # v2.1.1
+        uses: changesets/action/select-mode@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
 
       # The generated Prisma client is gitignored; typecheck needs it. Prisma
       # resolves DATABASE_URL while loading its config but generate never
