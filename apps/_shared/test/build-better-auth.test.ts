@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { Database } from 'bun:sqlite'
 import { getAuthTables } from 'better-auth/db'
 import type { ILogStore, ActionLogEntry } from '@modern-admin/core'
-import { buildBetterAuth, setAuditLogStore, type BuildBetterAuthOptions } from '../src/index.js'
+import { buildBetterAuth, setAuditLogStore, type BuildBetterAuthOptions } from '../src'
 
 /**
  * `buildBetterAuth()` produces both a Better Auth instance and the raw
@@ -60,7 +60,7 @@ describe('buildBetterAuth', () => {
     expect(config.secret).toBeDefined()
   })
 
-  test('exposes the stable Better Auth 1.7 account identity schema', () => {
+  test('preserves the Modern Admin account identity schema with Better Auth 1.7.5', () => {
     const { config } = buildBetterAuth({ database: makeDatabase() })
     const account = getAuthTables(config).account!
     expect(account.fields.issuer).toMatchObject({ type: 'string', required: true })
