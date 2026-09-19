@@ -10,6 +10,8 @@ import {
   type LoginCredentials,
 } from '@modern-admin/core'
 
+export { accountIdentityPlugin } from './account-identity-plugin.js'
+
 export {
   BUILTIN_AUTHORITATIVE_ACCOUNT_ISSUERS,
   BUILTIN_ISSUERLESS_OAUTH_PROVIDERS,

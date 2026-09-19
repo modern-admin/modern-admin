@@ -11,6 +11,7 @@
 import { betterAuth, type BetterAuthOptions, type BetterAuthPlugin } from 'better-auth'
 import { APIError } from 'better-auth/api'
 import { apiKey } from '@better-auth/api-key'
+import { accountIdentityPlugin } from '@modern-admin/auth-better-auth'
 import { uuidv7, type ILogStore } from '@modern-admin/core'
 
 export interface BuildBetterAuthOptions {
@@ -154,6 +155,7 @@ export const buildBetterAuth = ({
   // `ma_` prefix (Better Auth core tables are remapped via the top-level
   // `user/session/account/verification` config below).
   const plugins: BetterAuthPlugin[] = [
+    accountIdentityPlugin(),
     apiKey({
       apiKeyHeaders: 'x-api-key',
       // Names are required so list rows are identifiable in the UI.
@@ -222,6 +224,7 @@ export const buildBetterAuth = ({
 
   const config: BetterAuthOptions = {
     database,
+    advanced: { database: { generateId: () => uuidv7() } },
     secret,
     // Throttle auth endpoints (sign-in, api-key verify, …) so credential and
     // key-value brute-forcing is bounded. Better Auth disables its limiter

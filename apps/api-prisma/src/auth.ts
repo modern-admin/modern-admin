@@ -17,11 +17,11 @@ import { admin } from 'better-auth/plugins'
 const built = buildBetterAuth({
   database: prismaAdapter(prisma, { provider: 'postgresql' }),
   modelNames: {
-    user: 'MaUser',
-    session: 'MaSession',
-    account: 'MaAccount',
-    verification: 'MaVerification',
-    apikey: 'MaApiKey',
+    user: 'maUser',
+    session: 'maSession',
+    account: 'maAccount',
+    verification: 'maVerification',
+    apikey: 'maApiKey',
   },
   extraPlugins: [
     admin({

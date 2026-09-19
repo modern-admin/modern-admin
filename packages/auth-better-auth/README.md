@@ -12,10 +12,18 @@ end-to-end Zod validation.
 ## Installation
 
 ```sh
-bun add @modern-admin/auth-better-auth better-auth@^1.7.0
+bun add @modern-admin/auth-better-auth better-auth@1.7.5
 ```
 
-This release line supports Better Auth 1.7 and its required account identity
+Use `accountIdentityPlugin()` from this package in the Better Auth `plugins`
+array. Better Auth 1.7.3 removed its built-in issuer field; this plugin preserves
+Modern Admin’s existing required column and unique index without a destructive
+schema migration. Issuers are derived from trusted provider configuration,
+never client input. Unknown providers fail closed; pass an `AccountIssuerPolicy`
+for additional providers. Prisma `modelName` values must use delegate names
+(`maUser`, `maAccount`, etc.), not PascalCase model names.
+
+This release line supports Better Auth 1.7.5 and Modern Admin’s account identity
 tuple: credential accounts are `providerId: 'credential'`,
 `issuer: 'local:credential'`, and `accountId: user.id`; account uniqueness is
 the pair `(issuer, accountId)`. It does not advertise schema compatibility
