@@ -200,9 +200,14 @@ export class ApiKeysController {
     this.assertSession(req)
     const parsed = updateBodyZ.safeParse(body)
     if (!parsed.success) throw new BadRequestException(parsed.error.message)
-    if (parsed.data.permissions) this.validatePermissions(parsed.data.permissions)
     const service = this.requireService()
     try {
+      if (parsed.data.permissions !== undefined) {
+        const rows = normalizeListResult(await service.list(toHeaders(req.headers)))
+        const existing = rows.find((row) => row.id === id)
+        if (!existing) throw new NotFoundException('API key not found')
+        this.validatePermissions(parsed.data.permissions, existing.permissions ?? {})
+      }
       const row = await service.update(
         {
           keyId: id,
@@ -274,14 +279,21 @@ export class ApiKeysController {
     })
   }
 
-  /** Reject permissions naming unknown resources or actions. */
-  private validatePermissions(permissions: Record<string, string[]>): void {
+  /** Drop previously stored, removed resources on update; reject other invalid permissions. */
+  private validatePermissions(
+    permissions: Record<string, string[]>,
+    existingPermissions?: Record<string, string[]>,
+  ): void {
     for (const [resourceId, actions] of Object.entries(permissions)) {
       if (resourceId === '*') continue
       let resource
       try {
         resource = this.admin.findResource(resourceId)
       } catch {
+        if (existingPermissions && Object.hasOwn(existingPermissions, resourceId)) {
+          delete permissions[resourceId]
+          continue
+        }
         throw new BadRequestException(`Unknown resource: ${resourceId}`)
       }
       const decorator = resource.decorate()
