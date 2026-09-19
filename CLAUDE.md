@@ -70,7 +70,7 @@ Three jobs: **check** (install → `prisma generate` → typecheck → lint →
 Postgres/Redis,
 `prisma:push`, `build:standalone`, everything except the visual-regression
 spec), and **e2e-visual** (that spec only, inside
-`mcr.microsoft.com/playwright:v1.62.1-noble` so the checked-in
+`mcr.microsoft.com/playwright:v1.63.0-noble` so the checked-in
 `*-chromium-linux.png` baselines match byte-for-byte — regenerate baselines in
 that same image). The api app boots `ModernAdminStaticUiModule`, which reads
 `packages/web/dist/standalone/index.html`, so
