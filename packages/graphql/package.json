@@ -52,7 +52,7 @@
     "@modern-admin/core": "workspace:^",
     "busboy": "^1.6.0",
     "dataloader": "^2.2.3",
-    "graphql-ws": "^6.2.1",
+    "graphql-ws": "^6.2.2",
     "ws": "^8.21.3"
   },
   "devDependencies": {
