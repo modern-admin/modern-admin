@@ -303,9 +303,9 @@ describe('CacheRuntime.stats', () => {
   test('the constructor schedules no background timer', async () => {
     const realSetInterval = globalThis.setInterval
     const scheduled: number[] = []
-    globalThis.setInterval = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
-      scheduled.push(timeout ?? 0)
-      return realSetInterval(handler as () => void, timeout, ...args)
+    globalThis.setInterval = ((...args: Parameters<typeof realSetInterval>) => {
+      scheduled.push(typeof args[1] === 'number' ? args[1] : 0)
+      return realSetInterval(...args)
     }) as typeof globalThis.setInterval
     try {
       const rt = new CacheRuntime(new FakeCache())
