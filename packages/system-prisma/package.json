@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/system-prisma",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Prisma-backed implementation of Modern Admin system stores (logs, history, webhooks, AI tasks).",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/system-prisma#readme",
   "keywords": [
@@ -54,7 +54,7 @@
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
-    "@types/bun": "^1.4.0",
+    "@types/bun": "1.4.2",
     "typescript": "^7.0.2"
   },
   "peerDependencies": {

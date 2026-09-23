@@ -41,7 +41,7 @@ describe('AI assistant dependency boundaries', () => {
       provider: 'api-stock',
       providerName: 'api-stock',
       apiKeyUrl: 'https://api-stock.com',
-      model: 'gemini-3.5-flash',
+      model: 'gemini-3.6-flash',
       configured: false,
     })
   })
@@ -59,7 +59,7 @@ describe('AI assistant dependency boundaries', () => {
 
     const settings = await service.getSettings({ id: 'admin', role: 'admin' })
 
-    expect(settings.model).toBe('gemini-3.5-flash')
+    expect(settings.model).toBe('gemini-3.6-flash')
     expect(settings.configured).toBeFalse()
     expect(settings.maskedApiKey).toBeNull()
   })

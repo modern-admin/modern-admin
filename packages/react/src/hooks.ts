@@ -384,11 +384,16 @@ export const useLogin = (): UseMutationResult<void, Error, { email: string; pass
   })
 }
 
-export const useLogout = (): UseMutationResult<void, Error, void> => {
+/** `callbackURL` is forwarded to the IdP as `post_logout_redirect_uri` — see
+ *  {@link AdminClient.logout}. Omitted by default so the provider's own
+ *  configured (and registered) URL wins. */
+export type LogoutVariables = { callbackURL?: string } | void
+
+export const useLogout = (): UseMutationResult<void, Error, LogoutVariables> => {
   const client = useAdminClient()
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: () => client.logout(),
+    mutationFn: (vars: LogoutVariables) => client.logout(vars ?? undefined),
     onSuccess: async () => {
       // Cancel any in-flight `me` refetch so it cannot overwrite the
       // optimistic null below and bounce the gate back to authenticated.

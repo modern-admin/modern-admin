@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'bun:test'
-import { BadRequestException, ForbiddenException, NotImplementedException } from '@nestjs/common'
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+  NotImplementedException,
+} from '@nestjs/common'
 import { ModernAdmin } from '@modern-admin/core'
 import { ApiKeysController, type IApiKeyService } from '../src/api-keys.controller.js'
 import { FakeDatabase, FakeResource, type FakeTable } from './_helpers/fake-adapter.js'
@@ -226,6 +231,7 @@ describe('ApiKeysController', () => {
     const ctrl = new ApiKeysController(admin, service)
     await ctrl.update('k1', { enabled: false } as unknown, sessionReq())
     expect(calls.update[0]).toEqual({ keyId: 'k1', enabled: false })
+    expect(calls.list).toBe(0)
   })
 
   test('update with explicit null expiresInDays clears the expiry', async () => {
@@ -243,6 +249,73 @@ describe('ApiKeysController', () => {
     await expect(
       ctrl.update('k1', { permissions: { posts: ['list'] } } as unknown, sessionReq()),
     ).rejects.toThrow(BadRequestException)
+  })
+
+  test('update removes stored permissions for deleted resources while saving new grants', async () => {
+    const admin = buildAdmin([{ name: 'users', rows: [] }])
+    const { service, calls } = buildService()
+    const stored = { users: ['list'], 'legal-acceptances': ['list', 'show'] }
+    service.list = async (headers) => {
+      expect(headers.get('cookie')).toBe('session=abc')
+      return { apiKeys: [fakeRow({ permissions: stored })] }
+    }
+    const ctrl = new ApiKeysController(admin, service)
+    const permissions = { ...stored, users: ['list', 'edit'], '*': ['show'] }
+    const result = await ctrl.update('k1', { permissions }, sessionReq())
+
+    expect(calls.update).toEqual([
+      { keyId: 'k1', permissions: { users: ['list', 'edit'], '*': ['show'] } },
+    ])
+    expect(result.record.permissions).toEqual({ users: ['list', 'edit'], '*': ['show'] })
+    expect(permissions['legal-acceptances']).toEqual(['list', 'show'])
+    expect(stored['legal-acceptances']).toEqual(['list', 'show'])
+  })
+
+  test('update saves an empty map when all submitted resources were removed', async () => {
+    const admin = buildAdmin([])
+    const { service, calls } = buildService()
+    const ctrl = new ApiKeysController(admin, service)
+    await ctrl.update('k1', { permissions: { users: ['list'] } }, sessionReq())
+    expect(calls.update).toEqual([{ keyId: 'k1', permissions: {} }])
+  })
+
+  test('update still rejects invalid actions after dropping removed resources', async () => {
+    const admin = buildAdmin([{ name: 'users', rows: [] }])
+    const { service, calls } = buildService()
+    service.list = async () => [fakeRow({ permissions: { 'legal-acceptances': ['list'] } })]
+    const ctrl = new ApiKeysController(admin, service)
+    await expect(
+      ctrl.update(
+        'k1',
+        { permissions: { 'legal-acceptances': ['list'], users: ['noSuchAction'] } },
+        sessionReq(),
+      ),
+    ).rejects.toThrow(/Unknown action/)
+    expect(calls.update).toEqual([])
+  })
+
+  test('update does not accept removed resources stored on another key', async () => {
+    const admin = buildAdmin([{ name: 'users', rows: [] }])
+    const { service, calls } = buildService()
+    service.list = async () => [
+      fakeRow(),
+      fakeRow({ id: 'k2', permissions: { 'legal-acceptances': ['list'] } }),
+    ]
+    const ctrl = new ApiKeysController(admin, service)
+    await expect(
+      ctrl.update('k1', { permissions: { 'legal-acceptances': ['list'] } }, sessionReq()),
+    ).rejects.toThrow(/Unknown resource/)
+    expect(calls.update).toEqual([])
+  })
+
+  test('update does not write permissions for a key absent from the session list', async () => {
+    const admin = buildAdmin([{ name: 'users', rows: [] }])
+    const { service, calls } = buildService()
+    const ctrl = new ApiKeysController(admin, service)
+    await expect(
+      ctrl.update('missing', { permissions: { users: ['list'] } }, sessionReq()),
+    ).rejects.toThrow(NotFoundException)
+    expect(calls.update).toEqual([])
   })
 
   test('delete forwards the id and returns success', async () => {

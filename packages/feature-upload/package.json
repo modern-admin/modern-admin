@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/feature-upload",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "File upload feature plugin for Modern Admin (local + S3 providers).",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/feature-upload#readme",
   "keywords": [
@@ -74,7 +74,7 @@
     "@modern-admin/nest": "workspace:*",
     "@modern-admin/tsconfig": "workspace:*",
     "@nestjs/swagger": "^12.0.1",
-    "@types/bun": "^1.4.0",
+    "@types/bun": "1.4.2",
     "@types/busboy": "^1.5.4",
     "graphql": "^17.0.2",
     "typescript": "^7.0.2"

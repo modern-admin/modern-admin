@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/feature-media-generation",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Configurable record actions for Modern Admin media generation.",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/feature-media-generation#readme",
   "keywords": [
@@ -51,7 +51,7 @@
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
-    "@types/bun": "^1.4.0",
+    "@types/bun": "1.4.2",
     "typescript": "^7.0.2"
   }
 }

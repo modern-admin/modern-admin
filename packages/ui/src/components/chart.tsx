@@ -7,7 +7,6 @@ import {
   CartesianGrid,
   Cell,
   ComposedChart,
-  Legend,
   Line,
   LineChart,
   Pie,
@@ -379,9 +378,11 @@ const compactAxisFormat = (locale?: string): ((n: number) => string) => {
  * `area` for ≤2 primary series (single-metric look) and `line` for more
  * (multi-series comparison).
  *
- * Legend is clickable: click a label to toggle that series' visibility;
- * hover dims the rest. When >7 primary series a "show/hide all" button
- * appears under the chart.
+ * Legend is plain DOM rendered *below* the plot (not Recharts' in-chart
+ * `<Legend>`, which shrinks the plot by its own wrapped rows) and scrolls
+ * once it exceeds a couple of rows. Click a label to toggle that series'
+ * visibility; hover/focus dims the rest. When >7 primary series a
+ * "show/hide all" button appears next to it.
  *
  * `dashed` series (previous-period overlays) are always drawn as muted
  * dashed lines, stay out of the legend, and hide/dim together with the
@@ -516,116 +517,133 @@ export function TimeSeriesChart({
   }
 
   return (
-    <div
-      className={cn('w-full [&_*:focus]:outline-none [&_*:focus-visible]:outline-none', className)}
-    >
-      <ResponsiveContainer
-        width="100%"
-        height={effectiveHeight}
-        onResize={(w) => {
-          if (typeof w === 'number' && w > 0) setWidth(w)
-        }}
-      >
-        <ChartCmp data={rows} margin={{ top: 16, right: 12, left: 0, bottom: 8 }}>
-          <CartesianGrid
-            strokeDasharray="3 3"
-            stroke={GRID_STROKE}
-            strokeWidth={gridStrokeWidth}
-            strokeOpacity={gridStrokeOpacity}
-            // Draw evenly-spaced vertical lines across the plot instead of
-            // tying them to the (thinned) X-axis ticks — `preserveStartEnd`
-            // drops the near-end tick, which otherwise leaves a ragged gap on
-            // the right. Horizontal lines stay tied to the Y ticks.
-            verticalCoordinatesGenerator={(props: {
-              offset?: { left?: number; width?: number }
-            }) => {
-              const left = props.offset?.left ?? 0
-              const w = props.offset?.width ?? 0
-              if (w <= 0) return []
-              const target = narrow ? 56 : 96
-              const count = Math.max(2, Math.round(w / target))
-              const stepPx = w / count
-              return Array.from({ length: count - 1 }, (_, i) =>
-                Math.round(left + stepPx * (i + 1)),
-              )
-            }}
-          />
-          <XAxis
-            dataKey="date"
-            tick={AXIS_STYLE}
-            interval="preserveStartEnd"
-            minTickGap={minTickGap}
-            tickLine={false}
-            axisLine={false}
-            tickFormatter={tickFormatter}
-          />
-          <YAxis
-            width="auto"
-            tick={AXIS_STYLE}
-            tickLine={false}
-            axisLine={false}
-            tickFormatter={(v) => formatAxisValue(Number(v))}
-            allowDecimals={false}
-          />
-          <Tooltip
-            contentStyle={TS_TOOLTIP_STYLE}
-            labelStyle={TS_TOOLTIP_LABEL_STYLE}
-            itemStyle={{ color: '#fff' }}
-            cursor={{ stroke: 'hsla(0, 0%, 50%, 0.4)', strokeWidth: 1 }}
-            labelFormatter={(value) =>
-              labelFormatter ? labelFormatter(String(value)) : String(value)
-            }
-            formatter={(value, name, item) => {
-              const key = (item as { dataKey?: unknown })?.dataKey
-              const row = (item as { payload?: Record<string, unknown> })?.payload
-              const src = typeof key === 'string' && row ? row[`${key}__src`] : undefined
-              const displayName =
-                typeof src === 'string'
-                  ? `${String(name)} · ${labelFormatter ? labelFormatter(src) : src}`
-                  : name
-              return [formatValue(value as number | string), displayName]
-            }}
-          />
-          <Legend
-            layout="horizontal"
-            align="center"
-            verticalAlign="bottom"
-            wrapperStyle={{ fontSize: 12 }}
-            onClick={(data) => {
-              const key = data.dataKey as string | undefined
-              if (key) toggleHidden(key)
-            }}
-            onMouseEnter={(data) => {
-              const key = data.dataKey as string | undefined
-              if (key) setHovered(key)
-            }}
-            onMouseLeave={() => setHovered(null)}
-          />
-          {series.map((s) => {
-            const color = colorByKey.get(s.key)
-            if (s.dashed) {
+    <div className={cn('w-full', className)}>
+      <div className="[&_*:focus]:outline-none [&_*:focus-visible]:outline-none">
+        <ResponsiveContainer
+          width="100%"
+          height={effectiveHeight}
+          onResize={(w) => {
+            if (typeof w === 'number' && w > 0) setWidth(w)
+          }}
+        >
+          <ChartCmp data={rows} margin={{ top: 16, right: 12, left: 0, bottom: 8 }}>
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke={GRID_STROKE}
+              strokeWidth={gridStrokeWidth}
+              strokeOpacity={gridStrokeOpacity}
+              // Draw evenly-spaced vertical lines across the plot instead of
+              // tying them to the (thinned) X-axis ticks — `preserveStartEnd`
+              // drops the near-end tick, which otherwise leaves a ragged gap on
+              // the right. Horizontal lines stay tied to the Y ticks.
+              verticalCoordinatesGenerator={(props: {
+                offset?: { left?: number; width?: number }
+              }) => {
+                const left = props.offset?.left ?? 0
+                const w = props.offset?.width ?? 0
+                if (w <= 0) return []
+                const target = narrow ? 56 : 96
+                const count = Math.max(2, Math.round(w / target))
+                const stepPx = w / count
+                return Array.from({ length: count - 1 }, (_, i) =>
+                  Math.round(left + stepPx * (i + 1)),
+                )
+              }}
+            />
+            <XAxis
+              dataKey="date"
+              tick={AXIS_STYLE}
+              interval="preserveStartEnd"
+              minTickGap={minTickGap}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={tickFormatter}
+            />
+            <YAxis
+              width="auto"
+              tick={AXIS_STYLE}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(v) => formatAxisValue(Number(v))}
+              allowDecimals={false}
+            />
+            <Tooltip
+              contentStyle={TS_TOOLTIP_STYLE}
+              labelStyle={TS_TOOLTIP_LABEL_STYLE}
+              itemStyle={{ color: '#fff' }}
+              cursor={{ stroke: 'hsla(0, 0%, 50%, 0.4)', strokeWidth: 1 }}
+              labelFormatter={(value) =>
+                labelFormatter ? labelFormatter(String(value)) : String(value)
+              }
+              formatter={(value, name, item) => {
+                const key = (item as { dataKey?: unknown })?.dataKey
+                const row = (item as { payload?: Record<string, unknown> })?.payload
+                const src = typeof key === 'string' && row ? row[`${key}__src`] : undefined
+                const displayName =
+                  typeof src === 'string'
+                    ? `${String(name)} · ${labelFormatter ? labelFormatter(src) : src}`
+                    : name
+                return [formatValue(value as number | string), displayName]
+              }}
+            />
+            {series.map((s) => {
+              const color = colorByKey.get(s.key)
+              if (s.dashed) {
+                return (
+                  <Line
+                    key={s.key}
+                    type="monotone"
+                    dataKey={s.key}
+                    name={s.label}
+                    stroke={color}
+                    strokeWidth={1.5}
+                    strokeDasharray="6 5"
+                    strokeOpacity={isDimmed(s) ? 0.15 : 0.55}
+                    dot={false}
+                    activeDot={{ r: 3 }}
+                    legendType="none"
+                    hide={isHidden(s)}
+                    isAnimationActive={animateChart}
+                    animationDuration={300}
+                  />
+                )
+              }
+              if (resolvedVis === 'line') {
+                return (
+                  <Line
+                    key={s.key}
+                    type="monotone"
+                    dataKey={s.key}
+                    name={s.label}
+                    stroke={color}
+                    strokeWidth={2}
+                    strokeOpacity={isDimmed(s) ? 0.2 : 1}
+                    dot={false}
+                    activeDot={{ r: 4 }}
+                    hide={isHidden(s)}
+                    isAnimationActive={animateChart}
+                    animationDuration={300}
+                  />
+                )
+              }
+              if (resolvedVis === 'bar') {
+                return (
+                  <Bar
+                    key={s.key}
+                    dataKey={s.key}
+                    name={s.label}
+                    fill={color}
+                    fillOpacity={isDimmed(s) ? 0.25 : 1}
+                    radius={[3, 3, 0, 0] as never}
+                    maxBarSize={48}
+                    hide={isHidden(s)}
+                    isAnimationActive={animateChart}
+                    animationDuration={300}
+                  />
+                )
+              }
               return (
-                <Line
-                  key={s.key}
-                  type="monotone"
-                  dataKey={s.key}
-                  name={s.label}
-                  stroke={color}
-                  strokeWidth={1.5}
-                  strokeDasharray="6 5"
-                  strokeOpacity={isDimmed(s) ? 0.15 : 0.55}
-                  dot={false}
-                  activeDot={{ r: 3 }}
-                  legendType="none"
-                  hide={isHidden(s)}
-                  isAnimationActive={animateChart}
-                  animationDuration={300}
-                />
-              )
-            }
-            if (resolvedVis === 'line') {
-              return (
-                <Line
+                <Area
                   key={s.key}
                   type="monotone"
                   dataKey={s.key}
@@ -633,6 +651,8 @@ export function TimeSeriesChart({
                   stroke={color}
                   strokeWidth={2}
                   strokeOpacity={isDimmed(s) ? 0.2 : 1}
+                  fill={color}
+                  fillOpacity={isDimmed(s) ? 0.08 : 0.25}
                   dot={false}
                   activeDot={{ r: 4 }}
                   hide={isHidden(s)}
@@ -640,53 +660,64 @@ export function TimeSeriesChart({
                   animationDuration={300}
                 />
               )
-            }
-            if (resolvedVis === 'bar') {
-              return (
-                <Bar
-                  key={s.key}
-                  dataKey={s.key}
-                  name={s.label}
-                  fill={color}
-                  fillOpacity={isDimmed(s) ? 0.25 : 1}
-                  radius={[3, 3, 0, 0] as never}
-                  maxBarSize={48}
-                  hide={isHidden(s)}
-                  isAnimationActive={animateChart}
-                  animationDuration={300}
-                />
-              )
-            }
-            return (
-              <Area
-                key={s.key}
-                type="monotone"
-                dataKey={s.key}
-                name={s.label}
-                stroke={color}
-                strokeWidth={2}
-                strokeOpacity={isDimmed(s) ? 0.2 : 1}
-                fill={color}
-                fillOpacity={isDimmed(s) ? 0.08 : 0.25}
-                dot={false}
-                activeDot={{ r: 4 }}
-                hide={isHidden(s)}
-                isAnimationActive={animateChart}
-                animationDuration={300}
-              />
-            )
-          })}
-        </ChartCmp>
-      </ResponsiveContainer>
-      {primary.length > 7 && (
-        <div className="mt-2 flex justify-end">
-          <button
-            type="button"
-            onClick={handleToggleAll}
-            className="text-xs text-muted-foreground hover:text-foreground"
+            })}
+          </ChartCmp>
+        </ResponsiveContainer>
+      </div>
+      {/* Legend lives OUTSIDE the ResponsiveContainer: Recharts' own <Legend>
+          is laid out inside the chart box, so every wrapped row is subtracted
+          from the plot area — with many series on a narrow card the legend
+          takes the whole tile and the chart collapses to a few pixels. As
+          plain DOM it stacks below instead, and its own height is capped
+          (scrollable) so a long series list can't push the tile either. */}
+      {primary.length > 0 && (
+        <div className="mt-2 flex items-start gap-3">
+          <ul
+            className={cn(
+              'flex min-w-0 flex-1 flex-wrap gap-x-3 gap-y-1 overflow-y-auto overscroll-contain',
+              narrow ? 'max-h-16' : 'max-h-24',
+            )}
           >
-            {allHidden ? (labels?.showAll ?? 'Show all') : (labels?.hideAll ?? 'Hide all')}
-          </button>
+            {primary.map((s) => {
+              const off = hidden.has(s.key)
+              const dim = !off && hovered !== null && hovered !== s.key
+              return (
+                <li key={s.key} className="min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => toggleHidden(s.key)}
+                    onMouseEnter={() => setHovered(s.key)}
+                    onMouseLeave={() => setHovered(null)}
+                    onFocus={() => setHovered(s.key)}
+                    onBlur={() => setHovered(null)}
+                    aria-pressed={!off}
+                    title={s.label}
+                    className={cn(
+                      'flex max-w-[12rem] items-center gap-1.5 rounded-sm text-xs transition-opacity',
+                      'focus-visible:ring-1 focus-visible:ring-ring',
+                      off ? 'opacity-40' : dim ? 'opacity-50' : 'opacity-100',
+                    )}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="size-2.5 shrink-0 rounded-[2px]"
+                      style={{ background: colorByKey.get(s.key) }}
+                    />
+                    <span className={cn('truncate', off && 'line-through')}>{s.label}</span>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+          {primary.length > 7 && (
+            <button
+              type="button"
+              onClick={handleToggleAll}
+              className="shrink-0 text-xs text-muted-foreground hover:text-foreground"
+            >
+              {allHidden ? (labels?.showAll ?? 'Show all') : (labels?.hideAll ?? 'Hide all')}
+            </button>
+          )}
         </div>
       )}
     </div>

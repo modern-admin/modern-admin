@@ -1,6 +1,6 @@
 import { Controller, Get, Inject, Req, UseGuards } from '@nestjs/common'
 import { ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
-import { type ModernAdmin, type CurrentAdmin, type RolePermissions } from '@modern-admin/core'
+import { type ModernAdmin, type CurrentAdmin } from '@modern-admin/core'
 import { MODERN_ADMIN } from './tokens.js'
 import { ModernAdminAuthGuard } from './auth.guard.js'
 
@@ -26,16 +26,15 @@ export class AuthController {
   @ApiOperation({ summary: 'Resolve the current authenticated admin' })
   @Get('me')
   @UseGuards(ModernAdminAuthGuard)
-  async me(
-    @Req() req: AdminRequest,
-  ): Promise<{ user: CurrentAdmin; permissions: RolePermissions | null }> {
+  me(@Req() req: AdminRequest): { user: CurrentAdmin } {
     // Guard guarantees presence; the bang is just to satisfy the type.
-    const user = req.currentAdmin!
-    // Resolve effective permissions so the SPA can hide buttons it
-    // can't use. Server-side enforcement still runs in `invoke()` —
-    // this is a UI hint only, not a trust boundary.
-    const permissions = await this.admin.getRolePermissions(user.role)
-    return { user, permissions }
+    // The role's permission matrix is deliberately *not* returned: the SPA
+    // decides what to render from `/admin/api/config`, whose action
+    // descriptors are already pruned per principal by `toJSON(currentAdmin)`.
+    // Shipping the raw matrix as well invited a second, divergent copy of the
+    // same verdict — and handed an authenticated caller the whole map of what
+    // it may not do, for no UI gain.
+    return { user: req.currentAdmin! }
   }
 
   @ApiOperation({ summary: 'Public auth UI metadata (login providers etc.)' })

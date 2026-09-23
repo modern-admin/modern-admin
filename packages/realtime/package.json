@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/realtime",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "WebSocket gateway + realtime bus implementations for Modern Admin.",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/realtime#readme",
   "keywords": [
@@ -54,14 +54,14 @@
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
-    "@nestjs/common": "^12.0.1",
-    "@nestjs/websockets": "^12.0.1",
-    "@types/bun": "^1.4.0",
+    "@nestjs/common": "^12.0.3",
+    "@nestjs/websockets": "^12.0.3",
+    "@types/bun": "1.4.2",
     "typescript": "^7.0.2"
   },
   "peerDependencies": {
-    "@nestjs/common": "^12.0.1",
-    "@nestjs/websockets": "^12.0.1",
+    "@nestjs/common": "^12.0.3",
+    "@nestjs/websockets": "^12.0.3",
     "@nestjs/platform-socket.io": "^12.0.1"
   },
   "peerDependenciesMeta": {

@@ -438,7 +438,6 @@ describe('ModernAdmin role permission gate', () => {
       adapters: [adapter],
       rolesResourceId: 'roles',
       cache,
-      cacheRuntime: { metricsLogIntervalMs: 0 },
     }
     const first = new ModernAdmin(options)
     const second = new ModernAdmin(options)

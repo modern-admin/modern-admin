@@ -1,5 +1,21 @@
 # @modern-admin/ui
 
+## 0.11.0
+
+### Patch Changes
+
+- [#76](https://github.com/modern-admin/modern-admin/pull/76) [`8b8b07e`](https://github.com/modern-admin/modern-admin/commit/8b8b07e152701cdcaa2c7c7f53704b3610787811) Thanks [@SergiyIva](https://github.com/SergiyIva)! - `TimeSeriesChart`: render the legend as plain DOM below the plot instead of Recharts' in-chart `<Legend>`. Wrapped legend rows were subtracted from the chart box, so a chart with many series (a `groupBy` breakdown) collapsed to a few pixels of plot on narrow cards. The legend now stacks under the chart, caps its own height (scrollable, tighter on narrow containers) and keeps click-to-toggle plus hover/focus dimming.
+
+- [#51](https://github.com/modern-admin/modern-admin/pull/51) [`be19e9e`](https://github.com/modern-admin/modern-admin/commit/be19e9e9b331bafe23702ee2244b7b29db68c772) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update @tiptap/pm to 3.31.3, @tiptap/react to 3.31.3, @tiptap/starter-kit to 3.31.3 and validate compatibility with the current stable releases.
+
+- [#61](https://github.com/modern-admin/modern-admin/pull/61) [`6b3490f`](https://github.com/modern-admin/modern-admin/commit/6b3490ff10549c0e586a8a92267c11a5920c1f64) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update react to 19.3.0, react-dom to 19.3.0, @types/react to 19.3.0, @types/react-dom to 19.3.0, react-hook-form to 7.88.0 and validate compatibility with the current stable releases.
+
+- [#63](https://github.com/modern-admin/modern-admin/pull/63) [`f0aa056`](https://github.com/modern-admin/modern-admin/commit/f0aa0564aae700ca7b83746087bf6fb7911e3dc6) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update @types/bun to 1.4.2, bullmq to 6.3.8, @types/node to 26.6.2, @changesets/changelog-github to 1.0.1, @changesets/cli to 3.0.3, zod to 4.6.5, jose to 6.2.12, @scalar/nestjs-api-reference to 1.2.19, lucide-react to 1.47.0, dompurify to 3.4.15, marked to 18.0.13 and validate compatibility with the current stable releases.
+
+- [#74](https://github.com/modern-admin/modern-admin/pull/74) [`afdb6ef`](https://github.com/modern-admin/modern-admin/commit/afdb6eff2ddd0399ce81425cafa94bb2f7ec1109) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Update tailwind-merge to 3.7.0 and validate compatibility with the current stable releases.
+
+- [#76](https://github.com/modern-admin/modern-admin/pull/76) [`8b8b07e`](https://github.com/modern-admin/modern-admin/commit/8b8b07e152701cdcaa2c7c7f53704b3610787811) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Wrap unbreakable record values instead of letting them overflow the card. Values with no break opportunity (api keys, hashes, urls without hyphens, pasted long words) ran past the container on narrow viewports and were clipped: show-view text, textarea values, the rich-text body and reference badges now use `wrap-anywhere`.
+
 ## 0.10.0
 
 ### Patch Changes

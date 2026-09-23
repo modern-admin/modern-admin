@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/telemetry",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Opt-in usage telemetry for Modern Admin (privacy-first, MODERN_ADMIN_TELEMETRY=1 required).",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/telemetry#readme",
   "keywords": [
@@ -53,7 +53,7 @@
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
-    "@types/bun": "^1.4.0",
+    "@types/bun": "1.4.2",
     "typescript": "^7.0.2"
   }
 }

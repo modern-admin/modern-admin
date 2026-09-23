@@ -31,7 +31,7 @@ import { PageBreadcrumbs, homeCrumb } from '../breadcrumbs.js'
 import { RelatedRecordsTabs } from '../components/related-records-tabs.js'
 import { useDialogs } from '../dialogs.js'
 import { useNotify } from '../notify.js'
-import { ActionMenu, isActionAllowedForRecord, visibleRecordActions } from '../action-menu.js'
+import { ActionMenu, isRecordActionAllowed, visibleRecordActions } from '../action-menu.js'
 import { RevisionsButton } from '../components/revisions-button.js'
 import { visibleRecordProperties } from '../relations.js'
 
@@ -90,8 +90,8 @@ export function ResourceShowPage({
     ),
     loadedRecord,
   )
-  const canEdit = isActionAllowedForRecord('edit', loadedRecord)
-  const canDelete = isActionAllowedForRecord('delete', loadedRecord)
+  const canEdit = isRecordActionAllowed('edit', resource, loadedRecord)
+  const canDelete = isRecordActionAllowed('delete', resource, loadedRecord)
 
   // ── Keyboard shortcuts ──
   // Ctrl/Cmd+E jumps into edit. Discoverable via the action-button tooltip.

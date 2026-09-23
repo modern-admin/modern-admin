@@ -47,14 +47,45 @@ export const isActionAllowedForRecord = (
   record: Pick<RecordJSON, 'recordActions'> | undefined,
 ): boolean => !record?.recordActions || record.recordActions.includes(actionName)
 
-/** Whether the server-advertised resource metadata offers an action. */
+/**
+ * Whether the server-advertised resource metadata offers an action.
+ *
+ * `ResourceJSON.actions` is already pruned per principal — the api-key
+ * allowlist, the role matrix and `isAccessible` all ran before it was
+ * serialized — so "not advertised" means "this admin may not run it", and a
+ * control bound to it must not render. Fails closed while the metadata is
+ * still loading.
+ *
+ * `actionType` selects which scope to look in; a record-scoped `edit` and a
+ * resource-scoped `new` are different questions, and bulk actions
+ * (`bulkDelete`) live in a third scope.
+ */
 export const isActionAllowedForResource = (
   actionName: string,
   resource: Pick<ResourceJSON, 'actions'> | undefined,
+  actionType: ActionDescriptor['actionType'] = 'resource',
 ): boolean =>
   resource?.actions.some(
-    (action) => action.actionType === 'resource' && action.name === actionName,
+    (action) => action.actionType === actionType && action.name === actionName,
   ) ?? false
+
+/**
+ * Both verdicts a record-scoped control has to satisfy: the resource must
+ * advertise the action for this principal at all, and the loaded record must
+ * report it among the ones it offers.
+ *
+ * Neither check subsumes the other. The per-record verdict is absent on
+ * records that did not come through `invoke()` (or from an older server), and
+ * the resource-level descriptor is the only place a principal-wide denial
+ * (role matrix, api key) shows up when that happens.
+ */
+export const isRecordActionAllowed = (
+  actionName: string,
+  resource: Pick<ResourceJSON, 'actions'> | undefined,
+  record: Pick<RecordJSON, 'recordActions'> | undefined,
+): boolean =>
+  isActionAllowedForResource(actionName, resource, 'record') &&
+  isActionAllowedForRecord(actionName, record)
 
 /** Narrow a resource's record actions down to the ones this record offers. */
 export const visibleRecordActions = (

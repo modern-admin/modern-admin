@@ -100,7 +100,7 @@ export interface IAdminClient {
   login(email: string, password: string): Promise<void>
   getAuthUiProps(): Promise<AuthUiProps>
   loginSocial(provider: string, callbackUrl?: string): Promise<void>
-  logout(): Promise<void>
+  logout(options?: { callbackURL?: string }): Promise<void>
   list(
     resourceId: string,
     query?: ListQuery,
@@ -421,13 +421,25 @@ export class AdminClient implements IAdminClient {
   }
 
   /** Sign the current session out. Better Auth's sign-out endpoint requires
-   *  an explicit JSON body (even if empty) when Content-Type is JSON. */
-  async logout(): Promise<void> {
+   *  an explicit JSON body (even if empty) when Content-Type is JSON.
+   *
+   *  When the session came from an OIDC provider that supports RP-initiated
+   *  logout, the response carries `{ url, redirect }` — the provider's
+   *  end-session URL. Dropping it kills only the local session: the IdP
+   *  still holds one, so the next social-login click signs straight back in
+   *  without a prompt. The `Location` header Better Auth sets alongside it
+   *  does nothing on a 200, so the navigation has to happen here.
+   *
+   *  `callbackURL` is forwarded as `post_logout_redirect_uri` and overrides
+   *  the provider's configured one — omit it unless the host registered that
+   *  exact URL with the IdP, or the provider will reject the logout. */
+  async logout(options?: { callbackURL?: string }): Promise<void> {
     try {
-      await this.request<unknown>(this.signOutPath, {
+      const result = await this.request<{ url?: string; redirect?: boolean }>(this.signOutPath, {
         method: 'POST',
-        body: '{}',
+        body: JSON.stringify(options?.callbackURL ? { callbackURL: options.callbackURL } : {}),
       })
+      if (result?.url && result.redirect !== false) this.navigate(result.url)
     } finally {
       this.clearDemoSession()
     }

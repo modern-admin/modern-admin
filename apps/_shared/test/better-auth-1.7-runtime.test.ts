@@ -1,12 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { Database } from 'bun:sqlite'
 import { admin } from 'better-auth/plugins'
-import {
-  buildBetterAuth,
-  migrateAuth,
-  seedDemoUser,
-  type BuildBetterAuthOptions,
-} from '../src/index.js'
+import { buildBetterAuth, migrateAuth, seedDemoUser, type BuildBetterAuthOptions } from '../src'
 
 describe('Better Auth 1.7 runtime contract', () => {
   let database: Database
@@ -57,6 +52,7 @@ describe('Better Auth 1.7 runtime contract', () => {
     }>
 
     expect(users).toHaveLength(1)
+    expect(users[0]!.id).toMatch(/^[\da-f]{8}-[\da-f]{4}-7[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/)
     expect(users[0]!.role).toBe('admin')
     expect(accounts).toHaveLength(1)
     expect(accounts[0]).toMatchObject({
@@ -99,12 +95,22 @@ describe('Better Auth 1.7 runtime contract', () => {
     const context = await auth.$context
     const googleAccount = await context.internalAdapter.linkAccount({
       providerId: 'google',
-      issuer: 'https://accounts.google.com',
+      issuer: 'https://untrusted.example',
       accountId: 'google-subject-1',
       userId: signIn.response.user.id,
       accessToken: 'old-access-token',
       refreshToken: 'old-refresh-token',
     })
+    expect(
+      database.query('SELECT issuer FROM ma_account WHERE id = ?').get(googleAccount.id),
+    ).toEqual({ issuer: 'https://accounts.google.com' })
+    await expect(
+      context.internalAdapter.linkAccount({
+        providerId: 'unknown-provider',
+        accountId: 'unknown-subject',
+        userId: signIn.response.user.id,
+      }),
+    ).rejects.toThrow('Unknown Better Auth account provider')
 
     const linked = await auth.api.listUserAccounts({ headers: sessionHeaders })
     expect(linked).toHaveLength(2)

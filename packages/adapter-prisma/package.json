@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/adapter-prisma",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Prisma 7 adapter for Modern Admin — implements BaseDatabase/BaseResource on top of PrismaClient.",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/adapter-prisma#readme",
   "keywords": [
@@ -55,7 +55,7 @@
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
     "@prisma/client": "^7.10.0",
-    "@types/bun": "^1.4.0",
+    "@types/bun": "1.4.2",
     "prisma": "^7.10.0",
     "typescript": "^7.0.2"
   },

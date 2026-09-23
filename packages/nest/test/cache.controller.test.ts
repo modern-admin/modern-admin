@@ -11,7 +11,6 @@ const build = () => {
     databases: [[{ name: 'users', rows: [{ id: '1', name: 'Ann' }] }]],
     adapters: [adapter],
     cache: new MemoryCacheProvider(),
-    cacheRuntime: { metricsLogIntervalMs: 0 },
   })
   return { admin, controller: new CacheController(admin) }
 }

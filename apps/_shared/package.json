@@ -17,7 +17,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@better-auth/api-key": "^1.7.2",
+    "@better-auth/api-key": "1.7.5",
     "@modern-admin/auth-better-auth": "workspace:*",
     "@modern-admin/core": "workspace:*",
     "@modern-admin/feature-json-by-key": "workspace:*",
@@ -27,15 +27,15 @@
     "@modern-admin/feature-upload": "workspace:*",
     "@modern-admin/nest": "workspace:*",
     "@modern-admin/queue": "workspace:*",
-    "@nestjs/common": "^12.0.1",
-    "@nestjs/core": "^12.0.1",
-    "@nestjs/platform-express": "^12.0.1",
-    "better-auth": "^1.7.2",
+    "@nestjs/common": "^12.0.3",
+    "@nestjs/core": "^12.0.3",
+    "@nestjs/platform-express": "^12.0.3",
+    "better-auth": "1.7.5",
     "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
-    "@types/bun": "^1.4.0",
+    "@types/bun": "1.4.2",
     "typescript": "^7.0.2"
   }
 }

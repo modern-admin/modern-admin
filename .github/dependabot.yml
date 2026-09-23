@@ -1,6 +1,22 @@
+# Dependabot version updates for the @modern-admin/* monorepo.
+#
+# All pull requests target `develop` — `main` is publish-only and only accepts
+# promotion PRs from `develop` (.github/workflows/branch-policy.yml).
+#
+# The bun entry uses `directory: '/'` on purpose: this is a single-lockfile bun
+# workspaces repo (`workspaces: [apps/*, packages/*]` + one root `bun.lock`).
+# Dependabot reads the workspace globs from the root manifest and updates every
+# workspace `package.json` plus the lockfile in one pull request. Enumerating
+# `/packages/*` and `/apps/*` separately would open one PR per workspace, all
+# of them racing to rewrite the same root `bun.lock`.
+#
+# Note: the `bun` ecosystem supports version updates only — Dependabot does not
+# open security-update PRs for it. Dependabot alerts still fire; fixes for them
+# land through these scheduled bumps or by hand.
 version: 2
 
 updates:
+  # ---------------------------------------------------------------- workflows
   - package-ecosystem: github-actions
     directory: '/'
     target-branch: develop
@@ -9,3 +25,139 @@ updates:
     commit-message:
       prefix: ci
     open-pull-requests-limit: 5
+    groups:
+      # Action bumps are mechanical (and pinned by SHA) — one PR is enough.
+      github-actions:
+        patterns:
+          - '*'
+
+  # ----------------------------------------------------------- bun workspaces
+  - package-ecosystem: bun
+    directory: '/'
+    target-branch: develop
+    schedule:
+      interval: weekly
+    # Dependency policy (CLAUDE.md): always move to the latest stable release.
+    # `increase` rewrites the declared range instead of silently staying inside
+    # an existing caret, so published packages advertise what we actually test.
+    versioning-strategy: increase
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: chore
+      prefix-development: chore
+      include: scope
+    ignore:
+      # Internal packages are `workspace:*` and released by Changesets.
+      - dependency-name: '@modern-admin/*'
+      - dependency-name: '@modern-admin-pro/*'
+      # Alias for the TypeScript 6 JS API that unplugin-dts needs while the
+      # repo itself compiles with TypeScript 7 — it must not follow TS majors.
+      - dependency-name: '@typescript/typescript6'
+        update-types:
+          - version-update:semver-major
+      # Pinned to an exact version through the root `overrides` block.
+      - dependency-name: prosemirror-model
+    groups:
+      # A dependency joins the FIRST matching group, so narrow groups come
+      # before the catch-all at the bottom.
+      typescript:
+        patterns:
+          - typescript
+          - '@typescript/*'
+      linting:
+        patterns:
+          - oxlint
+          - prettier
+      react:
+        patterns:
+          - react
+          - react-dom
+          - '@types/react'
+          - '@types/react-dom'
+          - react-hook-form
+          - '@hookform/resolvers'
+      radix-ui:
+        patterns:
+          - '@radix-ui/*'
+      tanstack:
+        patterns:
+          - '@tanstack/*'
+      tiptap:
+        patterns:
+          - '@tiptap/*'
+          - tiptap-markdown
+          - prosemirror-*
+      tailwind:
+        patterns:
+          - tailwindcss
+          - '@tailwindcss/*'
+          - tailwind-merge
+          - tw-animate-css
+          - class-variance-authority
+          - clsx
+      # vite-plugin-dts drags in unplugin-dts, which is patched at an exact
+      # version (patches/unplugin-dts@1.0.3.patch) — re-check the patch when
+      # this group moves.
+      vite:
+        patterns:
+          - vite
+          - '@vitejs/*'
+          - vite-plugin-dts
+          - unplugin-dts
+      nestjs:
+        patterns:
+          - '@nestjs/*'
+          - reflect-metadata
+          - rxjs
+          - express
+          - '@types/express'
+      prisma:
+        patterns:
+          - prisma
+          - '@prisma/*'
+      drizzle:
+        patterns:
+          - drizzle-orm
+          - drizzle-kit
+          - postgres
+      graphql:
+        patterns:
+          - graphql
+          - graphql-ws
+          - dataloader
+      better-auth:
+        patterns:
+          - better-auth
+          - '@better-auth/*'
+      ai-sdk:
+        patterns:
+          - ai
+          - '@ai-sdk/*'
+          - '@openrouter/*'
+      # Kept on its own: the runner version must stay in step with the
+      # `mcr.microsoft.com/playwright:v<x>-noble` container in ci.yml, and the
+      # checked-in *-chromium-linux.png baselines have to be regenerated in
+      # that same image.
+      playwright:
+        patterns:
+          - '@playwright/test'
+          - playwright
+      # Everything else: majors still get their own PR so they are reviewed
+      # one at a time; the rest is swept into a single weekly PR.
+      minor-and-patch:
+        patterns:
+          - '*'
+        update-types:
+          - minor
+          - patch
+
+  # ------------------------------------------------------ local dev services
+  - package-ecosystem: docker-compose
+    directory: '/'
+    target-branch: develop
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: chore
+      include: scope
+    open-pull-requests-limit: 3

@@ -8,8 +8,12 @@ import DOMPurify from 'dompurify'
 import { marked } from 'marked'
 import { cn } from '../lib/utils.js'
 
+// `wrap-anywhere` is inherited by the rendered markup, so an unbroken token
+// pasted into the body (url, hash, api key) wraps instead of running past the
+// card on narrow viewports. `<pre>` keeps `white-space: pre`, so code blocks
+// still scroll horizontally rather than wrapping.
 const proseRenderClass =
-  'prose prose-sm max-w-none text-foreground prose-headings:text-foreground ' +
+  'prose prose-sm max-w-none wrap-anywhere text-foreground prose-headings:text-foreground ' +
   'prose-p:text-foreground prose-strong:text-foreground prose-li:text-foreground ' +
   'prose-code:text-foreground prose-pre:text-foreground prose-pre:bg-muted ' +
   'prose-blockquote:text-muted-foreground prose-blockquote:border-border ' +

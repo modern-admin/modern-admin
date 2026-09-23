@@ -1,5 +1,11 @@
 # @modern-admin/license
 
+## 0.11.0
+
+### Patch Changes
+
+- [#63](https://github.com/modern-admin/modern-admin/pull/63) [`f0aa056`](https://github.com/modern-admin/modern-admin/commit/f0aa0564aae700ca7b83746087bf6fb7911e3dc6) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update @types/bun to 1.4.2, bullmq to 6.3.8, @types/node to 26.6.2, @changesets/changelog-github to 1.0.1, @changesets/cli to 3.0.3, zod to 4.6.5, jose to 6.2.12, @scalar/nestjs-api-reference to 1.2.19, lucide-react to 1.47.0, dompurify to 3.4.15, marked to 18.0.13 and validate compatibility with the current stable releases.
+
 ## 0.10.0
 
 ### Patch Changes

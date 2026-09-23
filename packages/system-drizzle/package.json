@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/system-drizzle",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Drizzle-backed implementation of Modern Admin system stores.",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/system-drizzle#readme",
   "keywords": [
@@ -62,7 +62,7 @@
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
-    "@types/bun": "^1.4.0",
+    "@types/bun": "1.4.2",
     "drizzle-orm": "^0.45.2",
     "typescript": "^7.0.2"
   },

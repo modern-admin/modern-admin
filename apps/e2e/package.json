@@ -11,10 +11,11 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@modern-admin/core": "workspace:*",
     "@modern-admin/tsconfig": "workspace:*",
-    "@playwright/test": "^1.62.1",
-    "@types/bun": "^1.4.0",
-    "@types/node": "^26.4.0",
+    "@playwright/test": "^1.63.0",
+    "@types/bun": "1.4.2",
+    "@types/node": "26.6.2",
     "postgres": "^3.4.9",
     "typescript": "^7.0.2"
   }
