@@ -52,13 +52,13 @@
     "@modern-admin/core": "workspace:^",
     "busboy": "^1.6.0",
     "dataloader": "^2.2.3",
-    "graphql-ws": "^6.2.1",
+    "graphql-ws": "^6.2.2",
     "ws": "^8.21.3"
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
-    "@nestjs/common": "^12.0.1",
-    "@nestjs/core": "^12.0.1",
+    "@nestjs/common": "^12.0.3",
+    "@nestjs/core": "^12.0.3",
     "@types/bun": "1.4.2",
     "@types/busboy": "^1.5.4",
     "@types/ws": "^8.18.1",
@@ -66,8 +66,8 @@
     "typescript": "^7.0.2"
   },
   "peerDependencies": {
-    "@nestjs/common": "^12.0.1",
-    "@nestjs/core": "^12.0.1",
+    "@nestjs/common": "^12.0.3",
+    "@nestjs/core": "^12.0.3",
     "graphql": "^17.0.2"
   }
 }
