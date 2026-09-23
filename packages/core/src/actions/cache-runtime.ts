@@ -30,8 +30,6 @@ export interface CacheRuntimeOptions {
   invalidationAttempts?: number
   invalidationRetryBaseMs?: number
   quarantineRetryMs?: number
-  /** Delta metrics log interval. Set to `0` to disable. Defaults to 10 minutes. */
-  metricsLogIntervalMs?: number
 }
 
 export interface CacheMetricCounters {
@@ -147,7 +145,6 @@ export class CacheRuntime {
   private readonly invalidationRetryBaseMs: number
   private readonly quarantineRetryMs: number
   private quarantineTimer: ReturnType<typeof setTimeout> | null = null
-  private metricsTimer: ReturnType<typeof setInterval> | null = null
   private disposed = false
   readonly instanceId = uuidv7()
 
@@ -160,19 +157,6 @@ export class CacheRuntime {
     this.invalidationAttempts = Math.max(1, options.invalidationAttempts ?? 3)
     this.invalidationRetryBaseMs = Math.max(0, options.invalidationRetryBaseMs ?? 25)
     this.quarantineRetryMs = Math.max(100, options.quarantineRetryMs ?? 1_000)
-    const metricsLogIntervalMs = Math.max(0, options.metricsLogIntervalMs ?? 600_000)
-    if (metricsLogIntervalMs > 0) {
-      this.metricsTimer = setInterval(() => {
-        const delta = this.stats(true)
-        if (delta.entries.length > 0 || delta.dirtyTags.length > 0) {
-          this.logger.info(
-            '[modern-admin] cache metrics',
-            delta as unknown as Record<string, unknown>,
-          )
-        }
-      }, metricsLogIntervalMs)
-      this.metricsTimer.unref?.()
-    }
   }
 
   private counters(key: string, tags: readonly string[]): CacheStatsEntry {
@@ -523,8 +507,6 @@ export class CacheRuntime {
     this.disposed = true
     if (this.quarantineTimer) clearTimeout(this.quarantineTimer)
     this.quarantineTimer = null
-    if (this.metricsTimer) clearInterval(this.metricsTimer)
-    this.metricsTimer = null
   }
 
   get inFlightSize(): number {

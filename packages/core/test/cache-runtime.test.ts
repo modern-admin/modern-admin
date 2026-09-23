@@ -127,8 +127,8 @@ describe('CacheRuntime.read', () => {
       }
     }
     const cache = new LockingCache()
-    const firstRuntime = new CacheRuntime(cache, { metricsLogIntervalMs: 0 })
-    const secondRuntime = new CacheRuntime(cache, { metricsLogIntervalMs: 0 })
+    const firstRuntime = new CacheRuntime(cache)
+    const secondRuntime = new CacheRuntime(cache)
     let computes = 0
     const fetch = async () => {
       computes++
