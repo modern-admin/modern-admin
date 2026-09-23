@@ -1,5 +1,34 @@
 # @modern-admin/core
 
+## 0.11.0
+
+### Minor Changes
+
+- [#73](https://github.com/modern-admin/modern-admin/pull/73) [`9ec58d8`](https://github.com/modern-admin/modern-admin/commit/9ec58d8945d3b2aa1f720d371cef371900db1def) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Remove the periodic cache metrics log from `CacheRuntime`. The 10-minute
+  interval called `stats(true)`, which silently reset the counters served by
+  `GET /cache` and the admin cache page, and duplicated data that endpoint
+  already exposes. The `metricsLogIntervalMs` option is gone; drop it from
+  `ModernAdmin({ cacheRuntime })`.
+
+### Patch Changes
+
+- [#63](https://github.com/modern-admin/modern-admin/pull/63) [`f0aa056`](https://github.com/modern-admin/modern-admin/commit/f0aa0564aae700ca7b83746087bf6fb7911e3dc6) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update @types/bun to 1.4.2, bullmq to 6.3.8, @types/node to 26.6.2, @changesets/changelog-github to 1.0.1, @changesets/cli to 3.0.3, zod to 4.6.5, jose to 6.2.12, @scalar/nestjs-api-reference to 1.2.19, lucide-react to 1.47.0, dompurify to 3.4.15, marked to 18.0.13 and validate compatibility with the current stable releases.
+
+- [#76](https://github.com/modern-admin/modern-admin/pull/76) [`8b8b07e`](https://github.com/modern-admin/modern-admin/commit/8b8b07e152701cdcaa2c7c7f53704b3610787811) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Render action controls according to the current principal's permissions.
+  
+  The role matrix and the API-key allowlist were only enforced inside
+  `invoke()`, so `ResourceJSON.actions` and `RecordJSON.recordActions` still
+  advertised actions the principal could not run — a read-only role saw New /
+  Edit / Delete buttons that answered 403 on click.
+  
+  `ModernAdmin.toJSON(currentAdmin)` and the per-record annotation now run the
+  same gates the pipeline does, and `annotateRecordActions` reports an empty
+  array (instead of omitting the field) when every action is denied, so the
+  client cannot fail open on it. On the client, list, show, edit and wizard
+  pages consult the resulting verdict through the new `isRecordActionAllowed`
+  helper: denied controls are not rendered, and a row whose record may be
+  neither edited nor viewed is inert rather than navigating into a dead end.
+
 ## 0.10.0
 
 ### Minor Changes

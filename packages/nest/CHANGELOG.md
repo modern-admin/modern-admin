@@ -1,5 +1,36 @@
 # @modern-admin/nest
 
+## 0.11.0
+
+### Minor Changes
+
+- [#76](https://github.com/modern-admin/modern-admin/pull/76) [`8b8b07e`](https://github.com/modern-admin/modern-admin/commit/8b8b07e152701cdcaa2c7c7f53704b3610787811) Thanks [@SergiyIva](https://github.com/SergiyIva)! - `GET /admin/api/auth/me` no longer returns the role's `permissions` matrix — the response is now just `{ user }`.
+  
+  The field existed so the SPA could hide controls it could not use. That job now
+  belongs to `/admin/api/config`, whose action descriptors are pruned per
+  principal by `ModernAdmin.toJSON(currentAdmin)`, so the matrix was both unused
+  and a second copy of the same verdict that could drift from it. Server-side
+  enforcement was never affected either way — it runs in `invoke()`.
+  
+  Consumers that read `permissions` from this endpoint should derive the same
+  answer from the action descriptors in `/admin/api/config`, or call
+  `ModernAdmin.getRolePermissions(role)` directly, which is unchanged.
+
+### Patch Changes
+
+- [#63](https://github.com/modern-admin/modern-admin/pull/63) [`f0aa056`](https://github.com/modern-admin/modern-admin/commit/f0aa0564aae700ca7b83746087bf6fb7911e3dc6) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update @types/bun to 1.4.2, bullmq to 6.3.8, @types/node to 26.6.2, @changesets/changelog-github to 1.0.1, @changesets/cli to 3.0.3, zod to 4.6.5, jose to 6.2.12, @scalar/nestjs-api-reference to 1.2.19, lucide-react to 1.47.0, dompurify to 3.4.15, marked to 18.0.13 and validate compatibility with the current stable releases.
+
+- [#74](https://github.com/modern-admin/modern-admin/pull/74) [`afdb6ef`](https://github.com/modern-admin/modern-admin/commit/afdb6eff2ddd0399ce81425cafa94bb2f7ec1109) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Update @nestjs/common, @nestjs/core, @nestjs/platform-express, @nestjs/platform-socket.io, @nestjs/testing and @nestjs/websockets to 12.0.3 and validate compatibility with the current stable releases.
+
+- [#46](https://github.com/modern-admin/modern-admin/pull/46) [`29cf9a8`](https://github.com/modern-admin/modern-admin/commit/29cf9a8293a94f3288ce5b372326187212cfd35c) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Switched to gemini-3.6-flash as default llm
+
+- [#65](https://github.com/modern-admin/modern-admin/pull/65) [`eb7c2a1`](https://github.com/modern-admin/modern-admin/commit/eb7c2a12e8f2b617abc5cb20f6dc589e19add6a7) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Allow API key permission updates to remove previously stored grants for deleted resources, while continuing to reject new unknown resources and invalid actions.
+- Updated dependencies [[`f0aa056`](https://github.com/modern-admin/modern-admin/commit/f0aa0564aae700ca7b83746087bf6fb7911e3dc6), [`afdb6ef`](https://github.com/modern-admin/modern-admin/commit/afdb6eff2ddd0399ce81425cafa94bb2f7ec1109), [`8b8b07e`](https://github.com/modern-admin/modern-admin/commit/8b8b07e152701cdcaa2c7c7f53704b3610787811), [`9ec58d8`](https://github.com/modern-admin/modern-admin/commit/9ec58d8945d3b2aa1f720d371cef371900db1def)]:
+  - @modern-admin/core@0.11.0
+  - @modern-admin/feature-upload@0.11.0
+  - @modern-admin/i18n@0.11.0
+  - @modern-admin/queue@0.11.0
+
 ## 0.10.0
 
 ### Minor Changes
