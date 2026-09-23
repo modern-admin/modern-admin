@@ -200,6 +200,18 @@ function CopiableDisplay({
 // Re-exported here for backwards compat.
 export type { PropertyDisplayProps } from './types.js'
 
+/**
+ * Show-view text. A value with no break opportunities (api token, hash, url
+ * without hyphens, a pasted 200-char word) has nowhere to wrap, so the default
+ * `overflow-wrap: normal` lets it run past the card — on a 375px viewport the
+ * tail is simply clipped. `wrap-anywhere` also shrinks the intrinsic min-width
+ * so the value still wraps inside the flex/grid parents it can land in
+ * (`CopiableDisplay`, the m2m rows).
+ */
+function ShowText({ children }: { children: React.ReactNode }): React.ReactElement {
+  return <span className="block max-w-full wrap-anywhere">{children}</span>
+}
+
 function ListCellText({ children }: { children: React.ReactNode }): React.ReactElement {
   return (
     <span
@@ -245,7 +257,11 @@ export function PropertyDisplay({
       const withTime = property.type === 'datetime'
       const formatted = formatDate(value, withTime)
       return withCopy(
-        view === 'list' ? <ListCellText>{formatted}</ListCellText> : <span>{formatted}</span>,
+        view === 'list' ? (
+          <ListCellText>{formatted}</ListCellText>
+        ) : (
+          <ShowText>{formatted}</ShowText>
+        ),
       )
     }
     case 'money': {
@@ -255,7 +271,7 @@ export function PropertyDisplay({
         view === 'list' ? (
           <ListCellText>{formatMoneyValue(value, currency, locale)}</ListCellText>
         ) : (
-          <span>{formatMoneyValue(value, currency, locale)}</span>
+          <ShowText>{formatMoneyValue(value, currency, locale)}</ShowText>
         ),
       )
     }
@@ -342,7 +358,7 @@ export function PropertyDisplay({
                 />
                 {extras.map((f) =>
                   it[f] != null && it[f] !== '' ? (
-                    <span key={f} className="text-xs text-muted-foreground">
+                    <span key={f} className="min-w-0 wrap-anywhere text-xs text-muted-foreground">
                       {f}: <span className="text-foreground">{String(it[f])}</span>
                     </span>
                   ) : null,
@@ -381,7 +397,9 @@ export function PropertyDisplay({
     case 'textarea':
       return withCopy(
         view === 'show' ? (
-          <span className="whitespace-pre-wrap text-foreground">{String(value)}</span>
+          <span className="block max-w-full whitespace-pre-wrap wrap-anywhere text-foreground">
+            {String(value)}
+          </span>
         ) : (
           <ListCellText>{String(value)}</ListCellText>
         ),
@@ -393,7 +411,7 @@ export function PropertyDisplay({
           view === 'list' ? (
             <ListCellText>{String(value)}</ListCellText>
           ) : (
-            <span>{String(value)}</span>
+            <ShowText>{String(value)}</ShowText>
           ),
         )
       }
@@ -487,7 +505,7 @@ export function PropertyDisplay({
         view === 'list' ? (
           <ListCellText>{String(value)}</ListCellText>
         ) : (
-          <span>{String(value)}</span>
+          <ShowText>{String(value)}</ShowText>
         ),
       )
     }
