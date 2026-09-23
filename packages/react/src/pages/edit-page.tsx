@@ -515,7 +515,10 @@ export function ResourceEditPage({
       void form.handleSubmit(onSubmit, onInvalid)()
     },
     {
-      enabled: editable.length > 0,
+      // Hooks run before the forbidden card returns, so the listener outlives
+      // the form it belongs to: without `canSubmit` here, mod+s on a denied
+      // deep link still fires the mutation the card exists to prevent.
+      enabled: editable.length > 0 && canSubmit,
       description: isNew ? t('common:create') : t('common:save'),
     },
   )

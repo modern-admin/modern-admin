@@ -847,6 +847,7 @@ export function ResourceListPage({
             property={property}
             value={row.original.params[property.path]}
             populated={row.original.populated}
+            canShow={isRecordActionAllowed('show', resource, row.original)}
           />
         ),
       })),
@@ -1664,21 +1665,30 @@ function CellContent({
   property,
   value,
   populated,
+  canShow = true,
 }: {
   resourceId: string
   recordId: string
   property: PropertyJSON
   value: unknown
   populated?: Record<string, unknown>
+  /** Whether this principal may open the record. The id cell is the one place
+   *  a row navigates from its own content rather than through `rowTarget`, and
+   *  it stops propagation — so it needs the verdict handed to it separately or
+   *  it becomes a way around an inert row. */
+  canShow?: boolean
 }): React.ReactElement {
   if (property.isId) {
+    const idText = String(value ?? '')
+    const idClassName = 'font-mono text-sm font-medium text-foreground'
+    if (!canShow) return <span className={idClassName}>{idText}</span>
     return (
       <Link
         to={{ name: 'show', resourceId, recordId }}
-        className="font-mono text-sm font-medium text-foreground hover:underline"
+        className={cn(idClassName, 'hover:underline')}
         onClick={(e) => e.stopPropagation()}
       >
-        {String(value ?? '')}
+        {idText}
       </Link>
     )
   }
@@ -3049,6 +3059,7 @@ function RecordCard({
                       property={p}
                       value={record.params[p.path]}
                       populated={record.populated}
+                      canShow={isRecordActionAllowed('show', resource, record)}
                     />
                   </div>
                 </div>

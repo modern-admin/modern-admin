@@ -19,7 +19,7 @@ import {
 } from '@modern-admin/ui'
 import { AlertCircle } from 'lucide-react'
 import { useCreateRecord, useResource } from '../hooks.js'
-import { isActionAllowedForResource } from '../action-menu.js'
+import { isActionAllowedForResource, isRecordActionAllowed } from '../action-menu.js'
 import { useNavigate } from '../router.js'
 import { useI18n } from '../i18n.js'
 import { useNotify } from '../notify.js'
@@ -110,7 +110,14 @@ export function ResourceWizardCreatePage({
         return
       }
       notify.success({ key: 'toast:created' })
-      navigate({ name: 'show', resourceId, recordId: String(result.record.id) })
+      // The fresh record carries its own action verdict, so a principal who
+      // may create but not read lands on the list instead of bouncing off a
+      // 403 on the page it was just sent to.
+      navigate(
+        isRecordActionAllowed('show', resource, result.record)
+          ? { name: 'show', resourceId, recordId: String(result.record.id) }
+          : { name: 'list', resourceId },
+      )
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       setSubmitError(message)
