@@ -275,6 +275,48 @@ describe('CacheRuntime.read', () => {
   })
 })
 
+// Counters are owned by the caller: `GET /cache` reads them and the admin
+// cache page renders them, so nothing inside the runtime may clear them on
+// its own. A background metrics logger used to call `stats(true)` every ten
+// minutes and silently wiped the numbers under the UI — these two tests are
+// what keeps it from coming back.
+describe('CacheRuntime.stats', () => {
+  test('counters survive repeated reads; only stats(true) clears them', async () => {
+    const cache = new FakeCache()
+    const rt = new CacheRuntime(cache)
+    await rt.read('k', { enabled: true, ttl: 60, tags: ['list:users'] }, async () => ({ v: 1 }))
+    await rt.read('k', { enabled: true, ttl: 60, tags: ['list:users'] }, async () => ({ v: 1 }))
+
+    const first = rt.stats()
+    expect(first.entries[0]?.misses).toBe(1)
+    expect(first.entries[0]?.hits).toBe(1)
+
+    // Reading the snapshot is not a reset, however often the UI polls it.
+    expect(rt.stats().entries[0]?.misses).toBe(1)
+    expect(rt.stats().entries[0]?.hits).toBe(1)
+
+    expect(rt.stats(true).entries[0]?.hits).toBe(1)
+    expect(rt.stats().entries).toEqual([])
+    await rt.dispose()
+  })
+
+  test('the constructor schedules no background timer', async () => {
+    const realSetInterval = globalThis.setInterval
+    const scheduled: number[] = []
+    globalThis.setInterval = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
+      scheduled.push(timeout ?? 0)
+      return realSetInterval(handler as () => void, timeout, ...args)
+    }) as typeof globalThis.setInterval
+    try {
+      const rt = new CacheRuntime(new FakeCache())
+      await rt.dispose()
+    } finally {
+      globalThis.setInterval = realSetInterval
+    }
+    expect(scheduled).toEqual([])
+  })
+})
+
 // Forced revalidation — what the list view's refresh button triggers.
 // The contract: never serve the cached entry, always hit the source, and
 // when the source disagrees with the cache, drop the resource's scopes
