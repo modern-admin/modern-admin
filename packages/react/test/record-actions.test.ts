@@ -9,6 +9,7 @@ import { describe, expect, test } from 'bun:test'
 import {
   isActionAllowedForRecord,
   isActionAllowedForResource,
+  isRecordActionAllowed,
   visibleRecordActions,
 } from '../src/action-menu.js'
 import type { ActionDescriptor, RecordJSON, ResourceJSON } from '../src/types.js'
@@ -106,5 +107,42 @@ describe('isActionAllowedForResource', () => {
 
   test('fails closed until resource metadata is available', () => {
     expect(isActionAllowedForResource('new', undefined)).toBe(false)
+  })
+
+  test('looks in the scope it is asked for', () => {
+    const r = resource([
+      { name: 'edit', actionType: 'record', resourceId: 'users' },
+      { name: 'bulkDelete', actionType: 'bulk', resourceId: 'users' },
+    ])
+    expect(isActionAllowedForResource('edit', r, 'record')).toBe(true)
+    expect(isActionAllowedForResource('bulkDelete', r, 'bulk')).toBe(true)
+    expect(isActionAllowedForResource('bulkDelete', r, 'record')).toBe(false)
+  })
+})
+
+describe('isRecordActionAllowed', () => {
+  const resource = (names: string[]): Pick<ResourceJSON, 'actions'> => ({
+    actions: names.map((name) => action(name)),
+  })
+
+  test('needs both the principal-wide and the per-record verdict', () => {
+    expect(
+      isRecordActionAllowed('edit', resource(['show', 'edit']), record(['show', 'edit'])),
+    ).toBe(true)
+    // Advertised for the admin, but this row does not offer it.
+    expect(isRecordActionAllowed('edit', resource(['show', 'edit']), record(['show']))).toBe(false)
+    // Offered by the row, but the role matrix pruned it from the snapshot.
+    expect(isRecordActionAllowed('edit', resource(['show']), record(['show', 'edit']))).toBe(false)
+  })
+
+  test('the resource verdict still applies when the record carries none', () => {
+    // A record outside the action pipeline fails open on its own; the
+    // per-principal snapshot is what keeps a denied action hidden.
+    expect(isRecordActionAllowed('delete', resource(['show']), record())).toBe(false)
+    expect(isRecordActionAllowed('show', resource(['show']), record())).toBe(true)
+  })
+
+  test('fails closed until resource metadata is available', () => {
+    expect(isRecordActionAllowed('show', undefined, record(['show']))).toBe(false)
   })
 })

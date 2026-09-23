@@ -77,6 +77,7 @@ export {
   useSocialLogin,
   invalidateResourceData,
   type CurrentUserResult,
+  type LogoutVariables,
 } from './hooks.js'
 export {
   PropertyDisplay,
@@ -136,6 +137,7 @@ export {
   getActionLabel,
   isActionAllowedForRecord,
   isActionAllowedForResource,
+  isRecordActionAllowed,
   visibleRecordActions,
   type ActionMenuProps,
 } from './action-menu.js'

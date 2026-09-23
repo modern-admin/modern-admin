@@ -71,21 +71,25 @@ export function ReferenceLink({
   })
   if (!id) return (fallback as React.ReactElement | null) ?? null
   const title = (hasPopulated ? populated!.title : data?.record?.title) || `#${id}`
+  // The title is arbitrary record data — `max-w-full` + `wrap-anywhere` keep a
+  // title with no break opportunities inside the card on narrow viewports
+  // instead of letting the badge stretch past it.
+  const badge = (
+    <Badge variant="secondary" className="max-w-full wrap-anywhere">
+      {title}
+    </Badge>
+  )
   if (!canShow) {
-    return (
-      <span className={cn('inline-flex items-center', className)}>
-        <Badge variant="secondary">{title}</Badge>
-      </span>
-    )
+    return <span className={cn('inline-flex max-w-full items-center', className)}>{badge}</span>
   }
   return (
     <Link
       to={{ name: 'show', resourceId, recordId: id }}
-      className={cn('inline-flex items-center gap-1 hover:underline', className)}
+      className={cn('inline-flex max-w-full items-center gap-1 hover:underline', className)}
       onClick={(e) => e.stopPropagation()}
     >
-      <Badge variant="secondary">{title}</Badge>
-      {showIcon && <ExternalLink className="size-3 opacity-50" />}
+      {badge}
+      {showIcon && <ExternalLink className="size-3 shrink-0 opacity-50" />}
     </Link>
   )
 }

@@ -57,11 +57,13 @@ function RelatedRecordsTab({
       // The host `CardContent` already pads the tab body — don't double it,
       // or the table stops spanning the block's full width.
       embedPadding={false}
+      // Export stays on: `ResourceListPage` folds `lockedFilters` into the
+      // query it hands the dialog, so the download holds exactly this
+      // parent's related records — not the whole resource.
       features={{
         breadcrumbs: false,
         title: false,
         create: false,
-        export: false,
         card: false,
       }}
     />

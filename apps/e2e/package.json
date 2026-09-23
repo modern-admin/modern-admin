@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@modern-admin/core": "workspace:*",
     "@modern-admin/tsconfig": "workspace:*",
     "@playwright/test": "^1.63.0",
     "@types/bun": "1.4.2",

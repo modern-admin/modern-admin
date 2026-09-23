@@ -49,6 +49,7 @@ import { useDialogs } from '../dialogs.js'
 import { RevisionsButton } from '../components/revisions-button.js'
 import { AiFillDialog } from '../components/ai-fill-dialog.js'
 import { visibleRecordProperties } from '../relations.js'
+import { isActionAllowedForResource, isRecordActionAllowed } from '../action-menu.js'
 
 export interface ResourceEditPageProps {
   resourceId: string
@@ -452,7 +453,13 @@ export function ResourceEditPage({
       // the next visit to the new-form route.
       if (isNew) clearDraft()
       notify.success({ key: isNew ? 'toast:created' : 'toast:saved' })
-      navigate({ name: 'show', resourceId, recordId: String(result.record.id) })
+      // The saved record carries its own action verdict; a principal allowed
+      // to write but not to read the detail page goes back to the list.
+      navigate(
+        isRecordActionAllowed('show', resource, result.record)
+          ? { name: 'show', resourceId, recordId: String(result.record.id) }
+          : { name: 'list', resourceId },
+      )
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       setSubmitError(message)
@@ -484,6 +491,20 @@ export function ResourceEditPage({
   // wipes server-side fields (e.g. enums coerce '' → null).
   const isHydrating = !isNew && (existing.isLoading || hydratedRecordIdRef.current !== recordId)
 
+  // ── Access ──
+  // The server prunes `resource.actions` (and each record's `recordActions`)
+  // down to what this principal may actually invoke, so these answer "would
+  // the click succeed?" rather than "does the feature exist?". The page is
+  // reachable by deep link, so a denied `new`/`edit` replaces the form
+  // outright instead of just disabling submit — an editable form that 403s on
+  // save is worse than an honest notice.
+  const loadedRecord = existing.data?.record
+  const canSubmit = isNew
+    ? isActionAllowedForResource('new', resource)
+    : isRecordActionAllowed('edit', resource, loadedRecord)
+  const canDelete = !isNew && isRecordActionAllowed('delete', resource, loadedRecord)
+  const canShow = !isNew && isRecordActionAllowed('show', resource, loadedRecord)
+
   // ── Keyboard shortcuts ──
   // Ctrl/Cmd+S submits the form. Submit-on-Ctrl+S works even when focus is
   // in an input — that's the standard "save" gesture across editors.
@@ -494,17 +515,24 @@ export function ResourceEditPage({
       void form.handleSubmit(onSubmit, onInvalid)()
     },
     {
-      enabled: editable.length > 0,
+      // Hooks run before the forbidden card returns, so the listener outlives
+      // the form it belongs to: without `canSubmit` here, mod+s on a denied
+      // deep link still fires the mutation the card exists to prevent.
+      enabled: editable.length > 0 && canSubmit,
       description: isNew ? t('common:create') : t('common:save'),
     },
   )
 
   if (!resource) return <div className="p-6">{t('common:loading')}</div>
 
-  // When editing an existing record that failed to load (e.g. 404), bail out
-  // before rendering the form — there's nothing to edit.
-  if (!isNew && existing.isError) {
-    const { status, message } = parseApiError(existing.error)
+  // Dead ends, both rendered as the same card: nothing to edit (the record
+  // failed to load) or nothing this admin may do here (the action is not in
+  // the principal's advertised set).
+  const blocked = !isNew && existing.isError
+  if (blocked || !canSubmit) {
+    const { status, message } = blocked
+      ? parseApiError(existing.error)
+      : { status: 403, message: '' }
     const title =
       status === 404
         ? t('errors:notFound')
@@ -517,13 +545,15 @@ export function ResourceEditPage({
           items={[
             homeCrumb(t('common:home')),
             { label: resource.name, to: { name: 'list', resourceId } },
-            { label: recordId ?? '' },
+            { label: isNew ? t('common:new') : (recordId ?? '') },
           ]}
         />
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-3">
             <CardTitle className="truncate">
-              {resource.name} #{recordId}
+              {isNew
+                ? t('common:newRecord', { name: resource.name })
+                : `${resource.name} #${recordId}`}
             </CardTitle>
             <Link to={{ name: 'list', resourceId }}>
               <Button variant="ghost" size="sm">
@@ -536,7 +566,7 @@ export function ResourceEditPage({
               <AlertCircle className="mt-0.5 size-5 shrink-0 text-destructive" />
               <div className="space-y-1 text-sm">
                 <p className="font-semibold text-destructive">{title}</p>
-                <p className="text-destructive/90">{message}</p>
+                {message && <p className="text-destructive/90">{message}</p>}
               </div>
             </div>
           </CardContent>
@@ -554,10 +584,13 @@ export function ResourceEditPage({
     ...(isNew
       ? [{ label: t('common:new') }]
       : [
-          {
-            label: recordLabel ?? '',
-            to: { name: 'show' as const, resourceId, recordId: recordId! },
-          },
+          // Only a link when the show page is actually open to this admin.
+          canShow
+            ? {
+                label: recordLabel ?? '',
+                to: { name: 'show' as const, resourceId, recordId: recordId! },
+              }
+            : { label: recordLabel ?? '' },
           { label: t('common:edit') },
         ]),
   ]
@@ -590,22 +623,26 @@ export function ResourceEditPage({
                 {features.history && (
                   <RevisionsButton resourceId={resourceId} recordId={recordId!} />
                 )}
-                <Link to={{ name: 'show', resourceId, recordId: recordId! }}>
-                  <Button variant="outline" size="sm" aria-label={t('common:show')}>
-                    <Eye className="size-4" />
-                    <span className="hidden sm:inline">{t('common:show')}</span>
+                {canShow && (
+                  <Link to={{ name: 'show', resourceId, recordId: recordId! }}>
+                    <Button variant="outline" size="sm" aria-label={t('common:show')}>
+                      <Eye className="size-4" />
+                      <span className="hidden sm:inline">{t('common:show')}</span>
+                    </Button>
+                  </Link>
+                )}
+                {canDelete && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    disabled={remove.isPending || form.formState.isSubmitting || isHydrating}
+                    onClick={() => void handleDelete()}
+                    aria-label={t('common:delete')}
+                  >
+                    <Trash2 className="size-4" />
+                    <span className="hidden sm:inline">{t('common:delete')}</span>
                   </Button>
-                </Link>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  disabled={remove.isPending || form.formState.isSubmitting || isHydrating}
-                  onClick={() => void handleDelete()}
-                  aria-label={t('common:delete')}
-                >
-                  <Trash2 className="size-4" />
-                  <span className="hidden sm:inline">{t('common:delete')}</span>
-                </Button>
+                )}
               </>
             )}
           </div>
@@ -661,7 +698,7 @@ export function ResourceEditPage({
                 variant="ghost"
                 onClick={() =>
                   navigate(
-                    isNew
+                    isNew || !canShow
                       ? { name: 'list', resourceId }
                       : { name: 'show', resourceId, recordId: recordId! },
                   )

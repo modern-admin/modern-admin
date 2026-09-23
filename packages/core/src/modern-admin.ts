@@ -427,50 +427,70 @@ export class ModernAdmin {
     actionDecorator: ActionDecorator,
     context: ActionContext,
   ): Promise<void> {
-    // API-key principal gate. If the principal carries an `apiKey` claim,
-    // the requested resource×action must be in its allowlist. A wildcard
-    // entry (`'*'` action or a `'*'` resource key) opens the gate. This
-    // runs before `isAccessible` so resource-level guards can still further
-    // restrict what an api-key holder can do.
-    if (!apiKeyAllows(context.currentAdmin, decorator.id, actionDecorator.name())) {
-      throw new ForbiddenError(
-        `API key does not grant access to action "${actionDecorator.name()}" on "${decorator.id}"`,
-      )
-    }
+    const gate = await this.resolvePrincipalGate(context.currentAdmin)
+    const denial = gate(decorator.id, actionDecorator.name())
+    if (denial) throw new ForbiddenError(denial)
 
+    if (!(await actionDecorator.isAccessible(context))) {
+      throw new ForbiddenError(`Action "${actionDecorator.name()}" is not accessible`)
+    }
+  }
+
+  /**
+   * Resolve the principal-level gates — api-key allowlist and role matrix —
+   * into a synchronous predicate. Returns a denial reason for a rejected
+   * resource×action pair, `null` when it passes.
+   *
+   * Async work (the role-permission lookup) happens once, here; the returned
+   * predicate is pure, so callers that have to answer the question for *many*
+   * pairs — the config snapshot, the per-record action annotation — pay for a
+   * single lookup instead of one per action.
+   *
+   * These are exactly the gates `invoke()` applies before `isAccessible`,
+   * which is the point: what the SPA renders is derived from the same verdict
+   * that would run on click, so a button never offers an action that 403s.
+   * Everything below is still enforced server-side — the UI filtering is a
+   * consequence of the gate, never a replacement for it.
+   */
+  private async resolvePrincipalGate(
+    currentAdmin: CurrentAdmin | undefined,
+  ): Promise<(resourceId: string, action: string) => string | null> {
     // Role-based principal gate. When `rolesResourceId` is configured the
     // principal's `role` is resolved against that resource's permission
     // matrix. Same matching shape as the api-key gate (`'*'` wildcards
     // for resource and action). Skipped entirely when no `rolesResourceId`
     // is configured (framework-wide opt-in).
-    //
-    // Default-deny for anonymous: configuring `rolesResourceId` opts the
-    // deployment into role enforcement, so a principal with no `role`
-    // (anonymous / unauthenticated) is rejected outright instead of being
-    // waved through. This closes the transport-layer fail-open where an
-    // unauthenticated request whose `currentAdmin` was never populated would
-    // otherwise skip the gate entirely. A principal that *has* a role but
-    // whose row/matrix doesn't resolve is still open (see the "unknown role"
-    // case) — that is the separate, deliberate upgrade-compat stance.
-    if (this.options.rolesResourceId) {
-      const role = context.currentAdmin?.role
-      if (!role) {
-        throw new ForbiddenError(
-          `Anonymous access is not permitted for action ` +
-            `"${actionDecorator.name()}" on "${decorator.id}"`,
-        )
-      }
-      const perms = await this.getRolePermissions(role)
-      if (perms && !permissionsAllow(perms, decorator.id, actionDecorator.name())) {
-        throw new ForbiddenError(
-          `Role "${role}" does not grant access to action ` +
-            `"${actionDecorator.name()}" on "${decorator.id}"`,
-        )
-      }
-    }
+    const rolesEnabled = Boolean(this.options.rolesResourceId)
+    const role = currentAdmin?.role
+    const perms = rolesEnabled ? await this.getRolePermissions(role) : null
 
-    if (!(await actionDecorator.isAccessible(context))) {
-      throw new ForbiddenError(`Action "${actionDecorator.name()}" is not accessible`)
+    return (resourceId, action) => {
+      // API-key principal gate. If the principal carries an `apiKey` claim,
+      // the requested resource×action must be in its allowlist. A wildcard
+      // entry (`'*'` action or a `'*'` resource key) opens the gate. This
+      // runs before `isAccessible` so resource-level guards can still further
+      // restrict what an api-key holder can do.
+      if (!apiKeyAllows(currentAdmin, resourceId, action)) {
+        return `API key does not grant access to action "${action}" on "${resourceId}"`
+      }
+
+      if (!rolesEnabled) return null
+
+      // Default-deny for anonymous: configuring `rolesResourceId` opts the
+      // deployment into role enforcement, so a principal with no `role`
+      // (anonymous / unauthenticated) is rejected outright instead of being
+      // waved through. This closes the transport-layer fail-open where an
+      // unauthenticated request whose `currentAdmin` was never populated would
+      // otherwise skip the gate entirely. A principal that *has* a role but
+      // whose row/matrix doesn't resolve is still open (see the "unknown role"
+      // case) — that is the separate, deliberate upgrade-compat stance.
+      if (!role) {
+        return `Anonymous access is not permitted for action "${action}" on "${resourceId}"`
+      }
+      if (perms && !permissionsAllow(perms, resourceId, action)) {
+        return `Role "${role}" does not grant access to action "${action}" on "${resourceId}"`
+      }
+      return null
     }
   }
 
@@ -709,27 +729,39 @@ export class ModernAdmin {
    *   anonymous HTTP request must get: `isAccessible` / `isVisible` run with
    *   `currentAdmin` absent, so a logged-out caller can never see more than
    *   a logged-in one.
+   *
+   * The filtered shapes prune action descriptors through the *same* gates
+   * `invoke()` applies — api-key allowlist, role matrix, `isAccessible` — so
+   * the SPA can render exactly the buttons the principal may actually press.
+   * Dropping an action here is a UI consequence, not the enforcement.
    */
   toJSON(): ModernAdminJSON
   toJSON(currentAdmin: CurrentAdmin | null): Promise<ModernAdminJSON>
   toJSON(currentAdmin?: CurrentAdmin | null): ModernAdminJSON | Promise<ModernAdminJSON> {
     if (currentAdmin !== undefined) {
-      return Promise.all(
-        this.resources.map((r) =>
-          r.decorate().toJSON({
-            admin: this,
-            resource: r,
-            cache: this.cache,
-            // `PropertyContextBase.currentAdmin` is optional; omitting it is
-            // how an access check sees "anonymous".
-            ...(currentAdmin ? { currentAdmin } : {}),
-          }),
+      const principal = currentAdmin ?? undefined
+      return Promise.all([
+        this.resolvePrincipalGate(principal),
+        Promise.all(
+          this.resources.map((r) =>
+            r.decorate().toJSON({
+              admin: this,
+              resource: r,
+              cache: this.cache,
+              // `PropertyContextBase.currentAdmin` is optional; omitting it is
+              // how an access check sees "anonymous".
+              ...(principal ? { currentAdmin: principal } : {}),
+            }),
+          ),
         ),
-      ).then((resources) => ({
+      ]).then(([gate, resources]) => ({
         rootPath: this.rootPath,
         branding: this.options.branding,
         auth: this.auth.getUiProps(),
-        resources,
+        resources: resources.map((resource) => ({
+          ...resource,
+          actions: resource.actions.filter((a) => gate(resource.id, a.name) === null),
+        })),
         features: resolveFeatures(this.options.features),
       }))
     }
@@ -772,7 +804,9 @@ export class ModernAdmin {
 
   /**
    * Stamp every returned record with the record-scoped actions it actually
-   * offers, resolving `isVisible` and `isAccessible` against that record.
+   * offers: the principal gates (api-key allowlist, role matrix) narrow the
+   * candidate set, then `isVisible` and `isAccessible` are resolved against
+   * that record.
    *
    * This is where `isVisible` lives. It is a UI hint, not a security gate:
    * `invoke()` still authorizes through `isAccessible` alone, so hiding an
@@ -796,8 +830,19 @@ export class ModernAdmin {
     if (!recordResponse.record && !recordResponse.records) return response
 
     const resource = context.resource
-    const candidates = resource.decorate().recordActions()
-    if (candidates.length === 0) return response
+    const decorator = resource.decorate()
+    // Drop the actions the principal itself is barred from before asking the
+    // per-record predicates: an api-key/role denial does not depend on the
+    // row, and leaving those names in would advertise row menu entries that
+    // `invoke()` rejects on click.
+    const gate = await this.resolvePrincipalGate(context.currentAdmin)
+    const candidates = decorator
+      .recordActions()
+      .filter((action) => gate(decorator.id, action.name()) === null)
+    // No early return when `candidates` is empty: an absent `recordActions`
+    // means "no opinion" to the client, which then fails open and offers the
+    // whole menu. "The principal may run none of them" has to be said out
+    // loud, as an empty array.
 
     // Predicates read `record.params.*`, so rebuild a BaseRecord from the
     // serialized params rather than threading the original instances through

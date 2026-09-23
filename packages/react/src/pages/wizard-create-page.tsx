@@ -19,6 +19,7 @@ import {
 } from '@modern-admin/ui'
 import { AlertCircle } from 'lucide-react'
 import { useCreateRecord, useResource } from '../hooks.js'
+import { isActionAllowedForResource, isRecordActionAllowed } from '../action-menu.js'
 import { useNavigate } from '../router.js'
 import { useI18n } from '../i18n.js'
 import { useNotify } from '../notify.js'
@@ -109,7 +110,14 @@ export function ResourceWizardCreatePage({
         return
       }
       notify.success({ key: 'toast:created' })
-      navigate({ name: 'show', resourceId, recordId: String(result.record.id) })
+      // The fresh record carries its own action verdict, so a principal who
+      // may create but not read lands on the list instead of bouncing off a
+      // 403 on the page it was just sent to.
+      navigate(
+        isRecordActionAllowed('show', resource, result.record)
+          ? { name: 'show', resourceId, recordId: String(result.record.id) }
+          : { name: 'list', resourceId },
+      )
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       setSubmitError(message)
@@ -124,6 +132,11 @@ export function ResourceWizardCreatePage({
   }
 
   if (!resource) return <div className="p-6">{t('common:loading')}</div>
+
+  // The route can be entered by hand even when the principal may not create —
+  // `resource.actions` is serialized per admin, so a missing `new` means the
+  // submit would come back 403 after the whole wizard had been filled in.
+  const canCreate = isActionAllowedForResource('new', resource)
 
   const labels: WizardFormLabels = {
     back: t('common:back'),
@@ -149,14 +162,16 @@ export function ResourceWizardCreatePage({
             {t('common:newRecord', { name: resource.name })}
           </CardTitle>
         </CardHeader>
-        {editable.length === 0 ? (
+        {!canCreate || editable.length === 0 ? (
           <CardContent>
             <Empty>
               <EmptyHeader>
                 <EmptyMedia>
                   <AlertCircle aria-hidden="true" />
                 </EmptyMedia>
-                <EmptyTitle>{t('errors:noEditableProperties')}</EmptyTitle>
+                <EmptyTitle>
+                  {canCreate ? t('errors:noEditableProperties') : t('errors:forbidden')}
+                </EmptyTitle>
               </EmptyHeader>
             </Empty>
           </CardContent>
