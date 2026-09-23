@@ -20,6 +20,8 @@ import { expect, test, type APIRequestContext, type Page } from '@playwright/tes
  *     panel advances by one (verified by the records counter staying put
  *     while the row order changes — we capture the first row id before
  *     and after and assert they differ).
+ *   • The embedded toolbar's Export button downloads only the parent's
+ *     related records, not the whole resource.
  *
  * Customer #1 is used because the demo seed reliably wires plenty of
  * posts + comments to it (see `apps/api-prisma/src/seed-demo.ts`), so
@@ -158,6 +160,51 @@ test.describe('RelatedRecordsTabs — customers show page', () => {
     // customer "1" while the strict API count is 3).
     const pageSize = Math.min(10, apiBody.records.length)
     await expect(panel.locator('tbody tr')).toHaveCount(pageSize, { timeout: 15_000 })
+  })
+
+  test('Posts tab exports only this customer records', async ({ page, request }) => {
+    // The embedded list keeps its Export button (`features.export` defaults
+    // to true) and `ResourceListPage` merges `lockedFilters` into the query
+    // handed to the dialog — so the download must be scoped to the parent.
+    const customerId = await customerWithRelations(request)
+    const apiRes = await request.get(
+      adminApi(`/resources/posts/actions/list?perPage=200&filters[authorId]=${customerId}`),
+    )
+    expect(apiRes.ok()).toBeTruthy()
+    const apiBody = await apiRes.json()
+    const expectedIds = new Set((apiBody.records as Array<{ id: string }>).map((r) => String(r.id)))
+
+    await openCustomerShow(page, customerId)
+    const panel = activeRelatedPanel(page)
+    await expect(panel.locator('tbody tr')).not.toHaveCount(0, { timeout: 15_000 })
+
+    await panel
+      .getByRole('button', { name: /^export$/i })
+      .first()
+      .click()
+    // The dialog renders in a portal at the document root, not inside the panel.
+    const dialog = page.getByRole('dialog', { name: /export records/i })
+    await expect(dialog).toBeVisible({ timeout: 10_000 })
+
+    const downloadPromise = page.waitForEvent('download', { timeout: 30_000 })
+    await dialog.getByRole('button', { name: /^json/i }).click()
+    const download = await downloadPromise
+    expect(download.suggestedFilename()).toMatch(/^posts-\d{8}-\d{6}\.json$/)
+
+    const path = `playwright/.artifacts/${download.suggestedFilename()}`
+    await download.saveAs(path)
+    const fs = await import('node:fs/promises')
+    const body = await fs.readFile(path, 'utf8')
+    // `recordsToJson` prepends a `// Query: …` JSONC comment carrying the
+    // active query — the locked FK filter has to be in there.
+    const [comment] = body.split('\n')
+    expect(comment).toContain('authorId')
+    expect(comment).toContain(customerId)
+
+    const parsed = JSON.parse(body.replace(/^\s*\/\/[^\n]*\n/, '')) as Array<{ id: string }>
+    expect(parsed.length).toBe(expectedIds.size)
+    const leaked = parsed.map((r) => String(r.id)).filter((id) => !expectedIds.has(id))
+    expect(leaked, `export leaked posts of other customers: ${leaked.join(', ')}`).toEqual([])
   })
 
   test('Posts tab paginates next page inside the embedded list', async ({ page, request }) => {
