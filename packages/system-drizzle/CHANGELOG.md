@@ -1,5 +1,13 @@
 # @modern-admin/system-drizzle
 
+## 0.11.0
+
+### Patch Changes
+
+- [#63](https://github.com/modern-admin/modern-admin/pull/63) [`f0aa056`](https://github.com/modern-admin/modern-admin/commit/f0aa0564aae700ca7b83746087bf6fb7911e3dc6) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update @types/bun to 1.4.2, bullmq to 6.3.8, @types/node to 26.6.2, @changesets/changelog-github to 1.0.1, @changesets/cli to 3.0.3, zod to 4.6.5, jose to 6.2.12, @scalar/nestjs-api-reference to 1.2.19, lucide-react to 1.47.0, dompurify to 3.4.15, marked to 18.0.13 and validate compatibility with the current stable releases.
+- Updated dependencies [[`f0aa056`](https://github.com/modern-admin/modern-admin/commit/f0aa0564aae700ca7b83746087bf6fb7911e3dc6), [`8b8b07e`](https://github.com/modern-admin/modern-admin/commit/8b8b07e152701cdcaa2c7c7f53704b3610787811), [`9ec58d8`](https://github.com/modern-admin/modern-admin/commit/9ec58d8945d3b2aa1f720d371cef371900db1def)]:
+  - @modern-admin/core@0.11.0
+
 ## 0.10.0
 
 ### Patch Changes

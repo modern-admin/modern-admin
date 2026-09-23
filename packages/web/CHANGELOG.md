@@ -1,5 +1,20 @@
 # @modern-admin/web
 
+## 0.11.0
+
+### Patch Changes
+
+- [#60](https://github.com/modern-admin/modern-admin/pull/60) [`df07a77`](https://github.com/modern-admin/modern-admin/commit/df07a77ecad666ce2cbf49a910c2c9888fe3a905) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update vite to 8.3.0, vite-plugin-dts to 5.1.0 and validate compatibility with the current stable releases.
+
+- [#61](https://github.com/modern-admin/modern-admin/pull/61) [`6b3490f`](https://github.com/modern-admin/modern-admin/commit/6b3490ff10549c0e586a8a92267c11a5920c1f64) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update react to 19.3.0, react-dom to 19.3.0, @types/react to 19.3.0, @types/react-dom to 19.3.0, react-hook-form to 7.88.0 and validate compatibility with the current stable releases.
+
+- [#74](https://github.com/modern-admin/modern-admin/pull/74) [`afdb6ef`](https://github.com/modern-admin/modern-admin/commit/afdb6eff2ddd0399ce81425cafa94bb2f7ec1109) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Update @tanstack/react-query to 5.103.1 and validate compatibility with the current stable releases.
+- Updated dependencies [[`8b8b07e`](https://github.com/modern-admin/modern-admin/commit/8b8b07e152701cdcaa2c7c7f53704b3610787811), [`be19e9e`](https://github.com/modern-admin/modern-admin/commit/be19e9e9b331bafe23702ee2244b7b29db68c772), [`6b3490f`](https://github.com/modern-admin/modern-admin/commit/6b3490ff10549c0e586a8a92267c11a5920c1f64), [`177d2e1`](https://github.com/modern-admin/modern-admin/commit/177d2e197e39c4769e8e167d710379a1cd49a964), [`f0aa056`](https://github.com/modern-admin/modern-admin/commit/f0aa0564aae700ca7b83746087bf6fb7911e3dc6), [`afdb6ef`](https://github.com/modern-admin/modern-admin/commit/afdb6eff2ddd0399ce81425cafa94bb2f7ec1109), [`afdb6ef`](https://github.com/modern-admin/modern-admin/commit/afdb6eff2ddd0399ce81425cafa94bb2f7ec1109), [`8b8b07e`](https://github.com/modern-admin/modern-admin/commit/8b8b07e152701cdcaa2c7c7f53704b3610787811), [`8b8b07e`](https://github.com/modern-admin/modern-admin/commit/8b8b07e152701cdcaa2c7c7f53704b3610787811), [`8b8b07e`](https://github.com/modern-admin/modern-admin/commit/8b8b07e152701cdcaa2c7c7f53704b3610787811), [`8b8b07e`](https://github.com/modern-admin/modern-admin/commit/8b8b07e152701cdcaa2c7c7f53704b3610787811), [`9ec58d8`](https://github.com/modern-admin/modern-admin/commit/9ec58d8945d3b2aa1f720d371cef371900db1def)]:
+  - @modern-admin/ui@0.11.0
+  - @modern-admin/react@0.11.0
+  - @modern-admin/core@0.11.0
+  - @modern-admin/i18n@0.11.0
+
 ## 0.10.0
 
 ### Patch Changes
