@@ -222,3 +222,63 @@ describe('AdminClient cache diagnostics', () => {
     })
   })
 })
+
+describe('AdminClient.logout', () => {
+  /** Builds a client whose sign-out answers with `body`, recording the
+   *  request body and any navigation the client performs. */
+  const logoutClient = (
+    body: Record<string, unknown>,
+  ): { client: AdminClient; navigated: string[]; sent: unknown[] } => {
+    const navigated: string[] = []
+    const sent: unknown[] = []
+    const client = new AdminClient({
+      baseUrl: 'https://example.test',
+      navigate: (url) => {
+        navigated.push(url)
+      },
+      fetchImpl: async (_input, init) => {
+        sent.push(JSON.parse(String(init?.body)))
+        return new Response(JSON.stringify(body), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      },
+    })
+    return { client, navigated, sent }
+  }
+
+  it('follows the provider end-session URL so the IdP session dies too', async () => {
+    // Without this the next social-login click is a silent re-login: the
+    // local cookie is gone but the IdP still has a session.
+    const { client, navigated } = logoutClient({
+      success: true,
+      url: 'https://idp.test/logout?id_token_hint=abc',
+      redirect: true,
+    })
+    await client.logout()
+    expect(navigated).toEqual(['https://idp.test/logout?id_token_hint=abc'])
+  })
+
+  it('stays put for an email/password session', async () => {
+    const { client, navigated, sent } = logoutClient({ success: true })
+    await client.logout()
+    expect(navigated).toEqual([])
+    expect(sent).toEqual([{}])
+  })
+
+  it('honours a server that returns the URL without asking for a redirect', async () => {
+    const { client, navigated } = logoutClient({
+      success: true,
+      url: 'https://idp.test/logout',
+      redirect: false,
+    })
+    await client.logout()
+    expect(navigated).toEqual([])
+  })
+
+  it('forwards an explicit callbackURL as post-logout redirect', async () => {
+    const { client, sent } = logoutClient({ success: true })
+    await client.logout({ callbackURL: 'https://app.test/admin' })
+    expect(sent).toEqual([{ callbackURL: 'https://app.test/admin' }])
+  })
+})
