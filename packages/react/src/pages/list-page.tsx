@@ -112,7 +112,14 @@ import {
 } from '../hooks.js'
 import { PropertyDisplay } from '../property-renderer.js'
 import { ReferenceCombobox, ReferenceLink, ReferenceLinkList } from '../reference.js'
-import { Link, type ListQueryState, useNavigate, useOpenInNewTab, useRoute } from '../router.js'
+import {
+  Link,
+  type ListQueryState,
+  type Route,
+  useNavigate,
+  useOpenInNewTab,
+  useRoute,
+} from '../router.js'
 import { useI18n } from '../i18n.js'
 import { useNotify } from '../notify.js'
 import { useDialogs } from '../dialogs.js'
@@ -146,12 +153,18 @@ import {
 import {
   ActionMenu,
   ActionMenuItems,
-  isActionAllowedForRecord,
   isActionAllowedForResource,
+  isRecordActionAllowed,
   visibleRecordActions,
 } from '../action-menu.js'
 import { visibleRecordProperties } from '../relations.js'
-import type { ActionDescriptor, ListQuery, PropertyJSON, RecordJSON } from '../types.js'
+import type {
+  ActionDescriptor,
+  ListQuery,
+  PropertyJSON,
+  RecordJSON,
+  ResourceJSON,
+} from '../types.js'
 import { confirmGuard } from '../action-guard.js'
 import { showActionNotice } from '../action-notice.js'
 import { hasActionComponent, useActionLauncher } from '../action-launcher.js'
@@ -417,7 +430,12 @@ export function ResourceListPage({
       columns: features?.columns ?? true,
       export: features?.export ?? true,
       create: (features?.create ?? true) && isActionAllowedForResource('new', resource),
-      bulk: features?.bulk ?? true,
+      // Selection exists to feed bulk actions. When the principal is allowed
+      // none of them, the checkboxes and the selection bar would only lead to
+      // a 403, so the whole surface goes away with them.
+      bulk:
+        (features?.bulk ?? true) && (resource?.actions ?? []).some((a) => a.actionType === 'bulk'),
+      bulkDelete: isActionAllowedForResource('bulkDelete', resource, 'bulk'),
       actions: features?.actions ?? true,
       headerFilters: features?.headerFilters ?? true,
       card: features?.card ?? true,
@@ -736,6 +754,23 @@ export function ResourceListPage({
     [dialogs, invokeRecord, notify, openActionComponent],
   )
 
+  // Where a click on the row body goes. Edit is the default landing spot, but
+  // a principal who may only read the record has to land on the show page
+  // instead of a form that 403s on save — and one allowed neither gets an
+  // inert row rather than a dead end.
+  const rowTarget = React.useCallback(
+    (record: RecordJSON): Route | null => {
+      if (isRecordActionAllowed('edit', resource, record)) {
+        return { name: 'edit', resourceId, recordId: record.id }
+      }
+      if (isRecordActionAllowed('show', resource, record)) {
+        return { name: 'show', resourceId, recordId: record.id }
+      }
+      return null
+    },
+    [resource, resourceId],
+  )
+
   const showSelectColumn = f.bulk || isSelectionControlled
   const columns = React.useMemo<ListColumnDef[]>(() => {
     const cols: ListColumnDef[] = []
@@ -829,6 +864,7 @@ export function ResourceListPage({
           <RowActions
             t={t}
             record={row.original}
+            resource={resource}
             customActions={customRecordActions}
             onView={() => navigate({ name: 'show', resourceId, recordId: row.original.id })}
             onEdit={() => navigate({ name: 'edit', resourceId, recordId: row.original.id })}
@@ -840,6 +876,7 @@ export function ResourceListPage({
     return cols
   }, [
     visible,
+    resource,
     resourceId,
     navigate,
     t,
@@ -1226,15 +1263,17 @@ export function ResourceListPage({
                       }
                     />
                   )}
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleBulkDelete}
-                    disabled={bulkRemove.isPending}
-                  >
-                    <Trash2 className="size-4" />
-                    <span className="hidden sm:inline">{t('common:deleteSelected')}</span>
-                  </Button>
+                  {f.bulkDelete && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleBulkDelete}
+                      disabled={bulkRemove.isPending}
+                    >
+                      <Trash2 className="size-4" />
+                      <span className="hidden sm:inline">{t('common:deleteSelected')}</span>
+                    </Button>
+                  )}
                 </div>
               </div>
             )}
@@ -1286,7 +1325,9 @@ export function ResourceListPage({
                         (p) => table.getColumn(p.path)?.getIsVisible() ?? true,
                       )}
                       resourceId={resourceId}
+                      resource={resource}
                       showSelect={showSelectColumn}
+                      openTarget={rowTarget(row.original)}
                       selected={row.getIsSelected()}
                       onToggleSelect={(v) => row.toggleSelected(v)}
                       onView={() =>
@@ -1454,7 +1495,11 @@ export function ResourceListPage({
                             <TableRow
                               key={row.id}
                               data-state={row.getIsSelected() && 'selected'}
-                              className="group cursor-pointer"
+                              className={cn(
+                                'group',
+                                (disableRowNavigation || rowTarget(row.original)) &&
+                                  'cursor-pointer',
+                              )}
                               onClick={(e) => {
                                 const target = e.target as HTMLElement
                                 if (
@@ -1465,19 +1510,18 @@ export function ResourceListPage({
                                   row.toggleSelected(!row.getIsSelected())
                                   return
                                 }
-                                navigate({ name: 'edit', resourceId, recordId: row.original.id })
+                                const to = rowTarget(row.original)
+                                if (to) navigate(to)
                               }}
                               onAuxClick={(e) => {
                                 if (e.button !== 1) return
                                 const target = e.target as HTMLElement
                                 if (target.closest('a, button, [role="menuitem"]')) return
                                 if (disableRowNavigation) return
+                                const to = rowTarget(row.original)
+                                if (!to) return
                                 e.preventDefault()
-                                openInNewTab({
-                                  name: 'edit',
-                                  resourceId,
-                                  recordId: row.original.id,
-                                })
+                                openInNewTab(to)
                               }}
                               onMouseDown={(e) => {
                                 if (e.button === 1) {
@@ -1671,6 +1715,7 @@ function CellContent({
 
 function RowActions({
   record,
+  resource,
   onView,
   onEdit,
   onDelete,
@@ -1681,6 +1726,9 @@ function RowActions({
   /** Drives per-row visibility via `record.recordActions` — the server's
    *  `isVisible`/`isAccessible` verdict for this specific row. */
   record: RecordJSON
+  /** Principal-wide verdict: `resource.actions` is serialized per admin, so an
+   *  action missing here is one the role matrix or api key denies outright. */
+  resource: Pick<ResourceJSON, 'actions'> | undefined
   onView(): void
   onEdit(): void
   onDelete(): void
@@ -1689,9 +1737,9 @@ function RowActions({
   t: (key: string, params?: Record<string, string | number>) => string
 }): React.ReactElement {
   const rowActions = visibleRecordActions(customActions, record)
-  const canShow = isActionAllowedForRecord('show', record)
-  const canEdit = isActionAllowedForRecord('edit', record)
-  const canDelete = isActionAllowedForRecord('delete', record)
+  const canShow = isRecordActionAllowed('show', resource, record)
+  const canEdit = isRecordActionAllowed('edit', resource, record)
+  const canDelete = isRecordActionAllowed('delete', resource, record)
   return (
     <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
       <DropdownMenu>
@@ -2861,18 +2909,20 @@ function ColumnFilterPopover({
 }
 
 // ─── Mobile record card ──────────────────────────────────────────────────────
-// Renders a single record as a tap-to-edit card with a header (avatar + title +
+// Renders a single record as a tap-to-open card with a header (avatar + title +
 // id), a 2-column grid of property values, and a contextual menu.
 function RecordCard({
   record,
   properties,
   resourceId,
+  resource,
   showSelect,
   selected,
   onToggleSelect,
   onView,
   onEdit,
   onDelete,
+  openTarget,
   customActions = [],
   onInvokeAction,
   t,
@@ -2880,17 +2930,22 @@ function RecordCard({
   record: RecordJSON
   properties: PropertyJSON[]
   resourceId: string
+  resource: Pick<ResourceJSON, 'actions'> | undefined
   showSelect: boolean
   selected: boolean
   onToggleSelect(value: boolean): void
   onView(): void
   onEdit(): void
   onDelete(): void
+  /** Where tapping the card body goes — `null` when this admin may neither
+   *  edit nor view the record, which makes the card inert. */
+  openTarget: Route | null
   customActions?: ActionDescriptor[]
   onInvokeAction?(action: ActionDescriptor): void
   t: (key: string, params?: Record<string, string | number>) => string
 }): React.ReactElement {
   const openInNewTab = useOpenInNewTab()
+  const navigate = useNavigate()
   const idProperty = properties.find((p) => p.isId)
   const titleProperty = properties.find((p) => !p.isId && p.type === 'string')
   const titleText =
@@ -2910,21 +2965,23 @@ function RecordCard({
     if (e.key === 'Enter' || e.key === ' ') {
       const target = e.target as HTMLElement
       if (target.closest('a, button, [role="menuitem"]')) return
+      if (!openTarget) return
       e.preventDefault()
-      onEdit()
+      navigate(openTarget)
     }
   }
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement
     if (target.closest('a, button, [role="menuitem"]')) return
-    onEdit()
+    if (openTarget) navigate(openTarget)
   }
   const handleAuxClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.button !== 1) return
     const target = e.target as HTMLElement
     if (target.closest('a, button, [role="menuitem"]')) return
+    if (!openTarget) return
     e.preventDefault()
-    openInNewTab({ name: 'edit', resourceId, recordId: record.id })
+    openInNewTab(openTarget)
   }
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.button !== 1) return
@@ -2934,14 +2991,18 @@ function RecordCard({
   }
   return (
     <div
-      role="button"
-      tabIndex={0}
+      // An inert card is not a button: without a destination it must not be
+      // announced as one, nor invite a tap it cannot honour.
+      {...(openTarget ? { role: 'button', tabIndex: 0 } : {})}
       onClick={handleClick}
       onAuxClick={handleAuxClick}
       onMouseDown={handleMouseDown}
       onKeyDown={handleKeyDown}
       data-state={selected ? 'selected' : undefined}
-      className="block w-full cursor-pointer rounded-lg border border-border bg-card p-2.5 text-left transition-colors hover:bg-accent/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=selected]:border-primary/50 data-[state=selected]:bg-primary/5"
+      className={cn(
+        'block w-full rounded-lg border border-border bg-card p-2.5 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=selected]:border-primary/50 data-[state=selected]:bg-primary/5',
+        openTarget && 'cursor-pointer hover:bg-accent/40',
+      )}
     >
       <div className="flex items-start gap-2">
         {showSelect && (
@@ -2965,6 +3026,7 @@ function RecordCard({
             </div>
             <RowActions
               record={record}
+              resource={resource}
               onView={onView}
               onEdit={onEdit}
               onDelete={onDelete}

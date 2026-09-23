@@ -19,6 +19,7 @@ import {
 } from '@modern-admin/ui'
 import { AlertCircle } from 'lucide-react'
 import { useCreateRecord, useResource } from '../hooks.js'
+import { isActionAllowedForResource } from '../action-menu.js'
 import { useNavigate } from '../router.js'
 import { useI18n } from '../i18n.js'
 import { useNotify } from '../notify.js'
@@ -125,6 +126,11 @@ export function ResourceWizardCreatePage({
 
   if (!resource) return <div className="p-6">{t('common:loading')}</div>
 
+  // The route can be entered by hand even when the principal may not create —
+  // `resource.actions` is serialized per admin, so a missing `new` means the
+  // submit would come back 403 after the whole wizard had been filled in.
+  const canCreate = isActionAllowedForResource('new', resource)
+
   const labels: WizardFormLabels = {
     back: t('common:back'),
     next: t('common:next'),
@@ -149,14 +155,16 @@ export function ResourceWizardCreatePage({
             {t('common:newRecord', { name: resource.name })}
           </CardTitle>
         </CardHeader>
-        {editable.length === 0 ? (
+        {!canCreate || editable.length === 0 ? (
           <CardContent>
             <Empty>
               <EmptyHeader>
                 <EmptyMedia>
                   <AlertCircle aria-hidden="true" />
                 </EmptyMedia>
-                <EmptyTitle>{t('errors:noEditableProperties')}</EmptyTitle>
+                <EmptyTitle>
+                  {canCreate ? t('errors:noEditableProperties') : t('errors:forbidden')}
+                </EmptyTitle>
               </EmptyHeader>
             </Empty>
           </CardContent>
