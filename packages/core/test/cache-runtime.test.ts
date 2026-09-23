@@ -127,8 +127,8 @@ describe('CacheRuntime.read', () => {
       }
     }
     const cache = new LockingCache()
-    const firstRuntime = new CacheRuntime(cache, { metricsLogIntervalMs: 0 })
-    const secondRuntime = new CacheRuntime(cache, { metricsLogIntervalMs: 0 })
+    const firstRuntime = new CacheRuntime(cache)
+    const secondRuntime = new CacheRuntime(cache)
     let computes = 0
     const fetch = async () => {
       computes++
@@ -272,6 +272,48 @@ describe('CacheRuntime.read', () => {
     expect(cache.entries.has('k')).toBe(false)
     expect(rt.stats().dirtyTags).toEqual(['list:users'])
     await rt.dispose()
+  })
+})
+
+// Counters are owned by the caller: `GET /cache` reads them and the admin
+// cache page renders them, so nothing inside the runtime may clear them on
+// its own. A background metrics logger used to call `stats(true)` every ten
+// minutes and silently wiped the numbers under the UI — these two tests are
+// what keeps it from coming back.
+describe('CacheRuntime.stats', () => {
+  test('counters survive repeated reads; only stats(true) clears them', async () => {
+    const cache = new FakeCache()
+    const rt = new CacheRuntime(cache)
+    await rt.read('k', { enabled: true, ttl: 60, tags: ['list:users'] }, async () => ({ v: 1 }))
+    await rt.read('k', { enabled: true, ttl: 60, tags: ['list:users'] }, async () => ({ v: 1 }))
+
+    const first = rt.stats()
+    expect(first.entries[0]?.misses).toBe(1)
+    expect(first.entries[0]?.hits).toBe(1)
+
+    // Reading the snapshot is not a reset, however often the UI polls it.
+    expect(rt.stats().entries[0]?.misses).toBe(1)
+    expect(rt.stats().entries[0]?.hits).toBe(1)
+
+    expect(rt.stats(true).entries[0]?.hits).toBe(1)
+    expect(rt.stats().entries).toEqual([])
+    await rt.dispose()
+  })
+
+  test('the constructor schedules no background timer', async () => {
+    const realSetInterval = globalThis.setInterval
+    const scheduled: number[] = []
+    globalThis.setInterval = ((...args: Parameters<typeof realSetInterval>) => {
+      scheduled.push(typeof args[1] === 'number' ? args[1] : 0)
+      return realSetInterval(...args)
+    }) as typeof globalThis.setInterval
+    try {
+      const rt = new CacheRuntime(new FakeCache())
+      await rt.dispose()
+    } finally {
+      globalThis.setInterval = realSetInterval
+    }
+    expect(scheduled).toEqual([])
   })
 })
 
