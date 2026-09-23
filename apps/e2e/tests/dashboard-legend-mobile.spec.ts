@@ -11,6 +11,7 @@
 // is reset afterwards.
 
 import { expect, test, type APIRequestContext } from '@playwright/test'
+import { uuidv7 } from '@modern-admin/core'
 
 const API_URL = process.env.E2E_API_URL ?? 'http://localhost:3001'
 const adminApi = (p: string): string => `${API_URL}/admin/api${p}`
@@ -37,7 +38,7 @@ test.describe('Dashboard chart legend — many series on a narrow viewport', () 
   test.beforeAll(async ({ request }) => {
     await putDashboard(request, [
       {
-        id: crypto.randomUUID(),
+        id: uuidv7(),
         title: 'Posts by author',
         resource: 'posts',
         dateField: 'publishedAt',

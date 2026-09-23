@@ -93,6 +93,7 @@
       "name": "@modern-admin/app-e2e",
       "version": "0.0.0",
       "devDependencies": {
+        "@modern-admin/core": "workspace:*",
         "@modern-admin/tsconfig": "workspace:*",
         "@playwright/test": "^1.63.0",
         "@types/bun": "1.4.2",
