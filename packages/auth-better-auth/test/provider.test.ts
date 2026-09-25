@@ -248,3 +248,136 @@ describe('BetterAuthProvider', () => {
     expect(received!.headers).toBeUndefined()
   })
 })
+
+// Better Auth's api-key plugin turns `x-api-key` into a session of the key's
+// *owner* (`session.id = apiKey.id`, `userId = apiKey.referenceId`). The
+// provider must either attach the key's scope or reject the request — a
+// principal without the `apiKey` claim carries the owner's full role.
+describe('BetterAuthProvider — API-key requests', () => {
+  const owner = { id: 'u1', email: 'root@example.com', role: 'admin' }
+  const keyRow = {
+    id: 'k1',
+    name: 'payments-ro',
+    referenceId: 'u1',
+    enabled: true,
+    expiresAt: null,
+    permissions: { payments: ['list'] },
+  }
+  type VerifyResult = {
+    valid: boolean
+    error: { code: string } | null
+    key: typeof keyRow | null
+  }
+
+  const keyAuth = (
+    opts: {
+      verify?: (key: string) => Promise<VerifyResult>
+      sessionId?: string
+      header?: string
+    } = {},
+  ) =>
+    ({
+      api: {
+        async getSession({ headers }: { headers: Headers }) {
+          if (!headers.get(opts.header ?? 'x-api-key')) return null
+          return { user: owner, session: { id: opts.sessionId ?? keyRow.id } }
+        },
+        ...(opts.verify
+          ? { verifyApiKey: ({ body }: { body: { key: string } }) => opts.verify!(body.key) }
+          : {}),
+      },
+    }) as any
+
+  const valid = async (): Promise<VerifyResult> => ({ valid: true, error: null, key: keyRow })
+
+  test('a verified key is attached as the principal scope', async () => {
+    const provider = new BetterAuthProvider({
+      auth: keyAuth({ verify: valid }),
+      logger: silentLogger,
+    })
+    const principal = await provider.getCurrentUser({ headers: { 'x-api-key': 'secret' } })
+    expect(principal).toEqual({
+      id: 'u1',
+      email: 'root@example.com',
+      role: 'admin',
+      apiKey: { id: 'k1', name: 'payments-ro', permissions: { payments: ['list'] } },
+    })
+  })
+
+  test('a key with no permissions gets an empty allowlist, not the owner role', async () => {
+    const provider = new BetterAuthProvider({
+      auth: keyAuth({
+        verify: async () => ({
+          ...(await valid()),
+          key: { ...keyRow, permissions: null as never },
+        }),
+      }),
+      logger: silentLogger,
+    })
+    const principal = await provider.getCurrentUser({ headers: { 'x-api-key': 'secret' } })
+    expect(principal?.apiKey).toEqual({ id: 'k1', name: 'payments-ro', permissions: {} })
+  })
+
+  test('verification that throws rejects the request', async () => {
+    const provider = new BetterAuthProvider({
+      auth: keyAuth({
+        verify: async () => {
+          throw new Error('db down')
+        },
+      }),
+      logger: silentLogger,
+    })
+    expect(await provider.getCurrentUser({ headers: { 'x-api-key': 'secret' } })).toBeNull()
+  })
+
+  test('verification that reports invalid (rate limit, quota) rejects the request', async () => {
+    const provider = new BetterAuthProvider({
+      auth: keyAuth({
+        verify: async () => ({ valid: false, error: { code: 'RATE_LIMITED' }, key: null }),
+      }),
+      logger: silentLogger,
+    })
+    expect(await provider.getCurrentUser({ headers: { 'x-api-key': 'secret' } })).toBeNull()
+  })
+
+  test('no verifyApiKey on the instance rejects a key request', async () => {
+    const provider = new BetterAuthProvider({ auth: keyAuth(), logger: silentLogger })
+    expect(await provider.getCurrentUser({ headers: { 'x-api-key': 'secret' } })).toBeNull()
+  })
+
+  test('a key that is not the one the session was minted from is rejected', async () => {
+    const provider = new BetterAuthProvider({
+      auth: keyAuth({ verify: valid, sessionId: 'browser-session' }),
+      logger: silentLogger,
+    })
+    expect(await provider.getCurrentUser({ headers: { 'x-api-key': 'secret' } })).toBeNull()
+  })
+
+  test('a key owned by someone other than the session user is rejected', async () => {
+    const provider = new BetterAuthProvider({
+      auth: keyAuth({
+        verify: async () => ({ ...(await valid()), key: { ...keyRow, referenceId: 'u2' } }),
+      }),
+      logger: silentLogger,
+    })
+    expect(await provider.getCurrentUser({ headers: { 'x-api-key': 'secret' } })).toBeNull()
+  })
+
+  test('custom apiKeyHeaders are the ones checked', async () => {
+    const seen: string[] = []
+    const provider = new BetterAuthProvider({
+      auth: keyAuth({
+        header: 'x-service-token',
+        verify: async (key) => {
+          seen.push(key)
+          return valid()
+        },
+      }),
+      logger: silentLogger,
+      apiKeyHeaders: ['x-service-token'],
+    })
+    const principal = await provider.getCurrentUser({ headers: { 'x-service-token': 'tok' } })
+    expect(seen).toEqual(['tok'])
+    expect(principal?.apiKey).toMatchObject({ id: 'k1' })
+  })
+})

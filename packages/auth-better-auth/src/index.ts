@@ -231,7 +231,17 @@ export interface BetterAuthProviderOptions {
    * and let the create path handle it.
    */
   seedAdminHeaders?: Headers | (() => Headers | Promise<Headers>)
+  /**
+   * Headers the api-key plugin reads the key from. Must mirror the plugin's
+   * own `apiKeyHeaders` option (default `'x-api-key'`): a request presenting
+   * a key in any of them is only authenticated once the key is verified and
+   * attached as the principal's `apiKey` claim.
+   */
+  apiKeyHeaders?: string | readonly string[]
 }
+
+/** Better Auth api-key plugin's default `apiKeyHeaders`. */
+const DEFAULT_API_KEY_HEADER = 'x-api-key'
 
 export class BetterAuthProvider implements IAuthProvider {
   private readonly log: ILogger
@@ -305,28 +315,75 @@ export class BetterAuthProvider implements IAuthProvider {
       ...(typeof session.user.role === 'string' ? { role: session.user.role } : {}),
     }
 
-    // If the request authenticated via `x-api-key`, look up the key row to
-    // attach permissions + key id onto the principal. The core invoke() gate
-    // uses `apiKey.permissions` to allow/deny resource×action combinations.
-    const apiKeyHeader = headers.get('x-api-key')
+    // A request carrying an API key must come out of here scoped to that key,
+    // or not at all. Better Auth's api-key plugin turns the key into a session
+    // for the key's *owner*, so the `principal` above has the owner's full
+    // role; only the `apiKey` claim attached below narrows it in the core
+    // gate. Every path that fails to attach the claim — no `verifyApiKey`,
+    // a thrown or `valid: false` verification (the plugin's rate limit and
+    // `remaining` quota are consumed by getSession *and* verifyApiKey, so the
+    // second call is the one that trips them), a key that is not the one the
+    // session was minted from — therefore returns `null`. It used to fall
+    // through and hand the request the owner's unrestricted session.
+    const apiKeyHeader = this.readApiKeyHeader(headers)
+    if (apiKeyHeader === null) return principal
+
     const verify = this.api.verifyApiKey
-    if (apiKeyHeader && verify) {
-      try {
-        const result = await verify({ body: { key: apiKeyHeader } })
-        if (result.valid && result.key) {
-          principal.apiKey = {
-            id: result.key.id,
-            ...(result.key.name != null ? { name: result.key.name } : {}),
-            permissions: result.key.permissions ?? {},
-          }
-        }
-      } catch {
-        // Verification errors fall through — getSession already accepted the
-        // key, so identity is valid; permissions just won't be attached and
-        // the action gate will deny anything except wildcards.
-      }
+    if (!verify) {
+      this.log.warn(
+        '[modern-admin] request carries an API key, but this Better Auth instance has no ' +
+          '`verifyApiKey` (api-key plugin not mounted) — rejecting it.',
+      )
+      return null
+    }
+    let result: Awaited<ReturnType<NonNullable<BetterAuthApi['verifyApiKey']>>>
+    try {
+      result = await verify({ body: { key: apiKeyHeader } })
+    } catch (err) {
+      this.log.warn('[modern-admin] API key verification failed — rejecting the request', {
+        error: err instanceof Error ? err.message : String(err),
+      })
+      return null
+    }
+    const key = result?.valid ? result.key : null
+    if (!key) {
+      this.log.warn('[modern-admin] API key rejected on verification', {
+        ...(result?.error?.code ? { code: result.error.code } : {}),
+      })
+      return null
+    }
+    // The api-key plugin mints the session with `session.id = apiKey.id` and
+    // `userId = apiKey.referenceId`. Anything else means getSession resolved
+    // someone other than this key — a cookie session when
+    // `enableSessionForAPIKeys` is off, or a header the plugin reads
+    // differently from `apiKeyHeaders` here — and the claim cannot be trusted
+    // to describe the principal.
+    if (key.id !== session.session?.id || key.referenceId !== session.user.id) {
+      this.log.warn(
+        '[modern-admin] API key does not match the session Better Auth resolved — rejecting it.',
+      )
+      return null
+    }
+    principal.apiKey = {
+      id: key.id,
+      ...(key.name != null ? { name: key.name } : {}),
+      permissions: key.permissions ?? {},
     }
     return principal
+  }
+
+  /**
+   * The API key the request presents, or `null` when it presents none. Reads
+   * the same header list the api-key plugin is configured with
+   * (`apiKeyHeaders`), first non-empty value wins — matching the plugin.
+   */
+  private readApiKeyHeader(headers: Headers): string | null {
+    const names = this.options.apiKeyHeaders ?? DEFAULT_API_KEY_HEADER
+    for (const name of typeof names === 'string' ? [names] : names) {
+      const value = headers.get(name)
+      if (value) return value
+    }
+    return null
   }
 
   async logout(requestContext: unknown): Promise<void> {

@@ -35,6 +35,24 @@ apply the adapter-specific transactional migration shipped by
 fail closed on unknown providers and duplicate identities and never merge or
 delete users.
 
+## API keys
+
+With Better Auth's api-key plugin (`enableSessionForAPIKeys: true`), a key
+authenticates as its **owner**. `getCurrentUser` verifies the key and attaches
+its permissions as the principal's `apiKey` claim, which is what narrows the
+owner's role in Modern Admin's action gate. If the key cannot be verified —
+`verifyApiKey` throws or reports it invalid (rate limit, exhausted quota), the
+plugin is not mounted, or the key is not the one the session was minted from —
+the request is rejected (`null`), never served with the owner's full role.
+
+If the plugin reads keys from headers other than `x-api-key`, pass the same list
+as `apiKeyHeaders` here and to `createBetterAuthMiddleware` from
+`@modern-admin/nest`.
+
+Each request validates the key twice (once in `getSession`, once in
+`verifyApiKey`), so the plugin's rate limit and `remaining` quota are consumed
+at twice the request rate — size `rateLimit.maxRequests` accordingly.
+
 ## Documentation
 
 Setup guides, architecture, and usage examples live in the
