@@ -45,6 +45,17 @@ owner. Pass `{ apiKeyHeaders }` if the api-key plugin uses custom headers. Mount
 Better Auth through it rather than a bare `toNodeHandler(auth)`, whatever the
 prefix.
 
+`IApiKeyService` receives `expiresIn` in **seconds**, the unit of Better Auth's
+api-key plugin; `ApiKeysController` converts the `expiresInDays` it accepts.
+
+## Analytics
+
+`POST /admin/api/timeseries` aggregates record data, so it applies the `list`
+gate: the resource must pass `canAccess(resource, 'list', currentAdmin)` and
+`dateField`, `field` and `groupBy` must be properties the caller may read,
+otherwise 403. FK labels (`groupByLabelResource`) are only resolved from a
+resource the caller may list.
+
 ## Documentation
 
 Setup guides, architecture, and usage examples live in the
