@@ -27,6 +27,24 @@ When a cache provider is configured, the SPA exposes a Cache page backed by
 default to the `admin` role; configure `cacheRoles` to provide a different
 operator allowlist. API-key principals cannot use these operator endpoints.
 
+## API keys
+
+An API key authenticates as its owner, and its `resource × action` permissions
+are enforced only by the core action gate (`ModernAdmin.invoke()` /
+`canAccess()`). `ModernAdminAuthGuard` therefore answers **403** to API-key
+principals on every route except those marked `@AllowApiKey()`: resource
+actions, global search and `GET /admin/api/auth/me`. Audit log, history,
+webhooks, dashboard, analytics, cache, AI assistant, media generation and API
+key management are session-only. Mark your own controllers `@AllowApiKey()`
+only when everything they read or change goes through that gate.
+
+`createBetterAuthMiddleware` likewise answers 403 to any request presenting an
+API key on Better Auth's own paths (`/get-session`, `/list-sessions`,
+`/api-key/create`, …), where a key would otherwise act as a full session of its
+owner. Pass `{ apiKeyHeaders }` if the api-key plugin uses custom headers. Mount
+Better Auth through it rather than a bare `toNodeHandler(auth)`, whatever the
+prefix.
+
 ## Documentation
 
 Setup guides, architecture, and usage examples live in the

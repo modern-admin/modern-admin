@@ -27,7 +27,7 @@ import {
   type ModernAdmin,
 } from '@modern-admin/core'
 import { MODERN_ADMIN } from './tokens.js'
-import { ModernAdminAuthGuard } from './auth.guard.js'
+import { AllowApiKey, ModernAdminAuthGuard } from './auth.guard.js'
 import { ModernAdminCacheInterceptor } from './cache.interceptor.js'
 import { NoHttpCache } from './no-http-cache.js'
 import { wantsRevalidation } from './revalidate.js'
@@ -49,6 +49,7 @@ interface AdminRequest {
 @ApiCookieAuth('session')
 @Controller('admin/api/resources/:resourceId')
 @UseGuards(ModernAdminAuthGuard)
+@AllowApiKey()
 // Bound here rather than as an APP_INTERCEPTOR: the cache keys off a
 // `:resourceId` route param, so a global binding only ever added `x-cache`
 // noise to the host app's own routes — and captured any of them that happened

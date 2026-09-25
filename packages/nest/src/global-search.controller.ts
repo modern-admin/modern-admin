@@ -9,7 +9,7 @@ import {
 } from '@modern-admin/core'
 import { z } from 'zod'
 import { MODERN_ADMIN } from './tokens.js'
-import { ModernAdminAuthGuard } from './auth.guard.js'
+import { AllowApiKey, ModernAdminAuthGuard } from './auth.guard.js'
 
 interface AdminRequest {
   currentAdmin?: CurrentAdmin
@@ -135,6 +135,7 @@ const describeMatch = (record: RecordJSON, needle: string): MatchInfo => {
 @ApiCookieAuth('session')
 @Controller('admin/api/global-search')
 @UseGuards(ModernAdminAuthGuard)
+@AllowApiKey()
 export class GlobalSearchController {
   constructor(@Inject(MODERN_ADMIN) private readonly admin: ModernAdmin) {}
 
