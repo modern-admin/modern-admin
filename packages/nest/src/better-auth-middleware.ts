@@ -19,6 +19,16 @@ type NodeHandler = (req: IncomingMessage, res: ServerResponse) => void | Promise
  */
 const NEST_AUTH_PATHS: ReadonlySet<string> = new Set(['/me', '/login', '/ui-props'])
 
+export interface BetterAuthMiddlewareOptions {
+  /**
+   * Headers Better Auth's api-key plugin reads keys from — mirror the
+   * plugin's `apiKeyHeaders` option. Default `['x-api-key']`.
+   */
+  apiKeyHeaders?: string | readonly string[]
+}
+
+const DEFAULT_API_KEY_HEADERS: readonly string[] = ['x-api-key']
+
 /**
  * Creates an Express middleware that routes Better Auth's own paths
  * (`/sign-in/*`, `/sign-out`, `/session`, etc.) to the provided
@@ -39,16 +49,46 @@ const NEST_AUTH_PATHS: ReadonlySet<string> = new Set(['/me', '/login', '/ui-prop
  *
  * Must be mounted BEFORE Nest's body parsers so Better Auth can read
  * the raw request stream on sign-in/sign-out.
+ *
+ * Requests presenting an API key are answered 403 on every Better Auth
+ * path. The api-key plugin turns a key into a full session of its owner, and
+ * nothing on Better Auth's side knows about the key's `resource × action`
+ * scope — so a read-only key could otherwise call `/get-session`,
+ * `/list-sessions` (live browser session tokens of the owner) or
+ * `/api-key/create` (a fresh, unrestricted key). Keys are for the admin data
+ * API, which enforces their scope; account management stays session-only.
  */
 export function createBetterAuthMiddleware(
   authHandler: NodeHandler,
+  options: BetterAuthMiddlewareOptions = {},
 ): (req: IncomingMessage, res: ServerResponse, next: (err?: unknown) => void) => void {
+  const apiKeyHeaders = toHeaderList(options.apiKeyHeaders)
   return (req: IncomingMessage, res: ServerResponse, next: (err?: unknown) => void): void => {
     const path = (req.url ?? '').split('?')[0] ?? ''
     if (NEST_AUTH_PATHS.has(path)) {
       next()
       return
     }
+    if (apiKeyHeaders.some((name) => req.headers[name] !== undefined)) {
+      res.statusCode = 403
+      res.setHeader('Content-Type', 'application/json')
+      res.end(
+        JSON.stringify({
+          code: 'API_KEY_NOT_ALLOWED',
+          message: 'API keys cannot access authentication endpoints',
+        }),
+      )
+      return
+    }
     void authHandler(req, res)
   }
 }
+
+/** Node lower-cases incoming header names, so the lookup list must match. */
+const toHeaderList = (headers: BetterAuthMiddlewareOptions['apiKeyHeaders']): string[] =>
+  (headers === undefined
+    ? DEFAULT_API_KEY_HEADERS
+    : typeof headers === 'string'
+      ? [headers]
+      : headers
+  ).map((name) => name.toLowerCase())

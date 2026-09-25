@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import {
   BadRequestException,
   ForbiddenException,
+  HttpException,
   NotFoundException,
   NotImplementedException,
 } from '@nestjs/common'
@@ -203,7 +204,7 @@ describe('ApiKeysController', () => {
     expect(calls.create[0]!.permissions).toEqual({ '*': ['*'] })
   })
 
-  test('create converts expiresInDays to milliseconds', async () => {
+  test('create converts expiresInDays to seconds, the unit Better Auth expects', async () => {
     const admin = buildAdmin([{ name: 'users', rows: [] }])
     const { service, calls } = buildService()
     const ctrl = new ApiKeysController(admin, service)
@@ -211,7 +212,7 @@ describe('ApiKeysController', () => {
       { name: 'expiring', expiresInDays: 7, permissions: { users: ['list'] } } as unknown,
       sessionReq(),
     )
-    expect(calls.create[0]!.expiresIn).toBe(7 * 24 * 60 * 60 * 1000)
+    expect(calls.create[0]!.expiresIn).toBe(7 * 24 * 60 * 60)
   })
 
   test('create with explicit null expiresInDays passes null to the service', async () => {
@@ -240,6 +241,41 @@ describe('ApiKeysController', () => {
     const ctrl = new ApiKeysController(admin, service)
     await ctrl.update('k1', { expiresInDays: null } as unknown, sessionReq())
     expect(calls.update[0]).toEqual({ keyId: 'k1', expiresIn: null })
+  })
+
+  test('update converts expiresInDays to seconds', async () => {
+    const admin = buildAdmin([{ name: 'users', rows: [] }])
+    const { service, calls } = buildService()
+    const ctrl = new ApiKeysController(admin, service)
+    await ctrl.update('k1', { expiresInDays: 30 } as unknown, sessionReq())
+    expect(calls.update[0]).toEqual({ keyId: 'k1', expiresIn: 30 * 24 * 60 * 60 })
+  })
+
+  test('a Better Auth 4xx rejection keeps its status and code instead of becoming a 500', async () => {
+    const admin = buildAdmin([{ name: 'users', rows: [] }])
+    const { service } = buildService()
+    // Shape of better-call's APIError, which Better Auth throws.
+    const tooLarge = Object.assign(
+      new Error('The expiresIn is larger than the predefined maximum value.'),
+      { statusCode: 400, body: { code: 'EXPIRES_IN_IS_TOO_LARGE' } },
+    )
+    service.create = async () => {
+      throw tooLarge
+    }
+    service.update = async () => {
+      throw tooLarge
+    }
+    const ctrl = new ApiKeysController(admin, service)
+    const body = { name: 'long', expiresInDays: 3650, permissions: { users: ['list'] } }
+    for (const call of [
+      () => ctrl.create(body as unknown, sessionReq()),
+      () => ctrl.update('k1', { expiresInDays: 3650 } as unknown, sessionReq()),
+    ]) {
+      const err = (await call().catch((e: unknown) => e)) as HttpException
+      expect(err).toBeInstanceOf(HttpException)
+      expect(err.getStatus()).toBe(400)
+      expect(err.getResponse()).toMatchObject({ code: 'EXPIRES_IN_IS_TOO_LARGE' })
+    }
   })
 
   test('update validates permissions when provided', async () => {

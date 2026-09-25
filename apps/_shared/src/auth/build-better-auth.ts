@@ -166,10 +166,16 @@ export const buildBetterAuth = ({
       // the key id onto the principal so `ModernAdmin.invoke()` can gate
       // actions.
       enableSessionForAPIKeys: true,
-      // Rate-limit verification of each key. Leaving this off let an
-      // attacker brute-force key values against the `x-api-key` path with
-      // no throttle. The plugin caps attempts per key/identifier window.
-      rateLimit: { enabled: true },
+      // Per-key request throttle. The plugin's default (10 per 24 h) suits
+      // a key that is verified now and then, not one that authenticates
+      // every admin API call; 600/min is ~10 req/s sustained. The limit is
+      // copied onto the key row at creation, so changing it here does not
+      // re-limit existing keys (update their `rateLimitMax` /
+      // `rateLimitTimeWindow` for that).
+      rateLimit: { enabled: true, timeWindow: 60_000, maxRequests: 600 },
+      // Match the Settings UI and `ApiKeysController`, which accept up to
+      // 3650 days; the plugin's default ceiling is 365.
+      keyExpiration: { maxExpiresIn: 3650 },
       schema: { apikey: { modelName: resolvedModelNames.apikey } },
     }) as BetterAuthPlugin,
     ...(extraPlugins as BetterAuthPlugin[]),

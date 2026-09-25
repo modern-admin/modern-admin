@@ -16,7 +16,11 @@ import type { INestApplication } from '@nestjs/common'
 import type { NestExpressApplication } from '@nestjs/platform-express'
 import { toNodeHandler } from 'better-auth/node'
 import type { betterAuth } from 'better-auth'
-import { setupOpenApi, type SetupOpenApiOptions } from '@modern-admin/nest'
+import {
+  createBetterAuthMiddleware,
+  setupOpenApi,
+  type SetupOpenApiOptions,
+} from '@modern-admin/nest'
 
 type AuthInstance = ReturnType<typeof betterAuth>
 
@@ -83,8 +87,10 @@ export async function bootstrapApp(options: BootstrapAppOptions): Promise<void> 
 
   // Mount Better Auth at /api/auth/*. Has to come before any body parser
   // — Nest's default JSON parser would otherwise consume the request
-  // stream Better Auth needs raw access to.
-  app.use('/api/auth', toNodeHandler(auth))
+  // stream Better Auth needs raw access to. Wrapped so a request carrying an
+  // API key never reaches Better Auth's own endpoints (see
+  // `createBetterAuthMiddleware`).
+  app.use('/api/auth', createBetterAuthMiddleware(toNodeHandler(auth)))
 
   // OpenAPI spec + Swagger UI + Scalar UI. Mounted before listen so the
   // first request can already hit `/admin/api/docs`.

@@ -5,6 +5,7 @@ import {
   Delete,
   ForbiddenException,
   Get,
+  HttpException,
   Inject,
   NotFoundException,
   NotImplementedException,
@@ -73,6 +74,7 @@ type ApiKeyListResult = ApiKeyRowLike[] | { keys: ApiKeyRowLike[] } | { apiKeys:
  */
 export interface IApiKeyService {
   list(headers: Headers): Promise<ApiKeyListResult>
+  /** `expiresIn` is in **seconds** (Better Auth's api-key unit); `null` = never. */
   create(
     body: {
       name: string
@@ -81,6 +83,7 @@ export interface IApiKeyService {
     },
     headers: Headers,
   ): Promise<ApiKeyCreatedRow>
+  /** `expiresIn` is in seconds, as for `create`; `null` clears the expiry. */
   update(
     body: {
       keyId: string
@@ -111,7 +114,8 @@ const updateBodyZ = z.object({
   expiresInDays: z.number().int().min(1).max(3650).nullable().optional(),
 })
 
-const DAY_MS = 24 * 60 * 60 * 1000
+/** Better Auth's api-key plugin takes `expiresIn` in seconds, not milliseconds. */
+const DAY_SECONDS = 24 * 60 * 60
 
 const toHeaders = (raw: Record<string, string | string[] | undefined>): Headers => {
   const h = new Headers()
@@ -174,19 +178,24 @@ export class ApiKeysController {
     if (!parsed.success) throw new BadRequestException(parsed.error.message)
     this.validatePermissions(parsed.data.permissions)
     const service = this.requireService()
-    const created = await service.create(
-      {
-        name: parsed.data.name,
-        expiresIn:
-          parsed.data.expiresInDays === undefined
-            ? undefined
-            : parsed.data.expiresInDays === null
-              ? null
-              : parsed.data.expiresInDays * DAY_MS,
-        permissions: parsed.data.permissions,
-      },
-      toHeaders(req.headers),
-    )
+    let created: ApiKeyCreatedRow
+    try {
+      created = await service.create(
+        {
+          name: parsed.data.name,
+          expiresIn:
+            parsed.data.expiresInDays === undefined
+              ? undefined
+              : parsed.data.expiresInDays === null
+                ? null
+                : parsed.data.expiresInDays * DAY_SECONDS,
+          permissions: parsed.data.permissions,
+        },
+        toHeaders(req.headers),
+      )
+    } catch (err) {
+      throw mapServiceError(err)
+    }
     this.auditLog('apiKey.create', req.currentAdmin!, created.id, created.name ?? undefined)
     return { key: created.key, record: toResponse(created) }
   }
@@ -220,7 +229,7 @@ export class ApiKeysController {
             ? {}
             : parsed.data.expiresInDays === null
               ? { expiresIn: null }
-              : { expiresIn: parsed.data.expiresInDays * DAY_MS }),
+              : { expiresIn: parsed.data.expiresInDays * DAY_SECONDS }),
         },
         toHeaders(req.headers),
       )
@@ -307,8 +316,23 @@ export class ApiKeysController {
   }
 }
 
+/**
+ * Better Auth's `APIError` carries the HTTP status (`statusCode`) and a
+ * stable `body.code`; honour them before falling back to message matching,
+ * so a rejection such as `EXPIRES_IN_IS_TOO_LARGE` reaches the client as the
+ * 400 it is rather than a 500.
+ */
 const mapServiceError = (err: unknown): unknown => {
+  if (err instanceof HttpException) return err
   const message = err instanceof Error ? err.message : String(err)
+  const statusCode = (err as { statusCode?: unknown } | null)?.statusCode
+  if (typeof statusCode === 'number' && statusCode >= 400 && statusCode < 500) {
+    const code = (err as { body?: { code?: unknown } }).body?.code
+    return new HttpException(
+      { statusCode, message, ...(typeof code === 'string' ? { code } : {}) },
+      statusCode,
+    )
+  }
   if (/not found|invalid id|key.*not.*exist/i.test(message)) {
     return new NotFoundException(message)
   }
