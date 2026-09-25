@@ -38,20 +38,26 @@ delete users.
 ## API keys
 
 With Better Auth's api-key plugin (`enableSessionForAPIKeys: true`), a key
-authenticates as its **owner**. `getCurrentUser` verifies the key and attaches
-its permissions as the principal's `apiKey` claim, which is what narrows the
-owner's role in Modern Admin's action gate. If the key cannot be verified —
-`verifyApiKey` throws or reports it invalid (rate limit, exhausted quota), the
-plugin is not mounted, or the key is not the one the session was minted from —
-the request is rejected (`null`), never served with the owner's full role.
+authenticates as its **owner**. `getCurrentUser` attaches the key's permissions
+as the principal's `apiKey` claim, which is what narrows the owner's role in
+Modern Admin's action gate. If the key is rejected — Better Auth refuses it
+(disabled, expired, rate limit, exhausted quota), the plugin is not mounted, or
+the key is not the one the session was minted from — the request is rejected
+(`null`), never served with the owner's full role.
 
 If the plugin reads keys from headers other than `x-api-key`, pass the same list
 as `apiKeyHeaders` here and to `createBetterAuthMiddleware` from
 `@modern-admin/nest`.
 
-Each request validates the key twice (once in `getSession`, once in
-`verifyApiKey`), so the plugin's rate limit and `remaining` quota are consumed
-at twice the request rate — size `rateLimit.maxRequests` accordingly.
+Each request verifies the key once, in `getSession`; the claim is then read
+from the key's row by id through `auth.$context`, so the plugin's rate limit and
+`remaining` quota are charged once per request. Only when the row is not in the
+database (secondary-storage-only mode) does the provider fall back to
+`verifyApiKey`, which charges a second time.
+
+The plugin's default rate limit is 10 requests per key per 24 hours, and it is
+copied onto each key when the key is created. For keys that call the admin API,
+configure `rateLimit: { timeWindow, maxRequests }` to a realistic budget.
 
 ## Documentation
 

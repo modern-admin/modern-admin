@@ -381,3 +381,113 @@ describe('BetterAuthProvider — API-key requests', () => {
     expect(principal?.apiKey).toMatchObject({ id: 'k1' })
   })
 })
+
+describe('BetterAuthProvider — API-key requests verify the key once', () => {
+  const owner = { id: 'u1', email: 'root@example.com', role: 'admin' }
+  // As the api-key plugin stores it: `permissions` is a JSON string.
+  const storedRow = {
+    id: 'k1',
+    name: 'payments-ro',
+    referenceId: 'u1',
+    enabled: true,
+    permissions: JSON.stringify({ payments: ['list'] }),
+  }
+
+  const build = (
+    opts: {
+      row?: Record<string, unknown> | null
+      findOne?: () => Promise<Record<string, unknown> | null>
+      getSession?: () => Promise<unknown>
+    } = {},
+  ) => {
+    const calls = { verify: 0, findOne: [] as unknown[] }
+    const auth = {
+      api: {
+        getSession:
+          opts.getSession ?? (async () => ({ user: owner, session: { id: storedRow.id } })),
+        async verifyApiKey() {
+          calls.verify += 1
+          return {
+            valid: true,
+            error: null,
+            key: { ...storedRow, permissions: { orders: ['list'] } },
+          }
+        },
+      },
+      $context: Promise.resolve({
+        adapter: {
+          findOne:
+            opts.findOne ??
+            (async (args: unknown) => {
+              calls.findOne.push(args)
+              return opts.row === undefined ? storedRow : opts.row
+            }),
+        },
+      }),
+    } as any
+    return { provider: new BetterAuthProvider({ auth, logger: silentLogger }), calls }
+  }
+
+  const keyRequest = { headers: { 'x-api-key': 'secret' } }
+
+  test("the session's key row is read by id instead of being verified a second time", async () => {
+    const { provider, calls } = build()
+    const principal = await provider.getCurrentUser(keyRequest)
+    expect(principal?.apiKey).toEqual({
+      id: 'k1',
+      name: 'payments-ro',
+      permissions: { payments: ['list'] },
+    })
+    // getSession already consumed the rate-limit slot; verifyApiKey would take another.
+    expect(calls.verify).toBe(0)
+    expect(calls.findOne).toEqual([{ model: 'apikey', where: [{ field: 'id', value: 'k1' }] }])
+  })
+
+  test('a disabled row is rejected', async () => {
+    const { provider } = build({ row: { ...storedRow, enabled: false } })
+    expect(await provider.getCurrentUser(keyRequest)).toBeNull()
+  })
+
+  test('a row owned by someone other than the session user is rejected', async () => {
+    const { provider } = build({ row: { ...storedRow, referenceId: 'u2' } })
+    expect(await provider.getCurrentUser(keyRequest)).toBeNull()
+  })
+
+  test('unparseable stored permissions become an empty allowlist', async () => {
+    const { provider } = build({ row: { ...storedRow, permissions: '{not json' } })
+    expect((await provider.getCurrentUser(keyRequest))?.apiKey).toEqual({
+      id: 'k1',
+      name: 'payments-ro',
+      permissions: {},
+    })
+  })
+
+  test('a row missing from the database falls back to verifyApiKey', async () => {
+    const { provider, calls } = build({ row: null })
+    const principal = await provider.getCurrentUser(keyRequest)
+    expect(calls.verify).toBe(1)
+    expect(principal?.apiKey).toMatchObject({ permissions: { orders: ['list'] } })
+  })
+
+  test('a failing row lookup falls back to verifyApiKey rather than erroring', async () => {
+    const { provider, calls } = build({
+      findOne: async () => {
+        throw new Error('db down')
+      },
+    })
+    expect((await provider.getCurrentUser(keyRequest))?.apiKey).toMatchObject({ id: 'k1' })
+    expect(calls.verify).toBe(1)
+  })
+
+  test('a key Better Auth rejects in getSession (rate limit, expiry) is a 401, not a 500', async () => {
+    const rejected = async () => {
+      throw Object.assign(new Error('Rate limit exceeded.'), { statusCode: 401 })
+    }
+    const { provider } = build({ getSession: rejected })
+    expect(await provider.getCurrentUser(keyRequest)).toBeNull()
+    // Without a key the error is not a credential rejection and still surfaces.
+    await expect(provider.getCurrentUser({ headers: { cookie: 's=1' } })).rejects.toThrow(
+      'Rate limit exceeded.',
+    )
+  })
+})

@@ -121,6 +121,11 @@ interface BetterAuthApi extends Partial<ApiKeyAdminApi> {
  */
 export interface BetterAuthInstance {
   api: Record<string, unknown>
+  /**
+   * Better Auth's resolved context (`auth.$context`). Used to read an API
+   * key's row by id without re-verifying it — see `getCurrentUser`.
+   */
+  $context?: Promise<unknown>
   /** UI hint surface — list of enabled providers/passkeys/etc. */
   options?: { socialProviders?: Record<string, unknown>; emailAndPassword?: { enabled?: boolean } }
 }
@@ -197,6 +202,40 @@ const isUserAlreadyExistsError = (err: unknown, email: string): boolean => {
   // "the admin is already there", and treating it as such would skip account
   // creation entirely. Require the message to be about the email.
   return /\bemail\b/i.test(message) || message.includes(email)
+}
+
+/** The api-key plugin's model, as it names it in adapter calls. */
+const API_KEY_MODEL = 'apikey'
+
+/** What `getCurrentUser` needs from an api-key row. */
+interface ApiKeyClaimSource {
+  id: string
+  name: string | null
+  referenceId: string
+  enabled?: boolean
+  permissions?: Record<string, string[]> | null
+}
+
+interface AdapterContext {
+  adapter?: {
+    findOne(args: {
+      model: string
+      where: Array<{ field: string; value: unknown }>
+    }): Promise<Record<string, unknown> | null>
+  }
+}
+
+/** The plugin stores `permissions` as a JSON string; normalise to the object form. */
+const parsePermissions = (raw: unknown): Record<string, string[]> | null => {
+  if (raw == null) return null
+  if (typeof raw === 'object') return raw as Record<string, string[]>
+  if (typeof raw !== 'string') return null
+  try {
+    const parsed = JSON.parse(raw) as unknown
+    return parsed && typeof parsed === 'object' ? (parsed as Record<string, string[]>) : null
+  } catch {
+    return null
+  }
 }
 
 const resolveSessionUserId = async (
@@ -302,7 +341,21 @@ export class BetterAuthProvider implements IAuthProvider {
     const req = requestContext as RequestLike | undefined
     if (!req) return null
     const headers = toHeaders(req.headers)
-    const session = await this.api.getSession({ headers })
+    const apiKeyHeader = this.readApiKeyHeader(headers)
+
+    let session: Awaited<ReturnType<BetterAuthApi['getSession']>>
+    try {
+      session = await this.api.getSession({ headers })
+    } catch (err) {
+      // The api-key plugin's session hook throws for a disabled, expired,
+      // rate-limited or exhausted key. That is a rejected credential (401),
+      // not a server fault.
+      if (apiKeyHeader === null) throw err
+      this.log.warn('[modern-admin] API key rejected by Better Auth', {
+        error: err instanceof Error ? err.message : String(err),
+      })
+      return null
+    }
     if (!session?.user) return null
 
     const principal: CurrentAdmin = {
@@ -319,14 +372,57 @@ export class BetterAuthProvider implements IAuthProvider {
     // or not at all. Better Auth's api-key plugin turns the key into a session
     // for the key's *owner*, so the `principal` above has the owner's full
     // role; only the `apiKey` claim attached below narrows it in the core
-    // gate. Every path that fails to attach the claim — no `verifyApiKey`,
-    // a thrown or `valid: false` verification (the plugin's rate limit and
-    // `remaining` quota are consumed by getSession *and* verifyApiKey, so the
-    // second call is the one that trips them), a key that is not the one the
-    // session was minted from — therefore returns `null`. It used to fall
-    // through and hand the request the owner's unrestricted session.
-    const apiKeyHeader = this.readApiKeyHeader(headers)
+    // gate. Every path that fails to attach the claim therefore returns
+    // `null` — it used to fall through and hand the request the owner's
+    // unrestricted session.
     if (apiKeyHeader === null) return principal
+
+    const key = await this.resolveSessionApiKey(session, apiKeyHeader)
+    if (!key) return null
+    // The api-key plugin mints the session with `session.id = apiKey.id` and
+    // `userId = apiKey.referenceId`. Anything else means getSession resolved
+    // someone other than this key — a cookie session when
+    // `enableSessionForAPIKeys` is off, or a header the plugin reads
+    // differently from `apiKeyHeaders` here — and the claim cannot be trusted
+    // to describe the principal.
+    if (
+      key.id !== session.session?.id ||
+      key.referenceId !== session.user.id ||
+      key.enabled === false
+    ) {
+      this.log.warn(
+        '[modern-admin] API key does not match the session Better Auth resolved — rejecting it.',
+      )
+      return null
+    }
+    principal.apiKey = {
+      id: key.id,
+      ...(key.name != null ? { name: key.name } : {}),
+      permissions: key.permissions ?? {},
+    }
+    return principal
+  }
+
+  /**
+   * The api-key row behind a key-minted session, or `null` to reject.
+   *
+   * `getSession` has already run the plugin's full verification — enabled,
+   * expiry, rate limit, `remaining` quota — and each verification consumes a
+   * rate-limit slot and a unit of quota. Calling `verifyApiKey` on top of it
+   * charged every request twice, halving the configured limit, and made the
+   * *second* check the one that tripped. So the row is read by the session's
+   * id instead; `verifyApiKey` is only the fallback when the row is not in
+   * the database (secondary-storage-only mode, or no `$context`).
+   */
+  private async resolveSessionApiKey(
+    session: NonNullable<Awaited<ReturnType<BetterAuthApi['getSession']>>>,
+    apiKeyHeader: string,
+  ): Promise<ApiKeyClaimSource | null> {
+    const sessionId = session.session?.id
+    if (sessionId) {
+      const row = await this.findApiKeyRow(sessionId)
+      if (row) return row
+    }
 
     const verify = this.api.verifyApiKey
     if (!verify) {
@@ -352,24 +448,36 @@ export class BetterAuthProvider implements IAuthProvider {
       })
       return null
     }
-    // The api-key plugin mints the session with `session.id = apiKey.id` and
-    // `userId = apiKey.referenceId`. Anything else means getSession resolved
-    // someone other than this key — a cookie session when
-    // `enableSessionForAPIKeys` is off, or a header the plugin reads
-    // differently from `apiKeyHeaders` here — and the claim cannot be trusted
-    // to describe the principal.
-    if (key.id !== session.session?.id || key.referenceId !== session.user.id) {
-      this.log.warn(
-        '[modern-admin] API key does not match the session Better Auth resolved — rejecting it.',
-      )
+    return key
+  }
+
+  /**
+   * Read an api-key row by id through Better Auth's adapter; `null` when it
+   * cannot be read, which sends the caller to the `verifyApiKey` fallback.
+   */
+  private async findApiKeyRow(id: string): Promise<ApiKeyClaimSource | null> {
+    let context: AdapterContext | undefined
+    try {
+      context = (await this.options.auth.$context) as AdapterContext | undefined
+    } catch {
       return null
     }
-    principal.apiKey = {
-      id: key.id,
-      ...(key.name != null ? { name: key.name } : {}),
-      permissions: key.permissions ?? {},
+    const adapter = context?.adapter
+    if (typeof adapter?.findOne !== 'function') return null
+    let row: Record<string, unknown> | null
+    try {
+      row = await adapter.findOne({ model: API_KEY_MODEL, where: [{ field: 'id', value: id }] })
+    } catch {
+      return null
     }
-    return principal
+    if (!row || typeof row.id !== 'string' || typeof row.referenceId !== 'string') return null
+    return {
+      id: row.id,
+      name: typeof row.name === 'string' ? row.name : null,
+      referenceId: row.referenceId,
+      ...(typeof row.enabled === 'boolean' ? { enabled: row.enabled } : {}),
+      permissions: parsePermissions(row.permissions),
+    }
   }
 
   /**
