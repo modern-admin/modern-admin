@@ -61,9 +61,9 @@
     "@tanstack/react-query": "^5.103.1",
     "@tanstack/react-router": "1.170.38",
     "@tanstack/react-table": "^9.2.4",
-    "lucide-react": "1.47.0",
+    "lucide-react": "1.51.0",
     "react-hook-form": "7.88.0",
-    "socket.io-client": "^4.8.3",
+    "socket.io-client": "^4.8.4",
     "zod": "4.6.5"
   },
   "devDependencies": {
