@@ -58,15 +58,15 @@
     "@nestjs/common": "^12.0.3",
     "@nestjs/core": "^12.0.3",
     "@nestjs/swagger": "^12.0.1",
-    "bullmq": "6.3.8",
+    "bullmq": "6.3.12",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
-    "zod": "4.6.5"
+    "zod": "4.6.6"
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
     "@nestjs/testing": "^12.0.3",
-    "@scalar/nestjs-api-reference": "1.2.19",
+    "@scalar/nestjs-api-reference": "1.2.28",
     "@types/bun": "1.4.2",
     "@types/express": "^5.0.6",
     "typescript": "^7.0.2"
@@ -74,7 +74,7 @@
   "peerDependencies": {
     "@ai-sdk/openai-compatible": "^3.0.40",
     "@openrouter/ai-sdk-provider": "^3.0.0",
-    "@scalar/nestjs-api-reference": "1.2.19",
+    "@scalar/nestjs-api-reference": "1.2.28",
     "express": "^5.2.1",
     "@types/express": "^5.0.0",
     "ai": "^7.0.84"
