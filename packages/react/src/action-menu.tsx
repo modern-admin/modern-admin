@@ -51,8 +51,9 @@ export const isActionAllowedForRecord = (
  * Whether the server-advertised resource metadata offers an action.
  *
  * `ResourceJSON.actions` is already pruned per principal — the api-key
- * allowlist, the role matrix and `isAccessible` all ran before it was
- * serialized — so "not advertised" means "this admin may not run it", and a
+ * allowlist, the role matrix and static access flags ran before it was
+ * serialized. Dynamic record predicates run against the loaded record.
+ * "Not advertised" means "this admin may not run it", and a
  * control bound to it must not render. Fails closed while the metadata is
  * still loading.
  *
@@ -70,22 +71,34 @@ export const isActionAllowedForResource = (
   ) ?? false
 
 /**
- * Both verdicts a record-scoped control has to satisfy: the resource must
- * advertise the action for this principal at all, and the loaded record must
- * report it among the ones it offers.
+ * Whether a record-scoped control may render for one specific record.
  *
- * Neither check subsumes the other. The per-record verdict is absent on
- * records that did not come through `invoke()` (or from an older server), and
- * the resource-level descriptor is the only place a principal-wide denial
- * (role matrix, api key) shows up when that happens.
+ * The per-record verdict wins whenever the record carries one. `invoke()`
+ * builds `RecordJSON.recordActions` from the principal gates (api-key
+ * allowlist, role matrix) *and* `isVisible`/`isAccessible` resolved against
+ * that very record, so it already answers everything the resource-level list
+ * answers, with strictly more information.
+ *
+ * The two must not be AND-ed. `ResourceJSON.actions` is serialized without a
+ * record, so a record-dependent predicate — say
+ * `isAccessible: ({ record }) => record?.params.ownerId === currentAdmin.id` —
+ * evaluates false there and drops the action for the whole resource. Requiring
+ * that verdict as well would blank out every row menu and raise a forbidden
+ * page for an action the server would happily run.
+ *
+ * The resource-level list is the fallback for records that did not come
+ * through `invoke()` (or came from an older server) and therefore have no
+ * verdict of their own — there it is the only place a principal-wide denial
+ * shows up.
  */
 export const isRecordActionAllowed = (
   actionName: string,
   resource: Pick<ResourceJSON, 'actions'> | undefined,
   record: Pick<RecordJSON, 'recordActions'> | undefined,
 ): boolean =>
-  isActionAllowedForResource(actionName, resource, 'record') &&
-  isActionAllowedForRecord(actionName, record)
+  record?.recordActions
+    ? isActionAllowedForRecord(actionName, record)
+    : isActionAllowedForResource(actionName, resource, 'record')
 
 /** Narrow a resource's record actions down to the ones this record offers. */
 export const visibleRecordActions = (

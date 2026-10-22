@@ -1,6 +1,7 @@
 import * as React from 'react'
 import {
   Button,
+  cn,
   Card,
   CardContent,
   CardHeader,
@@ -11,12 +12,13 @@ import {
   TooltipTrigger,
   getModKeyLabel,
 } from '@modern-admin/ui'
-import { AlertCircle, Pencil, Trash2, Zap } from 'lucide-react'
+import { AlertCircle, Pencil, RefreshCw, Trash2, Zap } from 'lucide-react'
 import {
   useDeleteRecord,
   useFeatures,
   useInvokeRecordAction,
   useRecord,
+  useRefreshRecord,
   useResource,
 } from '../hooks.js'
 import { confirmGuard } from '../action-guard.js'
@@ -71,6 +73,7 @@ export function ResourceShowPage({
 }: ResourceShowPageProps): React.ReactElement {
   const resource = useResource(resourceId)
   const record = useRecord(resourceId, recordId)
+  const refreshRecord = useRefreshRecord(resourceId, recordId)
   const remove = useDeleteRecord(resourceId)
   const invokeRecord = useInvokeRecordAction(resourceId)
   const features = useFeatures()
@@ -134,78 +137,94 @@ export function ResourceShowPage({
           <CardTitle className="truncate">
             {resource.name} #{recordId}
           </CardTitle>
-          {record.data && (
-            <div className="flex shrink-0 flex-wrap gap-2">
-              {features.history && <RevisionsButton resourceId={resourceId} recordId={recordId} />}
-              {canEdit && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    {/* `asChild` + Link-as-Button keeps the rendered DOM a
-                     *  single `<a>` so it picks up the Button's `h-8` from
-                     *  `size="sm"` instead of stacking a Link wrapper that
-                     *  collapses to its anchor default height. */}
-                    <Button variant="outline-primary" size="sm" asChild>
-                      <Link
-                        to={{ name: 'edit', resourceId, recordId }}
-                        aria-label={t('common:edit')}
-                      >
-                        <Pencil className="size-4" />
-                        <span className="hidden sm:inline">{t('common:edit')}</span>
-                      </Link>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent className="flex items-center gap-1.5">
-                    <span>{t('common:edit')}</span>
-                    <span className="inline-flex items-center gap-0.5">
-                      <Kbd>{modLabel}</Kbd>
-                      <span className="text-muted-foreground">+</span>
-                      <Kbd>E</Kbd>
-                    </span>
-                  </TooltipContent>
-                </Tooltip>
-              )}
-              {canDelete && (
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
                 <Button
-                  variant="outline-destructive"
+                  variant="outline"
                   size="sm"
-                  disabled={remove.isPending}
-                  onClick={() => void handleDelete()}
-                  aria-label={t('common:delete')}
+                  onClick={() => void refreshRecord()}
+                  disabled={record.isFetching}
+                  aria-label={t('common:refresh')}
                 >
-                  <Trash2 className="size-4" />
-                  <span className="hidden sm:inline">{t('common:delete')}</span>
+                  <RefreshCw
+                    data-icon="inline-start"
+                    className={cn(record.isFetching && 'animate-spin')}
+                  />
                 </Button>
-              )}
-              {customRecordActions.length > 0 && (
-                <ActionMenu
-                  actions={customRecordActions}
-                  onAction={async (action) => {
-                    if (hasActionComponent(action)) {
-                      openActionComponent(action, { recordId })
-                      return
-                    }
-                    if (!(await confirmGuard(action, dialogs))) return
-                    void invokeRecord
-                      .mutateAsync({ recordId, actionName: action.name })
-                      .then((res) => showActionNotice(notify, res.notice))
-                      .catch((err: Error) => notify.error({ message: err.message }))
-                  }}
-                  t={t}
-                  trigger={
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={invokeRecord.isPending}
-                      aria-label={t('common:actions')}
-                    >
-                      <Zap className="size-4" />
-                      <span className="hidden sm:inline">{t('common:actions')}</span>
-                    </Button>
+              </TooltipTrigger>
+              <TooltipContent className="flex items-center gap-1.5">
+                <span>{t('common:refresh')}</span>
+              </TooltipContent>
+            </Tooltip>
+            {record.data && features.history && (
+              <RevisionsButton resourceId={resourceId} recordId={recordId} />
+            )}
+            {record.data && canEdit && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  {/* `asChild` + Link-as-Button keeps the rendered DOM a
+                   *  single `<a>` so it picks up the Button's `h-8` from
+                   *  `size="sm"` instead of stacking a Link wrapper that
+                   *  collapses to its anchor default height. */}
+                  <Button variant="outline-primary" size="sm" asChild>
+                    <Link to={{ name: 'edit', resourceId, recordId }} aria-label={t('common:edit')}>
+                      <Pencil className="size-4" />
+                      <span className="hidden sm:inline">{t('common:edit')}</span>
+                    </Link>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent className="flex items-center gap-1.5">
+                  <span>{t('common:edit')}</span>
+                  <span className="inline-flex items-center gap-0.5">
+                    <Kbd>{modLabel}</Kbd>
+                    <span className="text-muted-foreground">+</span>
+                    <Kbd>E</Kbd>
+                  </span>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            {record.data && canDelete && (
+              <Button
+                variant="outline-destructive"
+                size="sm"
+                disabled={remove.isPending}
+                onClick={() => void handleDelete()}
+                aria-label={t('common:delete')}
+              >
+                <Trash2 className="size-4" />
+                <span className="hidden sm:inline">{t('common:delete')}</span>
+              </Button>
+            )}
+            {record.data && customRecordActions.length > 0 && (
+              <ActionMenu
+                actions={customRecordActions}
+                onAction={async (action) => {
+                  if (hasActionComponent(action)) {
+                    openActionComponent(action, { recordId })
+                    return
                   }
-                />
-              )}
-            </div>
-          )}
+                  if (!(await confirmGuard(action, dialogs))) return
+                  void invokeRecord
+                    .mutateAsync({ recordId, actionName: action.name })
+                    .then((res) => showActionNotice(notify, res.notice))
+                    .catch((err: Error) => notify.error({ message: err.message }))
+                }}
+                t={t}
+                trigger={
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={invokeRecord.isPending}
+                    aria-label={t('common:actions')}
+                  >
+                    <Zap className="size-4" />
+                    <span className="hidden sm:inline">{t('common:actions')}</span>
+                  </Button>
+                }
+              />
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">

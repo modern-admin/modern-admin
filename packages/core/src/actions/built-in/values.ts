@@ -1,4 +1,6 @@
 import type { Action, ActionRequest, ActionContext, ActionResponse } from '../action.js'
+import { Filter } from '../../filter/filter.js'
+import { assertRelationPathAccess, resolveRelationPath } from '../../filter/relation-path.js'
 
 export interface ValuesActionResponse extends ActionResponse {
   values: string[]
@@ -19,6 +21,20 @@ const handler = async (
 
   if (!field) {
     return { values: [], hasMore: false }
+  }
+
+  if (new Filter({}, resource).isRelationPath(field)) {
+    const entries = resolveRelationPath(resource, field, (id) => context.admin.findResource(id))
+    await assertRelationPathAccess(entries, context, field)
+    const terminal = entries.at(-1)!
+    return context.admin.invoke<ValuesActionResponse>(
+      {
+        params: { resourceId: terminal.resource.decorate().id, action: 'values' },
+        method: 'get',
+        query: { ...query, field: terminal.property.path() },
+      },
+      context.currentAdmin,
+    )
   }
 
   const property = resource.property(field)

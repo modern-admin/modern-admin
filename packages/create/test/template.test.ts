@@ -4,7 +4,7 @@
 // package.json version — so `bun create @modern-admin` always pins the
 // release line that was just published, not a stale one.
 import { describe, expect, test, beforeEach, afterEach } from 'bun:test'
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, symlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { readOwnVersion, scaffold } from '../src/scaffold.js'
@@ -76,6 +76,32 @@ describe('scaffold template versions', () => {
       for (const range of Object.values(deps)) {
         expect(range).toBe(`^${version}`)
       }
+    })
+
+    test('Prisma CLI loads the generated config and validates the schema without a database', async () => {
+      await scaffold({
+        name: 'prisma-config-test',
+        templateDir,
+        targetDir,
+        variables: { modernAdminVersion: await readOwnVersion(packageDir) },
+      })
+      await symlink(join(packageDir, 'node_modules'), join(targetDir, 'node_modules'), 'dir')
+      const child = Bun.spawn(
+        [process.execPath, Bun.resolveSync('prisma/build/index.js', packageDir), 'validate'],
+        {
+          cwd: targetDir,
+          env: { ...process.env, DATABASE_URL: 'postgresql://localhost:1/schema_contract' },
+          stdout: 'pipe',
+          stderr: 'pipe',
+        },
+      )
+      const [exitCode, stdout, stderr] = await Promise.all([
+        child.exited,
+        new Response(child.stdout).text(),
+        new Response(child.stderr).text(),
+      ])
+      expect(exitCode, stdout + stderr).toBe(0)
+      expect(stderr).toContain('Loaded Prisma config from prisma.config.ts')
     })
   })
 })

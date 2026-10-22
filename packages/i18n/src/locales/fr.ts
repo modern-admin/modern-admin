@@ -33,6 +33,13 @@ export const fr: LocaleBundle = {
     'auth:loginFailed': 'Identifiants invalides.',
     'errors:notFound': 'Introuvable.',
     'errors:forbidden': 'Accès refusé à cette ressource.',
+    'errors:apiKeyEndpointForbidden':
+      'Les clés API ne peuvent pas accéder à ce point de terminaison.',
+    'errors:apiKeyAuthForbidden':
+      'Les clés API ne peuvent pas accéder aux points de terminaison d’authentification.',
+    'errors:resourceForbidden': 'L’accès à « {resource} » n’est pas autorisé.',
+    'errors:propertyForbidden':
+      'La propriété « {property} » de « {resource} » n’est pas accessible.',
     'errors:noEditableProperties': 'Aucun champ modifiable n’est disponible pour ce formulaire.',
     'errors:server': 'Une erreur est survenue. Veuillez réessayer.',
     'common:resources': 'Ressources',
@@ -132,6 +139,10 @@ export const fr: LocaleBundle = {
     'common:next': 'Suivant',
     'common:previous': 'Précédent',
     'common:relatedRecords': 'Enregistrements liés',
+    'common:commentsOnPosts': 'Commentaires sur les publications',
+    'errors:invalidRelationFilter': 'Filtre de relation invalide. Vérifiez le chemin de référence.',
+    'errors:relationFilterTooBroad':
+      'Le filtre de relation trouve trop de résultats. Affinez le filtre.',
     'common:viewAll': 'Tout afficher',
     'common:noRelatedRecords': 'Aucun enregistrement lié.',
     'common:preview': 'Aperçu',

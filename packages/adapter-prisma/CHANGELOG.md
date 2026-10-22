@@ -1,5 +1,46 @@
 # @modern-admin/adapter-prisma
 
+## 0.13.0
+
+### Patch Changes
+
+- [#104](https://github.com/modern-admin/modern-admin/pull/104) [`adb5486`](https://github.com/modern-admin/modern-admin/commit/adb5486a838e49e7f565aa19334e745fcad6447b) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Add a refresh button to record show pages that bypasses browser, HTTP and action caches,
+  reads current database values, and invalidates stale related scopes when data changes.
+  Fence older in-flight reads and mutations during revalidation so stale responses cannot
+  overwrite refreshed cache entries.
+  
+  Keep custom record-action descriptors available until dynamic access predicates can be
+  evaluated against the loaded record. Preserve role, API-key and static access denials.
+  
+  Resolve relation filters using the actual referenced unique column in Prisma and Drizzle,
+  with independent lookup memoization and property access checks. Reject composite mappings
+  that scalar relation traversal cannot preserve.
+  Normalize Drizzle schema keys to declared column paths on reads and map them back on writes,
+  so mapped unique columns and primary keys work through actual database queries.
+- Updated dependencies [[`adb5486`](https://github.com/modern-admin/modern-admin/commit/adb5486a838e49e7f565aa19334e745fcad6447b)]:
+  - @modern-admin/core@0.13.0
+
+## 0.12.0
+
+### Patch Changes
+
+- [#98](https://github.com/modern-admin/modern-admin/pull/98) [`29c3a22`](https://github.com/modern-admin/modern-admin/commit/29c3a220a81cfa7018eada015fa6644edadab720) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Update external dependencies to the latest stable releases and pin the tested
+  versions across packages and generated projects. Refresh the lockfile, move form
+  resolvers to v6, and keep TypeScript 7 declaration builds working with the
+  TypeScript 6 API alias and an updated unplugin-dts patch.
+  
+  Align Better Auth lookup indexes across the canonical Prisma and Drizzle
+  schemas, reference app, and CLI scaffold. Existing installations should add
+  missing indexes through their ORM migration workflow; the Prisma generator
+  preserves existing models. The 1.7.5 → 1.7.12 upgrade itself adds no columns.
+  
+  Include `prisma.config.ts` in generated hosts so Prisma 7 database commands
+  receive `DATABASE_URL` and the configured migration directory.
+
+- [#101](https://github.com/modern-admin/modern-admin/pull/101) [`6a24e6d`](https://github.com/modern-admin/modern-admin/commit/6a24e6d6e0fcfac2f17b38191ac7543912773ed1) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Support virtual related tables and typed filters through chains of scalar references, preserving permissions, hooks, pagination and export. Recheck relation membership on reads and refresh dependent client lists after mutations. Add translated labels and validation errors in all locales.
+- Updated dependencies [[`29c3a22`](https://github.com/modern-admin/modern-admin/commit/29c3a220a81cfa7018eada015fa6644edadab720), [`6a24e6d`](https://github.com/modern-admin/modern-admin/commit/6a24e6d6e0fcfac2f17b38191ac7543912773ed1)]:
+  - @modern-admin/core@0.12.0
+
 ## 0.11.0
 
 ### Patch Changes

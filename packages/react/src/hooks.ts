@@ -89,6 +89,22 @@ const linkedResourceIds = (config: AdminConfig | undefined, resourceId: string):
       linked.add(resource.id)
     }
   }
+  // A list may filter through several references (comments → posts → author).
+  // Follow incoming edges transitively so changes at the end of a path also
+  // refresh the list and any virtual tables using it. Keep reverse/parent
+  // invalidation above limited to its existing direct neighbours.
+  const pending = [resourceId]
+  const visited = new Set(pending)
+  while (pending.length > 0) {
+    const target = pending.pop()!
+    for (const resource of config?.resources ?? []) {
+      if (visited.has(resource.id) || !resource.properties.some((p) => p.reference === target))
+        continue
+      visited.add(resource.id)
+      linked.add(resource.id)
+      pending.push(resource.id)
+    }
+  }
   linked.delete(resourceId)
   return linked
 }
@@ -242,16 +258,41 @@ export const useRefreshRecords = (resourceId: string, query?: ListQuery): (() =>
   }, [qc, resourceId, query])
 }
 
+const pendingRecordRefresh = new WeakMap<QueryClient, Set<string>>()
+
 export const useRecord = (
   resourceId: string,
   recordId: string | undefined,
 ): UseQueryResult<RecordResponse> => {
   const client = useAdminClient()
+  const qc = useQueryClient()
+  const key = keyShow(resourceId, recordId ?? '')
   return useQuery({
-    queryKey: keyShow(resourceId, recordId ?? ''),
-    queryFn: () => client.show(resourceId, recordId!),
+    queryKey: key,
+    queryFn: () => {
+      const refresh = pendingRecordRefresh.get(qc)?.has(hashKey(key)) ?? false
+      return client.show(resourceId, recordId!, refresh ? { refresh: true } : undefined)
+    },
     enabled: !!recordId,
   })
+}
+
+/** Refetch one record through the same cache revalidation path as list refresh. */
+export const useRefreshRecord = (resourceId: string, recordId: string): (() => Promise<void>) => {
+  const qc = useQueryClient()
+  return React.useCallback(async () => {
+    const key = keyShow(resourceId, recordId)
+    const hash = hashKey(key)
+    const pending = pendingRecordRefresh.get(qc) ?? new Set<string>()
+    pendingRecordRefresh.set(qc, pending)
+    pending.add(hash)
+    try {
+      await qc.refetchQueries({ queryKey: key, exact: true })
+    } finally {
+      pending.delete(hash)
+      if (pending.size === 0) pendingRecordRefresh.delete(qc)
+    }
+  }, [qc, resourceId, recordId])
 }
 
 export const useCreateRecord = (

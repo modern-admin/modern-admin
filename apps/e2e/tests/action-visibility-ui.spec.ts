@@ -72,6 +72,27 @@ async function submenuItems(page: Page, recordId: string, submenu: string): Prom
 }
 
 test.describe('Per-record action visibility', () => {
+  test('show-page menus retain custom descriptors with record-dependent access', async ({
+    page,
+    request,
+  }) => {
+    const records = await listProducts(request)
+    const inStock = records.find((record) => record.params.inStock === true)!
+    const outOfStock = records.find((record) => record.params.inStock !== true)!
+    expect(inStock).toBeDefined()
+    expect(outOfStock).toBeDefined()
+    for (const [record, expected, hidden] of [
+      [inStock, 'Archive', 'Restock'],
+      [outOfStock, 'Restock', 'Archive'],
+    ] as const) {
+      await page.goto(`/resources/products/${record.id}`)
+      await page.getByRole('button', { name: 'Actions', exact: true }).click()
+      const submenu = await openSubmenu(page, menuOf(page, /^actions$/i), 'Inventory')
+      await expect(submenu.getByRole('menuitem', { name: expected, exact: true })).toBeVisible()
+      await expect(submenu.getByRole('menuitem', { name: hidden, exact: true })).toHaveCount(0)
+    }
+  })
+
   test('the API reports exactly one of archive/restock per row', async ({ request }) => {
     const records = await listProducts(request)
     expect(records.length).toBeGreaterThan(0)

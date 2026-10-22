@@ -33,6 +33,11 @@ export const it: LocaleBundle = {
     'auth:loginFailed': 'Credenziali non valide.',
     'errors:notFound': 'Non trovato.',
     'errors:forbidden': 'Non hai accesso a questa risorsa.',
+    'errors:apiKeyEndpointForbidden': 'Le chiavi API non possono accedere a questo endpoint.',
+    'errors:apiKeyAuthForbidden':
+      'Le chiavi API non possono accedere agli endpoint di autenticazione.',
+    'errors:resourceForbidden': 'L’accesso a «{resource}» non è consentito.',
+    'errors:propertyForbidden': 'La proprietà «{property}» di «{resource}» non è accessibile.',
     'errors:noEditableProperties': 'Non sono disponibili campi modificabili per questo modulo.',
     'errors:server': 'Qualcosa è andato storto. Riprova.',
     'common:resources': 'Risorse',
@@ -130,6 +135,11 @@ export const it: LocaleBundle = {
     'common:next': 'Avanti',
     'common:previous': 'Indietro',
     'common:relatedRecords': 'Record correlati',
+    'common:commentsOnPosts': 'Commenti ai post',
+    'errors:invalidRelationFilter':
+      'Filtro di relazione non valido. Controlla il percorso del riferimento.',
+    'errors:relationFilterTooBroad':
+      'Il filtro di relazione trova troppi record. Restringi il filtro.',
     'common:viewAll': 'Vedi tutti',
     'common:noRelatedRecords': 'Nessun record correlato.',
     'common:preview': 'Anteprima',

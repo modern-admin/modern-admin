@@ -51,6 +51,7 @@ import {
   type RealtimeEvent,
 } from './ports'
 import { setActiveFeatureFlags } from './feature-flags.js'
+import { bindRelationFilterScope } from './filter/resolve-relations.js'
 
 export interface ModernAdminOptions {
   databases?: unknown[]
@@ -249,6 +250,9 @@ export class ModernAdmin {
       plugins: options.plugins ?? [],
       logger: this.logger,
     })
+    for (const resource of this.resources) {
+      resource.decorate().resourceLookup = (id) => this.findResource(id)
+    }
   }
 
   /**
@@ -397,6 +401,7 @@ export class ModernAdmin {
       const id = r.decorate().id
       if (existing.has(id)) continue
       this.resources.push(r)
+      r.decorate().resourceLookup = (id) => this.findResource(id)
       existing.add(id)
       added.push(r)
     }
@@ -552,6 +557,7 @@ export class ModernAdmin {
       ...(currentAdmin !== undefined ? { currentAdmin } : {}),
     }
 
+    bindRelationFilterScope(request, context)
     if (actionDecorator.actionType() === 'record') {
       const id = request.params.recordId
       if (id) {
@@ -730,9 +736,9 @@ export class ModernAdmin {
    *   `currentAdmin` absent, so a logged-out caller can never see more than
    *   a logged-in one.
    *
-   * The filtered shapes prune action descriptors through the *same* gates
-   * `invoke()` applies — api-key allowlist, role matrix, `isAccessible` — so
-   * the SPA can render exactly the buttons the principal may actually press.
+   * The filtered shapes prune action descriptors through the principal gates
+   * and static access flags. Dynamic record predicates are deferred to
+   * `RecordJSON.recordActions`, where the record is available.
    * Dropping an action here is a UI consequence, not the enforcement.
    */
   toJSON(): ModernAdminJSON

@@ -11,6 +11,8 @@ export interface BasePropertyAttrs {
   isArray?: boolean
   position?: number
   reference?: string | null
+  /** Target columns of a foreign key; null means the target primary key. */
+  referenceFields?: readonly string[] | null
   availableValues?: string[] | null
   subProperties?: BaseProperty[]
 }
@@ -28,6 +30,7 @@ export class BaseProperty {
     >
   > & {
     reference: string | null
+    referenceFields: readonly string[] | null
     availableValues: string[] | null
     subProperties: BaseProperty[]
   }
@@ -45,6 +48,7 @@ export class BaseProperty {
       isArray: attrs.isArray ?? false,
       position: attrs.position ?? 1,
       reference: attrs.reference ?? null,
+      referenceFields: attrs.referenceFields ?? null,
       availableValues: attrs.availableValues ?? null,
       subProperties: attrs.subProperties ?? [],
     }
@@ -84,6 +88,15 @@ export class BaseProperty {
 
   reference(): string | null {
     return this.attrs.reference
+  }
+
+  referenceFields(): readonly string[] | null {
+    return this.attrs.referenceFields
+  }
+
+  /** Whether predicates can address this field directly in storage. */
+  isStored(): boolean {
+    return true
   }
 
   availableValues(): string[] | null {

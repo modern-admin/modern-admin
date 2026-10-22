@@ -33,6 +33,11 @@ export const ptBR: LocaleBundle = {
     'auth:loginFailed': 'Credenciais inválidas.',
     'errors:notFound': 'Não encontrado.',
     'errors:forbidden': 'Você não tem acesso a este recurso.',
+    'errors:apiKeyEndpointForbidden': 'As chaves de API não podem acessar este endpoint.',
+    'errors:apiKeyAuthForbidden':
+      'As chaves de API não podem acessar os endpoints de autenticação.',
+    'errors:resourceForbidden': 'O acesso a “{resource}” não é permitido.',
+    'errors:propertyForbidden': 'A propriedade “{property}” de “{resource}” não está acessível.',
     'errors:noEditableProperties': 'Não há campos editáveis disponíveis neste formulário.',
     'errors:server': 'Algo deu errado. Tente novamente.',
     'common:resources': 'Recursos',
@@ -131,6 +136,11 @@ export const ptBR: LocaleBundle = {
     'common:next': 'Próximo',
     'common:previous': 'Anterior',
     'common:relatedRecords': 'Registros relacionados',
+    'common:commentsOnPosts': 'Comentários em publicações',
+    'errors:invalidRelationFilter':
+      'Filtro de relação inválido. Verifique o caminho da referência.',
+    'errors:relationFilterTooBroad':
+      'O filtro de relação encontra muitos registros. Restrinja o filtro.',
     'common:viewAll': 'Ver todos',
     'common:noRelatedRecords': 'Sem registros relacionados.',
     'common:preview': 'Pré-visualizar',

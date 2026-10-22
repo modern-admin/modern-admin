@@ -68,21 +68,25 @@ export const maUser = pgTable('ma_user', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 })
 
-export const maSession = pgTable('ma_session', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
-  token: text('token').notNull().unique(),
-  ipAddress: text('ip_address'),
-  userAgent: text('user_agent'),
-  userId: uuid('user_id')
-    .notNull()
-    .references(() => maUser.id, { onDelete: 'cascade' }),
-  /** Active impersonation source; admin plugin uses this to track
-   *  "log in as" sessions so audit logs can attribute the real actor. */
-  impersonatedBy: text('impersonated_by'),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-})
+export const maSession = pgTable(
+  'ma_session',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    token: text('token').notNull().unique(),
+    ipAddress: text('ip_address'),
+    userAgent: text('user_agent'),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => maUser.id, { onDelete: 'cascade' }),
+    /** Active impersonation source; admin plugin uses this to track
+     *  "log in as" sessions so audit logs can attribute the real actor. */
+    impersonatedBy: text('impersonated_by'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [index('ma_session_user_id_idx').on(t.userId)],
+)
 
 export const maAccount = pgTable(
   'ma_account',
@@ -112,14 +116,18 @@ export const maAccount = pgTable(
   }),
 )
 
-export const maVerification = pgTable('ma_verification', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  identifier: text('identifier').notNull(),
-  value: text('value').notNull(),
-  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-})
+export const maVerification = pgTable(
+  'ma_verification',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    identifier: text('identifier').notNull(),
+    value: text('value').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [index('ma_verification_identifier_idx').on(t.identifier)],
+)
 
 /**
  * Better Auth api-key plugin storage. `permissions` is a JSON object
@@ -127,32 +135,40 @@ export const maVerification = pgTable('ma_verification', {
  * api-key gate (see also `maRole.permissions` for the role-based gate —
  * both share the same matching helper).
  */
-export const maApiKey = pgTable('ma_apikey', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  configId: text('config_id').notNull().default('default'),
-  name: text('name'),
-  start: text('start'),
-  prefix: text('prefix'),
-  key: text('key').notNull(),
-  referenceId: uuid('reference_id')
-    .notNull()
-    .references(() => maUser.id, { onDelete: 'cascade' }),
-  refillInterval: integer('refill_interval'),
-  refillAmount: integer('refill_amount'),
-  lastRefillAt: timestamp('last_refill_at', { withTimezone: true }),
-  enabled: boolean('enabled').notNull().default(true),
-  rateLimitEnabled: boolean('rate_limit_enabled').notNull().default(false),
-  rateLimitTimeWindow: integer('rate_limit_time_window'),
-  rateLimitMax: integer('rate_limit_max'),
-  requestCount: integer('request_count').notNull().default(0),
-  remaining: integer('remaining'),
-  lastRequest: timestamp('last_request', { withTimezone: true }),
-  expiresAt: timestamp('expires_at', { withTimezone: true }),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-  permissions: jsonb('permissions'),
-  metadata: jsonb('metadata'),
-})
+export const maApiKey = pgTable(
+  'ma_apikey',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    configId: text('config_id').notNull().default('default'),
+    name: text('name'),
+    start: text('start'),
+    prefix: text('prefix'),
+    key: text('key').notNull(),
+    referenceId: uuid('reference_id')
+      .notNull()
+      .references(() => maUser.id, { onDelete: 'cascade' }),
+    refillInterval: integer('refill_interval'),
+    refillAmount: integer('refill_amount'),
+    lastRefillAt: timestamp('last_refill_at', { withTimezone: true }),
+    enabled: boolean('enabled').notNull().default(true),
+    rateLimitEnabled: boolean('rate_limit_enabled').notNull().default(false),
+    rateLimitTimeWindow: integer('rate_limit_time_window'),
+    rateLimitMax: integer('rate_limit_max'),
+    requestCount: integer('request_count').notNull().default(0),
+    remaining: integer('remaining'),
+    lastRequest: timestamp('last_request', { withTimezone: true }),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+    permissions: jsonb('permissions'),
+    metadata: jsonb('metadata'),
+  },
+  (t) => [
+    index('ma_apikey_config_id_idx').on(t.configId),
+    index('ma_apikey_reference_id_idx').on(t.referenceId),
+    index('ma_apikey_key_idx').on(t.key),
+  ],
+)
 
 // ─── Modern Admin core ────────────────────────────────────────────────────
 

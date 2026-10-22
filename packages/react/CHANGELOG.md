@@ -1,5 +1,80 @@
 # @modern-admin/react
 
+## 0.13.1
+
+### Patch Changes
+
+- Updated dependencies [[`1ff58a6`](https://github.com/modern-admin/modern-admin/commit/1ff58a6be1712941ceb4e25ed8dc199c389c4489)]:
+  - @modern-admin/ui@0.13.1
+
+## 0.13.0
+
+### Minor Changes
+
+- [#104](https://github.com/modern-admin/modern-admin/pull/104) [`adb5486`](https://github.com/modern-admin/modern-admin/commit/adb5486a838e49e7f565aa19334e745fcad6447b) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Add a refresh button to record show pages that bypasses browser, HTTP and action caches,
+  reads current database values, and invalidates stale related scopes when data changes.
+  Fence older in-flight reads and mutations during revalidation so stale responses cannot
+  overwrite refreshed cache entries.
+  
+  Keep custom record-action descriptors available until dynamic access predicates can be
+  evaluated against the loaded record. Preserve role, API-key and static access denials.
+  
+  Resolve relation filters using the actual referenced unique column in Prisma and Drizzle,
+  with independent lookup memoization and property access checks. Reject composite mappings
+  that scalar relation traversal cannot preserve.
+  Normalize Drizzle schema keys to declared column paths on reads and map them back on writes,
+  so mapped unique columns and primary keys work through actual database queries.
+
+### Patch Changes
+
+- Updated dependencies [[`adb5486`](https://github.com/modern-admin/modern-admin/commit/adb5486a838e49e7f565aa19334e745fcad6447b)]:
+  - @modern-admin/core@0.13.0
+
+## 0.12.0
+
+### Minor Changes
+
+- [#101](https://github.com/modern-admin/modern-admin/pull/101) [`6a24e6d`](https://github.com/modern-admin/modern-admin/commit/6a24e6d6e0fcfac2f17b38191ac7543912773ed1) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Support virtual related tables and typed filters through chains of scalar references, preserving permissions, hooks, pagination and export. Recheck relation membership on reads and refresh dependent client lists after mutations. Add translated labels and validation errors in all locales.
+
+### Patch Changes
+
+- [#98](https://github.com/modern-admin/modern-admin/pull/98) [`29c3a22`](https://github.com/modern-admin/modern-admin/commit/29c3a220a81cfa7018eada015fa6644edadab720) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Update external dependencies to the latest stable releases and pin the tested
+  versions across packages and generated projects. Refresh the lockfile, move form
+  resolvers to v6, and keep TypeScript 7 declaration builds working with the
+  TypeScript 6 API alias and an updated unplugin-dts patch.
+  
+  Align Better Auth lookup indexes across the canonical Prisma and Drizzle
+  schemas, reference app, and CLI scaffold. Existing installations should add
+  missing indexes through their ORM migration workflow; the Prisma generator
+  preserves existing models. The 1.7.5 → 1.7.12 upgrade itself adds no columns.
+  
+  Include `prisma.config.ts` in generated hosts so Prisma 7 database commands
+  receive `DATABASE_URL` and the configured migration directory.
+
+- [#102](https://github.com/modern-admin/modern-admin/pull/102) [`ed92ce8`](https://github.com/modern-admin/modern-admin/commit/ed92ce8a8ecd35cf5a5d535dfcb4d2dfc73b75f4) Thanks [@SergiyIva](https://github.com/SergiyIva)! - `isRecordActionAllowed` now prefers the per-record verdict over the resource snapshot instead of requiring both.
+  
+  `ResourceJSON.actions` is serialized without a record, so a record-dependent
+  predicate such as
+  `isAccessible: ({ record }) => record?.params.ownerId === currentAdmin.id`
+  evaluates false there and the action is dropped for the whole resource. AND-ing
+  that with `RecordJSON.recordActions` blanked out row menus (show/edit/delete)
+  and raised a forbidden page on the edit route for records the server would have
+  happily acted on.
+  
+  `recordActions` is computed by `invoke()` from the principal gates (api-key
+  allowlist, role matrix) _and_ `isVisible`/`isAccessible` resolved against that
+  record, so it already covers everything the resource-level list covers. It is
+  now authoritative when present; the resource snapshot remains the fallback for
+  records that never went through `invoke()` and carry no verdict.
+
+- [#99](https://github.com/modern-admin/modern-admin/pull/99) [`eeba169`](https://github.com/modern-admin/modern-admin/commit/eeba1699048de5faf635a35f5e1e032237337fd1) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Persist the active related-records tab and each related table's filters, pagination,
+  page size, and sorting in the record URL so they survive navigation back and reloads.
+  Keep locked parent filters authoritative over URL filters for related tables and exports.
+- Updated dependencies [[`29c3a22`](https://github.com/modern-admin/modern-admin/commit/29c3a220a81cfa7018eada015fa6644edadab720), [`b0fc742`](https://github.com/modern-admin/modern-admin/commit/b0fc742d9d41fbee10ad18ee3d827cecd342496a), [`f26698c`](https://github.com/modern-admin/modern-admin/commit/f26698cc8743e222bf1442fd982da22783530e6f), [`6a24e6d`](https://github.com/modern-admin/modern-admin/commit/6a24e6d6e0fcfac2f17b38191ac7543912773ed1)]:
+  - @modern-admin/core@0.12.0
+  - @modern-admin/i18n@0.12.0
+  - @modern-admin/ui@0.12.0
+
 ## 0.11.0
 
 ### Minor Changes

@@ -1,5 +1,33 @@
 # @modern-admin/ui
 
+## 0.13.1
+
+### Patch Changes
+
+- [#106](https://github.com/modern-admin/modern-admin/pull/106) [`1ff58a6`](https://github.com/modern-admin/modern-admin/commit/1ff58a6be1712941ceb4e25ed8dc199c389c4489) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Publish the UI package on the same release line as the custom UI generator so
+  new hosts can install the dependencies added by `modern-admin setup-ui`.
+
+## 0.12.0
+
+### Patch Changes
+
+- [#98](https://github.com/modern-admin/modern-admin/pull/98) [`29c3a22`](https://github.com/modern-admin/modern-admin/commit/29c3a220a81cfa7018eada015fa6644edadab720) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Update external dependencies to the latest stable releases and pin the tested
+  versions across packages and generated projects. Refresh the lockfile, move form
+  resolvers to v6, and keep TypeScript 7 declaration builds working with the
+  TypeScript 6 API alias and an updated unplugin-dts patch.
+  
+  Align Better Auth lookup indexes across the canonical Prisma and Drizzle
+  schemas, reference app, and CLI scaffold. Existing installations should add
+  missing indexes through their ORM migration workflow; the Prisma generator
+  preserves existing models. The 1.7.5 → 1.7.12 upgrade itself adds no columns.
+  
+  Include `prisma.config.ts` in generated hosts so Prisma 7 database commands
+  receive `DATABASE_URL` and the configured migration directory.
+
+- [#100](https://github.com/modern-admin/modern-admin/pull/100) [`f26698c`](https://github.com/modern-admin/modern-admin/commit/f26698cc8743e222bf1442fd982da22783530e6f) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Keep toast notifications interactive over modal surfaces, supporting close buttons
+  and swipes in every direction without dismissing the underlying dialog. Let info
+  hints toggle on tap while preserving mouse hover and keyboard focus tooltips.
+
 ## 0.11.0
 
 ### Patch Changes

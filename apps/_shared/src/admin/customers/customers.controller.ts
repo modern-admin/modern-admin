@@ -32,6 +32,8 @@ import type { CustomerRow } from '../types.js'
   relatedResources: [
     { resourceId: 'posts', foreignKey: 'authorId' },
     { resourceId: 'comments', foreignKey: 'authorId' },
+    // Virtual table of comments on all posts authored by this customer.
+    { resourceId: 'comments', foreignKey: 'postId.authorId', label: 'common:commentsOnPosts' },
   ],
   features: [
     passwordsFeature({

@@ -78,7 +78,7 @@ export {
   type WebhookResponse,
   type WebhooksListResponse,
 } from './webhooks.controller.js'
-export { ModernAdminAuthGuard, ModernAdminConfigGuard } from './auth.guard.js'
+export { AllowApiKey, ModernAdminAuthGuard, ModernAdminConfigGuard } from './auth.guard.js'
 export { ModernAdminCacheInterceptor } from './cache.interceptor.js'
 export { NoHttpCache, NO_HTTP_CACHE } from './no-http-cache.js'
 export { MODERN_ADMIN, MODERN_ADMIN_OPTIONS, MODERN_ADMIN_API_KEY_SERVICE } from './tokens.js'
@@ -136,7 +136,10 @@ export {
 // Better Auth middleware — use instead of bare toNodeHandler() so that
 // @modern-admin/nest's AuthController endpoints (/me, /login, /ui-props)
 // are not shadowed by Better Auth's greedy handler.
-export { createBetterAuthMiddleware } from './better-auth-middleware.js'
+export {
+  createBetterAuthMiddleware,
+  type BetterAuthMiddlewareOptions,
+} from './better-auth-middleware.js'
 
 // Standalone static-UI middleware — serves the prebuilt @modern-admin/web SPA
 // under a configurable mount path (default `/admin`).

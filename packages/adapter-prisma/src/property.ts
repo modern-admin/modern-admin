@@ -28,6 +28,7 @@ export class PrismaProperty extends BaseProperty {
     enums: readonly DmmfEnum[] = [],
     position = 1,
     referenceOverride: string | null = null,
+    referenceFields: readonly string[] | null = null,
   ) {
     const enumDef = field.kind === 'enum' ? enums.find((e) => e.name === field.type) : undefined
     const reference = field.kind === 'object' ? field.type : referenceOverride
@@ -50,6 +51,7 @@ export class PrismaProperty extends BaseProperty {
       isArray: field.isList,
       position,
       reference,
+      referenceFields,
       availableValues: enumDef ? enumDef.values.map((v) => v.name) : null,
     })
     this.field = field
@@ -79,6 +81,10 @@ export class PrismaProperty extends BaseProperty {
    */
   foreignKeyFields(): readonly string[] {
     return this.field.relationFromFields ?? []
+  }
+
+  override isStored(): boolean {
+    return this.field.kind !== 'object'
   }
 
   override isVisible(): boolean {

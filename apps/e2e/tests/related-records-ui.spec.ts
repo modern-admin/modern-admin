@@ -34,7 +34,7 @@ const adminApi = (path: string): string => `${API_URL}/admin/api${path}`
 /** Pick a seeded customer that has at least one related post and one comment.
  *  In practice #1 always satisfies this, but we look it up so the spec
  *  doesn't break if the seeder ever shuffles. */
-async function customerWithRelations(request: APIRequestContext): Promise<string> {
+async function customerWithRelations(request: APIRequestContext, minPosts = 1): Promise<string> {
   const res = await request.get(adminApi('/resources/customers/actions/list?perPage=10'))
   expect(res.ok()).toBeTruthy()
   const customers = (await res.json()).records as Array<{ id: string }>
@@ -48,7 +48,7 @@ async function customerWithRelations(request: APIRequestContext): Promise<string
     if (posts.ok() && comments.ok()) {
       const postsBody = await posts.json()
       const commentsBody = await comments.json()
-      if (postsBody.records.length > 0 && commentsBody.records.length > 0) {
+      if (postsBody.meta.total >= minPosts && commentsBody.records.length > 0) {
         return String(c.id)
       }
     }
@@ -68,6 +68,58 @@ function activeRelatedPanel(page: Page) {
 }
 
 test.describe('RelatedRecordsTabs — customers show page', () => {
+  test('virtual Comments on posts tab contains comments across all customer posts', async ({
+    page,
+    request,
+  }) => {
+    const customerId = await customerWithRelations(request)
+    const postsRes = await request.get(
+      adminApi(`/resources/posts/actions/list?perPage=200&filters[authorId]=${customerId}`),
+    )
+    expect(postsRes.ok()).toBeTruthy()
+    const posts = (await postsRes.json()).records as Array<{ id: string }>
+    const expectedQuery = new URLSearchParams({ perPage: '200' })
+    expectedQuery.set('filters[postId][operator]', 'in')
+    for (const post of posts) expectedQuery.append('filters[postId][values][]', post.id)
+    const expectedRes = await request.get(
+      adminApi(`/resources/comments/actions/list?${expectedQuery}`),
+    )
+    expect(expectedRes.ok()).toBeTruthy()
+    const expected = await expectedRes.json()
+
+    const relationQuery = new URLSearchParams({ perPage: '200' })
+    relationQuery.set('filters[postId.authorId][operator]', 'eq')
+    relationQuery.set('filters[postId.authorId][value]', customerId)
+    const actualRes = await request.get(
+      adminApi(`/resources/comments/actions/list?${relationQuery}`),
+    )
+    expect(actualRes.ok()).toBeTruthy()
+    const actual = await actualRes.json()
+    expect(actual.records.map((r: { id: string }) => r.id).sort()).toEqual(
+      expected.records.map((r: { id: string }) => r.id).sort(),
+    )
+    expect(actual.meta.total).toBe(expected.meta.total)
+    expect(actualRes.headers()['x-cache']).toBe('BYPASS')
+
+    await page.setViewportSize({ width: 375, height: 812 })
+    await openCustomerShow(page, customerId)
+    await page.getByRole('tab', { name: /^comments on posts$/i }).click()
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get('relatedTab'))
+      .toBe('comments::postId.authorId')
+    await page.reload()
+    await expect(page.getByRole('tab', { name: /^comments on posts$/i })).toHaveAttribute(
+      'data-state',
+      'active',
+    )
+    const panel = activeRelatedPanel(page)
+    if (expected.meta.total > 0)
+      await expect(panel.locator('tbody tr')).toHaveCount(Math.min(10, expected.meta.total))
+    await expect(page.locator('body')).toBeVisible()
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true)
+  })
   test('renders both Posts and Comments tabs with Posts active', async ({ page, request }) => {
     const customerId = await customerWithRelations(request)
     await openCustomerShow(page, customerId)
@@ -98,6 +150,111 @@ test.describe('RelatedRecordsTabs — customers show page', () => {
     const panel = activeRelatedPanel(page)
     // Comments table also has at least one row (verified above).
     await expect(panel.locator('tbody tr')).not.toHaveCount(0, { timeout: 15_000 })
+  })
+
+  test('related table state survives opening a record, back and reload', async ({
+    page,
+    request,
+  }) => {
+    const customerId = await customerWithRelations(request, 3)
+    const unfilteredResponse = await request.get(
+      adminApi(
+        `/resources/posts/actions/list?perPage=200&sortBy=title&direction=desc&filters[authorId]=${customerId}`,
+      ),
+    )
+    expect(unfilteredResponse.ok()).toBeTruthy()
+    const unfiltered = await unfilteredResponse.json()
+    const excludedTitle = unfiltered.records[0].params.title as string
+    const titleFilter = new URLSearchParams({
+      'filters[title][operator]': 'nco',
+      'filters[title][value]': excludedTitle,
+    })
+    const response = await request.get(
+      adminApi(
+        `/resources/posts/actions/list?perPage=1&page=2&sortBy=title&direction=desc&filters[authorId]=${customerId}&${titleFilter}`,
+      ),
+    )
+    expect(response.ok()).toBeTruthy()
+    const filtered = await response.json()
+    expect(filtered.meta.total).toBeLessThan(unfiltered.meta.total)
+    expect(filtered.meta.total).toBeGreaterThanOrEqual(2)
+    // Page 2 must differ without the filter, otherwise Back/reload could
+    // silently drop the filter while still rendering the expected row.
+    expect(filtered.records[0].id).not.toBe(unfiltered.records[1].id)
+    const expectedTitle = filtered.records[0].params.title as string
+    const params = new URLSearchParams({
+      relatedTab: 'posts::authorId',
+      'related[posts::authorId][perPage]': '1',
+      'related[posts::authorId][sortBy]': 'title',
+      'related[posts::authorId][direction]': 'desc',
+      'related[posts::authorId][filters][title][operator]': 'nco',
+      'related[posts::authorId][filters][title][value]': excludedTitle,
+    })
+    await page.goto(`/resources/customers/${customerId}?${params}`)
+    const panel = activeRelatedPanel(page)
+    const rows = panel.locator('tbody tr:not([aria-busy="true"])')
+    await expect(rows).toHaveCount(1)
+    await panel.getByRole('button', { name: '2', exact: true }).click()
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get('related[posts::authorId][page]'))
+      .toBe('2')
+    await expect(rows).toHaveCount(1)
+    await expect(rows.first()).toContainText(expectedTitle)
+    const savedUrl = page.url()
+    const savedRow = await rows.first().innerText()
+
+    // Open the child explicitly, independent of column order and whether a
+    // particular cell links to show or edit. Back must restore the parent query.
+    await rows.first().getByRole('button', { name: 'Open menu', exact: true }).click()
+    await page.getByRole('menu').getByRole('menuitem', { name: 'Show', exact: true }).click()
+    await expect(page).toHaveURL(/\/resources\/posts\/[^/]+$/)
+    await page.goBack()
+    await expect(page).toHaveURL(savedUrl)
+    await expect(rows).toHaveCount(1)
+    await expect(rows.first()).toHaveText(savedRow, { useInnerText: true })
+    await expect(panel.getByRole('button', { name: '2', exact: true })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+
+    await page.reload()
+    await expect(page).toHaveURL(savedUrl)
+    await expect(rows).toHaveCount(1)
+    await expect(rows.first()).toHaveText(savedRow, { useInnerText: true })
+    // Cross-check against the same query with the parent's locked FK.
+    await expect(rows.first()).toContainText(expectedTitle)
+  })
+
+  test('tabs keep independent state and preserve an explicit page size of 20', async ({
+    page,
+    request,
+  }) => {
+    const customerId = await customerWithRelations(request)
+    await openCustomerShow(page, customerId)
+    const panel = activeRelatedPanel(page)
+    await expect(panel.locator('tbody tr:not([aria-busy="true"])').first()).toBeVisible()
+    await panel.getByRole('combobox').click()
+    await page.getByRole('option', { name: '20', exact: true }).click()
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get('related[posts::authorId][perPage]'))
+      .toBe('20')
+
+    await page.getByRole('tab', { name: /^comments$/i }).click()
+    await expect(panel.getByRole('combobox')).toHaveText('10')
+    await panel.getByRole('combobox').click()
+    await page.getByRole('option', { name: '50', exact: true }).click()
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get('related[comments::authorId][perPage]'))
+      .toBe('50')
+    await page.reload()
+    await expect(page.getByRole('tab', { name: /^comments$/i })).toHaveAttribute(
+      'data-state',
+      'active',
+    )
+    await expect(panel.getByRole('combobox')).toHaveText('50')
+    await page.getByRole('tab', { name: /^posts$/i }).click()
+    await expect(panel.getByRole('combobox')).toHaveText('20')
+    expect(new URL(page.url()).searchParams.get('related[comments::authorId][perPage]')).toBe('50')
   })
 
   test('foreign-key filter is strict equality, not substring', async ({ request }) => {
@@ -162,50 +319,87 @@ test.describe('RelatedRecordsTabs — customers show page', () => {
     await expect(panel.locator('tbody tr')).toHaveCount(pageSize, { timeout: 15_000 })
   })
 
-  test('Posts tab exports only this customer records', async ({ page, request }) => {
-    // The embedded list keeps its Export button (`features.export` defaults
-    // to true) and `ResourceListPage` merges `lockedFilters` into the query
-    // handed to the dialog — so the download must be scoped to the parent.
-    const customerId = await customerWithRelations(request)
-    const apiRes = await request.get(
-      adminApi(`/resources/posts/actions/list?perPage=200&filters[authorId]=${customerId}`),
-    )
-    expect(apiRes.ok()).toBeTruthy()
-    const apiBody = await apiRes.json()
-    const expectedIds = new Set((apiBody.records as Array<{ id: string }>).map((r) => String(r.id)))
+  for (const override of ['none', 'scalar', 'structured'] as const) {
+    test(`Posts tab and export keep the parent filter with ${override} URL override`, async ({
+      page,
+      request,
+    }) => {
+      // The embedded list keeps its Export button (`features.export` defaults
+      // to true) and `ResourceListPage` merges `lockedFilters` into the query
+      // handed to the dialog — so the download must be scoped to the parent.
+      const customerId = await customerWithRelations(request)
+      const apiRes = await request.get(
+        adminApi(`/resources/posts/actions/list?perPage=200&filters[authorId]=${customerId}`),
+      )
+      expect(apiRes.ok()).toBeTruthy()
+      const apiBody = await apiRes.json()
+      const expectedIds = new Set(
+        (apiBody.records as Array<{ id: string }>).map((r) => String(r.id)),
+      )
 
-    await openCustomerShow(page, customerId)
-    const panel = activeRelatedPanel(page)
-    await expect(panel.locator('tbody tr')).not.toHaveCount(0, { timeout: 15_000 })
+      const params = new URLSearchParams()
+      if (override !== 'none') {
+        const otherResponse = await request.get(
+          adminApi(
+            `/resources/posts/actions/list?perPage=1&filters[authorId][operator]=neq&filters[authorId][value]=${customerId}`,
+          ),
+        )
+        expect(otherResponse.ok()).toBeTruthy()
+        const otherId = (await otherResponse.json()).records[0].params.authorId as string
+        expect(otherId).not.toBe(customerId)
+        const key = 'related[posts::authorId][filters][authorId]'
+        if (override === 'scalar') params.set(key, otherId)
+        else {
+          params.set(`${key}[operator]`, 'eq')
+          params.set(`${key}[value]`, otherId)
+        }
+      }
+      const listResponse = page.waitForResponse((response) =>
+        response.url().includes('/resources/posts/actions/list'),
+      )
+      await page.goto(`/resources/customers/${customerId}?${params}`)
+      const list = await listResponse
+      expect(list.ok()).toBeTruthy()
+      const listParams = new URL(list.url()).searchParams
+      expect(listParams.get('filters[authorId][operator]')).toBe('eq')
+      expect(listParams.get('filters[authorId][value]')).toBe(customerId)
+      const listed = await list.json()
+      expect(listed.meta.total).toBe(expectedIds.size)
+      for (const record of listed.records as Array<{ id: string }>) {
+        expect(expectedIds.has(String(record.id))).toBeTruthy()
+      }
+      const panel = activeRelatedPanel(page)
+      await expect(panel.locator('tbody tr')).not.toHaveCount(0, { timeout: 15_000 })
 
-    await panel
-      .getByRole('button', { name: /^export$/i })
-      .first()
-      .click()
-    // The dialog renders in a portal at the document root, not inside the panel.
-    const dialog = page.getByRole('dialog', { name: /export records/i })
-    await expect(dialog).toBeVisible({ timeout: 10_000 })
+      await panel
+        .getByRole('button', { name: /^export$/i })
+        .first()
+        .click()
+      // The dialog renders in a portal at the document root, not inside the panel.
+      const dialog = page.getByRole('dialog', { name: /export records/i })
+      await expect(dialog).toBeVisible({ timeout: 10_000 })
 
-    const downloadPromise = page.waitForEvent('download', { timeout: 30_000 })
-    await dialog.getByRole('button', { name: /^json/i }).click()
-    const download = await downloadPromise
-    expect(download.suggestedFilename()).toMatch(/^posts-\d{8}-\d{6}\.json$/)
+      const downloadPromise = page.waitForEvent('download', { timeout: 30_000 })
+      await dialog.getByRole('button', { name: /^json/i }).click()
+      const download = await downloadPromise
+      expect(download.suggestedFilename()).toMatch(/^posts-\d{8}-\d{6}\.json$/)
 
-    const path = `playwright/.artifacts/${download.suggestedFilename()}`
-    await download.saveAs(path)
-    const fs = await import('node:fs/promises')
-    const body = await fs.readFile(path, 'utf8')
-    // `recordsToJson` prepends a `// Query: …` JSONC comment carrying the
-    // active query — the locked FK filter has to be in there.
-    const [comment] = body.split('\n')
-    expect(comment).toContain('authorId')
-    expect(comment).toContain(customerId)
+      const path = `playwright/.artifacts/${download.suggestedFilename()}`
+      await download.saveAs(path)
+      const fs = await import('node:fs/promises')
+      const body = await fs.readFile(path, 'utf8')
+      // `recordsToJson` prepends a `// Query: …` JSONC comment carrying the
+      // active query — the locked FK filter has to be in there.
+      const [comment] = body.split('\n')
+      expect(comment).toContain('authorId')
+      expect(comment).toContain(customerId)
 
-    const parsed = JSON.parse(body.replace(/^\s*\/\/[^\n]*\n/, '')) as Array<{ id: string }>
-    expect(parsed.length).toBe(expectedIds.size)
-    const leaked = parsed.map((r) => String(r.id)).filter((id) => !expectedIds.has(id))
-    expect(leaked, `export leaked posts of other customers: ${leaked.join(', ')}`).toEqual([])
-  })
+      const parsed = JSON.parse(body.replace(/^\s*\/\/[^\n]*\n/, '')) as Array<{ id: string }>
+      expect(parsed.length).toBe(expectedIds.size)
+      const leaked = parsed.map((r) => String(r.id)).filter((id) => !expectedIds.has(id))
+      expect(leaked, `export leaked posts of other customers: ${leaked.join(', ')}`).toEqual([])
+    })
+  }
 
   test('Posts tab paginates next page inside the embedded list', async ({ page, request }) => {
     const customerId = await customerWithRelations(request)

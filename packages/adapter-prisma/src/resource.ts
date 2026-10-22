@@ -67,12 +67,14 @@ const isPrismaResourceConfig = (raw: unknown): raw is PrismaResourceConfig =>
   'client' in raw &&
   typeof (raw as { model?: { fields?: unknown } }).model?.fields === 'object'
 
-const buildForeignKeyReferenceMap = (model: DmmfModel): Record<string, string> => {
-  const map: Record<string, string> = {}
+const buildForeignKeyReferenceMap = (
+  model: DmmfModel,
+): Record<string, { resourceId: string; fields: readonly string[] | null }> => {
+  const map: Record<string, { resourceId: string; fields: readonly string[] | null }> = {}
   for (const field of model.fields) {
     if (field.kind !== 'object') continue
     for (const fk of field.relationFromFields ?? []) {
-      map[fk] = field.type
+      map[fk] = { resourceId: field.type, fields: field.relationToFields ?? null }
     }
   }
   return map
@@ -115,7 +117,13 @@ export class PrismaResource extends BaseResource {
     this.writableForeignKeys = new Set(Object.keys(foreignKeyReferences))
     this._properties = config.model.fields.map(
       (field, index) =>
-        new PrismaProperty(field, this.enums, index + 1, foreignKeyReferences[field.name] ?? null),
+        new PrismaProperty(
+          field,
+          this.enums,
+          index + 1,
+          foreignKeyReferences[field.name]?.resourceId ?? null,
+          foreignKeyReferences[field.name]?.fields ?? null,
+        ),
     )
   }
 

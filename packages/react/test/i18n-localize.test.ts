@@ -9,6 +9,17 @@ const rel = (overrides: Partial<RelatedResource>): RelatedResource => ({
 })
 
 describe('localizeRelatedResources', () => {
+  test('distinguishes direct and virtual tables of the same resource', () => {
+    const input = [
+      rel({ resourceId: 'comments', foreignKey: 'authorId' }),
+      rel({ resourceId: 'comments', foreignKey: 'postId.authorId' }),
+    ]
+    const result = localizeRelatedResources(input, {
+      comments: 'Комментарии',
+      'comments::postId.authorId': 'Комментарии к постам',
+    })
+    expect(result?.map((r) => r.label)).toEqual(['Комментарии', 'Комментарии к постам'])
+  })
   test('returns undefined when input is undefined', () => {
     expect(localizeRelatedResources(undefined)).toBeUndefined()
   })

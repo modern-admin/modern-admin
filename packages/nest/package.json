@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/nest",
-  "version": "0.11.0",
+  "version": "0.13.0",
   "description": "NestJS module wrapping @modern-admin/core — REST controllers, guards, cache, OpenAPI.",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/nest#readme",
   "keywords": [
@@ -50,34 +50,35 @@
     "test": "bun test"
   },
   "dependencies": {
+    "@modern-admin/auth-better-auth": "workspace:*",
     "@modern-admin/core": "workspace:^",
     "@modern-admin/feature-upload": "workspace:^",
     "@modern-admin/i18n": "workspace:^",
     "@modern-admin/queue": "workspace:^",
-    "@nestjs/bullmq": "^12.0.0",
-    "@nestjs/common": "^12.0.3",
-    "@nestjs/core": "^12.0.3",
-    "@nestjs/swagger": "^12.0.1",
-    "bullmq": "6.3.8",
-    "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.2",
-    "zod": "4.6.5"
+    "@nestjs/bullmq": "12.0.0",
+    "@nestjs/common": "12.2.0",
+    "@nestjs/core": "12.2.0",
+    "@nestjs/swagger": "12.0.3",
+    "bullmq": "6.4.0",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2",
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
-    "@nestjs/testing": "^12.0.3",
-    "@scalar/nestjs-api-reference": "1.2.19",
-    "@types/bun": "1.4.2",
-    "@types/express": "^5.0.6",
-    "typescript": "^7.0.2"
+    "@nestjs/testing": "12.2.0",
+    "@scalar/nestjs-api-reference": "1.2.30",
+    "@types/bun": "1.4.3",
+    "@types/express": "5.0.6",
+    "typescript": "7.0.2"
   },
   "peerDependencies": {
-    "@ai-sdk/openai-compatible": "^3.0.40",
-    "@openrouter/ai-sdk-provider": "^3.0.0",
-    "@scalar/nestjs-api-reference": "1.2.19",
-    "express": "^5.2.1",
-    "@types/express": "^5.0.0",
-    "ai": "^7.0.84"
+    "@ai-sdk/openai-compatible": "3.0.75",
+    "@openrouter/ai-sdk-provider": "3.1.0",
+    "@scalar/nestjs-api-reference": "1.2.30",
+    "express": "5.3.0",
+    "@types/express": "5.0.6",
+    "ai": "7.0.148"
   },
   "peerDependenciesMeta": {
     "@ai-sdk/openai-compatible": {

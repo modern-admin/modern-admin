@@ -413,6 +413,14 @@ export class CacheRuntime {
       options.enabled && beforeRead
         ? await this.safeGet<T>(key, counters)
         : { ok: false, value: null }
+    // A forced read supersedes an older fetch of this key, even when no
+    // cached baseline exists yet. Fence that fetch before reading the source
+    // so it cannot later overwrite the refreshed response.
+    let fetchSnapshot = beforeRead
+    if (options.enabled && this.inFlight.has(key)) {
+      await this.invalidateTags(tags)
+      fetchSnapshot = await this.snapshot(tags)
+    }
     const started = Date.now()
     let value: T
     try {
@@ -423,7 +431,14 @@ export class CacheRuntime {
     }
     if (!options.enabled) return value
 
-    let writeSnapshot = beforeRead
+    // A mutation during the forced fetch owns the newer epoch. Return this
+    // read to its caller without caching it or reviving invalidated scopes.
+    if (!sameSnapshot(fetchSnapshot, await this.snapshot(tags))) {
+      counters.skippedWrites++
+      return value
+    }
+
+    let writeSnapshot = fetchSnapshot
     if (previous.ok && previous.value !== null && previous.value !== undefined) {
       const before = serializeForCompare(previous.value)
       const after = serializeForCompare(value)

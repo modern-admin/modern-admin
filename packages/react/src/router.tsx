@@ -42,12 +42,18 @@ export interface ListQueryState {
   filters?: FilterMap
 }
 
+/** Independent related tables, keyed by `resourceId::foreignKey`. */
+export interface ShowQueryState {
+  relatedTab?: string
+  related?: Record<string, ListQueryState>
+}
+
 export type Route =
   | { name: 'home' }
   | { name: 'audit-log' }
   | { name: 'cache' }
   | { name: 'list'; resourceId: string; query?: ListQueryState }
-  | { name: 'show'; resourceId: string; recordId: string }
+  | { name: 'show'; resourceId: string; recordId: string; query?: ShowQueryState }
   | { name: 'edit'; resourceId: string; recordId: string }
   | { name: 'new'; resourceId: string }
   /**
@@ -95,16 +101,53 @@ const parseListQuery = (search: string): ListQueryState | undefined => {
   return Object.keys(out).length > 0 ? out : undefined
 }
 
-const buildListQuery = (q: ListQueryState | undefined): string => {
+const buildListQuery = (q: ListQueryState | undefined, defaultPerPage = 20): string => {
   if (!q) return ''
   const params = new URLSearchParams()
   if (q.page != null && q.page !== 1) params.set('page', String(q.page))
-  if (q.perPage != null && q.perPage !== 20) params.set('perPage', String(q.perPage))
+  if (q.perPage != null && q.perPage !== defaultPerPage) params.set('perPage', String(q.perPage))
   if (q.sortBy) params.set('sortBy', q.sortBy)
   if (q.direction) params.set('direction', q.direction)
   if (q.filters) appendFilterQuery(params, q.filters)
   const s = params.toString()
   return s ? `?${s}` : ''
+}
+
+const parseShowQuery = (search: string): ShowQueryState | undefined => {
+  const params = new URLSearchParams(search)
+  const out: ShowQueryState = {}
+  const relatedTab = params.get('relatedTab')
+  if (relatedTab) out.relatedTab = relatedTab
+  const tables = new Map<string, URLSearchParams>()
+  params.forEach((value, key) => {
+    const match = /^related\[([^\]]+)]\[([^\]]+)](.*)$/.exec(key)
+    if (!match) return
+    const tableKey = match[1]!
+    const table = tables.get(tableKey) ?? new URLSearchParams()
+    table.append(match[2]! + match[3]!, value)
+    tables.set(tableKey, table)
+  })
+  const related = new Map<string, ListQueryState>()
+  for (const [key, params] of tables) {
+    const query = parseListQuery(params.toString())
+    if (query) related.set(key, query)
+  }
+  if (related.size) out.related = Object.fromEntries(related)
+  return Object.keys(out).length ? out : undefined
+}
+
+const buildShowQuery = (q: ShowQueryState | undefined): string => {
+  if (!q) return ''
+  const params = new URLSearchParams()
+  if (q.relatedTab) params.set('relatedTab', q.relatedTab)
+  for (const [key, query] of Object.entries(q.related ?? {})) {
+    // Related tables default to 10 rows; preserve an explicit size of 20.
+    new URLSearchParams(buildListQuery(query, 10)).forEach((value, name) => {
+      params.append(`related[${key}]${name.replace(/^([^[]+)/, '[$1]')}`, value)
+    })
+  }
+  const search = params.toString()
+  return search ? `?${search}` : ''
 }
 
 /** Read a bulk action's selection back out of `?recordIds=a,b,c`. Returns
@@ -160,7 +203,15 @@ export const parseLocation = (pathname: string, searchStr: string): Route => {
     if (parts[2] && parts[3] === 'edit') {
       return { name: 'edit', resourceId, recordId: decodeURIComponent(parts[2]) }
     }
-    if (parts[2]) return { name: 'show', resourceId, recordId: decodeURIComponent(parts[2]) }
+    if (parts[2]) {
+      const query = parseShowQuery(searchStr)
+      return {
+        name: 'show',
+        resourceId,
+        recordId: decodeURIComponent(parts[2]),
+        ...(query ? { query } : {}),
+      }
+    }
     const query = parseListQuery(searchStr)
     return query ? { name: 'list', resourceId, query } : { name: 'list', resourceId }
   }
@@ -180,7 +231,7 @@ export const buildHref = (route: Route): string => {
     case 'list':
       return `/resources/${encodeURIComponent(route.resourceId)}${buildListQuery(route.query)}`
     case 'show':
-      return `/resources/${encodeURIComponent(route.resourceId)}/${encodeURIComponent(route.recordId)}`
+      return `/resources/${encodeURIComponent(route.resourceId)}/${encodeURIComponent(route.recordId)}${buildShowQuery(route.query)}`
     case 'edit':
       return `/resources/${encodeURIComponent(route.resourceId)}/${encodeURIComponent(route.recordId)}/edit`
     case 'new':

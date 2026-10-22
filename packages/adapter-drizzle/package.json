@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/adapter-drizzle",
-  "version": "0.11.0",
+  "version": "0.13.0",
   "description": "Drizzle ORM adapter for Modern Admin — implements BaseDatabase/BaseResource on Drizzle schemas.",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/adapter-drizzle#readme",
   "keywords": [
@@ -53,11 +53,11 @@
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
-    "@types/bun": "1.4.2",
-    "drizzle-orm": "^0.45.2",
-    "typescript": "^7.0.2"
+    "@types/bun": "1.4.3",
+    "drizzle-orm": "0.45.4",
+    "typescript": "7.0.2"
   },
   "peerDependencies": {
-    "drizzle-orm": "^0.45.2"
+    "drizzle-orm": "0.45.4"
   }
 }

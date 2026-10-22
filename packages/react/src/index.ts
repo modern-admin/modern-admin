@@ -57,6 +57,7 @@ export {
   useResources,
   useRecords,
   useRefreshRecords,
+  useRefreshRecord,
   useRecord,
   useCreateRecord,
   useUpdateRecord,
@@ -167,6 +168,7 @@ export {
   parseLocation,
   type Route,
   type ListQueryState,
+  type ShowQueryState,
   type LinkProps,
 } from './router.js'
 export { AdminApp, type AdminAppProps } from './admin-app.js'

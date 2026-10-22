@@ -6,22 +6,22 @@
 #           Unit tests are hermetic (Redis is faked, no Postgres needed),
 #           so no services are provisioned for this job.
 #
-#   e2e   — full-stack Playwright suite. Postgres + Redis come from the
-#           repo's docker-compose.yml (same containers as local dev), the
+#   e2e   — full-stack Playwright suite in the official Playwright image.
+#           Postgres + Redis run as GitHub service containers, the
 #           schema is pushed with `prisma db push` (no checked-in
 #           migrations), and Playwright boots both dev servers itself
 #           (see apps/e2e/playwright.config.ts webServer entries). Excludes
 #           the visual-regression spec (see below).
 #
-#           The chromium build is cached under ~/.cache/ms-playwright, keyed
-#           by the @playwright/test version.
+#           Browsers and their system libraries are preinstalled, avoiding
+#           repeated browser dependency downloads from Ubuntu mirrors.
 #
 #   e2e-visual — the visual-regression spec only, run INSIDE the official
 #           Playwright container so font rendering is deterministic and the
 #           checked-in `*-chromium-linux.png` baselines match byte-for-byte.
 #           Isolated from the main e2e job so a container/service hiccup can't
 #           take the other specs down. Baselines are regenerated in the same
-#           image (`mcr.microsoft.com/playwright:v1.63.0-noble`).
+#           image (`mcr.microsoft.com/playwright:v1.64.1-noble`).
 
 name: CI
 
@@ -107,10 +107,32 @@ jobs:
     runs-on: ubuntu-latest
     # Normally ~10 min, almost all of it the spec run (retries: 2 on CI).
     timeout-minutes: 30
+    # Match @playwright/test and the visual job; browsers and OS dependencies
+    # are already installed, so no browser dependency apt step is needed.
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+    # Service containers share the job's network. Keep these images in step with
+    # docker-compose.yml by hand: Dependabot's docker-compose ecosystem updates
+    # that file, but no ecosystem touches image tags inside a workflow.
+    services:
+      postgres:
+        image: postgres:18.6-alpine
+        env:
+          POSTGRES_USER: admin
+          POSTGRES_PASSWORD: admin
+          POSTGRES_DB: modern_admin
+        options: >-
+          --health-cmd "pg_isready -U admin -d modern_admin"
+          --health-interval 10s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:8.10.2-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s --health-timeout 5s --health-retries 10
     env:
-      # Matches the credentials in docker-compose.yml.
-      DATABASE_URL: postgresql://admin:admin@127.0.0.1:5432/modern_admin?schema=public
-      REDIS_URL: redis://localhost:6379
+      # Service containers are reachable by their labels inside the job container.
+      DATABASE_URL: postgresql://admin:admin@postgres:5432/modern_admin?schema=public
+      REDIS_URL: redis://redis:6379
       # buildBetterAuth() refuses to boot without a strong secret (≥32 chars,
       # not the `replace-me` placeholder). CI runs against an ephemeral test
       # DB, so a fixed non-production value is fine here.
@@ -119,6 +141,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      # setup-bun needs unzip; browser dependencies already ship in the image.
+      - name: Install unzip
+        run: apt-get update && apt-get install -y --no-install-recommends unzip
+        timeout-minutes: 5
+
       - name: Setup bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
@@ -126,10 +153,6 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
-
-      # --wait blocks until the postgres/redis healthchecks pass.
-      - name: Start Postgres and Redis
-        run: docker compose up -d --wait
 
       - name: Generate Prisma client
         run: bun run --filter @modern-admin/app-api-prisma prisma:generate
@@ -145,30 +168,6 @@ jobs:
       - name: Build web standalone shell
         run: bun run --filter @modern-admin/web build:standalone
 
-      # The browser build is pinned by the @playwright/test version, so key the
-      # cache on that rather than the lockfile: a lockfile hash would miss on
-      # every unrelated dependency bump, and a `restore-keys` fallback would
-      # keep resurrecting the chromium build of the previous Playwright.
-      - name: Resolve Playwright version
-        id: playwright
-        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
-        working-directory: apps/e2e
-
-      - name: Cache Playwright browsers
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ steps.playwright.outputs.version }}
-
-      # `--with-deps` shells out to apt (on this runner image only for fonts —
-      # the shared libraries are already present). A stalled Ubuntu mirror has
-      # hung this step for 20+ minutes against its usual ~20s, so cap it: a
-      # fast red run is re-runnable, a silent hang is not.
-      - name: Install Playwright browsers
-        run: bunx playwright install --with-deps chromium
-        working-directory: apps/e2e
-        timeout-minutes: 5
-
       # Everything except the visual-regression spec — that one runs in the
       # `e2e-visual` job (container) so baselines are font-deterministic.
       - name: Run e2e tests
@@ -176,7 +175,7 @@ jobs:
 
       - name: Upload Playwright report
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: playwright-report
           path: apps/e2e/playwright-report/
@@ -189,17 +188,15 @@ jobs:
     timeout-minutes: 15
     # Run inside the official Playwright image so chromium + its fonts match
     # the environment the checked-in baselines were generated in. Pin the tag
-    # to the installed @playwright/test version (1.63.0).
+    # to the installed @playwright/test version (1.64.1).
     container:
-      image: mcr.microsoft.com/playwright:v1.63.0-noble
-    # This job runs inside a container, so `docker compose up` (used by the
-    # `e2e` job) is not available here — the same services are declared as job
-    # service containers instead. Keep these two images in step with
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+    # Both E2E jobs use service containers. Keep these images in step with
     # docker-compose.yml by hand: Dependabot's docker-compose ecosystem updates
     # that file, but no ecosystem touches image tags inside a workflow.
     services:
       postgres:
-        image: postgres:18-alpine
+        image: postgres:18.6-alpine
         env:
           POSTGRES_USER: admin
           POSTGRES_PASSWORD: admin
@@ -208,7 +205,7 @@ jobs:
           --health-cmd "pg_isready -U admin -d modern_admin"
           --health-interval 10s --health-timeout 5s --health-retries 10
       redis:
-        image: redis:8-alpine
+        image: redis:8.10.2-alpine
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s --health-timeout 5s --health-retries 10
@@ -223,9 +220,8 @@ jobs:
 
       # The Playwright image is Debian-based but ships no `unzip`, which
       # oven-sh/setup-bun needs to extract the bun archive.
-      # Capped for the same reason as the e2e job's browser install: this is
-      # the only apt call in the job, and a stalled mirror would otherwise
-      # hang it for the full job timeout.
+      # This is the only apt call in the job; cap it so a stalled mirror
+      # cannot hang it for the full job timeout.
       - name: Install unzip
         run: apt-get update && apt-get install -y --no-install-recommends unzip
         timeout-minutes: 5
@@ -254,7 +250,7 @@ jobs:
 
       - name: Upload Playwright report
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: playwright-report-visual
           path: apps/e2e/playwright-report/

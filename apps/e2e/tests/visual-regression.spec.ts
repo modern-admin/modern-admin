@@ -12,11 +12,20 @@ import { expect, test, type Locator, type Page } from '@playwright/test'
  * rendering is deterministic — baselines therefore MUST be regenerated in that
  * same image, not with a host browser (whose fonts differ by ~3% and trip the
  * diff). With the api (:3001) and web (:5173) dev servers already running on
- * the host:
+ * the host (enable host networking in Docker Desktop when using it):
  *
- *   docker run --rm --network host -v "$PWD:/work" -w /work/apps/e2e \
- *     mcr.microsoft.com/playwright:v1.61.1-noble \
- *     npx playwright test visual-regression --update-snapshots
+ *   docker build --platform linux/amd64 -t modern-admin-visual - <<'DOCKERFILE'
+ *   FROM oven/bun:1.4.4 AS bun
+ *   FROM mcr.microsoft.com/playwright:v1.64.1-noble
+ *   COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
+ *   DOCKERFILE
+ *   docker run --rm --platform linux/amd64 --network host \
+ *     -v "$PWD:/work" -w /work/apps/e2e modern-admin-visual \
+ *     bun run e2e visual-regression --update-snapshots
+ *
+ * Bun comes from its Linux image, so this also works with a macOS host.
+ * The amd64 platform matches CI's browser and font-rendering environment.
+ * Both dev servers stay on the host; the container only runs Playwright.
  *
  * Then commit the regenerated `*-chromium-linux.png` files.
  *
@@ -82,7 +91,7 @@ test.describe('Visual regression — apps/web', () => {
   // been regenerated inside the `e2e-visual` container image (see the header
   // comment for the one-liner). Re-enable by dropping `.skip` once the
   // `*-chromium-linux.png` baselines are regenerated in
-  // `mcr.microsoft.com/playwright:v1.61.1-noble` and committed. The lighter
+  // `mcr.microsoft.com/playwright:v1.64.1-noble` and committed. The lighter
   // `customer form` / `settings` snapshots stay active and still gate layout.
   test.skip('home / dashboard', async ({ page }) => {
     await page.goto('/')

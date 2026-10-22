@@ -11,13 +11,13 @@
 import { betterAuth, type BetterAuthOptions, type BetterAuthPlugin } from 'better-auth'
 import { APIError } from 'better-auth/api'
 import { apiKey } from '@better-auth/api-key'
-import { accountIdentityPlugin } from '@modern-admin/auth-better-auth'
+import { accountIdentityPlugin, oauthCallbackReplayPlugin } from '@modern-admin/auth-better-auth'
 import { uuidv7, type ILogStore } from '@modern-admin/core'
 
 export interface BuildBetterAuthOptions {
   /** Database slot to pass through to `betterAuth()`. */
   database: BetterAuthOptions['database']
-  /** Plugins appended after the default api-key plugin (admin, passkey…). */
+  /** Plugins appended after the built-in auth plugins (admin, passkey…). */
   extraPlugins?: unknown[]
   modelNames?: {
     user?: string
@@ -156,6 +156,7 @@ export const buildBetterAuth = ({
   // `user/session/account/verification` config below).
   const plugins: BetterAuthPlugin[] = [
     accountIdentityPlugin(),
+    oauthCallbackReplayPlugin(),
     apiKey({
       apiKeyHeaders: 'x-api-key',
       // Names are required so list rows are identifiable in the UI.
@@ -166,10 +167,17 @@ export const buildBetterAuth = ({
       // the key id onto the principal so `ModernAdmin.invoke()` can gate
       // actions.
       enableSessionForAPIKeys: true,
-      // Rate-limit verification of each key. Leaving this off let an
-      // attacker brute-force key values against the `x-api-key` path with
-      // no throttle. The plugin caps attempts per key/identifier window.
-      rateLimit: { enabled: true },
+      // Per-key request throttle. The plugin's default (10 per 24 h) suits
+      // a key that is verified now and then, not one that authenticates
+      // every admin API call; 600/min is ~10 req/s sustained. The limit is
+      // copied onto the key row at creation, so changing it here does not
+      // re-limit existing keys (update their `rateLimitMax` /
+      // `rateLimitTimeWindow` for that).
+      rateLimit: { enabled: true, timeWindow: 60_000, maxRequests: 600 },
+      // Match the Settings UI and `ApiKeysController`, which accept up to
+      // 3650 days; maxExpiresIn is in days (unlike expiresIn, in seconds).
+      // The plugin's default ceiling is 365 days.
+      keyExpiration: { maxExpiresIn: 3650 },
       schema: { apikey: { modelName: resolvedModelNames.apikey } },
     }) as BetterAuthPlugin,
     ...(extraPlugins as BetterAuthPlugin[]),
