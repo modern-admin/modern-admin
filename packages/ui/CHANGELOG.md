@@ -1,5 +1,12 @@
 # @modern-admin/ui
 
+## 0.13.1
+
+### Patch Changes
+
+- [#106](https://github.com/modern-admin/modern-admin/pull/106) [`1ff58a6`](https://github.com/modern-admin/modern-admin/commit/1ff58a6be1712941ceb4e25ed8dc199c389c4489) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Publish the UI package on the same release line as the custom UI generator so
+  new hosts can install the dependencies added by `modern-admin setup-ui`.
+
 ## 0.12.0
 
 ### Patch Changes
