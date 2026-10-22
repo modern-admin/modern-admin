@@ -55,10 +55,10 @@
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
     "@types/bun": "1.4.2",
-    "better-auth": "1.7.5",
+    "better-auth": "1.7.11",
     "typescript": "^7.0.2"
   },
   "peerDependencies": {
-    "better-auth": "1.7.5"
+    "better-auth": "1.7.11"
   }
 }
