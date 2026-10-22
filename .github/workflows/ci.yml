@@ -102,6 +102,9 @@ jobs:
       - name: Test
         run: bun run test
 
+      - name: Test release tooling
+        run: bun run test:release
+
   e2e:
     name: E2E (Playwright)
     runs-on: ubuntu-latest

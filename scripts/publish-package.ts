@@ -37,10 +37,14 @@ import { readFile, writeFile, readdir, rm, copyFile, access } from 'node:fs/prom
 import { join, resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
+import {
+  packedInternalDependencyProblems,
+  type DependencyManifest,
+} from './packed-internal-deps.js'
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
-interface PackageJson {
+interface PackageJson extends DependencyManifest {
   name: string
   version: string
   main?: string
@@ -154,8 +158,8 @@ async function workspaceVersions(): Promise<Map<string, string>> {
  * is how `@modern-admin/*@0.2.0` shipped pinning `core@0.1.1` and crashed
  * consumers with nested-copy resolution. We pack the tarball first, read
  * the manifest it would publish, and require every `@modern-admin/*`
- * range to be `^<current workspace version>` (no `workspace:` remnants,
- * no stale numbers). Any mismatch aborts the publish.
+ * range to match its declared workspace protocol at the current version
+ * (no `workspace:` remnants, no stale numbers). Any mismatch aborts the publish.
  */
 async function verifyPackedInternalDeps(pkgDir: string, pkg: PackageJson): Promise<void> {
   console.log('  → bun pm pack (verify internal dependency ranges)')
@@ -168,17 +172,7 @@ async function verifyPackedInternalDeps(pkgDir: string, pkg: PackageJson): Promi
     if (r.status !== 0) throw new Error(`tar failed: ${r.stderr}`)
     const packed = JSON.parse(r.stdout) as PackageJson
     const versions = await workspaceVersions()
-    const problems: string[] = []
-    for (const key of ['dependencies', 'peerDependencies', 'optionalDependencies'] as const) {
-      const deps = (packed[key] ?? {}) as Record<string, string>
-      for (const [name, range] of Object.entries(deps)) {
-        if (!name.startsWith('@modern-admin/')) continue
-        const expected = `^${versions.get(name)}`
-        if (range !== expected) {
-          problems.push(`${key}.${name} = "${range}" (expected "${expected}")`)
-        }
-      }
-    }
+    const problems = packedInternalDependencyProblems(pkg, packed, versions)
     if (problems.length > 0) {
       throw new Error(
         `Packed manifest of ${pkg.name}@${pkg.version} carries wrong internal ranges:\n` +
