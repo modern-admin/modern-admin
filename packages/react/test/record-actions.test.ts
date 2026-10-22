@@ -125,24 +125,40 @@ describe('isRecordActionAllowed', () => {
     actions: names.map((name) => action(name)),
   })
 
-  test('needs both the principal-wide and the per-record verdict', () => {
+  test('honours the per-record verdict when the record carries one', () => {
     expect(
       isRecordActionAllowed('edit', resource(['show', 'edit']), record(['show', 'edit'])),
     ).toBe(true)
     // Advertised for the admin, but this row does not offer it.
     expect(isRecordActionAllowed('edit', resource(['show', 'edit']), record(['show']))).toBe(false)
-    // Offered by the row, but the role matrix pruned it from the snapshot.
-    expect(isRecordActionAllowed('edit', resource(['show']), record(['show', 'edit']))).toBe(false)
   })
 
-  test('the resource verdict still applies when the record carries none', () => {
+  test('the per-record verdict overrides an absence in the resource snapshot', () => {
+    // `ResourceJSON.actions` is serialized without a record, so a
+    // record-dependent `isAccessible` drops the action there for everyone.
+    // `recordActions` is computed with the record *and* the principal gates,
+    // so it is the authoritative answer — AND-ing the two would make every
+    // row inert for an action `invoke()` would run.
+    expect(isRecordActionAllowed('edit', resource(['show']), record(['show', 'edit']))).toBe(true)
+    expect(isRecordActionAllowed('edit', resource([]), record(['edit']))).toBe(true)
+  })
+
+  test('an empty per-record verdict hides the action regardless of the snapshot', () => {
+    expect(isRecordActionAllowed('edit', resource(['show', 'edit']), record([]))).toBe(false)
+  })
+
+  test('falls back to the resource verdict when the record carries none', () => {
     // A record outside the action pipeline fails open on its own; the
     // per-principal snapshot is what keeps a denied action hidden.
     expect(isRecordActionAllowed('delete', resource(['show']), record())).toBe(false)
     expect(isRecordActionAllowed('show', resource(['show']), record())).toBe(true)
   })
 
-  test('fails closed until resource metadata is available', () => {
-    expect(isRecordActionAllowed('show', undefined, record(['show']))).toBe(false)
+  test('fails closed on an unverdicted record until resource metadata arrives', () => {
+    expect(isRecordActionAllowed('show', undefined, record())).toBe(false)
+    expect(isRecordActionAllowed('show', undefined, undefined)).toBe(false)
+    // A record that does carry a verdict came from this server for this
+    // principal, so it stands on its own while metadata is still loading.
+    expect(isRecordActionAllowed('show', undefined, record(['show']))).toBe(true)
   })
 })
