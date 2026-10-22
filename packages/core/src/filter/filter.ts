@@ -2,6 +2,8 @@ import type { BaseProperty, BaseResource } from '../adapters'
 import { parseBetween } from '../adapters/filter-coerce.js'
 import { z } from 'zod'
 import { flatten, unflatten } from '../utils/flat.js'
+import { resolveRelationPath } from './relation-path.js'
+import { ResourceNotFoundError } from '../errors'
 
 export const PARAM_SEPARATOR = '~~'
 
@@ -184,12 +186,18 @@ const extractRelationValues = (
   path: string,
   values: Map<string, FilterValue>,
   isRelationPath: (path: string) => boolean,
+  isRangeValue: (path: string, keys: string[]) => boolean,
 ): unknown => {
   const isRange =
     isPlainRecord(value) &&
     Object.keys(value).length > 0 &&
     Object.keys(value).every((key) => key === 'from' || key === 'to')
-  if ((Array.isArray(value) || isRange) && isSafeFilterPath(path) && isRelationPath(path)) {
+  if (
+    (Array.isArray(value) || isRange) &&
+    isSafeFilterPath(path) &&
+    isRelationPath(path) &&
+    (!isRange || isRangeValue(path, Object.keys(value)))
+  ) {
     values.set(path, filterInputZ.parse(value) as FilterValue)
     return undefined
   }
@@ -197,7 +205,7 @@ const extractRelationValues = (
   const remainder: Record<string, unknown> = {}
   for (const [key, child] of Object.entries(value)) {
     const childPath = path ? `${path}.${key}` : key
-    const extracted = extractRelationValues(child, childPath, values, isRelationPath)
+    const extracted = extractRelationValues(child, childPath, values, isRelationPath, isRangeValue)
     if (extracted !== undefined) remainder[key] = extracted
   }
   return remainder
@@ -263,8 +271,28 @@ export class Filter {
     const extractedLegacy = extractStructuredCriteria(rawFilters ?? {}, '', structuredCriteria)
     const relationValues = new Map<string, FilterValue>()
     const legacyFilters = options.preserveRelationPaths
-      ? extractRelationValues(extractedLegacy, '', relationValues, (path) =>
-          this.isRelationPath(path),
+      ? extractRelationValues(
+          extractedLegacy,
+          '',
+          relationValues,
+          (path) => this.isRelationPath(path),
+          (path, keys) => {
+            const lookup = resource._decorated?.resourceLookup
+            if (!lookup) return true
+            const terminal = resolveRelationPath(resource, path, lookup).at(-1)!.property
+            const reference = terminal.reference()
+            // A reference may lead to actual fields named `from` or `to`.
+            // Preserve that traversal instead of comparing a bound with its ID.
+            if (!reference) return true
+            try {
+              const target = lookup(reference)
+              return !keys.some((key) => target.property(key))
+            } catch (error) {
+              // A terminal FK can be filtered by ID without registering its target.
+              if (error instanceof ResourceNotFoundError) return true
+              throw error
+            }
+          },
         )
       : extractedLegacy
     const flat = flatten(legacyFilters)

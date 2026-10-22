@@ -53,7 +53,7 @@ const id = () => new BaseProperty({ path: 'id', isId: true })
 const ref = (path: string, reference: string) =>
   new BaseProperty({ path, reference, type: 'reference' })
 
-function fixture() {
+function fixture(authorProperties: BaseProperty[] = []) {
   const alice = uuidv7(),
     bob = uuidv7(),
     post = uuidv7(),
@@ -63,7 +63,11 @@ function fixture() {
     orphan = uuidv7()
   const authors = new ScalarResource({
     name: 'authors',
-    properties: [id(), new BaseProperty({ path: 'tier', availableValues: ['pro', 'free'] })],
+    properties: [
+      id(),
+      new BaseProperty({ path: 'tier', availableValues: ['pro', 'free'] }),
+      ...authorProperties,
+    ],
     rows: [
       { id: alice, tier: 'pro' },
       { id: bob, tier: 'free' },
@@ -186,6 +190,34 @@ describe('relation filters and virtual related tables', () => {
       preserveRelationPaths: true,
     })
     expect(parsed.get('postId.authorId')?.value).toBe(f.alice)
+  })
+
+  test('nested reference fields named from and to keep the same meaning as dotted predicates', async () => {
+    const f = fixture([
+      new BaseProperty({ path: 'from', type: 'date' }),
+      new BaseProperty({ path: 'to', type: 'date' }),
+    ])
+    Object.assign(f.authors.data.rows[0]!, { from: '2026-10-01', to: '2026-10-31' })
+    Object.assign(f.authors.data.rows[1]!, { from: '2026-11-01', to: '2026-11-30' })
+    for (const filters of [
+      { 'postId.authorId.from': '2026-10-01' },
+      { postId: { authorId: { from: '2026-10-01' } } },
+      { 'postId.authorId.to': '2026-10-31' },
+      { postId: { authorId: { to: '2026-10-31' } } },
+      { postId: { authorId: { from: '2026-10-01', to: '2026-10-31' } } },
+    ]) {
+      expect((await f.list(filters)).records.map((record) => record.id)).toEqual([f.comment])
+    }
+  })
+
+  test('terminal ID ranges do not require registration of the reference target', () => {
+    const f = fixture([ref('managerId', 'unregistered')])
+    const parsed = new Filter(
+      { postId: { authorId: { managerId: { from: '100', to: '200' } } } },
+      f.comments,
+      { preserveRelationPaths: true },
+    )
+    expect(parsed.toJSON()).toEqual({ 'postId.authorId.managerId': { from: '100', to: '200' } })
   })
 
   test('ANDs predicates on the same related record and retains a direct FK predicate', async () => {
