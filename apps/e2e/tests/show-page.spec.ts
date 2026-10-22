@@ -68,7 +68,10 @@ test.describe('Show page — field rendering', () => {
         expect(stale.headers()['x-cache']).toBe('HIT')
         expect((await stale.json()).record.params.name).toBe(customer.name)
 
-        const refresh = page.getByRole('button', { name: 'Refresh', exact: true })
+        const refresh = page
+          .getByRole('heading', { name: new RegExp(`customers\\s*#${customer.id}`, 'i') })
+          .locator('..')
+          .getByRole('button', { name: 'Refresh', exact: true })
         const responsePromise = page.waitForResponse(
           (response) =>
             response.url() === showUrl &&
