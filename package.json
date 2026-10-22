@@ -22,6 +22,7 @@
     "dev:status": "scripts/dev.sh status",
     "build": "bun run --filter '*' build",
     "test": "bun --filter '*' test",
+    "test:release": "bun test scripts/test --max-concurrency 1",
     "e2e": "bun run --cwd apps/e2e e2e",
     "typecheck": "bun run --filter '*' typecheck",
     "lint": "oxlint",
