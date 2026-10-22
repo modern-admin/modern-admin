@@ -60,6 +60,80 @@ describe('buildHref', () => {
     )
   })
 
+  test('related tables round-trip independent pagination, sorting and structured filters', () => {
+    const route: Route = {
+      name: 'show',
+      resourceId: 'customers',
+      recordId: '42',
+      query: {
+        relatedTab: 'comments::authorId',
+        related: {
+          'posts::authorId': {
+            page: 3,
+            perPage: 20,
+            sortBy: 'title',
+            direction: 'desc',
+            filters: {
+              title: { operator: 'in', values: ['Smith, John', 'a&b=中'] },
+              viewsCount: { operator: 'between', from: '10', to: '50' },
+              deletedAt: { operator: 'empty' },
+            },
+          },
+          'comments::authorId': { page: 2, filters: { body: 'hello' } },
+          'comments::reviewerId': { sortBy: 'createdAt', direction: 'asc' },
+        },
+      },
+    }
+    const href = buildHref(route)
+    const [path, search] = href.split('?')
+    expect(parseLocation(path!, search!)).toEqual(route)
+    const params = new URLSearchParams(search)
+    expect(params.get('related[posts::authorId][perPage]')).toBe('20')
+    expect(params.getAll('related[posts::authorId][filters][title][values][]')).toEqual([
+      'Smith, John',
+      'a&b=中',
+    ])
+    expect(params.has('page')).toBe(false)
+    expect(params.has('filters[title]')).toBe(false)
+  })
+
+  test('related tables omit their own defaults and retain a non-default page size', () => {
+    const href = buildHref({
+      name: 'show',
+      resourceId: 'customers',
+      recordId: '42',
+      query: {
+        related: {
+          'posts::authorId': { page: 1, perPage: 10 },
+          'comments::authorId': { perPage: 20 },
+        },
+      },
+    })
+    expect(parseLocation('/resources/customers/42', href.split('?')[1]!)).toEqual({
+      name: 'show',
+      resourceId: 'customers',
+      recordId: '42',
+      query: { related: { 'comments::authorId': { perPage: 20 } } },
+    })
+  })
+
+  test('invalid related table parameters do not introduce query state', () => {
+    const params = new URLSearchParams({
+      relatedTab: '',
+      'related[posts::authorId][page]': '-1',
+      'related[posts::authorId][perPage]': 'NaN',
+      'related[posts::authorId][direction]': 'sideways',
+      'related[posts::authorId][filters][title][operator]': 'unknown',
+      'related[comments::authorId][unknown]': 'ignored',
+      page: '4',
+    })
+    expect(parseLocation('/resources/customers/42', params.toString())).toEqual({
+      name: 'show',
+      resourceId: 'customers',
+      recordId: '42',
+    })
+  })
+
   test('edit', () => {
     expect(buildHref({ name: 'edit', resourceId: 'users', recordId: '42' })).toBe(
       '/resources/users/42/edit',

@@ -34,7 +34,7 @@ const adminApi = (path: string): string => `${API_URL}/admin/api${path}`
 /** Pick a seeded customer that has at least one related post and one comment.
  *  In practice #1 always satisfies this, but we look it up so the spec
  *  doesn't break if the seeder ever shuffles. */
-async function customerWithRelations(request: APIRequestContext): Promise<string> {
+async function customerWithRelations(request: APIRequestContext, minPosts = 1): Promise<string> {
   const res = await request.get(adminApi('/resources/customers/actions/list?perPage=10'))
   expect(res.ok()).toBeTruthy()
   const customers = (await res.json()).records as Array<{ id: string }>
@@ -48,7 +48,7 @@ async function customerWithRelations(request: APIRequestContext): Promise<string
     if (posts.ok() && comments.ok()) {
       const postsBody = await posts.json()
       const commentsBody = await comments.json()
-      if (postsBody.records.length > 0 && commentsBody.records.length > 0) {
+      if (postsBody.meta.total >= minPosts && commentsBody.records.length > 0) {
         return String(c.id)
       }
     }
@@ -98,6 +98,92 @@ test.describe('RelatedRecordsTabs — customers show page', () => {
     const panel = activeRelatedPanel(page)
     // Comments table also has at least one row (verified above).
     await expect(panel.locator('tbody tr')).not.toHaveCount(0, { timeout: 15_000 })
+  })
+
+  test('related table state survives opening a record, back and reload', async ({
+    page,
+    request,
+  }) => {
+    const customerId = await customerWithRelations(request, 2)
+    const response = await request.get(
+      adminApi(
+        `/resources/posts/actions/list?perPage=1&page=2&sortBy=title&direction=desc&filters[authorId]=${customerId}&filters[title][operator]=co&filters[title][value]=%23`,
+      ),
+    )
+    expect(response.ok()).toBeTruthy()
+    const expectedTitle = (await response.json()).records[0].params.title as string
+    const params = new URLSearchParams({
+      relatedTab: 'posts::authorId',
+      'related[posts::authorId][perPage]': '1',
+      'related[posts::authorId][sortBy]': 'title',
+      'related[posts::authorId][direction]': 'desc',
+      'related[posts::authorId][filters][title][operator]': 'co',
+      'related[posts::authorId][filters][title][value]': '#',
+    })
+    await page.goto(`/resources/customers/${customerId}?${params}`)
+    const panel = activeRelatedPanel(page)
+    const rows = panel.locator('tbody tr:not([aria-busy="true"])')
+    await expect(rows).toHaveCount(1)
+    await panel.getByRole('button', { name: '2', exact: true }).click()
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get('related[posts::authorId][page]'))
+      .toBe('2')
+    await expect(rows).toHaveCount(1)
+    await expect(rows.first()).toContainText(expectedTitle)
+    const savedUrl = page.url()
+    const savedRow = await rows.first().innerText()
+
+    // Row navigation goes to the child's edit page, then browser Back must
+    // restore the parent's embedded table rather than its initial query.
+    await rows.first().getByRole('cell').nth(1).click()
+    await expect(page).toHaveURL(/\/resources\/posts\/[^/]+\/edit$/)
+    await page.goBack()
+    await expect(page).toHaveURL(savedUrl)
+    await expect(rows).toHaveCount(1)
+    await expect(rows.first()).toHaveText(savedRow)
+    await expect(panel.getByRole('button', { name: '2', exact: true })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+
+    await page.reload()
+    await expect(page).toHaveURL(savedUrl)
+    await expect(rows).toHaveCount(1)
+    await expect(rows.first()).toHaveText(savedRow)
+    // Cross-check against the same query with the parent's locked FK.
+    await expect(rows.first()).toContainText(expectedTitle)
+  })
+
+  test('tabs keep independent state and preserve an explicit page size of 20', async ({
+    page,
+    request,
+  }) => {
+    const customerId = await customerWithRelations(request)
+    await openCustomerShow(page, customerId)
+    const panel = activeRelatedPanel(page)
+    await expect(panel.locator('tbody tr:not([aria-busy="true"])').first()).toBeVisible()
+    await panel.getByRole('combobox').click()
+    await page.getByRole('option', { name: '20', exact: true }).click()
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get('related[posts::authorId][perPage]'))
+      .toBe('20')
+
+    await page.getByRole('tab', { name: /^comments$/i }).click()
+    await expect(panel.getByRole('combobox')).toHaveText('10')
+    await panel.getByRole('combobox').click()
+    await page.getByRole('option', { name: '50', exact: true }).click()
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get('related[comments::authorId][perPage]'))
+      .toBe('50')
+    await page.reload()
+    await expect(page.getByRole('tab', { name: /^comments$/i })).toHaveAttribute(
+      'data-state',
+      'active',
+    )
+    await expect(panel.getByRole('combobox')).toHaveText('50')
+    await page.getByRole('tab', { name: /^posts$/i }).click()
+    await expect(panel.getByRole('combobox')).toHaveText('20')
+    expect(new URL(page.url()).searchParams.get('related[comments::authorId][perPage]')).toBe('50')
   })
 
   test('foreign-key filter is strict equality, not substring', async ({ request }) => {
