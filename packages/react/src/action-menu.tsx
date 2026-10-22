@@ -51,8 +51,9 @@ export const isActionAllowedForRecord = (
  * Whether the server-advertised resource metadata offers an action.
  *
  * `ResourceJSON.actions` is already pruned per principal — the api-key
- * allowlist, the role matrix and `isAccessible` all ran before it was
- * serialized — so "not advertised" means "this admin may not run it", and a
+ * allowlist, the role matrix and static access flags ran before it was
+ * serialized. Dynamic record predicates run against the loaded record.
+ * "Not advertised" means "this admin may not run it", and a
  * control bound to it must not render. Fails closed while the metadata is
  * still loading.
  *

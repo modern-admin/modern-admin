@@ -106,7 +106,11 @@ export interface IAdminClient {
     query?: ListQuery,
     options?: { refresh?: boolean },
   ): Promise<ListResponse>
-  show(resourceId: string, recordId: string): Promise<RecordResponse>
+  show(
+    resourceId: string,
+    recordId: string,
+    options?: { refresh?: boolean },
+  ): Promise<RecordResponse>
   create(resourceId: string, payload: Record<string, unknown>): Promise<RecordResponse>
   update(
     resourceId: string,
@@ -464,9 +468,14 @@ export class AdminClient implements IAdminClient {
     )
   }
 
-  show(resourceId: string, recordId: string): Promise<RecordResponse> {
+  show(
+    resourceId: string,
+    recordId: string,
+    options?: { refresh?: boolean },
+  ): Promise<RecordResponse> {
     return this.request<RecordResponse>(
       `/admin/api/resources/${encodeURIComponent(resourceId)}/records/${encodeURIComponent(recordId)}/actions/show`,
+      options?.refresh ? { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } } : {},
     )
   }
 

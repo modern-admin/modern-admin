@@ -271,19 +271,20 @@ export class ResourceDecorator {
         // referenced resource. Resource-level checks here use a context
         // without a `record`; per-record gating still re-runs at invoke time.
         //
-        // `isVisible` is applied too, but only to resource- and bulk-scoped
-        // actions: it is a UI hint, and evaluating it here is only meaningful
-        // when the answer does not depend on a record. Record actions keep
-        // their place in this list and are narrowed per row via
-        // `RecordJSON.recordActions`, which `invoke()` resolves with the
-        // record in context. (This is what drops the internal `values` /
-        // `search` actions, both declared `isVisible: false`.)
+        // Record-dependent predicates need the loaded record. Keep potential
+        // descriptors here and defer their dynamic access/visibility checks to
+        // `RecordJSON.recordActions`. Static access denials still apply.
+        // Resource and bulk predicates are evaluated against this context.
+        // Static visibility drops internal resource actions such as `values`
+        // and `search`, both declared `isVisible: false`.
         const entries = Array.from(this.actions.values())
         const descriptors = await Promise.all(
           entries.map(async (a) => {
             const descriptor = a.toDescriptor()
             const actionContext = { ...context, action: descriptor } as ActionContext
-            if (!(await a.isAccessible(actionContext))) return null
+            const deferAccess =
+              descriptor.actionType === 'record' && typeof a.merged.isAccessible === 'function'
+            if (!deferAccess && !(await a.isAccessible(actionContext))) return null
             if (descriptor.actionType !== 'record' && !(await a.isVisible(actionContext))) {
               return null
             }

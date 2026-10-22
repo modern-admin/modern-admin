@@ -736,9 +736,9 @@ export class ModernAdmin {
    *   `currentAdmin` absent, so a logged-out caller can never see more than
    *   a logged-in one.
    *
-   * The filtered shapes prune action descriptors through the *same* gates
-   * `invoke()` applies — api-key allowlist, role matrix, `isAccessible` — so
-   * the SPA can render exactly the buttons the principal may actually press.
+   * The filtered shapes prune action descriptors through the principal gates
+   * and static access flags. Dynamic record predicates are deferred to
+   * `RecordJSON.recordActions`, where the record is available.
    * Dropping an action here is a UI consequence, not the enforcement.
    */
   toJSON(): ModernAdminJSON

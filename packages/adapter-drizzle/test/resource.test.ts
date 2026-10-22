@@ -4,6 +4,7 @@ import { Filter } from '@modern-admin/core'
 import { DrizzleResource } from '../src/resource.js'
 import { createFakeClient } from './_helpers/fake-client.js'
 import { users } from './_helpers/schema.js'
+import type { DrizzleTable } from '../src/types.js'
 
 const makeResource = (canned = {}) => {
   const client = createFakeClient(canned)
@@ -12,6 +13,24 @@ const makeResource = (canned = {}) => {
 }
 
 describe('DrizzleResource construction', () => {
+  it('retains the target column of a foreign key to a unique non-primary column', () => {
+    const authors = pgTable('authors', {
+      id: text('id').primaryKey(),
+      email: text('email_address').unique(),
+    })
+    const posts = pgTable('posts', {
+      id: text('id').primaryKey(),
+      authorEmail: text('author_email').references(() => authors.email),
+    })
+    const resource = new DrizzleResource({
+      client: createFakeClient(),
+      table: posts as unknown as DrizzleTable,
+      tableKey: 'posts',
+    })
+    expect(resource.property('author_email')!.reference()).toBe('authors')
+    expect(resource.property('author_email')!.referenceFields()).toEqual(['email_address'])
+  })
+
   it('exposes id, databaseName, databaseType', () => {
     const { resource } = makeResource()
     expect(resource.id()).toBe('users')

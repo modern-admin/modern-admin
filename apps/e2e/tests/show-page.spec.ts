@@ -1,4 +1,5 @@
 import { expect, test, type APIRequestContext } from '@playwright/test'
+import postgres from 'postgres'
 
 /**
  * Show-page rendering. Drives a freshly-created `customers` row so we can
@@ -36,6 +37,72 @@ async function deleteCustomerSilently(request: APIRequestContext, id: string): P
 }
 
 test.describe('Show page — field rendering', () => {
+  for (const width of [1280, 375]) {
+    test(`refresh reads out-of-band updates past both server caches at ${width}px`, async ({
+      page,
+      request,
+    }) => {
+      const databaseUrl = process.env.DATABASE_URL
+      if (!databaseUrl) throw new Error('Show refresh regression requires DATABASE_URL')
+      const pgUrl = new URL(databaseUrl)
+      pgUrl.searchParams.delete('schema')
+      const sql = postgres(pgUrl.toString(), { max: 1 })
+      const customer = await createCustomer(request)
+      const showUrl = adminApi(`/resources/customers/records/${customer.id}/actions/show`)
+      const query = new URLSearchParams({
+        'filters[email][operator]': 'eq',
+        'filters[email][value]': customer.email,
+      })
+      const listUrl = adminApi(`/resources/customers/actions/list?${query}`)
+      try {
+        await page.setViewportSize({ width, height: 900 })
+        await page.goto(`/resources/customers/${customer.id}`)
+        const fields = page.locator('dl').first()
+        await expect(fields).toContainText(customer.name)
+        await request.get(listUrl)
+        const cachedList = await request.get(listUrl)
+        expect(cachedList.headers()['x-cache']).toBe('HIT')
+        const updatedName = `${customer.name} refreshed`
+        await sql`update customer set name = ${updatedName} where id = ${customer.id}`
+        const stale = await request.get(showUrl)
+        expect(stale.headers()['x-cache']).toBe('HIT')
+        expect((await stale.json()).record.params.name).toBe(customer.name)
+
+        const refresh = page.getByRole('button', { name: 'Refresh', exact: true })
+        const responsePromise = page.waitForResponse(
+          (response) =>
+            response.url() === showUrl &&
+            response.request().headers()['cache-control'] === 'no-cache',
+        )
+        await refresh.click()
+        const response = await responsePromise
+        expect(response.ok()).toBeTruthy()
+        expect(response.headers()['x-cache']).toBe('REVALIDATED')
+        await expect(fields).toContainText(updatedName)
+        await expect(refresh).toBeEnabled()
+        const latest = await request.get(listUrl)
+        expect((await latest.json()).records[0].params.name).toBe(updatedName)
+
+        const nextName = `${customer.name} refreshed again`
+        await sql`update customer set name = ${nextName} where id = ${customer.id}`
+        const nextResponse = page.waitForResponse(
+          (response) =>
+            response.url() === showUrl &&
+            response.request().headers()['cache-control'] === 'no-cache',
+        )
+        await refresh.click()
+        expect((await nextResponse).ok()).toBeTruthy()
+        await expect(fields).toContainText(nextName)
+        expect(
+          await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+        ).toBe(true)
+      } finally {
+        await sql.end({ timeout: 5 })
+        await deleteCustomerSilently(request, customer.id)
+      }
+    })
+  }
+
   test('renders the record header, breadcrumbs and seeded field values', async ({
     page,
     request,

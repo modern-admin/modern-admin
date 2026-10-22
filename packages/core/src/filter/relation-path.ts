@@ -46,8 +46,15 @@ export function resolveRelationPath(
     const property = raw?.isStored() ? current.decorate().getPropertyByKey(head) : null
     const reference = property?.reference()
     if (!property || property.isArray() || !reference) throw invalidRelationFilter(path)
+    const target = findResource(reference)
+    const fields = raw!.referenceFields()
+    if (fields) {
+      const key = fields.length === 1 ? target.property(fields[0]!) : null
+      // Scalar traversal cannot preserve a composite foreign key's tuple.
+      if (!key || key.isArray() || !key.isStored()) throw invalidRelationFilter(path)
+    }
     entries.push({ resource: current, property })
-    current = findResource(reference)
+    current = target
     remaining = remaining.slice(separator + 1)
   }
 }
@@ -57,10 +64,17 @@ export async function canAccessRelationPath(
   entries: RelationPathEntry[],
   context: PropertyContextBase,
 ): Promise<boolean> {
-  for (const entry of entries) {
+  for (const [index, entry] of entries.entries()) {
     const resourceId = entry.resource.decorate().id
     if (!(await context.admin.canAccess(resourceId, 'list', context.currentAdmin))) return false
     if (!(await entry.property.isAccessible({ ...context, resource: entry.resource }))) return false
+    const fields = entry.property.property.referenceFields()
+    const target = entries[index + 1]?.resource
+    if (fields && target) {
+      const key = target.decorate().getPropertyByKey(fields[0]!)
+      if (!key || (!key.isId() && !(await key.isAccessible({ ...context, resource: target }))))
+        return false
+    }
   }
   return true
 }

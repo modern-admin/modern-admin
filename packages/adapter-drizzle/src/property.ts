@@ -23,7 +23,12 @@ const isUuidColumn = (name: string, columnType?: string): boolean => {
 export class DrizzleProperty extends BaseProperty {
   public readonly column: DrizzleColumn
 
-  constructor(column: DrizzleColumn, reference: string | null = null, position = 1) {
+  constructor(
+    column: DrizzleColumn,
+    reference: string | null = null,
+    position = 1,
+    referenceFields: readonly string[] | null = null,
+  ) {
     const isEnum = (column.enumValues?.length ?? 0) > 0
     const isArray = column.dataType === 'array'
     const type = DrizzleProperty.resolveType(column, isEnum, reference !== null)
@@ -36,6 +41,7 @@ export class DrizzleProperty extends BaseProperty {
       isRequired: column.notNull === true && column.hasDefault !== true && column.primary !== true,
       position,
       reference,
+      referenceFields,
       availableValues: isEnum ? Array.from(column.enumValues!) : null,
     })
     this.column = column
@@ -83,6 +89,7 @@ interface DrizzleFKShape {
   reference: () => {
     columns: Array<{ name: string }>
     foreignTable: object
+    foreignColumns?: Array<{ name: string }>
   }
 }
 
@@ -98,11 +105,13 @@ const tableBaseName = (table: object): string | null => {
 
 /**
  * Walk drizzle's hidden inline-FK symbol on a table and return a map of
- * local column name → foreign table base name. Returns an empty map when
+ * local column name → target table and referenced columns. Returns an empty map when
  * the table has no FKs or when the structure differs (driver-specific).
  */
-export const extractForeignKeys = (table: DrizzleTable): Record<string, string> => {
-  const out: Record<string, string> = {}
+export const extractForeignKeyReferences = (
+  table: DrizzleTable,
+): Record<string, { resourceId: string; fields: readonly string[] | null }> => {
+  const out: Record<string, { resourceId: string; fields: readonly string[] | null }> = {}
   for (const sym of Object.getOwnPropertySymbols(table)) {
     if (!FK_SYMBOL_DESC.test(sym.description ?? '')) continue
     const fks = (table as Record<symbol, unknown>)[sym]
@@ -113,7 +122,10 @@ export const extractForeignKeys = (table: DrizzleTable): Record<string, string> 
         const targetName = tableBaseName(ref.foreignTable)
         if (!targetName) continue
         for (const c of ref.columns) {
-          out[c.name] = targetName
+          out[c.name] = {
+            resourceId: targetName,
+            fields: ref.foreignColumns?.map((column) => column.name) ?? null,
+          }
         }
       } catch {
         // ignore malformed FKs — keep adapter resilient across drivers.
@@ -122,3 +134,11 @@ export const extractForeignKeys = (table: DrizzleTable): Record<string, string> 
   }
   return out
 }
+
+export const extractForeignKeys = (table: DrizzleTable): Record<string, string> =>
+  Object.fromEntries(
+    Object.entries(extractForeignKeyReferences(table)).map(([key, value]) => [
+      key,
+      value.resourceId,
+    ]),
+  )

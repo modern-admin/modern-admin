@@ -31,7 +31,7 @@ import {
   type TimeSeriesSeries,
   type TimeSeriesStep,
 } from '@modern-admin/core'
-import { DrizzleProperty, extractForeignKeys, findPrimaryColumn } from './property.js'
+import { DrizzleProperty, extractForeignKeyReferences, findPrimaryColumn } from './property.js'
 import { filterToWhere, findOptionsToDrizzle, findTableColumn } from './converters.js'
 import type {
   DrizzleClientLike,
@@ -93,14 +93,21 @@ export class DrizzleResource extends BaseResource {
     }
     this.idColumn = idColumn
 
-    const fks = extractForeignKeys(raw.table)
+    const fks = extractForeignKeyReferences(raw.table)
     let position = 1
     this._properties = []
     for (const key of Object.keys(raw.table)) {
       if (key === '_') continue
       const col = raw.table[key] as DrizzleColumn | undefined
       if (!col || typeof col.name !== 'string') continue
-      this._properties.push(new DrizzleProperty(col, fks[col.name] ?? null, position++))
+      this._properties.push(
+        new DrizzleProperty(
+          col,
+          fks[col.name]?.resourceId ?? null,
+          position++,
+          fks[col.name]?.fields ?? null,
+        ),
+      )
     }
   }
 

@@ -21,6 +21,7 @@ import type { CacheSetOptions, ICacheProvider } from '../src/ports/cache-provide
 import type { ActionRequest, ListActionResponse, RecordActionResponse } from '../src/actions'
 import type { Adapter } from '../src/factories/resources-factory.js'
 import { FakeDatabase, FakeResource, type FakeTable } from './_helpers/fake-adapter.js'
+import { uuidv7 } from '../src/utils/uuid.js'
 
 const adapter = { Database: FakeDatabase, Resource: FakeResource } as unknown as Adapter
 
@@ -80,6 +81,68 @@ const showReq = (resourceId: string, recordId: string): ActionRequest => ({
 })
 
 describe('cache tag scheme — read actions', () => {
+  test('show refresh reads out-of-band updates and invalidates stale list data', async () => {
+    const id = uuidv7()
+    const cache = new FakeCache()
+    const admin = buildAdmin(cache, [{ name: 'users', rows: [{ id, name: 'Before' }] }])
+    await admin.invoke(listReq('users'))
+    await admin.invoke(showReq('users', id))
+    await admin.findResource('users').update(id, { name: 'After' })
+    expect(
+      (await admin.invoke<RecordActionResponse>(showReq('users', id))).record.params.name,
+    ).toBe('Before')
+    const fresh = await admin.invoke<RecordActionResponse>({
+      ...showReq('users', id),
+      refresh: true,
+    })
+    expect(fresh.record.params.name).toBe('After')
+    expect((await admin.invoke<ListActionResponse>(listReq('users'))).records[0]!.params.name).toBe(
+      'After',
+    )
+    expect(
+      (await admin.invoke<RecordActionResponse>(showReq('users', id))).record.params.name,
+    ).toBe('After')
+  })
+
+  test('a show refresh fences an older in-flight response out of the cache', async () => {
+    const id = uuidv7()
+    const admin = buildAdmin(new FakeCache(), [{ name: 'users', rows: [{ id, name: 'Before' }] }])
+    const resource = admin.findResource('users')
+    const findOne = resource.findOne.bind(resource)
+    let reads = 0
+    let release!: () => void, started!: () => void
+    const ready = new Promise<void>((resolve) => {
+      started = resolve
+    })
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    resource.findOne = async (recordId) => {
+      const record = await findOne(recordId)
+      if (++reads === 2) {
+        started()
+        await gate
+      }
+      return record
+    }
+    const pending = admin.invoke<RecordActionResponse>(showReq('users', id))
+    await ready
+    try {
+      await resource.update(id, { name: 'After' })
+      const fresh = await admin.invoke<RecordActionResponse>({
+        ...showReq('users', id),
+        refresh: true,
+      })
+      expect(fresh.record.params.name).toBe('After')
+    } finally {
+      release()
+    }
+    expect((await pending).record.params.name).toBe('Before')
+    expect(
+      (await admin.invoke<RecordActionResponse>(showReq('users', id))).record.params.name,
+    ).toBe('After')
+  })
+
   test('list response is tagged only with list:<resourceId>', async () => {
     const cache = new FakeCache()
     const admin = buildAdmin(cache, [{ name: 'users', rows: [{ id: '1', name: 'Ann' }] }])

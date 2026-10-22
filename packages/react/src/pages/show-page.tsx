@@ -1,6 +1,7 @@
 import * as React from 'react'
 import {
   Button,
+  cn,
   Card,
   CardContent,
   CardHeader,
@@ -11,12 +12,13 @@ import {
   TooltipTrigger,
   getModKeyLabel,
 } from '@modern-admin/ui'
-import { AlertCircle, Pencil, Trash2, Zap } from 'lucide-react'
+import { AlertCircle, Pencil, RefreshCw, Trash2, Zap } from 'lucide-react'
 import {
   useDeleteRecord,
   useFeatures,
   useInvokeRecordAction,
   useRecord,
+  useRefreshRecord,
   useResource,
 } from '../hooks.js'
 import { confirmGuard } from '../action-guard.js'
@@ -71,6 +73,7 @@ export function ResourceShowPage({
 }: ResourceShowPageProps): React.ReactElement {
   const resource = useResource(resourceId)
   const record = useRecord(resourceId, recordId)
+  const refreshRecord = useRefreshRecord(resourceId, recordId)
   const remove = useDeleteRecord(resourceId)
   const invokeRecord = useInvokeRecordAction(resourceId)
   const features = useFeatures()
@@ -136,6 +139,25 @@ export function ResourceShowPage({
           </CardTitle>
           {record.data && (
             <div className="flex shrink-0 flex-wrap gap-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void refreshRecord()}
+                    disabled={record.isFetching}
+                    aria-label={t('common:refresh')}
+                  >
+                    <RefreshCw
+                      data-icon="inline-start"
+                      className={cn(record.isFetching && 'animate-spin')}
+                    />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent className="flex items-center gap-1.5">
+                  <span>{t('common:refresh')}</span>
+                </TooltipContent>
+              </Tooltip>
               {features.history && <RevisionsButton resourceId={resourceId} recordId={recordId} />}
               {canEdit && (
                 <Tooltip>

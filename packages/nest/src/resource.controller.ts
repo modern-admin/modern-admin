@@ -86,7 +86,14 @@ export class ResourceController {
     @Param('recordId') recordId: string,
     @Req() req: AdminRequest,
   ): Promise<ActionResponse> {
-    return this.run({ params: { resourceId, recordId, action: 'show' }, method: 'get' }, req)
+    return this.run(
+      {
+        params: { resourceId, recordId, action: 'show' },
+        method: 'get',
+        ...(wantsRevalidation(req.headers) ? { refresh: true } : {}),
+      },
+      req,
+    )
   }
 
   @AllowApiKey()

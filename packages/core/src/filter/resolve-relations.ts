@@ -54,8 +54,15 @@ export async function resolveRelationFilters(
   }
 
   for (const [head, criteria] of groups) {
-    const reference = resource.decorate().getPropertyByKey(head)!.reference()!
+    const property = resource.decorate().getPropertyByKey(head)!
+    const reference = property.reference()!
     const target = admin.findResource(reference)
+    const idPath = target
+      .properties()
+      .find((property) => property.isId())
+      ?.path()
+    const keyPath = property.property.referenceFields()?.[0] ?? idPath
+    if (!keyPath) throw invalidRelationFilter(head)
     const readIds = async (filters: RawFilters): Promise<string[]> => {
       const ids = new Set<string>()
       for (let page = 1; ; page++) {
@@ -71,7 +78,13 @@ export async function resolveRelationFilters(
         if (response.meta.total > MAX_MATCHES) {
           throw invalidRelationFilter(head, 'errors:relationFilterTooBroad')
         }
-        for (const record of response.records) ids.add(String(record.id))
+        for (const record of response.records) {
+          const value = keyPath === idPath ? record.id : record.params[keyPath]
+          if (value == null || !['string', 'number', 'boolean'].includes(typeof value)) {
+            throw invalidRelationFilter(head)
+          }
+          ids.add(String(value))
+        }
         if (ids.size > MAX_MATCHES)
           throw invalidRelationFilter(head, 'errors:relationFilterTooBroad')
         if (page * response.meta.perPage >= response.meta.total) break
@@ -80,7 +93,7 @@ export async function resolveRelationFilters(
       return [...ids]
     }
     const collectIds = (filters: RawFilters): Promise<string[]> => {
-      const key = stableCacheStringify([target.decorate().id, filters])
+      const key = stableCacheStringify([target.decorate().id, keyPath, filters])
       let pending = scope.matches.get(key)
       if (!pending) {
         pending = readIds(filters)
@@ -94,11 +107,6 @@ export async function resolveRelationFilters(
     // A direct FK predicate and a relational predicate on the same FK are ANDed.
     // Resolve them independently to avoid overwriting either condition.
     if (Object.hasOwn(plain, head)) {
-      const idPath = target
-        .properties()
-        .find((property) => property.isId())
-        ?.path()
-      if (!idPath) throw invalidRelationFilter(head)
       const direct = filter.get(head)!
       const criterion =
         direct.operator === null
@@ -106,7 +114,7 @@ export async function resolveRelationFilters(
             ? { operator: 'in' as const, values: direct.value }
             : { operator: 'eq' as const, value: direct.value }
           : plain[head]!
-      const allowed = new Set(await collectIds({ [idPath]: criterion }))
+      const allowed = new Set(await collectIds({ [keyPath]: criterion }))
       ids = ids.filter((id) => allowed.has(id))
     }
     // Adapters may treat an empty IN selection as a cleared UI filter.
