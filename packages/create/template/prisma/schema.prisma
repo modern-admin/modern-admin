@@ -78,6 +78,7 @@ model MaSession {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([userId])
   @@map("ma_session")
 }
 
@@ -115,6 +116,7 @@ model MaVerification {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  @@index([identifier])
   @@map("ma_verification")
 }
 
@@ -150,6 +152,7 @@ model MaApiKey {
 
   @@index([configId])
   @@index([referenceId])
+  @@index([key])
   @@map("ma_apikey")
 }
 

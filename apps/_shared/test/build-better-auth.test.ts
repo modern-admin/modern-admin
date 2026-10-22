@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { Database } from 'bun:sqlite'
+import { readFile } from 'node:fs/promises'
 import { getAuthTables } from 'better-auth/db'
+import { admin } from 'better-auth/plugins'
 import type { ILogStore, ActionLogEntry } from '@modern-admin/core'
 import { buildBetterAuth, setAuditLogStore, type BuildBetterAuthOptions } from '../src'
 
@@ -60,7 +62,7 @@ describe('buildBetterAuth', () => {
     expect(config.secret).toBeDefined()
   })
 
-  test('preserves the Modern Admin account identity schema with Better Auth 1.7.5', () => {
+  test('preserves the Modern Admin account identity schema with the installed Better Auth version', () => {
     const { config } = buildBetterAuth({ database: makeDatabase() })
     const account = getAuthTables(config).account!
     expect(account.fields.issuer).toMatchObject({ type: 'string', required: true })
@@ -71,6 +73,63 @@ describe('buildBetterAuth', () => {
       fields: ['issuer', 'accountId'],
       unique: true,
     })
+  })
+
+  test.each([
+    'packages/system-prisma/prisma/modern-admin.prisma',
+    'apps/api-prisma/prisma/schema.prisma',
+    'packages/create/template/prisma/schema.prisma',
+  ])('%s implements the installed Better Auth fields and indexes', async (path) => {
+    const { config } = buildBetterAuth({
+      database: makeDatabase(),
+      extraPlugins: [admin({ defaultRole: 'admin' })],
+      modelNames: {
+        user: 'maUser',
+        session: 'maSession',
+        account: 'maAccount',
+        verification: 'maVerification',
+        apikey: 'maApiKey',
+      },
+    })
+    const source = await readFile(new URL(`../../../${path}`, import.meta.url), 'utf8')
+    const prismaTypes: Record<string, string[]> = {
+      string: ['String'],
+      number: ['Int', 'Float'],
+      boolean: ['Boolean'],
+      date: ['DateTime'],
+    }
+
+    for (const [logicalName, table] of Object.entries(getAuthTables(config))) {
+      const modelName = table.modelName[0]!.toUpperCase() + table.modelName.slice(1)
+      const block = new RegExp(`^model ${modelName} \\{([\\s\\S]*?)^\\}`, 'm').exec(source)
+      expect(block, `${path}: ${modelName}`).not.toBeNull()
+      const body = block![1]!
+      expect(body).toMatch(/^\s*id\s+String\s+@id/m)
+
+      for (const [name, field] of Object.entries(table.fields)) {
+        const line = new RegExp(`^\\s*${name}\\s+(\\w+)(\\??)([^\\n]*)$`, 'm').exec(body)
+        expect(line, `${path}: ${modelName}.${name}`).not.toBeNull()
+        // API-key JSON is intentionally stored as native JSON by our adapters.
+        const types =
+          logicalName === 'apikey' && ['permissions', 'metadata'].includes(name)
+            ? ['String', 'Json']
+            : (prismaTypes[String(field.type)] ?? [])
+        expect(types, `${modelName}.${name} type`).toContain(line![1]!)
+        if (field.required) expect(line![2]).toBe('')
+        if (field.unique) expect(line![3]).toContain('@unique')
+        if (field.index && !field.unique) {
+          expect(body, `${modelName}.${name} index`).toMatch(
+            new RegExp(`@@(?:index|unique)\\(\\[${name}(?:\\]|,)`),
+          )
+        }
+      }
+
+      for (const index of table.indexes ?? []) {
+        if (index.unique) {
+          expect(body).toMatch(new RegExp(`@@unique\\(\\[${index.fields.join(',\\s*')}\\]\\)`))
+        }
+      }
+    }
   })
 
   test('always installs a session.create.after audit hook', () => {

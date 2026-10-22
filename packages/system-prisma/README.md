@@ -30,6 +30,14 @@ window with
 provider mapping first. Unknown providers and identity collisions abort and
 roll back the complete transaction; users are never merged or deleted.
 
+The Better Auth 1.7.5 → 1.7.12 update does not add columns. The canonical
+fragment also includes the upstream lookup indexes on `MaSession.userId`,
+`MaVerification.identifier`, and `MaApiKey.configId`, `referenceId`, and `key`.
+For existing installations, copy any missing index declarations into your
+schema and apply them through your Prisma migration workflow. The Modern Admin
+generator preserves existing models, so rerunning it does not add indexes to
+models already present.
+
 ## License
 
 [MIT](https://github.com/modern-admin/modern-admin/blob/main/LICENSE) © Modern Admin
