@@ -1,5 +1,13 @@
 # @modern-admin/web
 
+## 0.13.1
+
+### Patch Changes
+
+- Updated dependencies [[`1ff58a6`](https://github.com/modern-admin/modern-admin/commit/1ff58a6be1712941ceb4e25ed8dc199c389c4489)]:
+  - @modern-admin/ui@0.13.1
+  - @modern-admin/react@0.13.1
+
 ## 0.13.0
 
 ### Patch Changes
