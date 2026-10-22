@@ -1,5 +1,89 @@
 # @modern-admin/nest
 
+## 0.12.0
+
+### Patch Changes
+
+- [#78](https://github.com/modern-admin/modern-admin/pull/78) [`b0fc742`](https://github.com/modern-admin/modern-admin/commit/b0fc742d9d41fbee10ad18ee3d827cecd342496a) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Fix API keys with an expiry, gate the time-series endpoint, and charge each
+  API-key request once against the key's rate limit.
+  
+  - **`ApiKeysController` sent the expiry in milliseconds.** Better Auth's
+    api-key plugin takes `expiresIn` in seconds, so every key with an expiry was
+    rejected as `EXPIRES_IN_IS_TOO_LARGE` and surfaced as a 500. `expiresInDays`
+    is now converted to seconds (`IApiKeyService` documents the unit), and a
+    Better Auth 4xx rejection keeps its status and `code` instead of becoming a
+    500 on create and update.
+  - **`POST /admin/api/timeseries` checked no permissions.** It aggregated any
+    resource for any signed-in user, bypassing the role matrix and
+    `isAccessible`. It now requires `canAccess(resource, 'list')` and read access
+    to `dateField` / `field` / `groupBy` (403 otherwise), and resolves FK labels
+    only from resources the caller may list.
+  - **Each API-key request consumed two rate-limit slots.** `getSession` already
+    verifies the key; `BetterAuthProvider` then called `verifyApiKey` again,
+    halving the plugin's limit and quota. The provider now reads the key's row by
+    id through `auth.$context` and falls back to `verifyApiKey` only when the row
+    is not in the database. A key that Better Auth rejects inside `getSession`
+    (rate limit, expiry) now yields 401 instead of an unhandled error.
+
+- [#78](https://github.com/modern-admin/modern-admin/pull/78) [`b0fc742`](https://github.com/modern-admin/modern-admin/commit/b0fc742d9d41fbee10ad18ee3d827cecd342496a) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Security: API keys no longer act with their owner's full role outside the action gate.
+  
+  Better Auth's api-key plugin turns a key into a session of its owner; only the
+  `apiKey` claim narrows that session, and only `ModernAdmin.invoke()` /
+  `canAccess()` read it. Two paths let a scoped key escape:
+  
+  - **`BetterAuthProvider.getCurrentUser` failed open.** When `verifyApiKey`
+    threw or reported the key invalid — which is exactly what happens once the
+    plugin's rate limit or `remaining` quota trips, since `getSession` and
+    `verifyApiKey` each consume a slot — the principal was returned without the
+    claim, i.e. with the owner's unrestricted role. It now returns `null` in that
+    case, when the api-key plugin is not mounted, and when the verified key is
+    not the one the session was minted from. New `apiKeyHeaders` option mirrors
+    the plugin's setting (default `'x-api-key'`).
+  - **Endpoints outside `invoke()` ignored the key's scope.** Audit log, record
+    history, webhooks, dashboard, analytics, AI assistant and media generation
+    served a key like its owner's session. `ModernAdminAuthGuard` now answers 403
+    to API-key principals unless the route is marked with the new
+    `@AllowApiKey()` decorator; resource actions, global search and
+    `GET /admin/api/auth/me` are marked. Host controllers behind the guard are
+    closed to keys until they opt in.
+  - **Better Auth's own endpoints accepted keys.** `createBetterAuthMiddleware`
+    now answers 403 (`API_KEY_NOT_ALLOWED`) to any request presenting an API key
+    on Better Auth paths, so a key can no longer read `/get-session`,
+    `/list-sessions` (the owner's live session tokens) or mint an unrestricted
+    key via `/api-key/create`. Pass `{ apiKeyHeaders }` for custom key headers,
+    and mount Better Auth through this middleware rather than a bare
+    `toNodeHandler(auth)`.
+
+- [#98](https://github.com/modern-admin/modern-admin/pull/98) [`29c3a22`](https://github.com/modern-admin/modern-admin/commit/29c3a220a81cfa7018eada015fa6644edadab720) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Update external dependencies to the latest stable releases and pin the tested
+  versions across packages and generated projects. Refresh the lockfile, move form
+  resolvers to v6, and keep TypeScript 7 declaration builds working with the
+  TypeScript 6 API alias and an updated unplugin-dts patch.
+  
+  Align Better Auth lookup indexes across the canonical Prisma and Drizzle
+  schemas, reference app, and CLI scaffold. Existing installations should add
+  missing indexes through their ORM migration workflow; the Prisma generator
+  preserves existing models. The 1.7.5 → 1.7.12 upgrade itself adds no columns.
+  
+  Include `prisma.config.ts` in generated hosts so Prisma 7 database commands
+  receive `DATABASE_URL` and the configured migration directory.
+
+- [#78](https://github.com/modern-admin/modern-admin/pull/78) [`b0fc742`](https://github.com/modern-admin/modern-admin/commit/b0fc742d9d41fbee10ad18ee3d827cecd342496a) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Recognize API-key requests through Better Auth's own plugin matchers, preventing
+  custom header configuration mismatches from bypassing action scopes or reaching
+  account-management endpoints. `createBetterAuthMiddleware` now requires the same
+  Better Auth instance via `{ auth }`; update existing middleware mounts accordingly.
+  
+  Limit built-in API-key opt-ins to individual resource/search handlers, keeping
+  future controller methods closed by default. Translate API-key and time-series
+  permission errors using Accept-Language and all nine bundled locales.
+
+- [#101](https://github.com/modern-admin/modern-admin/pull/101) [`6a24e6d`](https://github.com/modern-admin/modern-admin/commit/6a24e6d6e0fcfac2f17b38191ac7543912773ed1) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Support virtual related tables and typed filters through chains of scalar references, preserving permissions, hooks, pagination and export. Recheck relation membership on reads and refresh dependent client lists after mutations. Add translated labels and validation errors in all locales.
+- Updated dependencies [[`b0fc742`](https://github.com/modern-admin/modern-admin/commit/b0fc742d9d41fbee10ad18ee3d827cecd342496a), [`b0fc742`](https://github.com/modern-admin/modern-admin/commit/b0fc742d9d41fbee10ad18ee3d827cecd342496a), [`29c3a22`](https://github.com/modern-admin/modern-admin/commit/29c3a220a81cfa7018eada015fa6644edadab720), [`b0fc742`](https://github.com/modern-admin/modern-admin/commit/b0fc742d9d41fbee10ad18ee3d827cecd342496a), [`4b4553e`](https://github.com/modern-admin/modern-admin/commit/4b4553eb0c0fc974aef60e05935c41f7164bd528), [`6a24e6d`](https://github.com/modern-admin/modern-admin/commit/6a24e6d6e0fcfac2f17b38191ac7543912773ed1)]:
+  - @modern-admin/auth-better-auth@0.12.0
+  - @modern-admin/core@0.12.0
+  - @modern-admin/feature-upload@0.12.0
+  - @modern-admin/i18n@0.12.0
+  - @modern-admin/queue@0.12.0
+
 ## 0.11.0
 
 ### Minor Changes

@@ -1,5 +1,24 @@
 # @modern-admin/cache-redis
 
+## 0.12.0
+
+### Patch Changes
+
+- [#98](https://github.com/modern-admin/modern-admin/pull/98) [`29c3a22`](https://github.com/modern-admin/modern-admin/commit/29c3a220a81cfa7018eada015fa6644edadab720) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Update external dependencies to the latest stable releases and pin the tested
+  versions across packages and generated projects. Refresh the lockfile, move form
+  resolvers to v6, and keep TypeScript 7 declaration builds working with the
+  TypeScript 6 API alias and an updated unplugin-dts patch.
+  
+  Align Better Auth lookup indexes across the canonical Prisma and Drizzle
+  schemas, reference app, and CLI scaffold. Existing installations should add
+  missing indexes through their ORM migration workflow; the Prisma generator
+  preserves existing models. The 1.7.5 → 1.7.12 upgrade itself adds no columns.
+  
+  Include `prisma.config.ts` in generated hosts so Prisma 7 database commands
+  receive `DATABASE_URL` and the configured migration directory.
+- Updated dependencies [[`29c3a22`](https://github.com/modern-admin/modern-admin/commit/29c3a220a81cfa7018eada015fa6644edadab720), [`6a24e6d`](https://github.com/modern-admin/modern-admin/commit/6a24e6d6e0fcfac2f17b38191ac7543912773ed1)]:
+  - @modern-admin/core@0.12.0
+
 ## 0.11.0
 
 ### Patch Changes
