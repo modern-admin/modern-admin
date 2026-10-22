@@ -80,7 +80,9 @@ export interface ActionDescriptor {
 
 export interface RelatedResource {
   resourceId: string
+  /** Scalar FK path, including chains such as `postId.authorId`. */
   foreignKey: string
+  /** Literal/metadata-translated label or an i18n dictionary key. */
   label?: string
 }
 

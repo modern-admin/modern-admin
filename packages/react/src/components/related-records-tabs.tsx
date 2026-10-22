@@ -53,7 +53,7 @@ function RelatedRecordsTab({
       resourceId={related.resourceId}
       query={query}
       onQueryChange={setQuery}
-      lockedFilters={{ [related.foreignKey]: parentRecordId }}
+      lockedFilters={{ [related.foreignKey]: { operator: 'eq', value: parentRecordId } }}
       // The host `CardContent` already pads the tab body — don't double it,
       // or the table stops spanning the block's full width.
       embedPadding={false}
@@ -100,7 +100,7 @@ export function RelatedRecordsTabs({
   if (tabs.length === 0) return null
 
   const labelFor = (r: RelatedResource): string =>
-    r.label ?? allResources.find((x) => x.id === r.resourceId)?.name ?? r.resourceId
+    r.label ? t(r.label) : (allResources.find((x) => x.id === r.resourceId)?.name ?? r.resourceId)
 
   return (
     <Card>
@@ -108,8 +108,8 @@ export function RelatedRecordsTabs({
         <CardTitle className="text-base">{t('common:relatedRecords')}</CardTitle>
       </CardHeader>
       <CardContent>
-        <Tabs value={active} onValueChange={setActive}>
-          <TabsList className="w-full justify-start">
+        <Tabs key={recordId} value={active} onValueChange={setActive}>
+          <TabsList className="h-auto w-full flex-wrap justify-start">
             {tabs.map((r) => {
               const key = `${r.resourceId}::${r.foreignKey}`
               return (

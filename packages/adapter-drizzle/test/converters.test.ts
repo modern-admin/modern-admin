@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { Filter } from '@modern-admin/core'
+import { Filter, ModernAdmin, uuidv7, type ListActionResponse } from '@modern-admin/core'
 import { DrizzleResource } from '../src/resource.js'
 import { filterToWhere, findOptionsToDrizzle } from '../src/converters.js'
 import { createFakeClient } from './_helpers/fake-client.js'
@@ -26,6 +26,28 @@ const paramValues = (node: unknown, acc: unknown[] = []): unknown[] => {
 }
 
 describe('filterToWhere', () => {
+  it('empty relation matches never reach Drizzle as an omitted WHERE clause', async () => {
+    const authorClient = createFakeClient({ selectRows: [], countValue: 0 })
+    const postClient = createFakeClient({
+      selectRows: [{ id: uuidv7(), author_id: uuidv7() }],
+      countValue: 1,
+    })
+    const admin = new ModernAdmin({
+      resources: [
+        new DrizzleResource({ client: authorClient, table: users, tableKey: 'users' }),
+        new DrizzleResource({ client: postClient, table: posts, tableKey: 'posts' }),
+      ],
+    })
+    const result = await admin.invoke<ListActionResponse>({
+      params: { resourceId: 'posts', action: 'list' },
+      method: 'get',
+      query: { filters: { 'author_id.email': { operator: 'eq', value: 'missing@example.com' } } },
+    })
+    expect(result.records).toEqual([])
+    expect(result.meta.total).toBe(0)
+    expect(authorClient.calls.some((call) => call.op === 'where')).toBe(true)
+    expect(postClient.calls).toEqual([])
+  })
   it('returns undefined for empty filter', () => {
     const resource = makeResource()
     expect(filterToWhere(new Filter({}, resource), users)).toBeUndefined()

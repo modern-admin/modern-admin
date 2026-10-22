@@ -89,6 +89,22 @@ const linkedResourceIds = (config: AdminConfig | undefined, resourceId: string):
       linked.add(resource.id)
     }
   }
+  // A list may filter through several references (comments → posts → author).
+  // Follow incoming edges transitively so changes at the end of a path also
+  // refresh the list and any virtual tables using it. Keep reverse/parent
+  // invalidation above limited to its existing direct neighbours.
+  const pending = [resourceId]
+  const visited = new Set(pending)
+  while (pending.length > 0) {
+    const target = pending.pop()!
+    for (const resource of config?.resources ?? []) {
+      if (visited.has(resource.id) || !resource.properties.some((p) => p.reference === target))
+        continue
+      visited.add(resource.id)
+      linked.add(resource.id)
+      pending.push(resource.id)
+    }
+  }
   linked.delete(resourceId)
   return linked
 }

@@ -134,6 +134,10 @@ export const en: LocaleBundle = {
     'common:next': 'Next',
     'common:previous': 'Previous',
     'common:relatedRecords': 'Related records',
+    'common:commentsOnPosts': 'Comments on posts',
+    'errors:invalidRelationFilter': 'Invalid relation filter. Check the reference path.',
+    'errors:relationFilterTooBroad':
+      'The relation filter matches too many records. Narrow the filter.',
     'common:viewAll': 'View all',
     'common:noRelatedRecords': 'No related records.',
     'common:shortcutsHelp': 'Keyboard shortcuts',
