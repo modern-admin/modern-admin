@@ -33,6 +33,11 @@ export const ptBR: LocaleBundle = {
     'auth:loginFailed': 'Credenciais inválidas.',
     'errors:notFound': 'Não encontrado.',
     'errors:forbidden': 'Você não tem acesso a este recurso.',
+    'errors:apiKeyEndpointForbidden': 'As chaves de API não podem acessar este endpoint.',
+    'errors:apiKeyAuthForbidden':
+      'As chaves de API não podem acessar os endpoints de autenticação.',
+    'errors:resourceForbidden': 'O acesso a “{resource}” não é permitido.',
+    'errors:propertyForbidden': 'A propriedade “{property}” de “{resource}” não está acessível.',
     'errors:noEditableProperties': 'Não há campos editáveis disponíveis neste formulário.',
     'errors:server': 'Algo deu errado. Tente novamente.',
     'common:resources': 'Recursos',

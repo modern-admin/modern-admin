@@ -25,7 +25,7 @@ async function bootstrap(): Promise<void> {
   // three endpoints owned by @modern-admin/nest's AuthController
   // (/me, /login, /ui-props) are forwarded to NestJS instead of being
   // shadowed by Better Auth's greedy 404 handler.
-  app.use('/admin/api/auth', createBetterAuthMiddleware(toNodeHandler(auth)))
+  app.use('/admin/api/auth', createBetterAuthMiddleware(toNodeHandler(auth), { auth }))
 
   const port = Number(process.env.PORT ?? 3001)
   const host = process.env.HOST ?? '0.0.0.0'
