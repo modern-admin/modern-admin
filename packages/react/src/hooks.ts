@@ -270,7 +270,7 @@ export const useRecord = (
   return useQuery({
     queryKey: key,
     queryFn: () => {
-      const refresh = pendingRecordRefresh.get(qc)?.delete(hashKey(key)) ?? false
+      const refresh = pendingRecordRefresh.get(qc)?.has(hashKey(key)) ?? false
       return client.show(resourceId, recordId!, refresh ? { refresh: true } : undefined)
     },
     enabled: !!recordId,

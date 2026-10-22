@@ -24,10 +24,21 @@ describe('filterToWhere', () => {
     const email = 'author@example.com'
     const postDelegate = createDelegate([{ id: postId, authorEmail: email }])
     const client = createClient({
-      user: createDelegate([{ id: userId, email, age: 42 }]),
+      user: createDelegate([
+        { id: userId, email, age: 42 },
+        { id: uuidv7(), email: null, age: 42 },
+      ]),
       post: postDelegate,
     })
-    const users = new PrismaResource({ model: userModel, client })
+    const users = new PrismaResource({
+      model: {
+        ...userModel,
+        fields: userModel.fields.map((field) =>
+          field.name === 'email' ? { ...field, isRequired: false } : field,
+        ),
+      },
+      client,
+    })
     const posts = new PrismaResource({
       model: {
         ...postModel,

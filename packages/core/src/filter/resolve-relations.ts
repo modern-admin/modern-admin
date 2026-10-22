@@ -80,7 +80,9 @@ export async function resolveRelationFilters(
         }
         for (const record of response.records) {
           const value = keyPath === idPath ? record.id : record.params[keyPath]
-          if (value == null || !['string', 'number', 'boolean'].includes(typeof value)) {
+          // A nullable unique key cannot match any source foreign key.
+          if (value === null) continue
+          if (value === undefined || !['string', 'number', 'boolean'].includes(typeof value)) {
             throw invalidRelationFilter(head)
           }
           ids.add(String(value))
