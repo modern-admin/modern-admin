@@ -82,6 +82,9 @@ jobs:
       - name: Test
         run: bun run test
 
+      - name: Test release tooling
+        run: bun run test:release
+
       - name: Build all publishable packages
         run: bun run --filter './packages/*' build
 
