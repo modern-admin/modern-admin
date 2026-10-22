@@ -69,7 +69,7 @@ Three jobs: **check** (install → `prisma generate` → typecheck → lint →
 `format:check` → unit tests; hermetic, no services), **e2e** (Postgres/Redis service containers,
 `prisma:push`, `build:standalone`, everything except the visual-regression
 spec), and **e2e-visual** (that spec only). Both E2E jobs run inside
-`mcr.microsoft.com/playwright:v1.63.0-noble` with browsers preinstalled; the checked-in
+`mcr.microsoft.com/playwright:v1.64.1-noble` with browsers preinstalled; the checked-in
 `*-chromium-linux.png` baselines match byte-for-byte — regenerate baselines in
 that same image. The api app boots `ModernAdminStaticUiModule`, which reads
 `packages/web/dist/standalone/index.html`, so
@@ -195,7 +195,7 @@ Majors currently locked, with the gotchas they impose:
 | @tanstack/react-query   | 5.x           |                                                                                            |
 | @tanstack/react-router  | 1.x           | browser history via `createBrowserHistory()`; NOT TanStack Start (no SSR)                  |
 | @tanstack/react-table   | 9.x           | explicit `tableFeatures`; core row model is automatic                                      |
-| @hookform/resolvers     | 5.x           | API tweaks                                                                                 |
+| @hookform/resolvers     | 6.x           | API tweaks                                                                                 |
 | lucide-react            | 1.x           | verify icon names                                                                          |
 | tailwind-merge          | 3.x           |                                                                                            |
 | prisma / @prisma/client | 7.x           | new ESM engine, client API changes                                                         |

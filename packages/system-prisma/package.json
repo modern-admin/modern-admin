@@ -54,11 +54,11 @@
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
-    "@types/bun": "1.4.2",
-    "typescript": "^7.0.2"
+    "@types/bun": "1.4.3",
+    "typescript": "7.0.2"
   },
   "peerDependencies": {
-    "@prisma/client": "^7.10.0"
+    "@prisma/client": "7.10.1"
   },
   "peerDependenciesMeta": {
     "@prisma/client": {
