@@ -1,5 +1,12 @@
 # @modern-admin/feature-upload
 
+## 0.13.0
+
+### Patch Changes
+
+- Updated dependencies [[`adb5486`](https://github.com/modern-admin/modern-admin/commit/adb5486a838e49e7f565aa19334e745fcad6447b)]:
+  - @modern-admin/core@0.13.0
+
 ## 0.12.0
 
 ### Patch Changes
