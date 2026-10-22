@@ -14,6 +14,7 @@ import { isBetterAuthApiKeyRequest, type BetterAuthApiKeySource } from './api-ke
 export { isBetterAuthApiKeyRequest, type BetterAuthApiKeySource } from './api-key-request.js'
 
 export { accountIdentityPlugin } from './account-identity-plugin.js'
+export { oauthCallbackReplayPlugin } from './oauth-callback-replay-plugin.js'
 
 export {
   BUILTIN_AUTHORITATIVE_ACCOUNT_ISSUERS,

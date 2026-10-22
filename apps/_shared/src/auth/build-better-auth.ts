@@ -11,13 +11,13 @@
 import { betterAuth, type BetterAuthOptions, type BetterAuthPlugin } from 'better-auth'
 import { APIError } from 'better-auth/api'
 import { apiKey } from '@better-auth/api-key'
-import { accountIdentityPlugin } from '@modern-admin/auth-better-auth'
+import { accountIdentityPlugin, oauthCallbackReplayPlugin } from '@modern-admin/auth-better-auth'
 import { uuidv7, type ILogStore } from '@modern-admin/core'
 
 export interface BuildBetterAuthOptions {
   /** Database slot to pass through to `betterAuth()`. */
   database: BetterAuthOptions['database']
-  /** Plugins appended after the default api-key plugin (admin, passkey…). */
+  /** Plugins appended after the built-in auth plugins (admin, passkey…). */
   extraPlugins?: unknown[]
   modelNames?: {
     user?: string
@@ -156,6 +156,7 @@ export const buildBetterAuth = ({
   // `user/session/account/verification` config below).
   const plugins: BetterAuthPlugin[] = [
     accountIdentityPlugin(),
+    oauthCallbackReplayPlugin(),
     apiKey({
       apiKeyHeaders: 'x-api-key',
       // Names are required so list rows are identifiable in the UI.
