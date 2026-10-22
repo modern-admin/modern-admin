@@ -33,6 +33,11 @@ export const pl: LocaleBundle = {
     'auth:loginFailed': 'Nieprawidłowe dane logowania.',
     'errors:notFound': 'Nie znaleziono.',
     'errors:forbidden': 'Brak dostępu do tego zasobu.',
+    'errors:apiKeyEndpointForbidden': 'Klucze API nie mają dostępu do tego punktu końcowego.',
+    'errors:apiKeyAuthForbidden':
+      'Klucze API nie mają dostępu do punktów końcowych uwierzytelniania.',
+    'errors:resourceForbidden': 'Dostęp do „{resource}” jest niedozwolony.',
+    'errors:propertyForbidden': 'Właściwość „{property}” zasobu „{resource}” jest niedostępna.',
     'errors:noEditableProperties': 'W tym formularzu nie ma pól możliwych do edycji.',
     'errors:server': 'Coś poszło nie tak. Spróbuj ponownie.',
     'common:resources': 'Zasoby',

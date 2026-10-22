@@ -380,6 +380,54 @@ describe('BetterAuthProvider — API-key requests', () => {
     expect(seen).toEqual(['tok'])
     expect(principal?.apiKey).toMatchObject({ id: 'k1' })
   })
+
+  test.each([undefined, ['x-other-header']])(
+    'plugin-recognized headers retain scope with a mismatched provider header list (%j)',
+    async (apiKeyHeaders) => {
+      const auth = keyAuth({ header: 'x-private-key', verify: valid })
+      auth.api.getSession = async () => ({
+        user: owner,
+        session: { id: keyRow.id, token: 'secret' },
+      })
+      auth.options = {
+        plugins: [
+          {
+            id: 'api-key',
+            hooks: {
+              before: [
+                { matcher: (ctx: { headers: Headers }) => ctx.headers.has('x-private-key') },
+              ],
+            },
+          },
+        ],
+      }
+      const provider = new BetterAuthProvider({ auth, apiKeyHeaders, logger: silentLogger })
+      const principal = await provider.getCurrentUser({ headers: { 'x-private-key': 'secret' } })
+      expect(principal?.apiKey).toMatchObject({ id: 'k1', permissions: { payments: ['list'] } })
+    },
+  )
+
+  test('a failing plugin matcher rejects authentication rather than returning an owner session', async () => {
+    const auth = keyAuth({ verify: valid })
+    auth.options = {
+      plugins: [
+        {
+          id: 'api-key',
+          hooks: {
+            before: [
+              {
+                matcher: () => {
+                  throw new Error('getter failed')
+                },
+              },
+            ],
+          },
+        },
+      ],
+    }
+    const provider = new BetterAuthProvider({ auth, logger: silentLogger })
+    expect(await provider.getCurrentUser({ headers: { 'x-private-key': 'secret' } })).toBeNull()
+  })
 })
 
 describe('BetterAuthProvider — API-key requests verify the key once', () => {

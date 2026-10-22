@@ -35,18 +35,26 @@ are enforced only by the core action gate (`ModernAdmin.invoke()` /
 principals on every route except those marked `@AllowApiKey()`: resource
 actions, global search and `GET /admin/api/auth/me`. Audit log, history,
 webhooks, dashboard, analytics, cache, AI assistant, media generation and API
-key management are session-only. Mark your own controllers `@AllowApiKey()`
+key management are session-only. Mark your own handlers `@AllowApiKey()`
 only when everything they read or change goes through that gate.
 
 `createBetterAuthMiddleware` likewise answers 403 to any request presenting an
 API key on Better Auth's own paths (`/get-session`, `/list-sessions`,
 `/api-key/create`, …), where a key would otherwise act as a full session of its
-owner. Pass `{ apiKeyHeaders }` if the api-key plugin uses custom headers. Mount
-Better Auth through it rather than a bare `toNodeHandler(auth)`, whatever the
-prefix.
+owner. Mount it as
+`createBetterAuthMiddleware(toNodeHandler(auth), { auth })`, passing the same
+full Better Auth instance used by the provider. Its plugin matchers recognize
+custom key headers and header-based getters automatically; `apiKeyHeaders`
+can add explicit credential headers without replacing that detection. Mount
+Better Auth through this middleware whatever the prefix.
+
+API-key denials and time-series permission errors use `Accept-Language`, with
+English as fallback. Pass `serverLocales` for host-defined translations (on
+`ModernAdminModule` and, separately, on the Better Auth middleware).
 
 `IApiKeyService` receives `expiresIn` in **seconds**, the unit of Better Auth's
 api-key plugin; `ApiKeysController` converts the `expiresInDays` it accepts.
+The plugin's `keyExpiration.maxExpiresIn` ceiling, in contrast, is in **days**.
 
 ## Analytics
 

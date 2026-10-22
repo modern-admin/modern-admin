@@ -103,6 +103,16 @@ describe('AnalyticsController — access gate', () => {
     expect(queries).toHaveLength(0)
   })
 
+  test('resource and property denials use the requested language', async () => {
+    const req = { currentAdmin: viewer, headers: { 'accept-language': 'ru-RU' } }
+    await expect(
+      buildController().timeseries(body({ resource: 'customers' }), req),
+    ).rejects.toThrow('Доступ к ресурсу «customers» запрещён.')
+    await expect(buildController().timeseries(body({ field: 'salary' }), req)).rejects.toThrow(
+      'Свойство «salary» ресурса «payments» недоступно.',
+    )
+  })
+
   test('aggregating a property the role cannot read is refused', async () => {
     queries.length = 0
     const ctrl = buildController()

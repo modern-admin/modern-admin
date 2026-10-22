@@ -21,6 +21,7 @@ import { z } from 'zod'
 import { MODERN_ADMIN, MODERN_ADMIN_OPTIONS } from './tokens.js'
 import { ModernAdminAuthGuard } from './auth.guard.js'
 import type { ModernAdminModuleOptions } from './module.js'
+import { requestLocale, translateServerMessage } from './server-i18n.js'
 
 const stepZ = z.enum(['day', 'week', 'month', 'year', 'all'])
 const metricZ = z.enum(['count', 'sum', 'avg', 'min', 'max'])
@@ -59,6 +60,7 @@ export interface TimeSeriesResponse extends TimeSeriesResult {
 
 interface AdminRequest {
   currentAdmin?: CurrentAdmin
+  headers?: Record<string, string | string[] | undefined>
 }
 
 /**
@@ -104,13 +106,28 @@ export class AnalyticsController {
     }
 
     const currentAdmin = req.currentAdmin
+    const locale = requestLocale(req.headers, this.options?.serverLocales)
     if (!(await this.admin.canAccess(parsed.resource, 'list', currentAdmin))) {
-      throw new ForbiddenException(`Access to "${parsed.resource}" is not permitted`)
+      throw new ForbiddenException(
+        translateServerMessage(
+          locale,
+          'errors:resourceForbidden',
+          { resource: parsed.resource },
+          this.options?.serverLocales,
+        ),
+      )
     }
     const accessible = await this.admin.accessiblePropertyPaths(resource, currentAdmin)
     for (const path of [parsed.dateField, parsed.field, parsed.groupBy]) {
       if (path !== undefined && !isPathAccessible(path, accessible)) {
-        throw new ForbiddenException(`Property "${path}" of "${parsed.resource}" is not accessible`)
+        throw new ForbiddenException(
+          translateServerMessage(
+            locale,
+            'errors:propertyForbidden',
+            { property: path, resource: parsed.resource },
+            this.options?.serverLocales,
+          ),
+        )
       }
     }
 

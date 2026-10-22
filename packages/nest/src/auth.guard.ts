@@ -12,8 +12,10 @@ import { Reflector } from '@nestjs/core'
 import { type ModernAdmin } from '@modern-admin/core'
 import { MODERN_ADMIN, MODERN_ADMIN_OPTIONS } from './tokens.js'
 import type { ModernAdminModuleOptions } from './module.js'
+import { requestLocale, translateServerMessage } from './server-i18n.js'
 
 interface AdminRequest {
+  headers?: Record<string, string | string[] | undefined>
   currentAdmin?: unknown
   [key: string]: unknown
 }
@@ -48,14 +50,27 @@ const reflector = new Reflector()
  */
 @Injectable()
 export class ModernAdminAuthGuard implements CanActivate {
-  constructor(@Inject(MODERN_ADMIN) private readonly admin: ModernAdmin) {}
+  constructor(
+    @Inject(MODERN_ADMIN) private readonly admin: ModernAdmin,
+    @Optional()
+    @Inject(MODERN_ADMIN_OPTIONS)
+    private readonly options?: ModernAdminModuleOptions,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<AdminRequest>()
     const currentAdmin = await this.admin.auth.getCurrentUser(req)
     if (!currentAdmin) throw new UnauthorizedException()
     if (currentAdmin.apiKey != null && !allowsApiKey(context)) {
-      throw new ForbiddenException('API keys cannot access this endpoint')
+      throw new ForbiddenException({
+        code: 'API_KEY_NOT_ALLOWED',
+        message: translateServerMessage(
+          requestLocale(req.headers, this.options?.serverLocales),
+          'errors:apiKeyEndpointForbidden',
+          undefined,
+          this.options?.serverLocales,
+        ),
+      })
     }
     req.currentAdmin = currentAdmin
     return true

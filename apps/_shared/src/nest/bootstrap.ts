@@ -90,7 +90,7 @@ export async function bootstrapApp(options: BootstrapAppOptions): Promise<void> 
   // stream Better Auth needs raw access to. Wrapped so a request carrying an
   // API key never reaches Better Auth's own endpoints (see
   // `createBetterAuthMiddleware`).
-  app.use('/api/auth', createBetterAuthMiddleware(toNodeHandler(auth)))
+  app.use('/api/auth', createBetterAuthMiddleware(toNodeHandler(auth), { auth }))
 
   // OpenAPI spec + Swagger UI + Scalar UI. Mounted before listen so the
   // first request can already hit `/admin/api/docs`.

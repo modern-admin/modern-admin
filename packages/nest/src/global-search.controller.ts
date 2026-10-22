@@ -135,10 +135,10 @@ const describeMatch = (record: RecordJSON, needle: string): MatchInfo => {
 @ApiCookieAuth('session')
 @Controller('admin/api/global-search')
 @UseGuards(ModernAdminAuthGuard)
-@AllowApiKey()
 export class GlobalSearchController {
   constructor(@Inject(MODERN_ADMIN) private readonly admin: ModernAdmin) {}
 
+  @AllowApiKey()
   @Get()
   async search(
     @Query() rawQuery: Record<string, unknown>,

@@ -174,7 +174,8 @@ export const buildBetterAuth = ({
       // `rateLimitTimeWindow` for that).
       rateLimit: { enabled: true, timeWindow: 60_000, maxRequests: 600 },
       // Match the Settings UI and `ApiKeysController`, which accept up to
-      // 3650 days; the plugin's default ceiling is 365.
+      // 3650 days; maxExpiresIn is in days (unlike expiresIn, in seconds).
+      // The plugin's default ceiling is 365 days.
       keyExpiration: { maxExpiresIn: 3650 },
       schema: { apikey: { modelName: resolvedModelNames.apikey } },
     }) as BetterAuthPlugin,

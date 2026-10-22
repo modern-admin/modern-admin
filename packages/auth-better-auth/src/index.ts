@@ -9,6 +9,9 @@ import {
   type ILogger,
   type LoginCredentials,
 } from '@modern-admin/core'
+import { isBetterAuthApiKeyRequest, type BetterAuthApiKeySource } from './api-key-request.js'
+
+export { isBetterAuthApiKeyRequest, type BetterAuthApiKeySource } from './api-key-request.js'
 
 export { accountIdentityPlugin } from './account-identity-plugin.js'
 
@@ -84,7 +87,7 @@ interface BetterAuthApi extends Partial<ApiKeyAdminApi> {
       image?: string | null
       [key: string]: unknown
     }
-    session?: { id: string; expiresAt?: Date | string }
+    session?: { id: string; token?: string; expiresAt?: Date | string }
   } | null>
 
   signInEmail?(args: { body: { email: string; password: string } }): Promise<unknown>
@@ -119,7 +122,7 @@ interface BetterAuthApi extends Partial<ApiKeyAdminApi> {
  * call site. Instead we widen the public type and cast once internally via
  * the `api` getter below.
  */
-export interface BetterAuthInstance {
+export interface BetterAuthInstance extends BetterAuthApiKeySource {
   api: Record<string, unknown>
   /**
    * Better Auth's resolved context (`auth.$context`). Used to read an API
@@ -127,7 +130,10 @@ export interface BetterAuthInstance {
    */
   $context?: Promise<unknown>
   /** UI hint surface — list of enabled providers/passkeys/etc. */
-  options?: { socialProviders?: Record<string, unknown>; emailAndPassword?: { enabled?: boolean } }
+  options?: BetterAuthApiKeySource['options'] & {
+    socialProviders?: Record<string, unknown>
+    emailAndPassword?: { enabled?: boolean }
+  }
 }
 
 /**
@@ -271,10 +277,9 @@ export interface BetterAuthProviderOptions {
    */
   seedAdminHeaders?: Headers | (() => Headers | Promise<Headers>)
   /**
-   * Headers the api-key plugin reads the key from. Must mirror the plugin's
-   * own `apiKeyHeaders` option (default `'x-api-key'`): a request presenting
-   * a key in any of them is only authenticated once the key is verified and
-   * attached as the principal's `apiKey` claim.
+   * Additional headers to treat as API-key credentials (default `'x-api-key'`).
+   * The plugin's own matchers are always checked too, including custom headers
+   * and getters, so omitting a header here cannot bypass the key's scope.
    */
   apiKeyHeaders?: string | readonly string[]
 }
@@ -342,6 +347,14 @@ export class BetterAuthProvider implements IAuthProvider {
     if (!req) return null
     const headers = toHeaders(req.headers)
     const apiKeyHeader = this.readApiKeyHeader(headers)
+    let apiKeyRequest: boolean
+    try {
+      apiKeyRequest =
+        apiKeyHeader !== null || (await isBetterAuthApiKeyRequest(this.options.auth, headers))
+    } catch {
+      this.log.warn('[modern-admin] API key detection failed — rejecting the request')
+      return null
+    }
 
     let session: Awaited<ReturnType<BetterAuthApi['getSession']>>
     try {
@@ -350,7 +363,7 @@ export class BetterAuthProvider implements IAuthProvider {
       // The api-key plugin's session hook throws for a disabled, expired,
       // rate-limited or exhausted key. That is a rejected credential (401),
       // not a server fault.
-      if (apiKeyHeader === null) throw err
+      if (!apiKeyRequest) throw err
       this.log.warn('[modern-admin] API key rejected by Better Auth', {
         error: err instanceof Error ? err.message : String(err),
       })
@@ -375,9 +388,11 @@ export class BetterAuthProvider implements IAuthProvider {
     // gate. Every path that fails to attach the claim therefore returns
     // `null` — it used to fall through and hand the request the owner's
     // unrestricted session.
-    if (apiKeyHeader === null) return principal
+    if (!apiKeyRequest) return principal
 
-    const key = await this.resolveSessionApiKey(session, apiKeyHeader)
+    // The plugin places the extracted key in the synthetic session token;
+    // this also supports custom getters and secondary-storage-only keys.
+    const key = await this.resolveSessionApiKey(session, session.session?.token ?? apiKeyHeader)
     if (!key) return null
     // The api-key plugin mints the session with `session.id = apiKey.id` and
     // `userId = apiKey.referenceId`. Anything else means getSession resolved
@@ -416,7 +431,7 @@ export class BetterAuthProvider implements IAuthProvider {
    */
   private async resolveSessionApiKey(
     session: NonNullable<Awaited<ReturnType<BetterAuthApi['getSession']>>>,
-    apiKeyHeader: string,
+    apiKeyHeader: string | null | undefined,
   ): Promise<ApiKeyClaimSource | null> {
     const sessionId = session.session?.id
     if (sessionId) {
@@ -424,6 +439,7 @@ export class BetterAuthProvider implements IAuthProvider {
       if (row) return row
     }
 
+    if (!apiKeyHeader) return null
     const verify = this.api.verifyApiKey
     if (!verify) {
       this.log.warn(

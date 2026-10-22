@@ -49,7 +49,6 @@ interface AdminRequest {
 @ApiCookieAuth('session')
 @Controller('admin/api/resources/:resourceId')
 @UseGuards(ModernAdminAuthGuard)
-@AllowApiKey()
 // Bound here rather than as an APP_INTERCEPTOR: the cache keys off a
 // `:resourceId` route param, so a global binding only ever added `x-cache`
 // noise to the host app's own routes — and captured any of them that happened
@@ -58,6 +57,7 @@ interface AdminRequest {
 export class ResourceController {
   constructor(@Inject(MODERN_ADMIN) private readonly admin: ModernAdmin) {}
 
+  @AllowApiKey()
   @Get('actions/list')
   async list(
     @Param('resourceId') resourceId: string,
@@ -79,6 +79,7 @@ export class ResourceController {
     )
   }
 
+  @AllowApiKey()
   @Get('records/:recordId/actions/show')
   async show(
     @Param('resourceId') resourceId: string,
@@ -88,6 +89,7 @@ export class ResourceController {
     return this.run({ params: { resourceId, recordId, action: 'show' }, method: 'get' }, req)
   }
 
+  @AllowApiKey()
   @Post('actions/new')
   async create(
     @Param('resourceId') resourceId: string,
@@ -98,6 +100,7 @@ export class ResourceController {
     return this.run({ params: { resourceId, action: 'new' }, method: 'post', payload }, req)
   }
 
+  @AllowApiKey()
   @Patch('records/:recordId/actions/edit')
   async edit(
     @Param('resourceId') resourceId: string,
@@ -116,6 +119,7 @@ export class ResourceController {
     )
   }
 
+  @AllowApiKey()
   @Delete('records/:recordId/actions/delete')
   async remove(
     @Param('resourceId') resourceId: string,
@@ -125,6 +129,7 @@ export class ResourceController {
     return this.run({ params: { resourceId, recordId, action: 'delete' }, method: 'delete' }, req)
   }
 
+  @AllowApiKey()
   @Post('actions/bulkDelete')
   async bulkDelete(
     @Param('resourceId') resourceId: string,
@@ -141,6 +146,7 @@ export class ResourceController {
     )
   }
 
+  @AllowApiKey()
   @Get('actions/values')
   async values(
     @Param('resourceId') resourceId: string,
@@ -163,6 +169,7 @@ export class ResourceController {
     )
   }
 
+  @AllowApiKey()
   @Get('actions/search')
   async search(
     @Param('resourceId') resourceId: string,
@@ -191,6 +198,7 @@ export class ResourceController {
    * before submitting use this to fetch their initial data, and handlers
    * branch on `request.method !== 'post'` to skip the mutating path.
    */
+  @AllowApiKey()
   @Get('records/:recordId/actions/:action')
   @NoHttpCache()
   async fetchRecordAction(
@@ -205,6 +213,7 @@ export class ResourceController {
 
   /** Prime a custom resource- or bulk-scoped action's UI (`method: 'get'`).
    *  For bulk actions pass a comma-separated `recordIds` query param. */
+  @AllowApiKey()
   @Get('actions/:action')
   @NoHttpCache()
   async fetchResourceAction(
@@ -225,6 +234,7 @@ export class ResourceController {
   }
 
   /** Invoke a custom record-scoped action (actionType: 'record'). */
+  @AllowApiKey()
   @Post('records/:recordId/actions/:action')
   async invokeRecordAction(
     @Param('resourceId') resourceId: string,
@@ -241,6 +251,7 @@ export class ResourceController {
 
   /** Invoke a custom resource- or bulk-scoped action.
    *  For bulk actions pass `{ recordIds: string[] }` in the body. */
+  @AllowApiKey()
   @Post('actions/:action')
   async invokeResourceAction(
     @Param('resourceId') resourceId: string,

@@ -50,6 +50,7 @@
     "test": "bun test"
   },
   "dependencies": {
+    "@modern-admin/auth-better-auth": "workspace:^",
     "@modern-admin/core": "workspace:^",
     "@modern-admin/feature-upload": "workspace:^",
     "@modern-admin/i18n": "workspace:^",

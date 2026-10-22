@@ -383,6 +383,7 @@
       "name": "@modern-admin/nest",
       "version": "0.11.0",
       "dependencies": {
+        "@modern-admin/auth-better-auth": "workspace:^",
         "@modern-admin/core": "workspace:^",
         "@modern-admin/feature-upload": "workspace:^",
         "@modern-admin/i18n": "workspace:^",

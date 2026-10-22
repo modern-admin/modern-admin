@@ -45,9 +45,15 @@ Modern Admin's action gate. If the key is rejected — Better Auth refuses it
 the key is not the one the session was minted from — the request is rejected
 (`null`), never served with the owner's full role.
 
-If the plugin reads keys from headers other than `x-api-key`, pass the same list
-as `apiKeyHeaders` here and to `createBetterAuthMiddleware` from
-`@modern-admin/nest`.
+The provider asks the configured api-key plugin's own matchers to recognize
+key requests, including custom header lists and header-based getters. Its
+`apiKeyHeaders` option adds explicit credential headers; a mismatched list
+cannot turn a key into an unrestricted session.
+
+Pass the same full Better Auth instance to the provider and to
+`createBetterAuthMiddleware(toNodeHandler(auth), { auth })` from
+`@modern-admin/nest`. The middleware also uses the plugin's matchers, so its
+header settings cannot accidentally admit keys to account-management endpoints.
 
 Each request verifies the key once, in `getSession`; the claim is then read
 from the key's row by id through `auth.$context`, so the plugin's rate limit and

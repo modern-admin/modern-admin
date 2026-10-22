@@ -4,6 +4,8 @@ import { ForbiddenException, type ExecutionContext, UnauthorizedException } from
 import { GUARDS_METADATA } from '@nestjs/common/constants.js'
 import type { CurrentAdmin, ModernAdmin } from '@modern-admin/core'
 import { AllowApiKey, ModernAdminAuthGuard } from '../src/auth.guard.js'
+import { ResourceController } from '../src/resource.controller.js'
+import { GlobalSearchController } from '../src/global-search.controller.js'
 
 // An API key authenticates as its owner; its permissions only narrow what the
 // core gate (`invoke()` / `canAccess()`) lets through. These tests pin that
@@ -91,12 +93,26 @@ describe('ModernAdminAuthGuard — API-key principals', () => {
     // Resource actions and global search funnel through `invoke()`, where the
     // key's allowlist is enforced; `me` only echoes the (scoped) principal.
     // Adding an endpoint here is a security decision — see `AllowApiKey`.
-    expect(new Set(open.map((route) => route.split('.')[0]))).toEqual(
-      new Set(['ResourceController', 'GlobalSearchController', 'AuthController']),
+    expect(open.sort()).toEqual(
+      [
+        'AuthController.me',
+        'GlobalSearchController.search',
+        ...[
+          'list',
+          'show',
+          'create',
+          'edit',
+          'remove',
+          'bulkDelete',
+          'values',
+          'search',
+          'fetchRecordAction',
+          'invokeRecordAction',
+          'fetchResourceAction',
+          'invokeResourceAction',
+        ].map((name) => `ResourceController.${name}`),
+      ].sort(),
     )
-    expect(open.filter((route) => route.startsWith('AuthController.'))).toEqual([
-      'AuthController.me',
-    ])
   })
 
   test.each([
@@ -159,5 +175,33 @@ describe('ModernAdminAuthGuard — API-key principals', () => {
     const proto = HostController.prototype as unknown as Record<string, Handler>
     expect(await allows(keyPrincipal, cls, proto.open!)).toBe(true)
     expect(await allows(keyPrincipal, cls, proto.closed!)).toBe(false)
+  })
+
+  test.each([ResourceController, GlobalSearchController])(
+    '%s does not opt future handlers into API-key access',
+    async (Controller) => {
+      const unmarkedHandler = () => {}
+      expect(
+        await allows(keyPrincipal, Controller as unknown as ControllerClass, unmarkedHandler),
+      ).toBe(false)
+    },
+  )
+
+  test('API-key denials use the requested language', async () => {
+    const route = guardedRoutes().find(({ cls }) => cls.name === 'AuditLogController')!
+    try {
+      await guardFor(keyPrincipal).canActivate(
+        contextFor(route.cls, route.handler, {
+          headers: { 'accept-language': 'ru' },
+        }),
+      )
+      throw new Error('expected denial')
+    } catch (err) {
+      expect(err).toBeInstanceOf(ForbiddenException)
+      expect((err as ForbiddenException).getResponse()).toMatchObject({
+        code: 'API_KEY_NOT_ALLOWED',
+        message: 'API-ключам запрещён доступ к этому эндпоинту.',
+      })
+    }
   })
 })
