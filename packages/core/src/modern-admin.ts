@@ -51,6 +51,7 @@ import {
   type RealtimeEvent,
 } from './ports'
 import { setActiveFeatureFlags } from './feature-flags.js'
+import { bindRelationFilterScope } from './filter/resolve-relations.js'
 
 export interface ModernAdminOptions {
   databases?: unknown[]
@@ -556,6 +557,7 @@ export class ModernAdmin {
       ...(currentAdmin !== undefined ? { currentAdmin } : {}),
     }
 
+    bindRelationFilterScope(request, context)
     if (actionDecorator.actionType() === 'record') {
       const id = request.params.recordId
       if (id) {

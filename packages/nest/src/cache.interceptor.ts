@@ -150,10 +150,17 @@ export class ModernAdminCacheInterceptor implements NestInterceptor {
         return next.handle()
       }
       const actionName = req.params.recordId ? 'show' : 'list'
+      const action = decorator.getAction(actionName)?.merged
+      // Before hooks can add relation predicates absent from the URL. Their
+      // dependencies and access checks must run again on every list request.
+      const hasListBeforeHooks =
+        actionName === 'list' &&
+        (typeof action?.before === 'function' ||
+          (Array.isArray(action?.before) && action.before.length > 0))
       const hasDynamicAccess =
-        typeof decorator.getAction(actionName)?.merged.isAccessible === 'function' ||
+        typeof action?.isAccessible === 'function' ||
         decorator.properties.some((property) => typeof property.options.isAccessible === 'function')
-      if (hasDynamicAccess) {
+      if (hasDynamicAccess || hasListBeforeHooks) {
         setHeader('BYPASS')
         return next.handle()
       }

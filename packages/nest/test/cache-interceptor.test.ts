@@ -15,6 +15,8 @@ import { Reflector } from '@nestjs/core'
 import {
   MemoryCacheProvider,
   ModernAdmin,
+  uuidv7,
+  type ActionRequest,
   type CurrentAdmin,
   type PropertyContext,
 } from '@modern-admin/core'
@@ -87,6 +89,51 @@ const listReq = (currentAdmin?: CurrentAdmin) => ({
   originalUrl: '/admin/api/resources/users',
   params: { resourceId: 'users' },
   ...(currentAdmin ? { currentAdmin } : {}),
+})
+
+test('a plain URL with hook-added relation filters is fresh after a remote-resource mutation', async () => {
+  const cache = new InspectableCache()
+  const authorId = uuidv7()
+  const admin = new ModernAdmin({
+    databases: [
+      [
+        { name: 'users', rows: [] },
+        { name: 'authors', rows: [{ id: authorId, name: 'pro' }] },
+      ],
+    ],
+    adapters: [adapter as never],
+    cache,
+  })
+  const hook = (request: ActionRequest): ActionRequest => ({
+    ...request,
+    query: {
+      ...request.query,
+      filters: { 'postId.authorId.tier': { operator: 'eq', value: 'pro' } },
+    },
+  })
+  admin.findResource('users').decorate().getAction('list')!.merged.before = hook
+  const interceptor = new ModernAdminCacheInterceptor(admin, new Reflector())
+  const next: CallHandler = {
+    handle: () =>
+      from(
+        (async () => ({
+          tier: (await admin.findResource('authors').findOne(authorId))!.params.name,
+        }))(),
+      ),
+  }
+  await expect(
+    firstValueFrom(interceptor.intercept(httpContext(listReq()), next)),
+  ).resolves.toEqual({ tier: 'pro' })
+  await admin.invoke({
+    params: { resourceId: 'authors', recordId: authorId, action: 'edit' },
+    method: 'post',
+    payload: { name: 'free' },
+  })
+  admin.findResource('users').decorate().getAction('list')!.merged.before = [hook]
+  await expect(
+    firstValueFrom(interceptor.intercept(httpContext(listReq()), next)),
+  ).resolves.toEqual({ tier: 'free' })
+  expect(cache.keys.filter((key) => key.startsWith('v1:nest:'))).toEqual([])
 })
 
 test('relation predicates and distinct lookups bypass the HTTP cache', async () => {

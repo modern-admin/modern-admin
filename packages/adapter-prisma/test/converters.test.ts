@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test'
-import { Filter } from '@modern-admin/core'
+import { Filter, ModernAdmin, uuidv7, type ListActionResponse } from '@modern-admin/core'
 import { filterToWhere, findOptionsToPrisma } from '../src/converters.js'
 import { PrismaResource } from '../src/resource.js'
-import { userModel } from './_helpers/dmmf.js'
+import { postModel, userModel } from './_helpers/dmmf.js'
 import { createClient, createDelegate } from './_helpers/fake-client.js'
 
 const buildResource = () =>
@@ -12,6 +12,97 @@ const buildResource = () =>
   })
 
 describe('filterToWhere', () => {
+  test('legacy numeric ranges survive list resolution with and without relation predicates', async () => {
+    const authorId = uuidv7()
+    const postDelegate = createDelegate(
+      [2.57, 3, 3.05, 4].map((rating) => ({ id: uuidv7(), rating, authorId })),
+    )
+    const client = createClient({
+      user: createDelegate([{ id: authorId, email: 'author@example.com' }]),
+      post: postDelegate,
+    })
+    const admin = new ModernAdmin({
+      resources: [
+        new PrismaResource({ model: userModel, client }),
+        new PrismaResource({
+          model: {
+            ...postModel,
+            fields: [
+              ...postModel.fields.map((field) =>
+                field.isId ? { ...field, type: 'String' } : field,
+              ),
+              { ...postModel.fields[1]!, name: 'rating', type: 'Float' },
+            ],
+          },
+          client,
+        }),
+      ],
+    })
+    for (const filters of [
+      { rating: 'between:3,3.1' },
+      {
+        rating: 'between:3,3.1',
+        'authorId.email': { operator: 'eq', value: 'author@example.com' },
+      },
+    ]) {
+      const result = await admin.invoke<ListActionResponse>({
+        params: { resourceId: 'Post', action: 'list' },
+        method: 'get',
+        query: { filters },
+      })
+      expect(result.records.map((record) => record.params.rating)).toEqual([3, 3.05])
+      expect(result.meta.total).toBe(2)
+    }
+    const openEnded = await admin.invoke<ListActionResponse>({
+      params: { resourceId: 'Post', action: 'list' },
+      method: 'get',
+      query: {
+        filters: {
+          rating: 'between:3.05,',
+          'authorId.email': { operator: 'eq', value: 'author@example.com' },
+        },
+      },
+    })
+    expect(openEnded.records.map((record) => record.params.rating)).toEqual([3.05, 4])
+  })
+  test('empty relation matches and intersections never reach Prisma as a cleared IN filter', async () => {
+    const authorId = uuidv7()
+    const postId = uuidv7()
+    const authorDelegate = createDelegate([{ id: authorId, email: 'author@example.com' }])
+    const postDelegate = createDelegate([{ id: postId, title: 'Post', authorId }])
+    const client = createClient({ user: authorDelegate, post: postDelegate })
+    const admin = new ModernAdmin({
+      resources: [
+        new PrismaResource({ model: userModel, client }),
+        new PrismaResource({
+          model: {
+            ...postModel,
+            fields: postModel.fields.map((field) =>
+              field.isId ? { ...field, type: 'String' } : field,
+            ),
+          },
+          client,
+        }),
+      ],
+    })
+    for (const filters of [
+      { 'authorId.email': { operator: 'eq', value: 'missing@example.com' } },
+      {
+        authorId: { operator: 'eq', value: uuidv7() },
+        'authorId.email': { operator: 'eq', value: 'author@example.com' },
+      },
+    ]) {
+      const result = await admin.invoke<ListActionResponse>({
+        params: { resourceId: 'Post', action: 'list' },
+        method: 'get',
+        query: { filters },
+      })
+      expect(result.records).toEqual([])
+      expect(result.meta.total).toBe(0)
+    }
+    expect(authorDelegate.calls.some((call) => call.method === 'findMany')).toBe(true)
+    expect(postDelegate.calls).toEqual([])
+  })
   test('string fields produce case-insensitive contains clauses', () => {
     const resource = buildResource()
     const filter = new Filter({ email: 'foo@bar' }, resource)

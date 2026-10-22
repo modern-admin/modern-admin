@@ -47,6 +47,18 @@ describe('Filter', () => {
     expect(new Filter({ name: 'in:a,b,c' }, resource).get('name')?.value).toEqual(['a', 'b', 'c'])
   })
 
+  test('serializing legacy between filters preserves both and open-ended bounds', () => {
+    for (const [raw, criterion] of [
+      ['between:3,3.1', { operator: 'between', from: '3', to: '3.1' }],
+      ['between:4.5,', { operator: 'between', from: '4.5' }],
+      ['between:,3.1', { operator: 'between', to: '3.1' }],
+    ] as const) {
+      const json = new Filter({ rating: raw }, resource).toJSON()
+      expect(json).toEqual({ rating: criterion })
+      expect(new Filter(json, resource).toJSON()).toEqual(json)
+    }
+  })
+
   test('all strings using the removed in-json prefix remain literal', () => {
     for (const legacy of ['in-json:not-a-json-array', 'in-json:["a"]']) {
       const filter = new Filter({ name: legacy }, resource).get('name')

@@ -235,6 +235,40 @@ describe('relation filters and virtual related tables', () => {
     )
   })
 
+  test('resolves each nested lookup once while paging and scopes it to one invocation', async () => {
+    const f = fixture()
+    f.authors.data.rows = Array.from({ length: 405 }, () => ({ id: uuidv7(), tier: 'pro' }))
+    f.posts.data.rows = f.authors.data.rows.map((author) => ({ id: uuidv7(), authorId: author.id }))
+    f.comments.data.rows = f.posts.data.rows.map((post) => ({ id: uuidv7(), postId: post.id }))
+    let authorReads = 0
+    const findAuthors = f.authors.find.bind(f.authors)
+    f.authors.find = (filter, options) => {
+      authorReads++
+      return findAuthors(filter, options)
+    }
+    const filters = { 'postId.authorId.tier': { operator: 'eq' as const, value: 'pro' } }
+    expect((await f.list(filters)).meta.total).toBe(405)
+    expect(authorReads).toBe(3)
+    f.authors.data.rows.forEach((author) => {
+      author.tier = 'free'
+    })
+    expect((await f.list(filters)).meta.total).toBe(0)
+    expect(authorReads).toBe(4)
+  })
+
+  test('never sends an empty relation result to adapter find/count', async () => {
+    const f = fixture()
+    f.comments.find = async () => {
+      throw new Error('Unscoped adapter read')
+    }
+    f.comments.count = async () => {
+      throw new Error('Unscoped adapter count')
+    }
+    const result = await f.list({ postId: f.otherPost, 'postId.authorId': f.alice })
+    expect(result.records).toEqual([])
+    expect(result.meta.total).toBe(0)
+  })
+
   test('runs intermediate row-scoping hooks with the same principal', async () => {
     const f = fixture()
     const action = f.posts.decorate().getAction('list')!.merged as Action

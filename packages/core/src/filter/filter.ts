@@ -1,4 +1,5 @@
 import type { BaseProperty, BaseResource } from '../adapters'
+import { parseBetween } from '../adapters/filter-coerce.js'
 import { z } from 'zod'
 import { flatten, unflatten } from '../utils/flat.js'
 
@@ -201,6 +202,14 @@ const elementCriterion = (element: FilterElement): FilterInput => {
     return { operator, values: Array.isArray(value) ? value : [String(value)] }
   }
   if (operator === 'between') {
+    if (typeof value === 'string') {
+      const { fromStr, toStr } = parseBetween(value)
+      return {
+        operator,
+        ...(fromStr ? { from: fromStr } : {}),
+        ...(toStr ? { to: toStr } : {}),
+      }
+    }
     const range = value !== null && !Array.isArray(value) && typeof value === 'object' ? value : {}
     return {
       operator,

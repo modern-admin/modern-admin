@@ -149,14 +149,16 @@ const handler = async (
       const resolvedFilter = await resolveRelationFilters(filter, context)
       const sortOption =
         sortBy != null ? { sort: { sortBy, ...(direction ? { direction } : {}) } } : {}
-      const [records, total] = await Promise.all([
-        resource.find(resolvedFilter, {
-          limit: perPage,
-          offset: (page - 1) * perPage,
-          ...sortOption,
-        }),
-        resource.count(resolvedFilter),
-      ])
+      const [records, total]: [BaseRecord[], number] = resolvedFilter
+        ? await Promise.all([
+            resource.find(resolvedFilter, {
+              limit: perPage,
+              offset: (page - 1) * perPage,
+              ...sortOption,
+            }),
+            resource.count(resolvedFilter),
+          ])
+        : [[], 0]
 
       await populateReferences(records, resource, admin)
 
