@@ -11,6 +11,7 @@ import {
 } from '@modern-admin/core'
 
 export { accountIdentityPlugin } from './account-identity-plugin.js'
+export { oauthCallbackReplayPlugin } from './oauth-callback-replay-plugin.js'
 
 export {
   BUILTIN_AUTHORITATIVE_ACCOUNT_ISSUERS,
