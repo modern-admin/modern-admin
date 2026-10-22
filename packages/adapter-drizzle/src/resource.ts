@@ -75,6 +75,7 @@ export class DrizzleResource extends BaseResource {
   private readonly _id: string
   private readonly _properties: DrizzleProperty[]
   private readonly idColumn: DrizzleColumn
+  private readonly columnKeys = new Map<string, string>()
 
   constructor(raw: unknown) {
     super()
@@ -100,6 +101,7 @@ export class DrizzleResource extends BaseResource {
       if (key === '_') continue
       const col = raw.table[key] as DrizzleColumn | undefined
       if (!col || typeof col.name !== 'string') continue
+      this.columnKeys.set(col.name, key)
       this._properties.push(
         new DrizzleProperty(
           col,
@@ -162,11 +164,20 @@ export class DrizzleResource extends BaseResource {
   /** Drop unknown keys so we never write to columns that don't exist. */
   private writableData(params: ParamsType): Record<string, unknown> {
     const out: Record<string, unknown> = {}
-    for (const prop of this._properties) {
-      const path = prop.path()
-      if (path in params) out[path] = params[path]
+    for (const [path, key] of this.columnKeys) {
+      if (Object.hasOwn(params, path)) out[key] = params[path]
     }
     return out
+  }
+
+  /** Drizzle returns schema keys; core properties use physical column paths. */
+  private recordParams(row: ParamsType): ParamsType {
+    const params: ParamsType = {}
+    for (const [path, key] of this.columnKeys) {
+      if (Object.hasOwn(row, key)) params[path] = row[key]
+      else if (Object.hasOwn(row, path)) params[path] = row[path]
+    }
+    return params
   }
 
   override async distinct(
@@ -217,7 +228,7 @@ export class DrizzleResource extends BaseResource {
     if (limit !== undefined) qb = qb.limit(limit)
     if (offset !== undefined) qb = qb.offset(offset)
     const rows = (await qb) as ParamsType[]
-    return rows.map((row) => new BaseRecord(row, this))
+    return rows.map((row) => new BaseRecord(this.recordParams(row), this))
   }
 
   override async search(
@@ -247,7 +258,7 @@ export class DrizzleResource extends BaseResource {
       .from(this.table)
       .where(where as unknown)
       .limit(limit)) as ParamsType[]
-    return rows.map((row) => new BaseRecord(row, this))
+    return rows.map((row) => new BaseRecord(this.recordParams(row), this))
   }
 
   override async findOne(id: string): Promise<BaseRecord | null> {
@@ -257,7 +268,7 @@ export class DrizzleResource extends BaseResource {
       .where(eq(this.idColumn as never, this.castId(id) as never))
       .limit(1)) as ParamsType[]
     const row = rows[0]
-    return row ? new BaseRecord(row, this) : null
+    return row ? new BaseRecord(this.recordParams(row), this) : null
   }
 
   override async findMany(ids: Array<string | number>): Promise<BaseRecord[]> {
@@ -267,12 +278,12 @@ export class DrizzleResource extends BaseResource {
       .select()
       .from(this.table)
       .where(inArray(this.idColumn as never, cast as never))) as ParamsType[]
-    return rows.map((row) => new BaseRecord(row, this))
+    return rows.map((row) => new BaseRecord(this.recordParams(row), this))
   }
 
   override async create(params: ParamsType): Promise<ParamsType> {
     const rows = await this.db().insert(this.table).values(this.writableData(params)).returning()
-    return (rows[0] ?? {}) as ParamsType
+    return this.recordParams((rows[0] ?? {}) as ParamsType)
   }
 
   override async update(id: string, params: ParamsType): Promise<ParamsType> {
@@ -281,7 +292,7 @@ export class DrizzleResource extends BaseResource {
       .set(this.writableData(params))
       .where(eq(this.idColumn as never, this.castId(id) as never))
       .returning()
-    return (rows[0] ?? {}) as ParamsType
+    return this.recordParams((rows[0] ?? {}) as ParamsType)
   }
 
   override async delete(id: string): Promise<void> {

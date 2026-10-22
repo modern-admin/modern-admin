@@ -17,3 +17,5 @@ evaluated against the loaded record. Preserve role, API-key and static access de
 Resolve relation filters using the actual referenced unique column in Prisma and Drizzle,
 with independent lookup memoization and property access checks. Reject composite mappings
 that scalar relation traversal cannot preserve.
+Normalize Drizzle schema keys to declared column paths on reads and map them back on writes,
+so mapped unique columns and primary keys work through actual database queries.
