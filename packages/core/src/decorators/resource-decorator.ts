@@ -93,6 +93,7 @@ export class ResourceDecorator {
       if (
         path.includes('.') &&
         this.options.filterProperties?.includes(path) &&
+        head?.isStored() &&
         (overrides[head?.path() ?? '']?.reference ?? head?.reference())
       ) {
         continue
@@ -159,6 +160,7 @@ export class ResourceDecorator {
       !this.resourceLookup ||
       !path.includes('.') ||
       !this.options.filterProperties?.includes(path) ||
+      !this.resource.property(path.split('.')[0]!)?.isStored() ||
       !this.properties.find((property) => property.path() === path.split('.')[0])?.reference()
     ) {
       return null

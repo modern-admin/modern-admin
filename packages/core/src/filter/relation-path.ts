@@ -35,14 +35,15 @@ export function resolveRelationPath(
     const direct = current.property(remaining)
     if (direct) {
       const property = current.decorate().getPropertyByKey(remaining)!
-      if (property.isArray()) throw invalidRelationFilter(path)
+      if (property.isArray() || !direct.isStored()) throw invalidRelationFilter(path)
       entries.push({ resource: current, property })
       return entries
     }
     const separator = remaining.indexOf('.')
     if (separator < 1 || entries.length >= MAX_RELATION_DEPTH) throw invalidRelationFilter(path)
     const head = remaining.slice(0, separator)
-    const property = current.property(head) ? current.decorate().getPropertyByKey(head) : null
+    const raw = current.property(head)
+    const property = raw?.isStored() ? current.decorate().getPropertyByKey(head) : null
     const reference = property?.reference()
     if (!property || property.isArray() || !reference) throw invalidRelationFilter(path)
     entries.push({ resource: current, property })

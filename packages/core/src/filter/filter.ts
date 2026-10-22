@@ -178,6 +178,31 @@ const extractStructuredCriteria = (
   return remainder
 }
 
+/** Keep legacy relation arrays and ranges atomic instead of flattening their members. */
+const extractRelationValues = (
+  value: unknown,
+  path: string,
+  values: Map<string, FilterValue>,
+  isRelationPath: (path: string) => boolean,
+): unknown => {
+  const isRange =
+    isPlainRecord(value) &&
+    Object.keys(value).length > 0 &&
+    Object.keys(value).every((key) => key === 'from' || key === 'to')
+  if ((Array.isArray(value) || isRange) && isSafeFilterPath(path) && isRelationPath(path)) {
+    values.set(path, filterInputZ.parse(value) as FilterValue)
+    return undefined
+  }
+  if (!isPlainRecord(value)) return value
+  const remainder: Record<string, unknown> = {}
+  for (const [key, child] of Object.entries(value)) {
+    const childPath = path ? `${path}.${key}` : key
+    const extracted = extractRelationValues(child, childPath, values, isRelationPath)
+    if (extracted !== undefined) remainder[key] = extracted
+  }
+  return remainder
+}
+
 const criterionValue = (criterion: FilterCriterion): FilterValue => {
   switch (criterion.operator) {
     case 'in':
@@ -235,10 +260,16 @@ export class Filter {
     options: { preserveRelationPaths?: boolean } = {},
   ) {
     const structuredCriteria = new Map<string, FilterCriterion>()
-    const legacyFilters = extractStructuredCriteria(rawFilters ?? {}, '', structuredCriteria)
+    const extractedLegacy = extractStructuredCriteria(rawFilters ?? {}, '', structuredCriteria)
+    const relationValues = new Map<string, FilterValue>()
+    const legacyFilters = options.preserveRelationPaths
+      ? extractRelationValues(extractedLegacy, '', relationValues, (path) =>
+          this.isRelationPath(path),
+        )
+      : extractedLegacy
     const flat = flatten(legacyFilters)
     // Allow `field~~from` / `field~~to` ranges by un-flattening with our separator.
-    const ranged: Record<string, FilterValue> = {}
+    const ranged: Record<string, FilterValue> = Object.fromEntries(relationValues)
     /** Per-field operator extracted from `field~~op` qualifiers or value prefixes. */
     const operators: Record<string, FilterOperator | null> = {}
     for (const key of Object.keys(flat)) {
@@ -321,6 +352,7 @@ export class Filter {
   isRelationPath(path: string): boolean {
     if (!path.includes('.') || this.resource.property(path)) return false
     const head = path.slice(0, path.indexOf('.'))
+    if (!this.resource.property(head)?.isStored()) return false
     const property = this.resource._decorated?.getPropertyByKey(head)
     return Boolean(property?.reference() ?? this.resource.property(head)?.reference())
   }

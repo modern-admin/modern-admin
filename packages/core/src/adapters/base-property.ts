@@ -86,6 +86,11 @@ export class BaseProperty {
     return this.attrs.reference
   }
 
+  /** Whether predicates can address this field directly in storage. */
+  isStored(): boolean {
+    return true
+  }
+
   availableValues(): string[] | null {
     return this.attrs.availableValues
   }
