@@ -79,13 +79,19 @@ async function showErrorToast(page: Page, dialog: Locator): Promise<Locator> {
   return toast
 }
 
-async function swipeToast(page: Page, toast: Locator, direction: 'left' | 'right'): Promise<void> {
+type SwipeDirection = 'left' | 'right' | 'top' | 'bottom'
+
+async function swipeToast(page: Page, toast: Locator, direction: SwipeDirection): Promise<void> {
   // Wait for the toast's entrance animation before using viewport coordinates.
   await toast.tap({ trial: true })
   const box = await toast.boundingBox()
   expect(box).not.toBeNull()
   const x = box!.x + box!.width / 2
-  const y = box!.y + box!.height / 2
+  // An upward swipe starts near the bottom so it has enough travel without
+  // sending touch coordinates above the viewport's top edge.
+  const y = box!.y + (direction === 'top' ? box!.height - 8 : box!.height / 2)
+  const deltaX = direction === 'left' ? -120 : direction === 'right' ? 120 : 0
+  const deltaY = direction === 'top' ? -Math.min(120, y - 4) : direction === 'bottom' ? 120 : 0
   const session = await page.context().newCDPSession(page)
   try {
     await session.send('Input.dispatchTouchEvent', {
@@ -95,7 +101,7 @@ async function swipeToast(page: Page, toast: Locator, direction: 'left' | 'right
     for (let step = 1; step <= 6; step++) {
       await session.send('Input.dispatchTouchEvent', {
         type: 'touchMove',
-        touchPoints: [{ x: x + (direction === 'right' ? 1 : -1) * step * 20, y }],
+        touchPoints: [{ x: x + (deltaX * step) / 6, y: y + (deltaY * step) / 6 }],
       })
       await page.evaluate(
         () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
@@ -152,7 +158,7 @@ test.describe('Touch overlays (375px)', () => {
     await expect(dialog).toBeHidden()
   })
 
-  for (const direction of ['left', 'right'] as const) {
+  for (const direction of ['left', 'right', 'top', 'bottom'] as const) {
     test(`a toast swipes ${direction} while keeping the modal open`, async ({ page }) => {
       const dialog = await openWebhookEditor(page)
       const toast = await showErrorToast(page, dialog)
