@@ -79,7 +79,8 @@ export const navigationZ = z
 export const relatedResourceZ = z.object({
   /** Target resource id (the one *containing* the foreign key). */
   resourceId: z.string(),
-  /** Property path on the target resource that points back to us. */
+  /** Scalar FK path on the target resource that points back to us.
+   * May traverse references: `postId.authorId` lists comments on our posts. */
   foreignKey: z.string(),
   /** Optional tab label override; falls back to the target resource name. */
   label: z.string().optional(),
@@ -106,6 +107,8 @@ export const resourceOptionsZ = z.object({
   /** Creation-form whitelist/order. Falls back to `editProperties`. */
   newProperties: z.array(z.string()).optional(),
   editProperties: z.array(z.string()).optional(),
+  /** Filter fields, including scalar reference paths such as `postId.authorId.name`.
+   * Relation fields infer the terminal type and appear only in the filter view. */
   filterProperties: z.array(z.string()).optional(),
   sort: z
     .object({

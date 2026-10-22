@@ -1,6 +1,9 @@
 import type { BaseProperty, BaseResource } from '../adapters'
+import { parseBetween } from '../adapters/filter-coerce.js'
 import { z } from 'zod'
 import { flatten, unflatten } from '../utils/flat.js'
+import { resolveRelationPath } from './relation-path.js'
+import { ResourceNotFoundError } from '../errors'
 
 export const PARAM_SEPARATOR = '~~'
 
@@ -177,6 +180,37 @@ const extractStructuredCriteria = (
   return remainder
 }
 
+/** Keep legacy relation arrays and ranges atomic instead of flattening their members. */
+const extractRelationValues = (
+  value: unknown,
+  path: string,
+  values: Map<string, FilterValue>,
+  isRelationPath: (path: string) => boolean,
+  isRangeValue: (path: string, keys: string[]) => boolean,
+): unknown => {
+  const isRange =
+    isPlainRecord(value) &&
+    Object.keys(value).length > 0 &&
+    Object.keys(value).every((key) => key === 'from' || key === 'to')
+  if (
+    (Array.isArray(value) || isRange) &&
+    isSafeFilterPath(path) &&
+    isRelationPath(path) &&
+    (!isRange || isRangeValue(path, Object.keys(value)))
+  ) {
+    values.set(path, filterInputZ.parse(value) as FilterValue)
+    return undefined
+  }
+  if (!isPlainRecord(value)) return value
+  const remainder: Record<string, unknown> = {}
+  for (const [key, child] of Object.entries(value)) {
+    const childPath = path ? `${path}.${key}` : key
+    const extracted = extractRelationValues(child, childPath, values, isRelationPath, isRangeValue)
+    if (extracted !== undefined) remainder[key] = extracted
+  }
+  return remainder
+}
+
 const criterionValue = (criterion: FilterCriterion): FilterValue => {
   switch (criterion.operator) {
     case 'in':
@@ -201,6 +235,14 @@ const elementCriterion = (element: FilterElement): FilterInput => {
     return { operator, values: Array.isArray(value) ? value : [String(value)] }
   }
   if (operator === 'between') {
+    if (typeof value === 'string') {
+      const { fromStr, toStr } = parseBetween(value)
+      return {
+        operator,
+        ...(fromStr ? { from: fromStr } : {}),
+        ...(toStr ? { to: toStr } : {}),
+      }
+    }
     const range = value !== null && !Array.isArray(value) && typeof value === 'object' ? value : {}
     return {
       operator,
@@ -223,12 +265,39 @@ export class Filter {
   constructor(
     rawFilters: RawFilters | undefined,
     public readonly resource: BaseResource,
+    options: { preserveRelationPaths?: boolean } = {},
   ) {
     const structuredCriteria = new Map<string, FilterCriterion>()
-    const legacyFilters = extractStructuredCriteria(rawFilters ?? {}, '', structuredCriteria)
+    const extractedLegacy = extractStructuredCriteria(rawFilters ?? {}, '', structuredCriteria)
+    const relationValues = new Map<string, FilterValue>()
+    const legacyFilters = options.preserveRelationPaths
+      ? extractRelationValues(
+          extractedLegacy,
+          '',
+          relationValues,
+          (path) => this.isRelationPath(path),
+          (path, keys) => {
+            const lookup = resource._decorated?.resourceLookup
+            if (!lookup) return true
+            const terminal = resolveRelationPath(resource, path, lookup).at(-1)!.property
+            const reference = terminal.reference()
+            // A reference may lead to actual fields named `from` or `to`.
+            // Preserve that traversal instead of comparing a bound with its ID.
+            if (!reference) return true
+            try {
+              const target = lookup(reference)
+              return !keys.some((key) => target.property(key))
+            } catch (error) {
+              // A terminal FK can be filtered by ID without registering its target.
+              if (error instanceof ResourceNotFoundError) return true
+              throw error
+            }
+          },
+        )
+      : extractedLegacy
     const flat = flatten(legacyFilters)
     // Allow `field~~from` / `field~~to` ranges by un-flattening with our separator.
-    const ranged: Record<string, FilterValue> = {}
+    const ranged: Record<string, FilterValue> = Object.fromEntries(relationValues)
     /** Per-field operator extracted from `field~~op` qualifiers or value prefixes. */
     const operators: Record<string, FilterOperator | null> = {}
     for (const key of Object.keys(flat)) {
@@ -251,7 +320,18 @@ export class Filter {
       }
     }
     // Re-aggregate nested keys (a.b -> { a: { b } }) for properties of mixed type.
-    const reaggregated = unflatten(ranged) as Record<string, FilterValue>
+    const relationPaths = Object.fromEntries(
+      Object.entries(ranged).filter(
+        ([path]) => options.preserveRelationPaths && this.isRelationPath(path),
+      ),
+    )
+    const ordinaryPaths = Object.fromEntries(
+      Object.entries(ranged).filter(([path]) => !Object.hasOwn(relationPaths, path)),
+    )
+    const reaggregated = {
+      ...unflatten(ordinaryPaths),
+      ...relationPaths,
+    } as Record<string, FilterValue>
 
     this.filters = Object.create(null) as Record<string, FilterElement>
     for (const path of Object.keys(reaggregated)) {
@@ -295,6 +375,18 @@ export class Filter {
 
   get(path: string): FilterElement | null {
     return this.filters[path] ?? null
+  }
+
+  isRelationPath(path: string): boolean {
+    if (!path.includes('.') || this.resource.property(path)) return false
+    const head = path.slice(0, path.indexOf('.'))
+    if (!this.resource.property(head)?.isStored()) return false
+    const property = this.resource._decorated?.getPropertyByKey(head)
+    return Boolean(property?.reference() ?? this.resource.property(head)?.reference())
+  }
+
+  hasRelations(): boolean {
+    return Object.keys(this.filters).some((path) => this.isRelationPath(path))
   }
 
   reduce<T>(callback: (memo: T, element: FilterElement) => T, initial: T): T {

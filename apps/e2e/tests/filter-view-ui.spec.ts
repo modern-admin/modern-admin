@@ -13,7 +13,7 @@ import { expect, test, type APIRequestContext, type Page } from '@playwright/tes
  * column that doesn't exist.
  *
  * Fixtures: `comments` declares
- * `filterProperties: ['id', 'postId', 'authorId', 'rating']`
+ * `filterProperties: ['id', 'postId', 'authorId', 'rating', 'postId.authorId', 'postId.authorId.tier']`
  * (apps/_shared/src/admin/comments/comments.controller.ts) — a whitelist that
  * differs from its columns in three ways at once: it drops `body` and
  * `createdAt`, and it opts `id` back in against the default that excludes id
@@ -71,10 +71,17 @@ test.describe('Filter view — sheet is built from filterProperties', () => {
 
     // The panel mounts a few fields per frame (see FilterPanel's
     // `mountedCount`), so wait for the full set before snapshotting labels.
-    await expect(filterSheet(page).locator('label')).toHaveCount(4, { timeout: 10_000 })
+    await expect(filterSheet(page).locator('label')).toHaveCount(6, { timeout: 10_000 })
     // Labels are the localized ones the SPA renders, not the raw
     // `property.label` the API serialises (`postId` → "Post", etc.).
-    expect(await filterFieldLabels(page)).toEqual(['Id', 'Post', 'Author', 'Rating'])
+    expect(await filterFieldLabels(page)).toEqual([
+      'Id',
+      'Post',
+      'Author',
+      'Rating',
+      'Post Id author Id',
+      'Post Id author Id tier',
+    ])
   })
 
   test('a column excluded from the filter view is unfilterable, not silently listed', async ({
@@ -89,7 +96,7 @@ test.describe('Filter view — sheet is built from filterProperties', () => {
     expect(headers).toContain('Posted at')
 
     await openFilters(page)
-    await expect(filterSheet(page).locator('label')).toHaveCount(4, { timeout: 10_000 })
+    await expect(filterSheet(page).locator('label')).toHaveCount(6, { timeout: 10_000 })
     const labels = await filterFieldLabels(page)
     expect(labels).not.toContain('Comment text')
     expect(labels).not.toContain('Posted at')
@@ -116,6 +123,36 @@ test.describe('Filter view — sheet is built from filterProperties', () => {
     const search = new URL(page.url()).searchParams
     expect(search.get('filters[id][operator]')).toBe('co')
     expect(search.get('filters[id][value]')).toBe(commentId)
+  })
+
+  test('filters through two references using the inferred enum input', async ({
+    page,
+    request,
+  }) => {
+    const filters = new URLSearchParams({ perPage: '50' })
+    filters.set('filters[postId.authorId.tier][operator]', 'eq')
+    filters.set('filters[postId.authorId.tier][value]', 'pro')
+    const expectedRes = await request.get(adminApi(`/resources/comments/actions/list?${filters}`))
+    expect(expectedRes.ok()).toBeTruthy()
+    const expected = await expectedRes.json()
+    expect(expected.meta.total).toBeGreaterThan(0)
+    await openList(page, 'comments')
+    await openFilters(page)
+    const field = filterSheet(page).locator(
+      'xpath=.//label[normalize-space()="Post Id author Id tier"]/parent::div',
+    )
+    await field.getByRole('combobox').click()
+    await page.getByRole('option', { name: /^pro$/i }).click()
+    await filterSheet(page)
+      .getByRole('button', { name: /^Apply filters$/i })
+      .click()
+    await expect(filterSheet(page)).toBeHidden()
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get('filters[postId.authorId.tier][value]'))
+      .toBe('pro')
+    await expect(dataRows(page)).toHaveCount(expected.records.length)
+    const ids = expected.records.map((record: { id: string }) => record.id)
+    for (const id of ids) await expect(page.locator('tbody')).toContainText(id)
   })
 
   test('without filterProperties, id is offered as a column but not as a filter', async ({

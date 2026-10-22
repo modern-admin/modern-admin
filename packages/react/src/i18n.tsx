@@ -39,7 +39,7 @@ export interface MetadataResourceTranslations {
   actions?: Record<string, MetadataActionTranslations>
   /**
    * Tab label overrides for related-resource tabs on the show page.
-   * Key is the related resource's `resourceId`.
+   * Key is `resourceId::foreignKey` for a specific table, or `resourceId`.
    */
   relatedResources?: Record<string, string>
 }
@@ -105,7 +105,7 @@ const localizeKeyValueField = (
 
 /**
  * Applies translated tab labels to `relatedResources`. Each translation map
- * is keyed by `resourceId`; the first map that has a matching entry wins.
+ * is keyed by `resourceId::foreignKey` or `resourceId`; the first matching map wins.
  * Exported for unit testing.
  */
 export const localizeRelatedResources = (
@@ -114,7 +114,11 @@ export const localizeRelatedResources = (
 ): RelatedResource[] | undefined => {
   if (!relatedResources) return relatedResources
   return relatedResources.map((r) => {
-    const translatedLabel = firstDefined(...translations.map((map) => map?.[r.resourceId]))
+    const translatedLabel = firstDefined(
+      ...translations.map(
+        (map) => map?.[`${r.resourceId}::${r.foreignKey}`] ?? map?.[r.resourceId],
+      ),
+    )
     return translatedLabel !== undefined ? { ...r, label: translatedLabel } : r
   })
 }

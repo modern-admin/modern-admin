@@ -134,6 +134,10 @@ export const ru: LocaleBundle = {
     'common:next': 'Вперёд',
     'common:previous': 'Назад',
     'common:relatedRecords': 'Связанные записи',
+    'common:commentsOnPosts': 'Комментарии к постам',
+    'errors:invalidRelationFilter': 'Некорректный фильтр по связи. Проверьте путь связи.',
+    'errors:relationFilterTooBroad':
+      'Фильтр по связи находит слишком много записей. Уточните условия.',
     'common:viewAll': 'Все записи',
     'common:noRelatedRecords': 'Связанных записей нет.',
     'common:shortcutsHelp': 'Сочетания клавиш',

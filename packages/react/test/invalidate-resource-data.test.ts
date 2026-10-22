@@ -49,6 +49,32 @@ const isInvalidated = (qc: QueryClient, key: unknown[]): boolean =>
   qc.getQueryState(key)?.isInvalidated === true
 
 describe('invalidateResourceData', () => {
+  test('refreshes lists using nested relation filters and terminates on cycles', () => {
+    const qc = buildClient()
+    qc.setQueryData(['modern-admin', 'config'], {
+      ...config,
+      resources: [
+        ...config.resources,
+        {
+          id: 'comments',
+          name: 'Comments',
+          properties: [property('orderId', 'orders'), property('replyId', 'comments')],
+        },
+      ],
+    })
+    const comments = [
+      'modern-admin',
+      'comments',
+      'list',
+      { filters: { 'orderId.userId.name': 'Ann' } },
+    ]
+    const products = ['modern-admin', 'products', 'list', null]
+    seed(qc, comments)
+    seed(qc, products)
+    invalidateResourceData(qc, 'users')
+    expect(isInvalidated(qc, comments)).toBe(true)
+    expect(isInvalidated(qc, products)).toBe(false)
+  })
   test('drops the mutated resource, linked resources, and aggregates — not bystanders', () => {
     const qc = buildClient()
     const usersList = ['modern-admin', 'users', 'list', null]

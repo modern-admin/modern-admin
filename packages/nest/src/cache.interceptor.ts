@@ -136,11 +136,31 @@ export class ModernAdminCacheInterceptor implements NestInterceptor {
       const resource = this.admin.findResource(resourceId)
       const decorator = resource.decorate()
       cfg = resolveResourceCacheConfig(decorator.options, 'http')
+      // Dotted predicates can depend on data and permissions several resources
+      // away. Do not replay an HTTP body without re-running that chain.
+      const url = new URL(req.originalUrl, 'http://modern-admin.local')
+      const criterionMembers = new Set(['operator', 'value', 'values', 'from', 'to'])
+      const hasRelationFilters = [...url.searchParams.keys()].some((key) => {
+        const match = /^filters\[([^\]]+)\](?:\[([^\]]+)\])?/.exec(key)
+        return match?.[1]?.includes('.') || Boolean(match?.[2] && !criterionMembers.has(match[2]))
+      })
+      const hasRelationValues = url.searchParams.get('field')?.includes('.') === true
+      if (hasRelationFilters || hasRelationValues) {
+        setHeader('BYPASS')
+        return next.handle()
+      }
       const actionName = req.params.recordId ? 'show' : 'list'
+      const action = decorator.getAction(actionName)?.merged
+      // Before hooks can add relation predicates absent from the URL. Their
+      // dependencies and access checks must run again on every list request.
+      const hasListBeforeHooks =
+        actionName === 'list' &&
+        (typeof action?.before === 'function' ||
+          (Array.isArray(action?.before) && action.before.length > 0))
       const hasDynamicAccess =
-        typeof decorator.getAction(actionName)?.merged.isAccessible === 'function' ||
+        typeof action?.isAccessible === 'function' ||
         decorator.properties.some((property) => typeof property.options.isAccessible === 'function')
-      if (hasDynamicAccess) {
+      if (hasDynamicAccess || hasListBeforeHooks) {
         setHeader('BYPASS')
         return next.handle()
       }

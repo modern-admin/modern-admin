@@ -68,6 +68,58 @@ function activeRelatedPanel(page: Page) {
 }
 
 test.describe('RelatedRecordsTabs — customers show page', () => {
+  test('virtual Comments on posts tab contains comments across all customer posts', async ({
+    page,
+    request,
+  }) => {
+    const customerId = await customerWithRelations(request)
+    const postsRes = await request.get(
+      adminApi(`/resources/posts/actions/list?perPage=200&filters[authorId]=${customerId}`),
+    )
+    expect(postsRes.ok()).toBeTruthy()
+    const posts = (await postsRes.json()).records as Array<{ id: string }>
+    const expectedQuery = new URLSearchParams({ perPage: '200' })
+    expectedQuery.set('filters[postId][operator]', 'in')
+    for (const post of posts) expectedQuery.append('filters[postId][values][]', post.id)
+    const expectedRes = await request.get(
+      adminApi(`/resources/comments/actions/list?${expectedQuery}`),
+    )
+    expect(expectedRes.ok()).toBeTruthy()
+    const expected = await expectedRes.json()
+
+    const relationQuery = new URLSearchParams({ perPage: '200' })
+    relationQuery.set('filters[postId.authorId][operator]', 'eq')
+    relationQuery.set('filters[postId.authorId][value]', customerId)
+    const actualRes = await request.get(
+      adminApi(`/resources/comments/actions/list?${relationQuery}`),
+    )
+    expect(actualRes.ok()).toBeTruthy()
+    const actual = await actualRes.json()
+    expect(actual.records.map((r: { id: string }) => r.id).sort()).toEqual(
+      expected.records.map((r: { id: string }) => r.id).sort(),
+    )
+    expect(actual.meta.total).toBe(expected.meta.total)
+    expect(actualRes.headers()['x-cache']).toBe('BYPASS')
+
+    await page.setViewportSize({ width: 375, height: 812 })
+    await openCustomerShow(page, customerId)
+    await page.getByRole('tab', { name: /^comments on posts$/i }).click()
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get('relatedTab'))
+      .toBe('comments::postId.authorId')
+    await page.reload()
+    await expect(page.getByRole('tab', { name: /^comments on posts$/i })).toHaveAttribute(
+      'data-state',
+      'active',
+    )
+    const panel = activeRelatedPanel(page)
+    if (expected.meta.total > 0)
+      await expect(panel.locator('tbody tr')).toHaveCount(Math.min(10, expected.meta.total))
+    await expect(page.locator('body')).toBeVisible()
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true)
+  })
   test('renders both Posts and Comments tabs with Posts active', async ({ page, request }) => {
     const customerId = await customerWithRelations(request)
     await openCustomerShow(page, customerId)
@@ -308,7 +360,9 @@ test.describe('RelatedRecordsTabs — customers show page', () => {
       await page.goto(`/resources/customers/${customerId}?${params}`)
       const list = await listResponse
       expect(list.ok()).toBeTruthy()
-      expect(new URL(list.url()).searchParams.get('filters[authorId]')).toBe(customerId)
+      const listParams = new URL(list.url()).searchParams
+      expect(listParams.get('filters[authorId][operator]')).toBe('eq')
+      expect(listParams.get('filters[authorId][value]')).toBe(customerId)
       const listed = await list.json()
       expect(listed.meta.total).toBe(expectedIds.size)
       for (const record of listed.records as Array<{ id: string }>) {
