@@ -1,5 +1,40 @@
 # @modern-admin/create
 
+## 0.12.0
+
+### Patch Changes
+
+- [#98](https://github.com/modern-admin/modern-admin/pull/98) [`29c3a22`](https://github.com/modern-admin/modern-admin/commit/29c3a220a81cfa7018eada015fa6644edadab720) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Update external dependencies to the latest stable releases and pin the tested
+  versions across packages and generated projects. Refresh the lockfile, move form
+  resolvers to v6, and keep TypeScript 7 declaration builds working with the
+  TypeScript 6 API alias and an updated unplugin-dts patch.
+  
+  Align Better Auth lookup indexes across the canonical Prisma and Drizzle
+  schemas, reference app, and CLI scaffold. Existing installations should add
+  missing indexes through their ORM migration workflow; the Prisma generator
+  preserves existing models. The 1.7.5 → 1.7.12 upgrade itself adds no columns.
+  
+  Include `prisma.config.ts` in generated hosts so Prisma 7 database commands
+  receive `DATABASE_URL` and the configured migration directory.
+
+- [#78](https://github.com/modern-admin/modern-admin/pull/78) [`b0fc742`](https://github.com/modern-admin/modern-admin/commit/b0fc742d9d41fbee10ad18ee3d827cecd342496a) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Recognize API-key requests through Better Auth's own plugin matchers, preventing
+  custom header configuration mismatches from bypassing action scopes or reaching
+  account-management endpoints. `createBetterAuthMiddleware` now requires the same
+  Better Auth instance via `{ auth }`; update existing middleware mounts accordingly.
+  
+  Limit built-in API-key opt-ins to individual resource/search handlers, keeping
+  future controller methods closed by default. Translate API-key and time-series
+  permission errors using Accept-Language and all nine bundled locales.
+
+- [#94](https://github.com/modern-admin/modern-admin/pull/94) [`4b4553e`](https://github.com/modern-admin/modern-admin/commit/4b4553eb0c0fc974aef60e05935c41f7164bd528) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Recover exact repeats of completed web OAuth callbacks instead of failing with
+  `state_mismatch`. Export `oauthCallbackReplayPlugin()` and enable it in the
+  reference auth factory and generated hosts. Recovery requires a short-lived
+  signed receipt and the same active server-side session; normal state validation,
+  revocation, and account restrictions remain in force.
+- Updated dependencies [[`29c3a22`](https://github.com/modern-admin/modern-admin/commit/29c3a220a81cfa7018eada015fa6644edadab720)]:
+  - @modern-admin/system-drizzle@0.12.0
+  - @modern-admin/system-prisma@0.12.0
+
 ## 0.11.0
 
 ### Patch Changes
