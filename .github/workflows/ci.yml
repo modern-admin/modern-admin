@@ -21,7 +21,7 @@
 #           checked-in `*-chromium-linux.png` baselines match byte-for-byte.
 #           Isolated from the main e2e job so a container/service hiccup can't
 #           take the other specs down. Baselines are regenerated in the same
-#           image (`mcr.microsoft.com/playwright:v1.63.0-noble`).
+#           image (`mcr.microsoft.com/playwright:v1.64.1-noble`).
 
 name: CI
 
@@ -176,7 +176,7 @@ jobs:
 
       - name: Upload Playwright report
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: playwright-report
           path: apps/e2e/playwright-report/
@@ -189,9 +189,9 @@ jobs:
     timeout-minutes: 15
     # Run inside the official Playwright image so chromium + its fonts match
     # the environment the checked-in baselines were generated in. Pin the tag
-    # to the installed @playwright/test version (1.63.0).
+    # to the installed @playwright/test version (1.64.1).
     container:
-      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
     # This job runs inside a container, so `docker compose up` (used by the
     # `e2e` job) is not available here — the same services are declared as job
     # service containers instead. Keep these two images in step with
@@ -199,7 +199,7 @@ jobs:
     # that file, but no ecosystem touches image tags inside a workflow.
     services:
       postgres:
-        image: postgres:18-alpine
+        image: postgres:18.6-alpine
         env:
           POSTGRES_USER: admin
           POSTGRES_PASSWORD: admin
@@ -208,7 +208,7 @@ jobs:
           --health-cmd "pg_isready -U admin -d modern_admin"
           --health-interval 10s --health-timeout 5s --health-retries 10
       redis:
-        image: redis:8-alpine
+        image: redis:8.10.2-alpine
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s --health-timeout 5s --health-retries 10
@@ -254,7 +254,7 @@ jobs:
 
       - name: Upload Playwright report
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: playwright-report-visual
           path: apps/e2e/playwright-report/

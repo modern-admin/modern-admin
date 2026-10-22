@@ -15,8 +15,9 @@ import { expect, test, type Locator, type Page } from '@playwright/test'
  * the host:
  *
  *   docker run --rm --network host -v "$PWD:/work" -w /work/apps/e2e \
- *     mcr.microsoft.com/playwright:v1.61.1-noble \
- *     npx playwright test visual-regression --update-snapshots
+ *     -v "$(command -v bun):/usr/local/bin/bun:ro" \
+ *     mcr.microsoft.com/playwright:v1.64.1-noble \
+ *     bun run e2e visual-regression --update-snapshots
  *
  * Then commit the regenerated `*-chromium-linux.png` files.
  *
@@ -82,7 +83,7 @@ test.describe('Visual regression — apps/web', () => {
   // been regenerated inside the `e2e-visual` container image (see the header
   // comment for the one-liner). Re-enable by dropping `.skip` once the
   // `*-chromium-linux.png` baselines are regenerated in
-  // `mcr.microsoft.com/playwright:v1.61.1-noble` and committed. The lighter
+  // `mcr.microsoft.com/playwright:v1.64.1-noble` and committed. The lighter
   // `customer form` / `settings` snapshots stay active and still gate layout.
   test.skip('home / dashboard', async ({ page }) => {
     await page.goto('/')
