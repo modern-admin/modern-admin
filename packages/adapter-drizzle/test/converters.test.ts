@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'bun:test'
+import { Database } from 'bun:sqlite'
+import { drizzle } from 'drizzle-orm/bun-sqlite'
+import { sqliteTable, text } from 'drizzle-orm/sqlite-core'
 import { Filter, ModernAdmin, uuidv7, type ListActionResponse } from '@modern-admin/core'
 import { DrizzleResource } from '../src/resource.js'
 import { filterToWhere, findOptionsToDrizzle } from '../src/converters.js'
 import { createFakeClient } from './_helpers/fake-client.js'
 import { posts, users } from './_helpers/schema.js'
+import type { DrizzleClientLike, DrizzleTable } from '../src/types.js'
 
 const makeResource = () => {
   const client = createFakeClient()
@@ -26,6 +30,69 @@ const paramValues = (node: unknown, acc: unknown[] = []): unknown[] => {
 }
 
 describe('filterToWhere', () => {
+  it('executes relation lookups with mapped unique columns and mapped primary keys', async () => {
+    const authors = sqliteTable('mapped_authors', {
+      id: text('author_pk').primaryKey(),
+      email: text('email_address').unique(),
+      tier: text('plan_tier'),
+    })
+    const posts = sqliteTable('mapped_posts', {
+      id: text('post_pk').primaryKey(),
+      authorEmail: text('author_email').references(() => authors.email),
+    })
+    const sqlite = new Database(':memory:')
+    sqlite.exec(`
+      CREATE TABLE mapped_authors (author_pk TEXT PRIMARY KEY, email_address TEXT UNIQUE, plan_tier TEXT);
+      CREATE TABLE mapped_posts (post_pk TEXT PRIMARY KEY, author_email TEXT REFERENCES mapped_authors(email_address));
+    `)
+    const db = drizzle(sqlite)
+    const authorId = uuidv7(),
+      postId = uuidv7()
+    const email = 'mapped@example.com'
+    try {
+      await db.insert(authors).values([
+        { id: authorId, email, tier: 'pro' },
+        { id: uuidv7(), email: null, tier: 'pro' },
+      ])
+      await db.insert(posts).values([
+        { id: postId, authorEmail: email },
+        { id: uuidv7(), authorEmail: null },
+      ])
+      const client = db as unknown as DrizzleClientLike
+      const authorResource = new DrizzleResource({
+        client,
+        table: authors as unknown as DrizzleTable,
+        tableKey: 'mapped_authors',
+      })
+      const postResource = new DrizzleResource({
+        client,
+        table: posts as unknown as DrizzleTable,
+        tableKey: 'mapped_posts',
+      })
+      const admin = new ModernAdmin({ resources: [authorResource, postResource] })
+      const response = await admin.invoke<ListActionResponse>({
+        params: { resourceId: 'mapped_posts', action: 'list' },
+        method: 'get',
+        query: { filters: { 'author_email.plan_tier': { operator: 'eq', value: 'pro' } } },
+      })
+      expect(response.records.map((record) => record.id)).toEqual([postId])
+      expect(response.records[0]!.params.author_email).toBe(email)
+      expect((await authorResource.findOne(authorId))!.params.email_address).toBe(email)
+      await authorResource.update(authorId, { plan_tier: 'enterprise' })
+      expect((await authorResource.findOne(authorId))!.params.plan_tier).toBe('enterprise')
+      const createdId = uuidv7()
+      const created = await authorResource.create({
+        author_pk: createdId,
+        email_address: 'created@example.com',
+        plan_tier: 'free',
+      })
+      expect(created.author_pk).toBe(createdId)
+      expect(created.email_address).toBe('created@example.com')
+    } finally {
+      sqlite.close()
+    }
+  })
+
   it('empty relation matches never reach Drizzle as an omitted WHERE clause', async () => {
     const authorClient = createFakeClient({ selectRows: [], countValue: 0 })
     const postClient = createFakeClient({

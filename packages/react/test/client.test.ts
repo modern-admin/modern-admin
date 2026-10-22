@@ -197,6 +197,20 @@ describe('AdminClient.list', () => {
     expect(headers?.['Cache-Control']).toBe('no-cache')
     expect(req?.init?.cache).toBe('no-store')
   })
+
+  it('refreshes a single record past browser and server caches without changing its URL', async () => {
+    const requests = await captureRequests(async (client) => {
+      await client.show('users', 'user/42')
+      await client.show('users', 'user/42', { refresh: true })
+    })
+    expect(requests[0]?.url).toBe(requests[1]?.url)
+    expect(requests[1]?.url).toBe(
+      'https://example.test/admin/api/resources/users/records/user%2F42/actions/show',
+    )
+    expect(requests[0]?.init?.cache).toBeUndefined()
+    expect(requests[1]?.init?.cache).toBe('no-store')
+    expect((requests[1]?.init?.headers as Record<string, string>)['Cache-Control']).toBe('no-cache')
+  })
 })
 
 describe('AdminClient cache diagnostics', () => {

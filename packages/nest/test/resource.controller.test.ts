@@ -242,6 +242,22 @@ describe('ResourceController — list revalidation', () => {
     (res as { records: Array<{ id: string }> }).records
   const refreshReq = { ...req, headers: { 'cache-control': 'no-cache' } }
 
+  test('show forwards revalidation to the action cache and invalidates stale lists', async () => {
+    const table: FakeTable = { name: 'users', rows: [{ id: '1', name: 'Before' }] }
+    const controller = buildCached(table)
+    await controller.list('users', {}, req)
+    await controller.show('users', '1', req)
+    table.rows[0] = { id: '1', name: 'After' }
+    const stale = await controller.show('users', '1', req)
+    expect((stale as { record: { params: { name: string } } }).record.params.name).toBe('Before')
+    const fresh = await controller.show('users', '1', refreshReq)
+    expect((fresh as { record: { params: { name: string } } }).record.params.name).toBe('After')
+    const list = await controller.list('users', {}, req)
+    expect((list as { records: Array<{ params: { name: string } }> }).records[0]!.params.name).toBe(
+      'After',
+    )
+  })
+
   test('reads past the cache and invalidates the resource when rows changed', async () => {
     const table: FakeTable = { name: 'users', rows: [{ id: '1', name: 'Ann' }] }
     const controller = buildCached(table)

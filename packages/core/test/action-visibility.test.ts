@@ -15,6 +15,7 @@
 import { describe, expect, test } from 'bun:test'
 import { ModernAdmin } from '../src/modern-admin.js'
 import { BaseProperty } from '../src/adapters/base-property.js'
+import { ForbiddenError } from '../src/errors'
 import type { ActionContext, ListActionResponse, RecordActionResponse } from '../src/actions'
 import type { Adapter } from '../src/factories/resources-factory.js'
 import { FakeDatabase, FakeResource } from './_helpers/fake-adapter.js'
@@ -197,6 +198,35 @@ describe('per-record isVisible', () => {
 })
 
 describe('record-less isVisible at serialization time', () => {
+  test('keeps custom descriptors until record-dependent access can be evaluated', async () => {
+    const admin = buildAdmin()
+    const action = admin.findResource('users').decorate().getAction('archive')!.merged
+    action.isAccessible = ({ record }) => {
+      if (!record) throw new Error('record-dependent predicate called without a record')
+      return record.params.archived === false
+    }
+    const snapshot = await admin.toJSON(null)
+    const descriptors = snapshot.resources.find((r) => r.id === 'users')!.actions
+    expect(descriptors.find((a) => a.name === 'archive')?.actionType).toBe('record')
+    const records = await listRecords(admin)
+    const menuFor = (id: string) =>
+      descriptors.filter((a) => records.find((r) => r.id === id)!.recordActions!.includes(a.name))
+    expect(menuFor('1').map((a) => a.name)).toContain('archive')
+    expect(menuFor('2').map((a) => a.name)).not.toContain('archive')
+    await expect(
+      admin.invoke({
+        params: { resourceId: 'users', action: 'archive', recordId: '1' },
+        method: 'post',
+      }),
+    ).resolves.toBeDefined()
+    await expect(
+      admin.invoke({
+        params: { resourceId: 'users', action: 'archive', recordId: '2' },
+        method: 'post',
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenError)
+  })
+
   const serialize = async (admin: ModernAdmin) => {
     const resource = admin.findResource('users')
     const json = await resource.decorate().toJSON({

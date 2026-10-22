@@ -57,6 +57,7 @@ export {
   useResources,
   useRecords,
   useRefreshRecords,
+  useRefreshRecord,
   useRecord,
   useCreateRecord,
   useUpdateRecord,

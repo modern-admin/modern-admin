@@ -330,6 +330,38 @@ describe('CacheRuntime.read — refresh', () => {
     ...extra,
   })
 
+  test('mutation during a forced fetch prevents its stale response from being cached', async () => {
+    const cache = new FakeCache()
+    const rt = new CacheRuntime(cache)
+    await cache.set('k', { v: 'before' }, { tags: ['list:users'] })
+    let release!: () => void, started!: () => void
+    const ready = new Promise<void>((resolve) => {
+      started = resolve
+    })
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const pending = rt.read(
+      'k',
+      opts({ onChanged: () => rt.invalidateTags('list:users') }),
+      async () => {
+        started()
+        await gate
+        return { v: 'during' }
+      },
+    )
+    await ready
+    await rt.invalidateTags('list:users')
+    release()
+    await pending
+    expect(cache.entries.has('k')).toBe(false)
+    expect(
+      await rt.read('k', { enabled: true, ttl: 60, tags: ['list:users'] }, async () => ({
+        v: 'after',
+      })),
+    ).toEqual({ v: 'after' })
+  })
+
   test('ignores the cached entry and returns freshly fetched data', async () => {
     const cache = new FakeCache()
     await cache.set('k', { v: 'stale' }, { tags: ['list:users'] })

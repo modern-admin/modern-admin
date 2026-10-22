@@ -1,5 +1,11 @@
 import { describe, expect, test } from 'bun:test'
-import { Filter, ModernAdmin, uuidv7, type ListActionResponse } from '@modern-admin/core'
+import {
+  Filter,
+  ForbiddenError,
+  ModernAdmin,
+  uuidv7,
+  type ListActionResponse,
+} from '@modern-admin/core'
 import { filterToWhere, findOptionsToPrisma } from '../src/converters.js'
 import { PrismaResource } from '../src/resource.js'
 import { postModel, userModel } from './_helpers/dmmf.js'
@@ -12,6 +18,69 @@ const buildResource = () =>
   })
 
 describe('filterToWhere', () => {
+  test('relation filters join through a referenced unique column instead of the primary key', async () => {
+    const userId = uuidv7(),
+      postId = uuidv7()
+    const email = 'author@example.com'
+    const postDelegate = createDelegate([{ id: postId, authorEmail: email }])
+    const client = createClient({
+      user: createDelegate([
+        { id: userId, email, age: 42 },
+        { id: uuidv7(), email: null, age: 42 },
+      ]),
+      post: postDelegate,
+    })
+    const users = new PrismaResource({
+      model: {
+        ...userModel,
+        fields: userModel.fields.map((field) =>
+          field.name === 'email' ? { ...field, isRequired: false } : field,
+        ),
+      },
+      client,
+    })
+    const posts = new PrismaResource({
+      model: {
+        ...postModel,
+        fields: postModel.fields.map((field) =>
+          field.isId
+            ? { ...field, type: 'String' }
+            : field.name === 'authorId'
+              ? { ...field, name: 'authorEmail' }
+              : field.kind === 'object'
+                ? { ...field, relationFromFields: ['authorEmail'], relationToFields: ['email'] }
+                : field,
+        ),
+      },
+      client,
+    })
+    const admin = new ModernAdmin({ resources: [users, posts] })
+    expect(posts.property('authorEmail')!.referenceFields()).toEqual(['email'])
+    for (const direct of [undefined, email, { operator: 'eq' as const, value: email }]) {
+      const response = await admin.invoke<ListActionResponse>({
+        params: { resourceId: 'Post', action: 'list' },
+        method: 'get',
+        query: {
+          filters: {
+            'authorEmail.age': { operator: 'eq', value: 42 },
+            ...(direct ? { authorEmail: direct } : {}),
+          },
+        },
+      })
+      expect(response.records.map((record) => record.id)).toEqual([postId])
+    }
+    const query = postDelegate.calls.find((call) => call.method === 'findMany')!
+    expect((query.args as { where: unknown }).where).toEqual({ authorEmail: { in: [email] } })
+    users.decorate().getPropertyByKey('email')!.options.isAccessible = false
+    await expect(
+      admin.invoke({
+        params: { resourceId: 'Post', action: 'list' },
+        method: 'get',
+        query: { filters: { 'authorEmail.age': { operator: 'eq', value: 42 } } },
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenError)
+  })
+
   test('list preserves native relation predicates without registering the referenced resource', async () => {
     for (const registerUser of [false, true]) {
       const postDelegate = createDelegate()

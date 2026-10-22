@@ -8,7 +8,7 @@ const handler = async (
   request: ActionRequest,
   context: ActionContext,
 ): Promise<RecordActionResponse> => {
-  const { resource, cacheRuntime } = context
+  const { resource, cacheRuntime, admin } = context
   const id = request.params.recordId
   if (!id) throw new Error('show action requires recordId')
 
@@ -30,6 +30,8 @@ const handler = async (
       // changes, the affected parent record ids are unknown, so all
       // record entries of the resource drop together.
       tags: [recordTag(resource.id(), id), recordsTag(resource.id())],
+      refresh: request.refresh === true,
+      onChanged: () => admin.invalidateResourceCaches(resource.id()),
     },
     async () => {
       const record = await resource.findOne(id)

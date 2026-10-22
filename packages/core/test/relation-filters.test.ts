@@ -125,6 +125,46 @@ function fixture(authorProperties: BaseProperty[] = []) {
 }
 
 describe('relation filters and virtual related tables', () => {
+  test('lookups to the same target keep primary and alternate keys independent', async () => {
+    const authorId = uuidv7(),
+      postId = uuidv7()
+    const email = 'author@example.com'
+    const authors = new ScalarResource({
+      name: 'authors',
+      properties: [id(), new BaseProperty({ path: 'email' }), new BaseProperty({ path: 'tier' })],
+      rows: [{ id: authorId, email, tier: 'pro' }],
+    })
+    const posts = new ScalarResource({
+      name: 'posts',
+      properties: [
+        id(),
+        ref('authorId', 'authors'),
+        new BaseProperty({
+          path: 'authorEmail',
+          reference: 'authors',
+          type: 'reference',
+          referenceFields: ['email'],
+        }),
+      ],
+      rows: [{ id: postId, authorId, authorEmail: email }],
+    })
+    const admin = new ModernAdmin({ resources: [authors, posts] })
+    const response = await admin.invoke<ListActionResponse>({
+      params: { resourceId: 'posts', action: 'list' },
+      method: 'get',
+      query: { filters: { 'authorId.tier': 'pro', 'authorEmail.tier': 'pro' } },
+    })
+    expect(response.records.map((r) => r.id)).toEqual([postId])
+    posts.property('authorEmail')!.referenceFields = () => ['email', 'tier']
+    await expect(
+      admin.invoke({
+        params: { resourceId: 'posts', action: 'list' },
+        method: 'get',
+        query: { filters: { 'authorEmail.tier': 'pro' } },
+      }),
+    ).rejects.toBeInstanceOf(ValidationError)
+  })
+
   test('enforces access overrides on the declared relation filter itself', async () => {
     const f = fixture()
     f.comments.decorate().options.properties = {
