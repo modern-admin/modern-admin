@@ -17,7 +17,7 @@ import { apiKey } from '@better-auth/api-key'
 import { admin } from 'better-auth/plugins'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
 import { uuidv7, type ILogStore } from '@modern-admin/core'
-import { accountIdentityPlugin } from '@modern-admin/auth-better-auth'
+import { accountIdentityPlugin, oauthCallbackReplayPlugin } from '@modern-admin/auth-better-auth'
 import { prisma } from './db.js'
 
 const port = Number(process.env.PORT ?? 3001)
@@ -70,6 +70,7 @@ export const auth = betterAuth({
   advanced: { database: { generateId: () => uuidv7() } },
   plugins: [
     accountIdentityPlugin(),
+    oauthCallbackReplayPlugin(),
     apiKey({
       apiKeyHeaders: 'x-api-key',
       requireName: true,
