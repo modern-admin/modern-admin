@@ -191,6 +191,23 @@ describe('schema/pg', () => {
     )
   })
 
+  it.each([
+    ['maSession', systemTables.maSession, ['user_id']],
+    ['maVerification', systemTables.maVerification, ['identifier']],
+    ['maApiKey', systemTables.maApiKey, ['config_id', 'reference_id', 'key']],
+  ] as const)('%s indexes the Better Auth lookup fields', (_name, table, fields) => {
+    const config = getTableConfig(table)
+    for (const name of fields) {
+      expect(config.indexes).toContainEqual(
+        expect.objectContaining({
+          config: expect.objectContaining({
+            columns: [expect.objectContaining({ name })],
+          }),
+        }),
+      )
+    }
+  })
+
   it('ships a fail-closed transactional Better Auth 1.7 migration', async () => {
     const migration = await readFile(
       join(import.meta.dir, '../migrations/postgres/better-auth-1.7-account-identities.sql'),

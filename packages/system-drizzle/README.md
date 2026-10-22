@@ -30,6 +30,13 @@ explicit provider mapping first. Unknown providers and identity collisions
 abort and roll back the complete transaction; users are never merged or
 deleted.
 
+The Better Auth 1.7.5 → 1.7.12 update does not add columns. The exported
+PostgreSQL tables also include the upstream lookup indexes on session
+`user_id`, verification `identifier`, and API-key `config_id`, `reference_id`,
+and `key`. Apply any missing indexes through your Drizzle migration workflow
+after updating the package; updating the schema exports alone does not alter
+an existing database.
+
 ## License
 
 [MIT](https://github.com/modern-admin/modern-admin/blob/main/LICENSE) © Modern Admin
