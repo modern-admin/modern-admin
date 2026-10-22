@@ -625,8 +625,8 @@ export function ResourceListPage({
   )
 
   const query = React.useMemo<ListQuery>(() => {
-    // Locked filters are merged in but never written to URL or column state.
-    const mergedFilters = { ...(lockedFilters ?? {}), ...(urlQuery.filters ?? {}) }
+    // Locked filters must win over URL or controlled filters, including exports.
+    const mergedFilters = { ...(urlQuery.filters ?? {}), ...(lockedFilters ?? {}) }
     return {
       page: urlQuery.page ?? 1,
       perPage: urlQuery.perPage ?? 20,

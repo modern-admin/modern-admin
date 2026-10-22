@@ -104,21 +104,39 @@ test.describe('RelatedRecordsTabs — customers show page', () => {
     page,
     request,
   }) => {
-    const customerId = await customerWithRelations(request, 2)
+    const customerId = await customerWithRelations(request, 3)
+    const unfilteredResponse = await request.get(
+      adminApi(
+        `/resources/posts/actions/list?perPage=200&sortBy=title&direction=desc&filters[authorId]=${customerId}`,
+      ),
+    )
+    expect(unfilteredResponse.ok()).toBeTruthy()
+    const unfiltered = await unfilteredResponse.json()
+    const excludedTitle = unfiltered.records[0].params.title as string
+    const titleFilter = new URLSearchParams({
+      'filters[title][operator]': 'nco',
+      'filters[title][value]': excludedTitle,
+    })
     const response = await request.get(
       adminApi(
-        `/resources/posts/actions/list?perPage=1&page=2&sortBy=title&direction=desc&filters[authorId]=${customerId}&filters[title][operator]=co&filters[title][value]=%23`,
+        `/resources/posts/actions/list?perPage=1&page=2&sortBy=title&direction=desc&filters[authorId]=${customerId}&${titleFilter}`,
       ),
     )
     expect(response.ok()).toBeTruthy()
-    const expectedTitle = (await response.json()).records[0].params.title as string
+    const filtered = await response.json()
+    expect(filtered.meta.total).toBeLessThan(unfiltered.meta.total)
+    expect(filtered.meta.total).toBeGreaterThanOrEqual(2)
+    // Page 2 must differ without the filter, otherwise Back/reload could
+    // silently drop the filter while still rendering the expected row.
+    expect(filtered.records[0].id).not.toBe(unfiltered.records[1].id)
+    const expectedTitle = filtered.records[0].params.title as string
     const params = new URLSearchParams({
       relatedTab: 'posts::authorId',
       'related[posts::authorId][perPage]': '1',
       'related[posts::authorId][sortBy]': 'title',
       'related[posts::authorId][direction]': 'desc',
-      'related[posts::authorId][filters][title][operator]': 'co',
-      'related[posts::authorId][filters][title][value]': '#',
+      'related[posts::authorId][filters][title][operator]': 'nco',
+      'related[posts::authorId][filters][title][value]': excludedTitle,
     })
     await page.goto(`/resources/customers/${customerId}?${params}`)
     const panel = activeRelatedPanel(page)
@@ -249,50 +267,85 @@ test.describe('RelatedRecordsTabs — customers show page', () => {
     await expect(panel.locator('tbody tr')).toHaveCount(pageSize, { timeout: 15_000 })
   })
 
-  test('Posts tab exports only this customer records', async ({ page, request }) => {
-    // The embedded list keeps its Export button (`features.export` defaults
-    // to true) and `ResourceListPage` merges `lockedFilters` into the query
-    // handed to the dialog — so the download must be scoped to the parent.
-    const customerId = await customerWithRelations(request)
-    const apiRes = await request.get(
-      adminApi(`/resources/posts/actions/list?perPage=200&filters[authorId]=${customerId}`),
-    )
-    expect(apiRes.ok()).toBeTruthy()
-    const apiBody = await apiRes.json()
-    const expectedIds = new Set((apiBody.records as Array<{ id: string }>).map((r) => String(r.id)))
+  for (const override of ['none', 'scalar', 'structured'] as const) {
+    test(`Posts tab and export keep the parent filter with ${override} URL override`, async ({
+      page,
+      request,
+    }) => {
+      // The embedded list keeps its Export button (`features.export` defaults
+      // to true) and `ResourceListPage` merges `lockedFilters` into the query
+      // handed to the dialog — so the download must be scoped to the parent.
+      const customerId = await customerWithRelations(request)
+      const apiRes = await request.get(
+        adminApi(`/resources/posts/actions/list?perPage=200&filters[authorId]=${customerId}`),
+      )
+      expect(apiRes.ok()).toBeTruthy()
+      const apiBody = await apiRes.json()
+      const expectedIds = new Set(
+        (apiBody.records as Array<{ id: string }>).map((r) => String(r.id)),
+      )
 
-    await openCustomerShow(page, customerId)
-    const panel = activeRelatedPanel(page)
-    await expect(panel.locator('tbody tr')).not.toHaveCount(0, { timeout: 15_000 })
+      const params = new URLSearchParams()
+      if (override !== 'none') {
+        const otherResponse = await request.get(
+          adminApi(
+            `/resources/posts/actions/list?perPage=1&filters[authorId][operator]=neq&filters[authorId][value]=${customerId}`,
+          ),
+        )
+        expect(otherResponse.ok()).toBeTruthy()
+        const otherId = (await otherResponse.json()).records[0].params.authorId as string
+        expect(otherId).not.toBe(customerId)
+        const key = 'related[posts::authorId][filters][authorId]'
+        if (override === 'scalar') params.set(key, otherId)
+        else {
+          params.set(`${key}[operator]`, 'eq')
+          params.set(`${key}[value]`, otherId)
+        }
+      }
+      const listResponse = page.waitForResponse((response) =>
+        response.url().includes('/resources/posts/actions/list'),
+      )
+      await page.goto(`/resources/customers/${customerId}?${params}`)
+      const list = await listResponse
+      expect(list.ok()).toBeTruthy()
+      expect(new URL(list.url()).searchParams.get('filters[authorId]')).toBe(customerId)
+      const listed = await list.json()
+      expect(listed.meta.total).toBe(expectedIds.size)
+      for (const record of listed.records as Array<{ id: string }>) {
+        expect(expectedIds.has(String(record.id))).toBeTruthy()
+      }
+      const panel = activeRelatedPanel(page)
+      await expect(panel.locator('tbody tr')).not.toHaveCount(0, { timeout: 15_000 })
 
-    await panel
-      .getByRole('button', { name: /^export$/i })
-      .first()
-      .click()
-    // The dialog renders in a portal at the document root, not inside the panel.
-    const dialog = page.getByRole('dialog', { name: /export records/i })
-    await expect(dialog).toBeVisible({ timeout: 10_000 })
+      await panel
+        .getByRole('button', { name: /^export$/i })
+        .first()
+        .click()
+      // The dialog renders in a portal at the document root, not inside the panel.
+      const dialog = page.getByRole('dialog', { name: /export records/i })
+      await expect(dialog).toBeVisible({ timeout: 10_000 })
 
-    const downloadPromise = page.waitForEvent('download', { timeout: 30_000 })
-    await dialog.getByRole('button', { name: /^json/i }).click()
-    const download = await downloadPromise
-    expect(download.suggestedFilename()).toMatch(/^posts-\d{8}-\d{6}\.json$/)
+      const downloadPromise = page.waitForEvent('download', { timeout: 30_000 })
+      await dialog.getByRole('button', { name: /^json/i }).click()
+      const download = await downloadPromise
+      expect(download.suggestedFilename()).toMatch(/^posts-\d{8}-\d{6}\.json$/)
 
-    const path = `playwright/.artifacts/${download.suggestedFilename()}`
-    await download.saveAs(path)
-    const fs = await import('node:fs/promises')
-    const body = await fs.readFile(path, 'utf8')
-    // `recordsToJson` prepends a `// Query: …` JSONC comment carrying the
-    // active query — the locked FK filter has to be in there.
-    const [comment] = body.split('\n')
-    expect(comment).toContain('authorId')
-    expect(comment).toContain(customerId)
+      const path = `playwright/.artifacts/${download.suggestedFilename()}`
+      await download.saveAs(path)
+      const fs = await import('node:fs/promises')
+      const body = await fs.readFile(path, 'utf8')
+      // `recordsToJson` prepends a `// Query: …` JSONC comment carrying the
+      // active query — the locked FK filter has to be in there.
+      const [comment] = body.split('\n')
+      expect(comment).toContain('authorId')
+      expect(comment).toContain(customerId)
 
-    const parsed = JSON.parse(body.replace(/^\s*\/\/[^\n]*\n/, '')) as Array<{ id: string }>
-    expect(parsed.length).toBe(expectedIds.size)
-    const leaked = parsed.map((r) => String(r.id)).filter((id) => !expectedIds.has(id))
-    expect(leaked, `export leaked posts of other customers: ${leaked.join(', ')}`).toEqual([])
-  })
+      const parsed = JSON.parse(body.replace(/^\s*\/\/[^\n]*\n/, '')) as Array<{ id: string }>
+      expect(parsed.length).toBe(expectedIds.size)
+      const leaked = parsed.map((r) => String(r.id)).filter((id) => !expectedIds.has(id))
+      expect(leaked, `export leaked posts of other customers: ${leaked.join(', ')}`).toEqual([])
+    })
+  }
 
   test('Posts tab paginates next page inside the embedded list', async ({ page, request }) => {
     const customerId = await customerWithRelations(request)
