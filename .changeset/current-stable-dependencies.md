@@ -35,3 +35,6 @@ Align Better Auth lookup indexes across the canonical Prisma and Drizzle
 schemas, reference app, and CLI scaffold. Existing installations should add
 missing indexes through their ORM migration workflow; the Prisma generator
 preserves existing models. The 1.7.5 → 1.7.12 upgrade itself adds no columns.
+
+Include `prisma.config.ts` in generated hosts so Prisma 7 database commands
+receive `DATABASE_URL` and the configured migration directory.

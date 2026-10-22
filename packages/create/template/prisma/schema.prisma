@@ -13,8 +13,9 @@
 //   - `output` is required and project-local — generated client lands
 //     in `src/generated/prisma/`. Add that path to `.gitignore`.
 //   - The datasource has no `url` line — the connection string is
-//     supplied at runtime via the `@prisma/adapter-pg` driver adapter
-//     in `src/db.ts`, which reads `DATABASE_URL` from the environment.
+//     supplied to CLI commands via `prisma.config.ts` and at runtime
+//     via the `@prisma/adapter-pg` driver adapter in `src/db.ts`.
+//     Both read `DATABASE_URL` from the environment.
 //   - `@default(uuid(7))` produces UUID v7 (time-ordered) ids — the
 //     project's identifier policy.
 
