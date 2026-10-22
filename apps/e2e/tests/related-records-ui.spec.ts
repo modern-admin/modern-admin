@@ -133,14 +133,15 @@ test.describe('RelatedRecordsTabs — customers show page', () => {
     const savedUrl = page.url()
     const savedRow = await rows.first().innerText()
 
-    // Row navigation goes to the child's edit page, then browser Back must
-    // restore the parent's embedded table rather than its initial query.
-    await rows.first().getByRole('cell').nth(1).click()
-    await expect(page).toHaveURL(/\/resources\/posts\/[^/]+\/edit$/)
+    // Open the child explicitly, independent of column order and whether a
+    // particular cell links to show or edit. Back must restore the parent query.
+    await rows.first().getByRole('button', { name: 'Open menu', exact: true }).click()
+    await page.getByRole('menu').getByRole('menuitem', { name: 'Show', exact: true }).click()
+    await expect(page).toHaveURL(/\/resources\/posts\/[^/]+$/)
     await page.goBack()
     await expect(page).toHaveURL(savedUrl)
     await expect(rows).toHaveCount(1)
-    await expect(rows.first()).toHaveText(savedRow)
+    await expect(rows.first()).toHaveText(savedRow, { useInnerText: true })
     await expect(panel.getByRole('button', { name: '2', exact: true })).toHaveAttribute(
       'aria-current',
       'page',
@@ -149,7 +150,7 @@ test.describe('RelatedRecordsTabs — customers show page', () => {
     await page.reload()
     await expect(page).toHaveURL(savedUrl)
     await expect(rows).toHaveCount(1)
-    await expect(rows.first()).toHaveText(savedRow)
+    await expect(rows.first()).toHaveText(savedRow, { useInnerText: true })
     // Cross-check against the same query with the parent's locked FK.
     await expect(rows.first()).toContainText(expectedTitle)
   })
