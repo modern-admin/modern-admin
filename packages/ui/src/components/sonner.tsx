@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { Toaster as SonnerToaster, toast } from 'sonner'
+import { cn } from '../lib/utils.js'
 
 export type ToasterProps = React.ComponentProps<typeof SonnerToaster>
 
@@ -20,23 +21,32 @@ const useDocumentTheme = (): 'light' | 'dark' => {
   return theme
 }
 
-export const Toaster = ({ ...props }: ToasterProps): React.ReactElement => {
+export const Toaster = ({ className, ...props }: ToasterProps): React.ReactElement => {
   const theme = useDocumentTheme()
   return (
-    <SonnerToaster
-      theme={theme}
-      className="toaster group"
-      toastOptions={{
-        classNames: {
-          toast:
-            'group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg',
-          description: 'group-[.toast]:text-muted-foreground',
-          actionButton: 'group-[.toast]:bg-primary group-[.toast]:text-primary-foreground',
-          cancelButton: 'group-[.toast]:bg-muted group-[.toast]:text-muted-foreground',
-        },
-      }}
-      {...props}
-    />
+    // Modal layers disable pointer events on the body. Toasts must remain
+    // interactive, and their gestures/focus must not dismiss the layer below.
+    <div
+      className="contents"
+      onPointerDown={(event) => event.stopPropagation()}
+      onFocus={(event) => event.stopPropagation()}
+    >
+      <SonnerToaster
+        theme={theme}
+        className={cn('toaster group pointer-events-auto', className)}
+        swipeDirections={['left', 'right', 'top', 'bottom']}
+        toastOptions={{
+          classNames: {
+            toast:
+              'group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg',
+            description: 'group-[.toast]:text-muted-foreground',
+            actionButton: 'group-[.toast]:bg-primary group-[.toast]:text-primary-foreground',
+            cancelButton: 'group-[.toast]:bg-muted group-[.toast]:text-muted-foreground',
+          },
+        }}
+        {...props}
+      />
+    </div>
   )
 }
 
