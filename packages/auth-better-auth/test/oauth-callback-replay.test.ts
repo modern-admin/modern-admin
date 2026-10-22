@@ -2,7 +2,7 @@ import { describe, expect, it, mock, setSystemTime } from 'bun:test'
 import { betterAuth } from 'better-auth'
 import { memoryAdapter } from 'better-auth/adapters/memory'
 import { uuidv7 } from '@modern-admin/core'
-import { oauthCallbackReplayPlugin } from '../src/index.js'
+import { oauthCallbackReplayPlugin } from '../src'
 
 const API = 'https://api.example.test'
 const AUTH_PATH = '/admin/api/auth'
