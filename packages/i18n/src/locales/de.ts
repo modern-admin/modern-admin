@@ -33,6 +33,12 @@ export const de: LocaleBundle = {
     'auth:loginFailed': 'Ungültige Zugangsdaten.',
     'errors:notFound': 'Nicht gefunden.',
     'errors:forbidden': 'Kein Zugriff auf diese Ressource.',
+    'errors:apiKeyEndpointForbidden': 'API-Schlüssel können nicht auf diesen Endpunkt zugreifen.',
+    'errors:apiKeyAuthForbidden':
+      'API-Schlüssel können nicht auf Authentifizierungsendpunkte zugreifen.',
+    'errors:resourceForbidden': 'Der Zugriff auf „{resource}“ ist nicht erlaubt.',
+    'errors:propertyForbidden':
+      'Auf die Eigenschaft „{property}“ von „{resource}“ kann nicht zugegriffen werden.',
     'errors:noEditableProperties': 'Für dieses Formular sind keine bearbeitbaren Felder verfügbar.',
     'errors:server': 'Etwas ist schiefgelaufen. Bitte erneut versuchen.',
     'common:resources': 'Ressourcen',

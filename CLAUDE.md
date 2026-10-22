@@ -66,13 +66,12 @@ start the web app manually and then run e2e, start it on 5173.
 ### CI (`.github/workflows/ci.yml`)
 
 Three jobs: **check** (install → `prisma generate` → typecheck → lint →
-`format:check` → unit tests; hermetic, no services), **e2e** (docker-compose
-Postgres/Redis,
+`format:check` → unit tests; hermetic, no services), **e2e** (Postgres/Redis service containers,
 `prisma:push`, `build:standalone`, everything except the visual-regression
-spec), and **e2e-visual** (that spec only, inside
-`mcr.microsoft.com/playwright:v1.64.1-noble` so the checked-in
+spec), and **e2e-visual** (that spec only). Both E2E jobs run inside
+`mcr.microsoft.com/playwright:v1.64.1-noble` with browsers preinstalled; the checked-in
 `*-chromium-linux.png` baselines match byte-for-byte — regenerate baselines in
-that same image). The api app boots `ModernAdminStaticUiModule`, which reads
+that same image. The api app boots `ModernAdminStaticUiModule`, which reads
 `packages/web/dist/standalone/index.html`, so
 `bun run --filter @modern-admin/web build:standalone` must run before e2e.
 

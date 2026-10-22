@@ -2,7 +2,7 @@ import { Controller, Get, Inject, Req, UseGuards } from '@nestjs/common'
 import { ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { type ModernAdmin, type CurrentAdmin } from '@modern-admin/core'
 import { MODERN_ADMIN } from './tokens.js'
-import { ModernAdminAuthGuard } from './auth.guard.js'
+import { AllowApiKey, ModernAdminAuthGuard } from './auth.guard.js'
 
 interface AdminRequest {
   currentAdmin?: CurrentAdmin
@@ -26,6 +26,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Resolve the current authenticated admin' })
   @Get('me')
   @UseGuards(ModernAdminAuthGuard)
+  @AllowApiKey()
   me(@Req() req: AdminRequest): { user: CurrentAdmin } {
     // Guard guarantees presence; the bang is just to satisfy the type.
     // The role's permission matrix is deliberately *not* returned: the SPA
