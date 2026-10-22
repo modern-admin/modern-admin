@@ -89,6 +89,37 @@ const listReq = (currentAdmin?: CurrentAdmin) => ({
   ...(currentAdmin ? { currentAdmin } : {}),
 })
 
+test('relation predicates and distinct lookups bypass the HTTP cache', async () => {
+  const cache = new InspectableCache()
+  const interceptor = buildInterceptor(cache)
+  for (const query of [
+    'filters[postId.authorId]=parent',
+    'filters[postId.authorId][operator]=eq&filters[postId.authorId][value]=parent',
+    'filters[postId][authorId]=parent',
+    'field=postId.authorId.name',
+  ]) {
+    const handler = handlerReturning({ records: [] })
+    const request = { ...listReq(), originalUrl: `/admin/api/resources/users?${query}` }
+    await firstValueFrom(interceptor.intercept(httpContext(request), handler))
+    await firstValueFrom(interceptor.intercept(httpContext(request), handler))
+    expect(handler.calls).toBe(2)
+  }
+  expect(cache.keys).toHaveLength(0)
+})
+
+test('structured scalar predicates remain cacheable', async () => {
+  const cache = new InspectableCache()
+  const interceptor = buildInterceptor(cache)
+  const handler = handlerReturning({ records: [] })
+  const request = {
+    ...listReq(),
+    originalUrl: '/admin/api/resources/users?filters[name][operator]=eq&filters[name][value]=Ann',
+  }
+  await firstValueFrom(interceptor.intercept(httpContext(request), handler))
+  await firstValueFrom(interceptor.intercept(httpContext(request), handler))
+  expect(handler.calls).toBe(1)
+})
+
 describe('ModernAdminCacheInterceptor — principal scoping', () => {
   test('different roles never share a cached response', async () => {
     const cache = new InspectableCache()

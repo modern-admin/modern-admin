@@ -223,6 +223,7 @@ export class Filter {
   constructor(
     rawFilters: RawFilters | undefined,
     public readonly resource: BaseResource,
+    options: { preserveRelationPaths?: boolean } = {},
   ) {
     const structuredCriteria = new Map<string, FilterCriterion>()
     const legacyFilters = extractStructuredCriteria(rawFilters ?? {}, '', structuredCriteria)
@@ -251,7 +252,18 @@ export class Filter {
       }
     }
     // Re-aggregate nested keys (a.b -> { a: { b } }) for properties of mixed type.
-    const reaggregated = unflatten(ranged) as Record<string, FilterValue>
+    const relationPaths = Object.fromEntries(
+      Object.entries(ranged).filter(
+        ([path]) => options.preserveRelationPaths && this.isRelationPath(path),
+      ),
+    )
+    const ordinaryPaths = Object.fromEntries(
+      Object.entries(ranged).filter(([path]) => !Object.hasOwn(relationPaths, path)),
+    )
+    const reaggregated = {
+      ...unflatten(ordinaryPaths),
+      ...relationPaths,
+    } as Record<string, FilterValue>
 
     this.filters = Object.create(null) as Record<string, FilterElement>
     for (const path of Object.keys(reaggregated)) {
@@ -295,6 +307,17 @@ export class Filter {
 
   get(path: string): FilterElement | null {
     return this.filters[path] ?? null
+  }
+
+  isRelationPath(path: string): boolean {
+    if (!path.includes('.') || this.resource.property(path)) return false
+    const head = path.slice(0, path.indexOf('.'))
+    const property = this.resource._decorated?.getPropertyByKey(head)
+    return Boolean(property?.reference() ?? this.resource.property(head)?.reference())
+  }
+
+  hasRelations(): boolean {
+    return Object.keys(this.filters).some((path) => this.isRelationPath(path))
   }
 
   reduce<T>(callback: (memo: T, element: FilterElement) => T, initial: T): T {

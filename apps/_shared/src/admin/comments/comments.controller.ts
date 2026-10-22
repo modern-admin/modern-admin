@@ -17,7 +17,14 @@ import type { CommentRow } from '../types.js'
   // global search is for — while `id` is opted back in even though the default
   // filter view drops id columns: looking a comment up by an id pasted out of a
   // support ticket is routine.
-  filterProperties: ['id', 'postId', 'authorId', 'rating'],
+  filterProperties: [
+    'id',
+    'postId',
+    'authorId',
+    'rating',
+    'postId.authorId',
+    'postId.authorId.tier',
+  ],
 })
 export class CommentsAdminController extends AdminController<CommentRow> {
   constructor(private readonly audit: AuditLogService) {

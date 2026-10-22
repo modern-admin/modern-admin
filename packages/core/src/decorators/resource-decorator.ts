@@ -5,6 +5,7 @@ import { ActionDecorator } from './action-decorator.js'
 import { PropertyDecorator, type PropertyJSON } from './property-decorator.js'
 import type { PropertyContextBase } from './property-options.js'
 import type { RelatedResource, ResourceOptions } from './resource-options.js'
+import { canAccessRelationPath, resolveRelationPath } from '../filter/relation-path.js'
 
 const humanize = (value: string): string =>
   value.replace(/[._-]/g, ' ').replace(/^./, (c) => c.toUpperCase())
@@ -52,6 +53,8 @@ const normalizeNavigation = (
  * Transports query the decorator to render UIs and route requests.
  */
 export class ResourceDecorator {
+  /** @internal Bound after registration so paths can cross resource boundaries. */
+  resourceLookup?: (id: string) => BaseResource
   public readonly id: string
   public readonly name: string
   public readonly properties: PropertyDecorator[]
@@ -84,6 +87,16 @@ export class ResourceDecorator {
     const virtual: PropertyDecorator[] = []
     for (const [path, opts] of Object.entries(overrides)) {
       if (knownPaths.has(path)) continue
+      // Relational filters get their type from the terminal resource, once
+      // all resources have been registered. They are never form fields.
+      const head = properties.find((property) => property.path() === path.split('.')[0])
+      if (
+        path.includes('.') &&
+        this.options.filterProperties?.includes(path) &&
+        (overrides[head?.path() ?? '']?.reference ?? head?.reference())
+      ) {
+        continue
+      }
       // Give synthetic fields a trailing position so the position-based sort in
       // `propertiesForView` keeps them after the real (adapter-numbered)
       // columns, matching their append-at-end placement. A user-supplied
@@ -140,7 +153,42 @@ export class ResourceDecorator {
   }
 
   getPropertyByKey(path: string): PropertyDecorator | null {
-    return this.properties.find((p) => p.path() === path) ?? null
+    const own = this.properties.find((p) => p.path() === path)
+    if (own) return own
+    if (
+      !this.resourceLookup ||
+      !path.includes('.') ||
+      !this.options.filterProperties?.includes(path) ||
+      !this.properties.find((property) => property.path() === path.split('.')[0])?.reference()
+    ) {
+      return null
+    }
+    const entries = resolveRelationPath(this.resource, path, this.resourceLookup)
+    const terminal = entries.at(-1)!.property
+    const overrides = this.options.properties?.[path] ?? {}
+    const synthetic = new BaseProperty({ path, type: terminal.property.type(), isSortable: false })
+    const property = new PropertyDecorator(synthetic, {
+      type: terminal.type(),
+      reference: terminal.reference() ?? undefined,
+      availableValues: terminal.availableValues() ?? undefined,
+      isVisible: { list: false, show: false, new: false, edit: false, filter: true },
+      ...overrides,
+      isSortable: false,
+      isAccessible: async (context) => {
+        if (!(await canAccessRelationPath(entries, context))) return false
+        return new PropertyDecorator(synthetic, overrides).isAccessible(context)
+      },
+    })
+    return property
+  }
+
+  private serializableProperties(): PropertyDecorator[] {
+    const existing = new Set(this.properties.map((property) => property.path()))
+    const filters = (this.options.filterProperties ?? [])
+      .filter((path) => !existing.has(path))
+      .map((path) => this.getPropertyByKey(path))
+      .filter((property): property is PropertyDecorator => property !== null)
+    return [...this.properties, ...filters]
   }
 
   getAction(name: string): ActionDecorator<ActionResponse> | null {
@@ -213,7 +261,7 @@ export class ResourceDecorator {
     if (context) {
       return (async () => {
         const properties = (
-          await Promise.all(this.properties.map((p) => p.toJSON(context)))
+          await Promise.all(this.serializableProperties().map((p) => p.toJSON(context)))
         ).filter((p): p is PropertyJSON => p !== null)
         // Filter out actions the current admin cannot access, so the SPA can
         // gate UI on capability — e.g. <ReferenceLink> renders a plain badge
@@ -260,7 +308,7 @@ export class ResourceDecorator {
       navigation: this.navigation,
       relatedResources: this.relatedResources,
       showRelatedResources: this.showRelatedResources,
-      properties: this.properties.map((p) => p.toJSON()),
+      properties: this.serializableProperties().map((p) => p.toJSON()),
       propertyOrder: this.buildPropertyOrder(),
       actions: Array.from(this.actions.values()).map((a) => a.toDescriptor()),
     }

@@ -6,6 +6,7 @@ import { listCacheKey } from '../cache-keys.js'
 import { resolveResourceCacheConfig } from '../../decorators/cache-config.js'
 import type { BaseRecord, BaseResource } from '../../adapters'
 import type { ModernAdmin } from '../../modern-admin.js'
+import { resolveRelationFilters } from '../../filter/resolve-relations.js'
 
 const DEFAULT_PER_PAGE = 20
 
@@ -117,7 +118,7 @@ const handler = async (
   const sortBy = querySortBy ?? defaultSort?.sortBy
   const direction = querySortBy != null ? queryDirection : defaultSort?.direction
 
-  const filter = new Filter(filters, resource)
+  const filter = new Filter(filters, resource, { preserveRelationPaths: true })
   const cacheKey = listCacheKey(resource.id(), {
     filters,
     page,
@@ -130,7 +131,9 @@ const handler = async (
   return cacheRuntime.read<ListActionResponse>(
     cacheKey,
     {
-      enabled: cfg.enabled,
+      // Relation membership and access depend on several resources. Resolve
+      // afresh rather than storing an entry tagged only with this resource.
+      enabled: cfg.enabled && !filter.hasRelations(),
       ttl: cfg.ttl,
       jitterRatio: cfg.jitterRatio,
       crossReplicaLock: cfg.crossReplicaLock,
@@ -143,11 +146,16 @@ const handler = async (
       onChanged: () => admin.invalidateResourceCaches(resource.id()),
     },
     async () => {
+      const resolvedFilter = await resolveRelationFilters(filter, context)
       const sortOption =
         sortBy != null ? { sort: { sortBy, ...(direction ? { direction } : {}) } } : {}
       const [records, total] = await Promise.all([
-        resource.find(filter, { limit: perPage, offset: (page - 1) * perPage, ...sortOption }),
-        resource.count(filter),
+        resource.find(resolvedFilter, {
+          limit: perPage,
+          offset: (page - 1) * perPage,
+          ...sortOption,
+        }),
+        resource.count(resolvedFilter),
       ])
 
       await populateReferences(records, resource, admin)

@@ -139,6 +139,10 @@ export const fr: LocaleBundle = {
     'common:next': 'Suivant',
     'common:previous': 'Précédent',
     'common:relatedRecords': 'Enregistrements liés',
+    'common:commentsOnPosts': 'Commentaires sur les publications',
+    'errors:invalidRelationFilter': 'Filtre de relation invalide. Vérifiez le chemin de référence.',
+    'errors:relationFilterTooBroad':
+      'Le filtre de relation trouve trop de résultats. Affinez le filtre.',
     'common:viewAll': 'Tout afficher',
     'common:noRelatedRecords': 'Aucun enregistrement lié.',
     'common:preview': 'Aperçu',

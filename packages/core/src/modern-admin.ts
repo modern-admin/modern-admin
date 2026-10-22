@@ -249,6 +249,9 @@ export class ModernAdmin {
       plugins: options.plugins ?? [],
       logger: this.logger,
     })
+    for (const resource of this.resources) {
+      resource.decorate().resourceLookup = (id) => this.findResource(id)
+    }
   }
 
   /**
@@ -397,6 +400,7 @@ export class ModernAdmin {
       const id = r.decorate().id
       if (existing.has(id)) continue
       this.resources.push(r)
+      r.decorate().resourceLookup = (id) => this.findResource(id)
       existing.add(id)
       added.push(r)
     }

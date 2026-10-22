@@ -136,6 +136,10 @@ export const de: LocaleBundle = {
     'common:next': 'Weiter',
     'common:previous': 'Zurück',
     'common:relatedRecords': 'Verknüpfte Datensätze',
+    'common:commentsOnPosts': 'Kommentare zu Beiträgen',
+    'errors:invalidRelationFilter': 'Ungültiger Beziehungsfilter. Prüfen Sie den Referenzpfad.',
+    'errors:relationFilterTooBroad':
+      'Der Beziehungsfilter findet zu viele Datensätze. Grenzen Sie den Filter ein.',
     'common:viewAll': 'Alle anzeigen',
     'common:noRelatedRecords': 'Keine verknüpften Datensätze.',
     'common:preview': 'Vorschau',

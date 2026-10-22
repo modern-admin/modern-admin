@@ -136,6 +136,11 @@ export const es: LocaleBundle = {
     'common:next': 'Siguiente',
     'common:previous': 'Anterior',
     'common:relatedRecords': 'Registros relacionados',
+    'common:commentsOnPosts': 'Comentarios en publicaciones',
+    'errors:invalidRelationFilter':
+      'Filtro de relación no válido. Compruebe la ruta de referencia.',
+    'errors:relationFilterTooBroad':
+      'El filtro de relación encuentra demasiados registros. Limite el filtro.',
     'common:viewAll': 'Ver todos',
     'common:noRelatedRecords': 'Sin registros relacionados.',
     'common:preview': 'Vista previa',

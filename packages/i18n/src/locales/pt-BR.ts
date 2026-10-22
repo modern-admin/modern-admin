@@ -136,6 +136,11 @@ export const ptBR: LocaleBundle = {
     'common:next': 'Próximo',
     'common:previous': 'Anterior',
     'common:relatedRecords': 'Registros relacionados',
+    'common:commentsOnPosts': 'Comentários em publicações',
+    'errors:invalidRelationFilter':
+      'Filtro de relação inválido. Verifique o caminho da referência.',
+    'errors:relationFilterTooBroad':
+      'O filtro de relação encontra muitos registros. Restrinja o filtro.',
     'common:viewAll': 'Ver todos',
     'common:noRelatedRecords': 'Sem registros relacionados.',
     'common:preview': 'Pré-visualizar',
