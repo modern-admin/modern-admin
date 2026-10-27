@@ -59,7 +59,7 @@
     "@modern-admin/i18n": "workspace:^",
     "@modern-admin/ui": "workspace:^",
     "@tanstack/react-query": "5.104.5",
-    "@tanstack/react-router": "1.170.45",
+    "@tanstack/react-router": "1.170.46",
     "@tanstack/react-table": "9.3.1",
     "lucide-react": "1.61.0",
     "react-hook-form": "7.90.0",
