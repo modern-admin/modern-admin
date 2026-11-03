@@ -17,7 +17,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@better-auth/api-key": "1.7.12",
+    "@better-auth/api-key": "1.7.14",
     "@modern-admin/auth-better-auth": "workspace:*",
     "@modern-admin/core": "workspace:*",
     "@modern-admin/feature-json-by-key": "workspace:*",
@@ -30,7 +30,7 @@
     "@nestjs/common": "12.2.0",
     "@nestjs/core": "12.2.0",
     "@nestjs/platform-express": "12.2.0",
-    "better-auth": "1.7.12",
+    "better-auth": "1.7.14",
     "reflect-metadata": "0.2.2"
   },
   "devDependencies": {
