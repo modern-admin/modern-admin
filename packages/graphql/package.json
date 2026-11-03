@@ -57,8 +57,8 @@
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
-    "@nestjs/common": "12.2.0",
-    "@nestjs/core": "12.2.0",
+    "@nestjs/common": "12.3.2",
+    "@nestjs/core": "12.3.2",
     "@types/bun": "1.4.3",
     "@types/busboy": "1.5.5",
     "@types/ws": "8.18.2",
@@ -66,8 +66,8 @@
     "typescript": "7.0.2"
   },
   "peerDependencies": {
-    "@nestjs/common": "12.2.0",
-    "@nestjs/core": "12.2.0",
+    "@nestjs/common": "12.3.2",
+    "@nestjs/core": "12.3.2",
     "graphql": "17.0.2"
   }
 }
