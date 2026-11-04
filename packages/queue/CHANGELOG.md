@@ -1,5 +1,15 @@
 # @modern-admin/queue
 
+## 0.13.2
+
+### Patch Changes
+
+- [#119](https://github.com/modern-admin/modern-admin/pull/119) [`4e38081`](https://github.com/modern-admin/modern-admin/commit/4e38081103a9ec826385f13dcbefd6df8e38b065) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update runtime dependencies and Bun/Node development types, keeping queue peers and generated host dependencies aligned.
+
+- [#120](https://github.com/modern-admin/modern-admin/pull/120) [`f229b9f`](https://github.com/modern-admin/modern-admin/commit/f229b9f556974b47f466cf980af78a534c5159f6) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update NestJS to 12.3.3 and Swagger to 12.1.0 across transports, optional peers, and generated hosts.
+- Updated dependencies [[`4e38081`](https://github.com/modern-admin/modern-admin/commit/4e38081103a9ec826385f13dcbefd6df8e38b065)]:
+  - @modern-admin/core@0.13.2
+
 ## 0.13.0
 
 ### Patch Changes

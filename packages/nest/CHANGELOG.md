@@ -1,5 +1,21 @@
 # @modern-admin/nest
 
+## 0.13.2
+
+### Patch Changes
+
+- [#112](https://github.com/modern-admin/modern-admin/pull/112) [`b10ce98`](https://github.com/modern-admin/modern-admin/commit/b10ce983c8ff82911666792abd79ae0f8319e411) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update the AI SDK to 7.0.162 and the OpenAI-compatible provider to 3.0.84, keeping optional Nest peers aligned with the reference host.
+
+- [#119](https://github.com/modern-admin/modern-admin/pull/119) [`4e38081`](https://github.com/modern-admin/modern-admin/commit/4e38081103a9ec826385f13dcbefd6df8e38b065) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update runtime dependencies and Bun/Node development types, keeping queue peers and generated host dependencies aligned.
+
+- [#120](https://github.com/modern-admin/modern-admin/pull/120) [`f229b9f`](https://github.com/modern-admin/modern-admin/commit/f229b9f556974b47f466cf980af78a534c5159f6) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update NestJS to 12.3.3 and Swagger to 12.1.0 across transports, optional peers, and generated hosts.
+- Updated dependencies [[`4e38081`](https://github.com/modern-admin/modern-admin/commit/4e38081103a9ec826385f13dcbefd6df8e38b065), [`f229b9f`](https://github.com/modern-admin/modern-admin/commit/f229b9f556974b47f466cf980af78a534c5159f6), [`a97175b`](https://github.com/modern-admin/modern-admin/commit/a97175bfbcd54f51be5b2bc95812309ce0f67fc4)]:
+  - @modern-admin/auth-better-auth@0.13.2
+  - @modern-admin/core@0.13.2
+  - @modern-admin/feature-upload@0.13.2
+  - @modern-admin/i18n@0.13.2
+  - @modern-admin/queue@0.13.2
+
 ## 0.13.0
 
 ### Patch Changes
