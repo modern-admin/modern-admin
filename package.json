@@ -21,7 +21,7 @@
     "dev:restart": "scripts/dev.sh restart",
     "dev:status": "scripts/dev.sh status",
     "build": "bun run --filter '*' build",
-    "test": "bun --filter '*' test",
+    "test": "bun test packages --max-concurrency 2",
     "test:release": "bun test scripts/test --max-concurrency 1",
     "e2e": "bun run --cwd apps/e2e e2e",
     "typecheck": "bun run --filter '*' typecheck",
@@ -40,7 +40,7 @@
     "@changesets/cli": "3.0.3",
     "@types/bun": "1.4.3",
     "@typescript/typescript6": "npm:typescript@6.0.3",
-    "oxlint": "1.90.0",
+    "oxlint": "1.91.0",
     "prettier": "3.9.10",
     "typescript": "7.0.2"
   },
