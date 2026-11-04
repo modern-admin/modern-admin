@@ -25,20 +25,39 @@ TabsList.displayName = TabsPrimitive.List.displayName
 export const TabsTrigger = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.Trigger>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
->(({ className, ...props }, ref) => (
-  <TabsPrimitive.Trigger
-    ref={ref}
-    className={cn(
-      'relative -mb-px inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap border-b-2 border-transparent px-4 py-2 text-sm font-medium ring-offset-background transition-all',
-      'hover:text-foreground',
-      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-      'disabled:pointer-events-none disabled:opacity-50',
-      'data-[state=active]:border-primary data-[state=active]:text-foreground',
-      className,
-    )}
-    {...props}
-  />
-))
+>(({ className, onPointerDown, onKeyDown, onBlur, ...props }, ref) => {
+  // Radix focuses triggers programmatically on mouse down, which can retain
+  // :focus-visible after pointer input. Keep the ring for keyboard input only.
+  const [pointerFocus, setPointerFocus] = React.useState(false)
+
+  return (
+    <TabsPrimitive.Trigger
+      ref={ref}
+      className={cn(
+        'relative -mb-px inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap border-b-2 border-transparent px-4 py-2 text-sm font-medium ring-offset-background transition-all',
+        'hover:text-foreground',
+        'outline-none',
+        !pointerFocus && 'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+        'disabled:pointer-events-none disabled:opacity-50',
+        'data-[state=active]:border-primary data-[state=active]:text-foreground',
+        className,
+      )}
+      {...props}
+      onPointerDown={(event) => {
+        onPointerDown?.(event)
+        if (!event.defaultPrevented) setPointerFocus(true)
+      }}
+      onKeyDown={(event) => {
+        setPointerFocus(false)
+        onKeyDown?.(event)
+      }}
+      onBlur={(event) => {
+        setPointerFocus(false)
+        onBlur?.(event)
+      }}
+    />
+  )
+})
 TabsTrigger.displayName = TabsPrimitive.Trigger.displayName
 
 export const TabsContent = React.forwardRef<
