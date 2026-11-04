@@ -48,7 +48,7 @@
     "test": "bun test"
   },
   "dependencies": {
-    "jose": "6.2.14"
+    "jose": "6.2.15"
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
