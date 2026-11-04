@@ -1,5 +1,17 @@
 # @modern-admin/ui
 
+## 0.13.2
+
+### Patch Changes
+
+- [#123](https://github.com/modern-admin/modern-admin/pull/123) [`73efe60`](https://github.com/modern-admin/modern-admin/commit/73efe608d2dd40a821b0c842ded54223e8e35672) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Hide the tab focus ring after mouse or touch input while preserving keyboard focus indicators and the active tab underline.
+
+- [#116](https://github.com/modern-admin/modern-admin/pull/116) [`4887e48`](https://github.com/modern-admin/modern-admin/commit/4887e4889c3cb6181d891717f0d0861e8a8c3835) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update React Hook Form to 7.91.0 and its validation resolvers to 7.0.2.
+
+- [#118](https://github.com/modern-admin/modern-admin/pull/118) [`e1bbb6a`](https://github.com/modern-admin/modern-admin/commit/e1bbb6a795b2fb46c3706a7c8849f5a664fa1bef) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update the Tiptap editor packages together to 3.32.2.
+
+- [#119](https://github.com/modern-admin/modern-admin/pull/119) [`4e38081`](https://github.com/modern-admin/modern-admin/commit/4e38081103a9ec826385f13dcbefd6df8e38b065) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update runtime dependencies and Bun/Node development types, keeping queue peers and generated host dependencies aligned.
+
 ## 0.13.1
 
 ### Patch Changes

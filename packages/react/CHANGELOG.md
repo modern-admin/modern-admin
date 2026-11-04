@@ -1,5 +1,19 @@
 # @modern-admin/react
 
+## 0.13.2
+
+### Patch Changes
+
+- [#116](https://github.com/modern-admin/modern-admin/pull/116) [`4887e48`](https://github.com/modern-admin/modern-admin/commit/4887e4889c3cb6181d891717f0d0861e8a8c3835) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update React Hook Form to 7.91.0 and its validation resolvers to 7.0.2.
+
+- [#117](https://github.com/modern-admin/modern-admin/pull/117) [`62d49c0`](https://github.com/modern-admin/modern-admin/commit/62d49c0d580cf2170c86bc1ebc75d260f3e2a45e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update TanStack Query to 5.105.3 and Router to 1.170.46 across the React integrations and web bundles.
+
+- [#119](https://github.com/modern-admin/modern-admin/pull/119) [`4e38081`](https://github.com/modern-admin/modern-admin/commit/4e38081103a9ec826385f13dcbefd6df8e38b065) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update runtime dependencies and Bun/Node development types, keeping queue peers and generated host dependencies aligned.
+- Updated dependencies [[`73efe60`](https://github.com/modern-admin/modern-admin/commit/73efe608d2dd40a821b0c842ded54223e8e35672), [`4887e48`](https://github.com/modern-admin/modern-admin/commit/4887e4889c3cb6181d891717f0d0861e8a8c3835), [`e1bbb6a`](https://github.com/modern-admin/modern-admin/commit/e1bbb6a795b2fb46c3706a7c8849f5a664fa1bef), [`4e38081`](https://github.com/modern-admin/modern-admin/commit/4e38081103a9ec826385f13dcbefd6df8e38b065)]:
+  - @modern-admin/ui@0.13.2
+  - @modern-admin/core@0.13.2
+  - @modern-admin/i18n@0.13.2
+
 ## 0.13.1
 
 ### Patch Changes
