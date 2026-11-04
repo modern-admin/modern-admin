@@ -54,7 +54,7 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@hookform/resolvers": "6.0.0",
+    "@hookform/resolvers": "7.0.2",
     "@modern-admin/core": "workspace:^",
     "@modern-admin/i18n": "workspace:^",
     "@modern-admin/ui": "workspace:^",
@@ -62,7 +62,7 @@
     "@tanstack/react-router": "1.170.45",
     "@tanstack/react-table": "9.3.1",
     "lucide-react": "1.61.0",
-    "react-hook-form": "7.90.0",
+    "react-hook-form": "7.91.0",
     "socket.io-client": "4.8.4",
     "zod": "4.6.7"
   },
