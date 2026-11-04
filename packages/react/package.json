@@ -54,7 +54,7 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@hookform/resolvers": "6.0.2",
+    "@hookform/resolvers": "7.0.2",
     "@modern-admin/core": "workspace:^",
     "@modern-admin/i18n": "workspace:^",
     "@modern-admin/ui": "workspace:^",
