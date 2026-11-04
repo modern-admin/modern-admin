@@ -128,7 +128,7 @@ jobs:
           --health-cmd "pg_isready -U admin -d modern_admin"
           --health-interval 10s --health-timeout 5s --health-retries 10
       redis:
-        image: redis:8.10.2-alpine
+        image: redis:8.10.3-alpine
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s --health-timeout 5s --health-retries 10
@@ -208,7 +208,7 @@ jobs:
           --health-cmd "pg_isready -U admin -d modern_admin"
           --health-interval 10s --health-timeout 5s --health-retries 10
       redis:
-        image: redis:8.10.2-alpine
+        image: redis:8.10.3-alpine
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s --health-timeout 5s --health-retries 10
