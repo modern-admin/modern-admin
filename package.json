@@ -21,7 +21,7 @@
     "dev:restart": "scripts/dev.sh restart",
     "dev:status": "scripts/dev.sh status",
     "build": "bun run --filter '*' build",
-    "test": "bun test --isolate --max-concurrency 1",
+    "test": "bun test packages --isolate --max-concurrency 1",
     "test:release": "bun test scripts/test --max-concurrency 1",
     "e2e": "bun run --cwd apps/e2e e2e",
     "typecheck": "bun run --filter '*' typecheck",
@@ -38,9 +38,9 @@
   "devDependencies": {
     "@changesets/changelog-github": "1.0.1",
     "@changesets/cli": "3.0.3",
-    "@types/bun": "1.4.3",
+    "@types/bun": "1.4.4",
     "@typescript/typescript6": "npm:typescript@6.0.3",
-    "oxlint": "1.89.0",
+    "oxlint": "1.91.0",
     "prettier": "3.9.10",
     "typescript": "7.0.2"
   },

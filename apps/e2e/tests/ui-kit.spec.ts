@@ -26,6 +26,16 @@ for (const width of [375, 1280]) {
         'background-color',
         dark ? 'rgb(12, 12, 13)' : 'rgb(255, 255, 255)',
       )
+      // Theme colors transition independently on badges and controls. Audit
+      // the settled theme, excluding perpetual spinner animations.
+      await page.locator('main').evaluate(async (element) => {
+        await Promise.all(
+          element
+            .getAnimations({ subtree: true })
+            .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+            .map((animation) => animation.finished),
+        )
+      })
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
         true,
       )
