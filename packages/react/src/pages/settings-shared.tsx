@@ -2,6 +2,7 @@
 // `settings-page.tsx` (API keys, webhooks, AI assistant, ...) should use
 // these so the look, spacing, and mobile behavior stays uniform.
 
+import { AlertCircle } from 'lucide-react'
 import * as React from 'react'
 import {
   Card,
@@ -15,6 +16,8 @@ import {
   EmptyMedia,
   EmptyTitle,
   cn,
+  Alert,
+  AlertDescription,
 } from '@modern-admin/ui'
 
 type IconComponent = React.ComponentType<{ className?: string }>
@@ -130,9 +133,12 @@ export function SettingsListState({
   }
   if (error) {
     return (
-      <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-        {error instanceof Error ? error.message : String(error)}
-      </div>
+      <Alert variant="destructive">
+        <AlertCircle />
+        <AlertDescription>
+          {error instanceof Error ? error.message : String(error)}
+        </AlertDescription>
+      </Alert>
     )
   }
   if (isEmpty) {

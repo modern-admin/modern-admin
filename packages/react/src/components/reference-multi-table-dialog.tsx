@@ -39,6 +39,9 @@ export interface ReferenceMultiTableDialogProps {
   /** Label for the trigger button. Defaults to "Pick records". */
   triggerLabel?: string
   className?: string
+  ref?: React.Ref<HTMLButtonElement>
+  invalid?: boolean
+  'aria-describedby'?: string
 }
 
 export function ReferenceMultiTableDialog({
@@ -48,6 +51,9 @@ export function ReferenceMultiTableDialog({
   disabled,
   triggerLabel,
   className,
+  ref,
+  invalid,
+  'aria-describedby': describedBy,
 }: ReferenceMultiTableDialogProps): React.ReactElement {
   const { t } = useI18n()
   const client = useAdminClient()
@@ -131,6 +137,9 @@ export function ReferenceMultiTableDialog({
         </div>
       )}
       <Button
+        ref={ref}
+        aria-invalid={invalid || undefined}
+        aria-describedby={describedBy}
         type="button"
         variant="outline"
         disabled={disabled}
@@ -143,7 +152,7 @@ export function ReferenceMultiTableDialog({
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
-          closeLabel={t('common:close')}
+          labels={{ close: t('common:close') }}
           // Wide layout so the embedded table has room. Cap height and let
           // the body scroll independently of the footer.
           className="flex max-h-[90vh] w-[95vw] max-w-5xl flex-col gap-0 p-0"

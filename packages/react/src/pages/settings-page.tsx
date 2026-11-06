@@ -31,6 +31,8 @@ import {
   TableHeader,
   TableRow,
   cn,
+  Alert,
+  AlertDescription,
 } from '@modern-admin/ui'
 import {
   AlertTriangle,
@@ -639,7 +641,7 @@ function ApiKeyEditorDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent closeLabel={t('common:close')} className="max-w-3xl">
+      <DialogContent labels={{ close: t('common:close') }} className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>
             {isEdit
@@ -982,7 +984,7 @@ function WebhookEditorDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent closeLabel={t('common:close')} className="max-w-3xl">
+      <DialogContent labels={{ close: t('common:close') }} className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>
             {webhook
@@ -1035,7 +1037,7 @@ function WebhookEditorDialog({
                 <Label>{t('settings:webhooks.editor.secret')}</Label>
                 <InfoTooltip
                   content={t('settings:webhooks.editor.secretHint')}
-                  ariaLabel={t('settings:webhooks.editor.secret')}
+                  aria-label={t('settings:webhooks.editor.secret')}
                   side="right"
                 />
               </div>
@@ -1069,7 +1071,7 @@ function WebhookEditorDialog({
                 <Label>{t('settings:webhooks.editor.payloadFields')}</Label>
                 <InfoTooltip
                   content={t('settings:webhooks.editor.payloadFieldsHint')}
-                  ariaLabel={t('settings:webhooks.editor.payloadFields')}
+                  aria-label={t('settings:webhooks.editor.payloadFields')}
                   side="right"
                 />
               </div>
@@ -1098,22 +1100,32 @@ function WebhookEditorDialog({
                 <Label>{t('settings:webhooks.editor.headers')}</Label>
                 <InfoTooltip
                   content={t('settings:webhooks.editor.headersHint')}
-                  ariaLabel={t('settings:webhooks.editor.headers')}
+                  aria-label={t('settings:webhooks.editor.headers')}
                   side="top"
                 />
               </div>
-              <JsonEditor value={headers} onChange={(next) => setHeaders(toJsonRecord(next))} />
+              <JsonEditor
+                value={headers}
+                onChange={(next) => setHeaders(toJsonRecord(next))}
+                aria-label={t('settings:webhooks.editor.headers')}
+                labels={{ format: t('common:format'), invalid: t('common:invalidJson') }}
+              />
             </div>
             <div className="space-y-1.5">
               <div className="flex items-center gap-1.5">
                 <Label>{t('settings:webhooks.editor.filters')}</Label>
                 <InfoTooltip
                   content={t('settings:webhooks.editor.filtersHint')}
-                  ariaLabel={t('settings:webhooks.editor.filters')}
+                  aria-label={t('settings:webhooks.editor.filters')}
                   side="top"
                 />
               </div>
-              <JsonEditor value={filters} onChange={(next) => setFilters(toJsonRecord(next))} />
+              <JsonEditor
+                value={filters}
+                onChange={(next) => setFilters(toJsonRecord(next))}
+                aria-label={t('settings:webhooks.editor.filters')}
+                labels={{ format: t('common:format'), invalid: t('common:invalidJson') }}
+              />
             </div>
           </div>
           <DialogFooter>
@@ -1187,7 +1199,7 @@ function CreatedSecretDialog({
 
   return (
     <Dialog open={!!secret} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent closeLabel={t('common:close')} className="max-w-lg">
+      <DialogContent labels={{ close: t('common:close') }} className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <SettingsIcon className="size-5" />
@@ -1195,12 +1207,10 @@ function CreatedSecretDialog({
           </DialogTitle>
           <DialogDescription>{t('settings:apiKeys.created.description')}</DialogDescription>
         </DialogHeader>
-        <div className="rounded-md border border-amber-300/60 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-300/30 dark:bg-amber-950/40 dark:text-amber-200">
-          <div className="flex items-start gap-2">
-            <AlertTriangle className="mt-0.5 size-4" />
-            <p>{t('settings:apiKeys.created.warning')}</p>
-          </div>
-        </div>
+        <Alert variant="warning">
+          <AlertTriangle />
+          <AlertDescription>{t('settings:apiKeys.created.warning')}</AlertDescription>
+        </Alert>
         <div className="flex items-stretch gap-2">
           <div className="relative flex-1">
             <Input

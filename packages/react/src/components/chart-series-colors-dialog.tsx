@@ -59,7 +59,7 @@ export function ChartSeriesColorsDialog({
         if (!open) onClose()
       }}
     >
-      <DialogContent closeLabel={t('common:close')} className="w-full max-w-lg">
+      <DialogContent labels={{ close: t('common:close') }} className="w-full max-w-lg">
         <DialogHeader>
           <DialogTitle>{t('dashboard:widget.colorsTitle')}</DialogTitle>
         </DialogHeader>

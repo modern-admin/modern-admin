@@ -21,6 +21,14 @@ export interface ColorSwatchPickerProps {
   presets: ReadonlyArray<string>
   labels?: ColorSwatchPickerLabels
   className?: string
+  id?: string
+  name?: string
+  disabled?: boolean
+  invalid?: boolean
+  'aria-label'?: string
+  'aria-labelledby'?: string
+  'aria-describedby'?: string
+  ref?: React.Ref<HTMLInputElement>
 }
 
 const HEX_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
@@ -45,6 +53,14 @@ export function ColorSwatchPicker({
   presets,
   labels,
   className,
+  id,
+  name,
+  disabled,
+  invalid,
+  'aria-label': ariaLabel,
+  'aria-labelledby': ariaLabelledBy,
+  'aria-describedby': ariaDescribedBy,
+  ref,
 }: ColorSwatchPickerProps): React.ReactElement {
   const [draft, setDraft] = React.useState(value ?? '')
 
@@ -66,15 +82,22 @@ export function ColorSwatchPicker({
   const isCustom = value != null && !presets.includes(value)
 
   return (
-    <div className={cn('flex flex-wrap items-center gap-2', className)}>
+    <div
+      role="group"
+      aria-label={ariaLabel}
+      aria-labelledby={ariaLabelledBy}
+      data-invalid={invalid || undefined}
+      className={cn('flex flex-wrap items-center gap-2', className)}
+    >
       <div className="flex items-center gap-1.5">
         {presets.map((hex) => (
           <button
             key={hex}
             type="button"
+            disabled={disabled}
             onClick={() => onChange(value === hex ? undefined : hex)}
             className={cn(
-              'size-6 rounded-full border transition-shadow',
+              'size-6 rounded-full border transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50',
               value === hex
                 ? 'border-foreground ring-2 ring-ring ring-offset-1 ring-offset-background'
                 : 'border-border hover:ring-1 hover:ring-ring',
@@ -100,6 +123,7 @@ export function ColorSwatchPicker({
         )}
         <input
           type="color"
+          disabled={disabled}
           value={wellValue}
           onChange={(e) => commitDraft(e.target.value)}
           className="absolute inset-0 size-full cursor-pointer opacity-0"
@@ -107,6 +131,13 @@ export function ColorSwatchPicker({
         />
       </label>
       <Input
+        ref={ref}
+        id={id}
+        name={name}
+        disabled={disabled}
+        aria-invalid={invalid || undefined}
+        aria-labelledby={ariaLabelledBy}
+        aria-describedby={ariaDescribedBy}
         value={draft}
         onChange={(e) => commitDraft(e.target.value)}
         placeholder={labels?.custom ?? '#8b5cf6'}
@@ -121,6 +152,7 @@ export function ColorSwatchPicker({
           size="sm"
           className="h-8 px-2 text-xs"
           onClick={() => onChange(undefined)}
+          disabled={disabled}
         >
           {labels?.auto ?? 'Auto'}
         </Button>

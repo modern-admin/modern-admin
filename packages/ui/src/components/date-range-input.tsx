@@ -35,7 +35,7 @@ import type { DateRange } from 'react-day-picker'
 import { cn } from '../lib/utils.js'
 import { Button } from './button.js'
 import { Calendar } from './calendar.js'
-import { Popover, PopoverContent, PopoverTrigger } from './popover.js'
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from './popover.js'
 
 const DATE_FMT = 'yyyy-MM-dd'
 const DISPLAY_FMT = 'MMM d, yyyy'
@@ -60,8 +60,18 @@ export interface DateRangeInputProps {
   to: string | null | undefined
   onChange(from: string, to: string): void
   disabled?: boolean
+  /** Marks the trigger `aria-invalid` and draws the error border. */
+  invalid?: boolean
+  /** Styles the visible box (width, grid placement, …). */
   className?: string
   labels?: DateRangeInputLabels
+  /** `id` of the trigger button, so a `<label for=…>` can point at it. */
+  id?: string
+  'aria-label'?: string
+  'aria-labelledby'?: string
+  'aria-describedby'?: string
+  /** Ref to the trigger button — lets form libraries focus the field. */
+  ref?: React.Ref<HTMLButtonElement>
   /**
    * date-fns locale for the calendars — month names, weekday headers, and
    * react-day-picker's own ARIA labels. Without it they render in `en-US`
@@ -75,9 +85,15 @@ export function DateRangeInput({
   to,
   onChange,
   disabled,
+  invalid,
   className,
   labels = {},
   locale,
+  id,
+  'aria-label': ariaLabel,
+  'aria-labelledby': ariaLabelledBy,
+  'aria-describedby': ariaDescribedBy,
+  ref,
 }: DateRangeInputProps): React.ReactElement {
   const placeholder = labels.placeholder ?? 'Select date range'
   const applyLabel = labels.apply ?? 'Apply'
@@ -193,9 +209,10 @@ export function DateRangeInput({
     setOpen(false)
   }
 
-  // Inline X on the trigger: clear committed range without opening the picker.
-  const handleClearInline = (e: React.MouseEvent): void => {
-    e.stopPropagation()
+  // Inline X next to the trigger: clear committed range without opening the
+  // picker. It is a sibling of the trigger, not a child — a button inside a
+  // button is invalid markup and unreachable for assistive tech.
+  const handleClearInline = (): void => {
     setPending(undefined)
     onChange('', '')
   }
@@ -213,38 +230,46 @@ export function DateRangeInput({
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={disabled}
-          className={cn(
-            'h-9 w-full justify-start gap-2 px-3 font-normal',
-            !hasValue && 'text-muted-foreground',
-            className,
-          )}
-        >
-          <CalendarRange className="size-4 shrink-0 opacity-60" />
-          <span className="flex-1 truncate text-left text-sm">{displayText ?? placeholder}</span>
-          {hasValue && (
-            <span
-              role="button"
-              tabIndex={0}
+      <PopoverAnchor asChild>
+        <div data-slot="date-range-input" className={cn('relative flex h-9 w-full', className)}>
+          <PopoverTrigger asChild>
+            <Button
+              ref={ref}
+              id={id}
+              type="button"
+              variant="outline"
+              disabled={disabled}
+              aria-label={ariaLabel}
+              aria-labelledby={ariaLabelledBy}
+              aria-describedby={ariaDescribedBy}
+              aria-invalid={invalid || undefined}
+              className={cn(
+                'h-full w-full justify-start gap-2 px-3 font-normal',
+                hasValue && 'pr-9',
+                !hasValue && 'text-muted-foreground',
+              )}
+            >
+              <CalendarRange className="opacity-60" />
+              <span className="flex-1 truncate text-left text-sm">
+                {displayText ?? placeholder}
+              </span>
+            </Button>
+          </PopoverTrigger>
+          {hasValue && !disabled && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
               aria-label={clearLabel}
               onClick={handleClearInline}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  handleClearInline(e as unknown as React.MouseEvent)
-                }
-              }}
-              className="ml-1 rounded-sm p-0.5 opacity-50 hover:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="absolute right-1 top-1/2 size-7 -translate-y-1/2 text-muted-foreground hover:text-foreground [&_svg]:size-3.5"
             >
-              <X className="size-3.5" />
-            </span>
+              <X />
+            </Button>
           )}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+        </div>
+      </PopoverAnchor>
+      <PopoverContent className="w-auto p-0" align="start" aria-label={ariaLabel ?? placeholder}>
         {months === 2 ? (
           // Two-panel layout: each Calendar is a fully independent single-
           // month instance with its own controlled `month` state. The left

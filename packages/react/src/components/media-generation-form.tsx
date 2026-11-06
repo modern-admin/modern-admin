@@ -19,8 +19,11 @@ import {
   SelectTrigger,
   SelectValue,
   Textarea,
+  Alert,
+  AlertDescription,
+  Spinner,
 } from '@modern-admin/ui'
-import { Download, Loader2, RefreshCw, Sparkles, Square, Upload } from 'lucide-react'
+import { Download, RefreshCw, Sparkles, Square, Upload, AlertCircle } from 'lucide-react'
 import type { ActionComponentProps } from '../types.js'
 import { parseApiError, type MediaGenerationTask } from '../client.js'
 import { useAdminClient } from '../provider.js'
@@ -219,16 +222,17 @@ export function MediaGenerationForm({
   if (catalog.isLoading) {
     return (
       <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
-        <Loader2 className="size-4 animate-spin" />
+        <Spinner />
         {t('common:loading')}
       </div>
     )
   }
   if (catalog.error) {
     return (
-      <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-        {parseApiError(catalog.error).message}
-      </div>
+      <Alert variant="destructive">
+        <AlertCircle />
+        <AlertDescription>{parseApiError(catalog.error).message}</AlertDescription>
+      </Alert>
     )
   }
 
@@ -284,14 +288,11 @@ export function MediaGenerationForm({
           </label>
           <div className="flex justify-end">
             <Button
-              disabled={!model || !confirmed || create.isPending}
+              disabled={!model || !confirmed}
+              loading={create.isPending}
               onClick={() => create.mutate()}
             >
-              {create.isPending ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Sparkles className="size-4" />
-              )}
+              <Sparkles className="size-4" />
               {t('mediaGeneration:create')}
             </Button>
           </div>
@@ -383,14 +384,11 @@ export function MediaGenerationForm({
                 )}
                 {target ? (
                   <Button
-                    disabled={apply.isPending || Boolean(currentTask?.output?.applied)}
+                    disabled={Boolean(currentTask?.output?.applied)}
+                    loading={apply.isPending}
                     onClick={() => apply.mutate()}
                   >
-                    {apply.isPending ? (
-                      <Loader2 className="size-4 animate-spin" />
-                    ) : (
-                      <Upload className="size-4" />
-                    )}
+                    <Upload className="size-4" />
                     {currentTask?.output?.applied
                       ? t('mediaGeneration:apply.applied')
                       : t('mediaGeneration:apply.button')}

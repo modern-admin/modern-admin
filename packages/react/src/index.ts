@@ -247,3 +247,4 @@ export {
   type UseDashboardChartsOptions,
   type UseDashboardChartsResult,
 } from './use-dashboard-charts.js'
+export { UiKitGallery } from './components/ui-kit-gallery.js'

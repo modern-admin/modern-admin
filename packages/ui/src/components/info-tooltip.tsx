@@ -7,6 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from './popover.js'
 export interface InfoTooltipProps {
   content: React.ReactNode
   ariaLabel?: string
+  'aria-label'?: string
   className?: string
   iconClassName?: string
   side?: React.ComponentProps<typeof TooltipContent>['side']
@@ -15,6 +16,7 @@ export interface InfoTooltipProps {
 export function InfoTooltip({
   content,
   ariaLabel,
+  'aria-label': ariaLabelProp,
   className,
   iconClassName,
   side = 'top',
@@ -23,7 +25,7 @@ export function InfoTooltip({
   // as a popover, including inside modal surfaces.
   const [popoverOpen, setPopoverOpen] = React.useState(false)
   const [tooltipOpen, setTooltipOpen] = React.useState(false)
-  const label = ariaLabel ?? (typeof content === 'string' ? content : undefined)
+  const label = ariaLabelProp ?? ariaLabel ?? (typeof content === 'string' ? content : undefined)
   return (
     <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
       <Tooltip open={tooltipOpen && !popoverOpen} onOpenChange={setTooltipOpen}>

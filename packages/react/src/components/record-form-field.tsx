@@ -63,7 +63,7 @@ export function RecordFormField({
             <FieldLabel id={labelId} htmlFor={isGroup ? undefined : controlId}>
               {property.label}
               {property.description ? (
-                <InfoTooltip content={property.description} ariaLabel={property.description} />
+                <InfoTooltip content={property.description} aria-label={property.description} />
               ) : null}
               {property.isRequired && (
                 <span className="ml-1 text-destructive" aria-hidden="true">
@@ -72,6 +72,7 @@ export function RecordFormField({
               )}
             </FieldLabel>
             <PropertyEditor
+              ref={field.ref}
               property={property}
               value={field.value}
               onChange={field.onChange}

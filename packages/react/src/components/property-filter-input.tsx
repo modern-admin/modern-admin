@@ -372,7 +372,8 @@ function DateFilterInput({
               mode={mode}
               value={from}
               onChange={(next) => emit('between', next, to)}
-              ariaLabel={t('common:from')}
+              aria-label={t('common:from')}
+              labels={{ openCalendar: t('common:openCalendar'), time: t('common:time') }}
               locale={locale}
             />
           </Field>
@@ -382,7 +383,8 @@ function DateFilterInput({
               mode={mode}
               value={to}
               onChange={(next) => emit('between', from, next)}
-              ariaLabel={t('common:to')}
+              aria-label={t('common:to')}
+              labels={{ openCalendar: t('common:openCalendar'), time: t('common:time') }}
               locale={locale}
             />
           </Field>

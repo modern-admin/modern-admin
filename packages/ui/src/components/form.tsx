@@ -1,6 +1,11 @@
-// shadcn-style Form: thin wrappers around react-hook-form's `Controller` that
-// pipe field state into accessible label/control/message slots. Apps render
-// `<Form>` (== FormProvider) at the top, then use `<FormField>` per input.
+// react-hook-form bindings. `Form` (== FormProvider) and `FormField` (a
+// `Controller`) are the supported entry points; lay the field out with the
+// `Field*` primitives from `./field.js`.
+//
+// `FormItem` / `FormLabel` / `FormControl` / `FormDescription` /
+// `FormMessage` / `useFormField` are a second, context-driven layout system
+// that duplicates `Field*`. They are deprecated and will be removed in a
+// future major release. Existing consumers remain supported.
 
 import * as React from 'react'
 import { Slot } from '@radix-ui/react-slot'
@@ -39,10 +44,15 @@ export const FormField = <
 
 interface FormItemContextValue {
   id: string
+  descriptionId?: string
+  messageId?: string
+  setDescriptionId: React.Dispatch<React.SetStateAction<string | undefined>>
+  setMessageId: React.Dispatch<React.SetStateAction<string | undefined>>
 }
 
 const FormItemContext = React.createContext<FormItemContextValue | null>(null)
 
+/** @deprecated Use the `Field*` primitives with `FormField` — see `field.tsx`. */
 export const useFormField = (): {
   id: string
   name: string
@@ -68,22 +78,32 @@ export const useFormField = (): {
   }
 }
 
-export const FormItem = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => {
-    const id = React.useId()
-    return (
-      <FormItemContext.Provider value={{ id }}>
-        <div ref={ref} className={cn('space-y-2', className)} {...props} />
-      </FormItemContext.Provider>
-    )
-  },
-)
-FormItem.displayName = 'FormItem'
+/** @deprecated Use the `Field*` primitives with `FormField` — see `field.tsx`. */
+export const FormItem = ({
+  ref,
+  className,
+  ...props
+}: React.PropsWithoutRef<React.HTMLAttributes<HTMLDivElement>> &
+  React.RefAttributes<HTMLDivElement>) => {
+  const id = React.useId()
+  const [descriptionId, setDescriptionId] = React.useState<string>()
+  const [messageId, setMessageId] = React.useState<string>()
+  return (
+    <FormItemContext.Provider
+      value={{ id, descriptionId, messageId, setDescriptionId, setMessageId }}
+    >
+      <div ref={ref} className={cn('flex flex-col gap-2', className)} {...props} />
+    </FormItemContext.Provider>
+  )
+}
 
-export const FormLabel = React.forwardRef<
-  React.ElementRef<typeof Label>,
-  React.ComponentPropsWithoutRef<typeof Label>
->(({ className, ...props }, ref) => {
+/** @deprecated Use the `Field*` primitives with `FormField` — see `field.tsx`. */
+export const FormLabel = ({
+  ref,
+  className,
+  ...props
+}: React.PropsWithoutRef<React.ComponentPropsWithoutRef<typeof Label>> &
+  React.RefAttributes<React.ElementRef<typeof Label>>) => {
   const { error, formItemId } = useFormField()
   return (
     <Label
@@ -93,31 +113,44 @@ export const FormLabel = React.forwardRef<
       {...props}
     />
   )
-})
-FormLabel.displayName = 'FormLabel'
+}
 
-export const FormControl = React.forwardRef<
-  React.ElementRef<typeof Slot>,
-  React.ComponentPropsWithoutRef<typeof Slot>
->(({ ...props }, ref) => {
-  const { error, formItemId, formDescriptionId, formMessageId } = useFormField()
+/** @deprecated Use the `Field*` primitives with `FormField` — see `field.tsx`. */
+export const FormControl = ({
+  ref,
+  ...props
+}: React.PropsWithoutRef<React.ComponentPropsWithoutRef<typeof Slot>> &
+  React.RefAttributes<React.ElementRef<typeof Slot>>) => {
+  const { error, formItemId } = useFormField()
+  const item = React.useContext(FormItemContext)
+  const describedBy =
+    [item?.descriptionId, item?.messageId, props['aria-describedby']].filter(Boolean).join(' ') ||
+    undefined
   return (
     <Slot
       ref={ref}
       id={formItemId}
-      aria-describedby={!error ? `${formDescriptionId}` : `${formDescriptionId} ${formMessageId}`}
       aria-invalid={!!error}
       {...props}
+      aria-describedby={describedBy}
     />
   )
-})
-FormControl.displayName = 'FormControl'
+}
 
-export const FormDescription = React.forwardRef<
-  HTMLParagraphElement,
-  React.HTMLAttributes<HTMLParagraphElement>
->(({ className, ...props }, ref) => {
+/** @deprecated Use the `Field*` primitives with `FormField` — see `field.tsx`. */
+export const FormDescription = ({
+  ref,
+  className,
+  ...props
+}: React.PropsWithoutRef<React.HTMLAttributes<HTMLParagraphElement>> &
+  React.RefAttributes<HTMLParagraphElement>) => {
   const { formDescriptionId } = useFormField()
+  const { setDescriptionId } = React.useContext(FormItemContext)!
+  const descriptionId = props.id ?? formDescriptionId
+  React.useEffect(() => {
+    setDescriptionId(descriptionId)
+    return () => setDescriptionId(undefined)
+  }, [descriptionId, setDescriptionId])
   return (
     <p
       ref={ref}
@@ -126,15 +159,25 @@ export const FormDescription = React.forwardRef<
       {...props}
     />
   )
-})
-FormDescription.displayName = 'FormDescription'
+}
 
-export const FormMessage = React.forwardRef<
-  HTMLParagraphElement,
-  React.HTMLAttributes<HTMLParagraphElement>
->(({ className, children, ...props }, ref) => {
+/** @deprecated Use the `Field*` primitives with `FormField` — see `field.tsx`. */
+export const FormMessage = ({
+  ref,
+  className,
+  children,
+  ...props
+}: React.PropsWithoutRef<React.HTMLAttributes<HTMLParagraphElement>> &
+  React.RefAttributes<HTMLParagraphElement>) => {
   const { error, formMessageId } = useFormField()
   const body = error ? String(error.message ?? '') : children
+  const { setMessageId } = React.useContext(FormItemContext)!
+  const messageId = props.id ?? formMessageId
+  React.useEffect(() => {
+    if (!body) return
+    setMessageId(messageId)
+    return () => setMessageId(undefined)
+  }, [Boolean(body), messageId, setMessageId])
   if (!body) return null
   return (
     <p
@@ -146,5 +189,4 @@ export const FormMessage = React.forwardRef<
       {body}
     </p>
   )
-})
-FormMessage.displayName = 'FormMessage'
+}

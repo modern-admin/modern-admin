@@ -8,9 +8,11 @@
  */
 
 import * as React from 'react'
-import { Upload, X, FileText, Loader2 } from 'lucide-react'
+import { Upload, X, FileText } from 'lucide-react'
 import { cn } from '../lib/utils.js'
 import { Button } from './button.js'
+import { Progress } from './progress.js'
+import { Spinner } from './spinner.js'
 
 export interface MultiFileInputItem {
   /** Storage key (or URL). */
@@ -70,6 +72,15 @@ export interface MultiFileInputProps {
   /** Upload error message. */
   error?: string
   disabled?: boolean
+  /** Marks the dropzone `aria-invalid` and draws the error border. Implied by `error`. */
+  invalid?: boolean
+  /** `id` of the dropzone button, so a `<label for=…>` can point at it. */
+  id?: string
+  'aria-label'?: string
+  'aria-labelledby'?: string
+  'aria-describedby'?: string
+  /** Ref to the focusable dropzone — lets form libraries focus the field. */
+  ref?: React.Ref<HTMLDivElement>
   className?: string
   /** Translated UI labels. All optional — English strings are the defaults. */
   labels?: MultiFileInputLabels
@@ -91,6 +102,12 @@ export function MultiFileInput({
   uploading = false,
   error,
   disabled = false,
+  invalid,
+  id,
+  'aria-label': ariaLabel,
+  'aria-labelledby': ariaLabelledBy,
+  'aria-describedby': ariaDescribedBy,
+  ref,
   className,
   labels,
   onFilesSelect,
@@ -108,6 +125,8 @@ export function MultiFileInput({
     dismiss: labels?.dismiss ?? 'Dismiss',
   }
   const inputRef = React.useRef<HTMLInputElement>(null)
+  const errorId = React.useId()
+  const isInvalid = Boolean(invalid || error)
   const [isDragging, setIsDragging] = React.useState(false)
   const hasPending = (pendingItems?.length ?? 0) > 0
   // The dropzone spinner is redundant when individual progress rows are
@@ -143,9 +162,18 @@ export function MultiFileInput({
     <div className={cn('w-full space-y-2', className)}>
       {/* Drop zone / trigger */}
       <div
+        ref={ref}
+        id={id}
         role="button"
         tabIndex={disabled ? -1 : 0}
-        aria-label={l.chooseFiles}
+        aria-label={ariaLabel ?? (ariaLabelledBy ? undefined : l.chooseFiles)}
+        aria-labelledby={ariaLabelledBy}
+        aria-describedby={
+          [ariaDescribedBy, error ? errorId : undefined].filter(Boolean).join(' ') || undefined
+        }
+        aria-invalid={isInvalid || undefined}
+        aria-disabled={disabled || undefined}
+        aria-busy={showSpinner || undefined}
         onClick={() => !disabled && inputRef.current?.click()}
         onKeyDown={(e) => {
           if ((e.key === 'Enter' || e.key === ' ') && !disabled) {
@@ -159,13 +187,14 @@ export function MultiFileInput({
         className={cn(
           'flex min-h-[5rem] w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed border-border bg-muted/30 px-4 py-6 text-center transition-colors',
           'hover:border-primary/50 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          isInvalid && 'border-destructive/60',
           isDragging && 'border-primary bg-primary/5',
           disabled && 'cursor-not-allowed opacity-60',
         )}
       >
         {showSpinner ? (
           <>
-            <Loader2 className="size-6 animate-spin text-muted-foreground" />
+            <Spinner className="size-6 text-muted-foreground" />
             <span className="text-sm text-muted-foreground">{l.uploading}</span>
           </>
         ) : (
@@ -243,7 +272,7 @@ export function MultiFileInput({
               {p.status === 'error' ? (
                 <FileText className="size-5 shrink-0 text-destructive" />
               ) : (
-                <Loader2 className="size-5 shrink-0 animate-spin text-muted-foreground" />
+                <Spinner size="lg" className="text-muted-foreground" />
               )}
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm text-foreground" title={p.name}>
@@ -255,18 +284,11 @@ export function MultiFileInput({
                   </div>
                 ) : (
                   <div className="mt-1 flex items-center gap-2">
-                    <div
-                      className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted"
-                      role="progressbar"
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                      aria-valuenow={p.progress ?? 0}
-                    >
-                      <div
-                        className="h-full rounded-full bg-primary transition-[width] duration-150 ease-out"
-                        style={{ width: `${p.progress ?? 0}%` }}
-                      />
-                    </div>
+                    <Progress
+                      value={p.progress ?? null}
+                      className="h-1.5 flex-1"
+                      aria-label={p.name}
+                    />
                     <span className="w-10 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
                       {p.progress != null ? `${p.progress}%` : '…'}
                     </span>
@@ -294,7 +316,11 @@ export function MultiFileInput({
       )}
 
       {/* Error message */}
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && (
+        <p id={errorId} className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
 
       {/* Hidden native input */}
       <input

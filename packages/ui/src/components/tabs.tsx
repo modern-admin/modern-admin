@@ -7,10 +7,12 @@ export const Tabs = TabsPrimitive.Root
 // Underline-style tab strip — works visually even with a single tab because
 // the active item has a clearly drawn bottom indicator that anchors it to the
 // content below.
-export const TabsList = React.forwardRef<
-  React.ElementRef<typeof TabsPrimitive.List>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
->(({ className, ...props }, ref) => (
+export const TabsList = ({
+  ref,
+  className,
+  ...props
+}: React.PropsWithoutRef<React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>> &
+  React.RefAttributes<React.ElementRef<typeof TabsPrimitive.List>>) => (
   <TabsPrimitive.List
     ref={ref}
     className={cn(
@@ -19,13 +21,17 @@ export const TabsList = React.forwardRef<
     )}
     {...props}
   />
-))
-TabsList.displayName = TabsPrimitive.List.displayName
+)
 
-export const TabsTrigger = React.forwardRef<
-  React.ElementRef<typeof TabsPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
->(({ className, onPointerDown, onKeyDown, onBlur, ...props }, ref) => {
+export const TabsTrigger = ({
+  ref,
+  className,
+  onPointerDown,
+  onKeyDown,
+  onBlur,
+  ...props
+}: React.PropsWithoutRef<React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>> &
+  React.RefAttributes<React.ElementRef<typeof TabsPrimitive.Trigger>>) => {
   // Radix focuses triggers programmatically on mouse down, which can retain
   // :focus-visible after pointer input. Keep the ring for keyboard input only.
   const [pointerFocus, setPointerFocus] = React.useState(false)
@@ -57,13 +63,14 @@ export const TabsTrigger = React.forwardRef<
       }}
     />
   )
-})
-TabsTrigger.displayName = TabsPrimitive.Trigger.displayName
+}
 
-export const TabsContent = React.forwardRef<
-  React.ElementRef<typeof TabsPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>
->(({ className, ...props }, ref) => (
+export const TabsContent = ({
+  ref,
+  className,
+  ...props
+}: React.PropsWithoutRef<React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>> &
+  React.RefAttributes<React.ElementRef<typeof TabsPrimitive.Content>>) => (
   <TabsPrimitive.Content
     ref={ref}
     className={cn(
@@ -72,5 +79,4 @@ export const TabsContent = React.forwardRef<
     )}
     {...props}
   />
-))
-TabsContent.displayName = TabsPrimitive.Content.displayName
+)

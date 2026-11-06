@@ -15,10 +15,16 @@ export interface PopoverContentProps extends React.ComponentPropsWithoutRef<
   container?: HTMLElement | null
 }
 
-export const PopoverContent = React.forwardRef<
-  React.ElementRef<typeof PopoverPrimitive.Content>,
-  PopoverContentProps
->(({ className, align = 'center', sideOffset = 4, collisionPadding, container, ...props }, ref) => {
+export const PopoverContent = ({
+  ref,
+  className,
+  align = 'center',
+  sideOffset = 4,
+  collisionPadding,
+  container,
+  ...props
+}: React.PropsWithoutRef<PopoverContentProps> &
+  React.RefAttributes<React.ElementRef<typeof PopoverPrimitive.Content>>) => {
   const portalContainer = usePortalContainer()
   const viewportPadding = useViewportCollisionPadding()
   return (
@@ -36,5 +42,4 @@ export const PopoverContent = React.forwardRef<
       />
     </PopoverPrimitive.Portal>
   )
-})
-PopoverContent.displayName = PopoverPrimitive.Content.displayName
+}

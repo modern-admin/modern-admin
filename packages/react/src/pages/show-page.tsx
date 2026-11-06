@@ -11,6 +11,9 @@ import {
   TooltipContent,
   TooltipTrigger,
   getModKeyLabel,
+  Alert,
+  AlertTitle,
+  AlertDescription,
 } from '@modern-admin/ui'
 import { AlertCircle, Pencil, RefreshCw, Trash2, Zap } from 'lucide-react'
 import {
@@ -52,13 +55,11 @@ function PageError({
         ? t('errors:forbidden')
         : t('errors:server')
   return (
-    <div className="flex items-start gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4 dark:bg-destructive/15">
-      <AlertCircle className="mt-0.5 size-5 shrink-0 text-destructive" />
-      <div className="space-y-1 text-sm">
-        <p className="font-semibold text-destructive">{title}</p>
-        <p className="text-destructive/90">{message}</p>
-      </div>
-    </div>
+    <Alert variant="destructive">
+      <AlertCircle />
+      <AlertTitle>{title}</AlertTitle>
+      <AlertDescription>{message}</AlertDescription>
+    </Alert>
   )
 }
 

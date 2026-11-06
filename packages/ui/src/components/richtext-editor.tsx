@@ -86,13 +86,28 @@ export interface RichtextEditorProps {
    * `id` of the element that labels the editing surface. Must be a real
    * element id — passing a label *string* here names nothing.
    */
-  ariaLabelledBy?: string
+  'aria-labelledby'?: string
   /** Accessible name for the editing surface, when there is no label element. */
-  ariaLabel?: string
+  'aria-label'?: string
   /** `id` of the element describing the surface (e.g. a validation message). */
-  ariaDescribedBy?: string
+  'aria-describedby'?: string
+  /** Marks the editing surface `aria-invalid` and draws the error border. */
+  invalid?: boolean
+  /** Imperative handle — `focus()` moves the caret into the editor. */
+  ref?: React.Ref<RichtextEditorHandle>
   /** Translated toolbar labels. All optional — English strings are the defaults. */
   labels?: RichtextEditorLabels
+  /** @deprecated Use `aria-labelledby`. */
+  ariaLabelledBy?: string
+  /** @deprecated Use `aria-label`. */
+  ariaLabel?: string
+  /** @deprecated Use `aria-describedby`. */
+  ariaDescribedBy?: string
+}
+
+/** What a `ref` on `<RichtextEditor>` receives. Form libraries only need `focus`. */
+export interface RichtextEditorHandle {
+  focus(): void
 }
 
 const HEADING_ICON: Record<1 | 2 | 3, React.ComponentType<{ className?: string }>> = {
@@ -155,11 +170,19 @@ export function RichtextEditor({
   defaultMode = 'wysiwyg',
   className,
   onBlur,
-  ariaLabelledBy,
-  ariaLabel,
-  ariaDescribedBy,
+  'aria-labelledby': ariaLabelledByProp,
+  'aria-label': ariaLabelProp,
+  'aria-describedby': ariaDescribedByProp,
+  invalid,
+  ref,
   labels,
+  ariaLabelledBy: deprecatedLabelledBy,
+  ariaLabel: deprecatedLabel,
+  ariaDescribedBy: deprecatedDescribedBy,
 }: RichtextEditorProps): React.ReactElement {
+  const ariaLabelledBy = ariaLabelledByProp ?? deprecatedLabelledBy
+  const ariaLabel = ariaLabelProp ?? deprecatedLabel
+  const ariaDescribedBy = ariaDescribedByProp ?? deprecatedDescribedBy
   const l = {
     bold: labels?.bold ?? 'Bold',
     italic: labels?.italic ?? 'Italic',
@@ -259,6 +282,37 @@ export function RichtextEditor({
       immediatelyRender: false,
     },
     [disabled, ariaLabelledBy, ariaLabel, ariaDescribedBy],
+  )
+
+  // `aria-invalid` flips with validation state on every keystroke that fixes
+  // or breaks the field. Recreating the Tiptap instance for that (as the
+  // `useEditor` deps do for the other ARIA props) would drop focus and caret
+  // mid-typing, so it is patched onto the live view instead.
+  React.useEffect(() => {
+    if (!editor) return
+    const attributes = (editor.options.editorProps.attributes ?? {}) as Record<string, string>
+    const { 'aria-invalid': _previous, ...rest } = attributes
+    editor.setOptions({
+      editorProps: {
+        ...editor.options.editorProps,
+        attributes: invalid ? { ...rest, 'aria-invalid': 'true' } : rest,
+      },
+    })
+  }, [editor, invalid])
+
+  const sourceRef = React.useRef<HTMLTextAreaElement | null>(null)
+  React.useImperativeHandle(
+    ref,
+    () => ({
+      focus: () => {
+        if (editor && !editor.isDestroyed && sourceRef.current == null) {
+          editor.commands.focus()
+        } else {
+          sourceRef.current?.focus()
+        }
+      },
+    }),
+    [editor],
   )
 
   // Keep editor in sync when external `value` changes (e.g. form reset).
@@ -375,8 +429,11 @@ export function RichtextEditor({
 
   return (
     <div
+      data-slot="richtext-editor"
+      data-invalid={invalid || undefined}
       className={cn(
         'rounded-md border border-input bg-background shadow-sm',
+        invalid && 'border-destructive',
         disabled && 'opacity-50',
         fullscreen && 'fixed inset-0 z-50 flex flex-col rounded-none border-0 shadow-none',
         className,
@@ -576,6 +633,11 @@ export function RichtextEditor({
             `value` so each pane stays in sync via onChange + the sync effect. */}
       {effectiveMode === 'source' ? (
         <Textarea
+          ref={sourceRef}
+          aria-label={ariaLabel}
+          aria-labelledby={ariaLabelledBy}
+          aria-describedby={ariaDescribedBy}
+          aria-invalid={invalid || undefined}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onBlur={() => onBlur?.()}
@@ -590,6 +652,11 @@ export function RichtextEditor({
       ) : effectiveMode === 'split' ? (
         <div className={cn('flex w-full', fullscreen ? 'min-h-0 flex-1' : 'min-h-[160px]')}>
           <Textarea
+            ref={sourceRef}
+            aria-label={ariaLabel}
+            aria-labelledby={ariaLabelledBy}
+            aria-describedby={ariaDescribedBy}
+            aria-invalid={invalid || undefined}
             value={value}
             onChange={(e) => onChange(e.target.value)}
             onBlur={() => onBlur?.()}
