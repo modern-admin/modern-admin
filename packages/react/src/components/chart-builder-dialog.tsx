@@ -29,6 +29,8 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
+  ToggleGroup,
+  ToggleGroupItem,
 } from '@modern-admin/ui'
 import {
   chartDefZ,
@@ -296,7 +298,7 @@ export function ChartBuilderDialog({
       }}
     >
       <DialogContent
-        closeLabel={t('common:close')}
+        labels={{ close: t('common:close') }}
         className="w-full max-w-2xl max-h-[90vh] overflow-y-auto"
       >
         <DialogHeader>
@@ -349,22 +351,31 @@ export function ChartBuilderDialog({
 
             {/* Visualisation (incl. KPI) */}
             <div className="space-y-1.5">
-              <Label>{t('dashboard:vis')}</Label>
-              <div className="flex flex-wrap gap-2">
+              <Label id="chart-vis-label">{t('dashboard:vis')}</Label>
+              <ToggleGroup
+                type="single"
+                variant="outline"
+                size="sm"
+                aria-labelledby="chart-vis-label"
+                value={visualisation}
+                // Single-select groups emit '' when the active item is
+                // clicked again; a chart always has a visualisation.
+                onValueChange={(v) => v && setVisualisation(v as ChartVisualisation)}
+                className="w-full gap-2"
+              >
                 {VIS_OPTIONS.map(({ value, icon, labelKey }) => (
-                  <Button
+                  <ToggleGroupItem
                     key={value}
-                    type="button"
-                    variant={visualisation === value ? 'default' : 'outline'}
-                    size="sm"
+                    value={value}
+                    // The text label is hidden on narrow screens; keep the name.
+                    aria-label={t(labelKey)}
                     className="flex-1 min-w-[5rem] gap-1.5 capitalize"
-                    onClick={() => setVisualisation(value)}
                   >
                     {icon}
                     <span className="hidden sm:inline">{t(labelKey)}</span>
-                  </Button>
+                  </ToggleGroupItem>
                 ))}
-              </div>
+              </ToggleGroup>
             </div>
 
             {/* Resource */}
@@ -505,21 +516,22 @@ export function ChartBuilderDialog({
             {/* Default time-range preset. Custom ranges are picked on the
               widget toolbar — not in the builder. */}
             <div className="space-y-1.5">
-              <Label>{t('dashboard:builder.range')}</Label>
-              <div className="flex flex-wrap gap-2">
+              <Label id="chart-range-label">{t('dashboard:builder.range')}</Label>
+              <ToggleGroup
+                type="single"
+                variant="outline"
+                size="sm"
+                aria-labelledby="chart-range-label"
+                value={preset}
+                onValueChange={(v) => v && setPreset(v as Exclude<TimeRangePreset, 'custom'>)}
+                className="w-full gap-2"
+              >
                 {PRESETS.map((p) => (
-                  <Button
-                    key={p}
-                    type="button"
-                    variant={preset === p ? 'default' : 'outline'}
-                    size="sm"
-                    className="flex-1 min-w-[4rem]"
-                    onClick={() => setPreset(p)}
-                  >
+                  <ToggleGroupItem key={p} value={p} className="flex-1 min-w-[4rem]">
                     {t(`dashboard:range.${p}`)}
-                  </Button>
+                  </ToggleGroupItem>
                 ))}
-              </div>
+              </ToggleGroup>
             </div>
           </TabsContent>
 

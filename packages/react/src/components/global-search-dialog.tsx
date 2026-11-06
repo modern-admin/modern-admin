@@ -18,8 +18,9 @@ import {
   CommandSeparator,
   DialogDescription,
   DialogTitle,
+  Spinner,
 } from '@modern-admin/ui'
-import { AlertTriangle, ArrowRight, Clock, Loader2, X } from 'lucide-react'
+import { AlertTriangle, ArrowRight, Clock, X } from 'lucide-react'
 import { useGlobalSearch } from '../hooks.js'
 import { useI18n } from '../i18n.js'
 import { useNavigate } from '../router.js'
@@ -157,7 +158,7 @@ export function GlobalSearchDialog({
   }, [])
 
   return (
-    <CommandDialog open={open} onOpenChange={onOpenChange} closeLabel={t('common:close')}>
+    <CommandDialog open={open} onOpenChange={onOpenChange} labels={{ close: t('common:close') }}>
       {/* Visually-hidden title + description keep Radix Dialog accessibility
           warnings quiet and provide a label for screen readers. */}
       <DialogTitle className="sr-only">{t('globalSearch:title')}</DialogTitle>
@@ -221,7 +222,7 @@ export function GlobalSearchDialog({
             role="status"
             aria-live="polite"
           >
-            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+            <Spinner />
             <span>{t('common:loading')}</span>
           </div>
         )}

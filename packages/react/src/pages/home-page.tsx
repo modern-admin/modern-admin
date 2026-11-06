@@ -239,7 +239,7 @@ export function HomePage(): React.ReactElement {
                 placeholder={t('home:searchResources')}
                 aria-label={t('home:searchResources')}
                 onClear={() => setResourceSearch('')}
-                clearLabel={t('common:clear')}
+                labels={{ clear: t('common:clear') }}
               />
             </div>
           )}

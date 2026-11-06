@@ -92,7 +92,7 @@ export interface ModernAdminStaticUiOptions<TConfig = ModernAdminUiRuntimeConfig
    * overriding the `:root` / `.dark` design tokens:
    *
    * ```ts
-   * themeCss: ':root{--primary:262 83% 58%}.dark{--primary:262 83% 68%}'
+   * themeCss: ':root{--primary:hsl(262 83% 58%)}.dark{--primary:hsl(262 83% 68%)}'
    * ```
    */
   themeCss?: string

@@ -45,7 +45,7 @@ export function HotkeyHelpButton(): React.ReactElement {
         </TooltipContent>
       </Tooltip>
       <KeyboardShortcutsHelp
-        closeLabel={t('common:close')}
+        labels={{ close: t('common:close') }}
         open={open}
         onOpenChange={setOpen}
         items={items}

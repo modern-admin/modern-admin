@@ -53,6 +53,8 @@ import {
   Skeleton,
   paletteFor,
   dateFnsLocale,
+  Alert,
+  AlertDescription,
 } from '@modern-admin/ui'
 import type { PropertyJSON } from '../types.js'
 import type {
@@ -340,9 +342,9 @@ export function ChartWidget({
               title={t('dashboard:widget.previousPeriod')}
               className={`inline-flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-xs font-medium tabular-nums ${
                 delta.direction === 'up'
-                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                  ? 'bg-success/10 text-success'
                   : delta.direction === 'down'
-                    ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                    ? 'bg-destructive/10 text-destructive'
                     : 'bg-muted text-muted-foreground'
               }`}
             >
@@ -495,21 +497,21 @@ export function ChartWidget({
                 <DatePicker
                   value={draftFrom}
                   onChange={setDraftFrom}
-                  ariaLabel={t('common:from')}
-                  openCalendarLabel={t('common:openCalendar')}
+                  aria-label={t('common:from')}
+                  labels={{ openCalendar: t('common:openCalendar') }}
                   locale={dateFnsLocale(locale)}
-                  className="w-[130px]"
-                  inputClassName="h-8 text-xs"
+                  className="h-8 w-[130px]"
+                  inputClassName="text-xs"
                 />
                 <span className="text-muted-foreground">—</span>
                 <DatePicker
                   value={draftTo}
                   onChange={setDraftTo}
-                  ariaLabel={t('common:to')}
-                  openCalendarLabel={t('common:openCalendar')}
+                  aria-label={t('common:to')}
+                  labels={{ openCalendar: t('common:openCalendar') }}
                   locale={dateFnsLocale(locale)}
-                  className="w-[130px]"
-                  inputClassName="h-8 text-xs"
+                  className="h-8 w-[130px]"
+                  inputClassName="text-xs"
                 />
                 <Button
                   size="sm"
@@ -533,10 +535,10 @@ export function ChartWidget({
         {/* Truncation warning — adapter capped the scan, so the chart reflects
             only a subset of the window. Hidden while loading / unsupported. */}
         {!unsupported && !isError && data?.truncated && (
-          <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
-            <AlertTriangle className="size-3.5 mt-0.5 shrink-0" />
-            <span>{t('dashboard:widget.truncatedWarning')}</span>
-          </div>
+          <Alert variant="warning" size="sm">
+            <AlertTriangle />
+            <AlertDescription>{t('dashboard:widget.truncatedWarning')}</AlertDescription>
+          </Alert>
         )}
 
         {/* Body */}
@@ -593,11 +595,7 @@ export function ChartWidget({
               }}
               aria-label={sqlCopied ? t('common:copied') : t('common:copy')}
             >
-              {sqlCopied ? (
-                <Check className="size-3 text-green-500" />
-              ) : (
-                <Copy className="size-3" />
-              )}
+              {sqlCopied ? <Check className="size-3 text-success" /> : <Copy className="size-3" />}
             </Button>
             <pre className="text-[11px] leading-snug bg-muted/50 border border-border rounded-md p-2 pr-8 overflow-x-auto whitespace-pre">
               {data.sql}

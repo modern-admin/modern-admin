@@ -15,10 +15,15 @@ export interface TooltipContentProps extends React.ComponentPropsWithoutRef<
   container?: HTMLElement | null
 }
 
-export const TooltipContent = React.forwardRef<
-  React.ElementRef<typeof TooltipPrimitive.Content>,
-  TooltipContentProps
->(({ className, sideOffset = 4, collisionPadding, container, ...props }, ref) => {
+export const TooltipContent = ({
+  ref,
+  className,
+  sideOffset = 4,
+  collisionPadding,
+  container,
+  ...props
+}: React.PropsWithoutRef<TooltipContentProps> &
+  React.RefAttributes<React.ElementRef<typeof TooltipPrimitive.Content>>) => {
   const viewportPadding = useViewportCollisionPadding()
   return (
     <TooltipPrimitive.Portal container={container}>
@@ -34,5 +39,4 @@ export const TooltipContent = React.forwardRef<
       />
     </TooltipPrimitive.Portal>
   )
-})
-TooltipContent.displayName = TooltipPrimitive.Content.displayName
+}

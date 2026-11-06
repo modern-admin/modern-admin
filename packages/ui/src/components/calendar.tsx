@@ -1,4 +1,4 @@
-// shadcn-style calendar built on react-day-picker 9. Tokens come from the
+// shadcn-style calendar built on react-day-picker 10. Tokens come from the
 // project's semantic palette so light/dark themes work without overrides.
 //
 // Use directly for inline calendars, or wrap with `<DatePicker>` for the
@@ -10,7 +10,14 @@ import { DayPicker, type DayPickerProps, type DropdownOption } from 'react-day-p
 import 'react-day-picker/style.css'
 import { cn } from '../lib/utils.js'
 import { buttonVariants } from './button.js'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select.js'
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './select.js'
 
 /**
  * Replacement for react-day-picker's native <select> dropdown. Uses the
@@ -53,11 +60,13 @@ function CalendarDropdown(props: {
         <SelectValue />
       </SelectTrigger>
       <SelectContent className="max-h-[var(--radix-select-content-available-height)]">
-        {options.map((opt) => (
-          <SelectItem key={opt.value} value={String(opt.value)} disabled={opt.disabled}>
-            {opt.label}
-          </SelectItem>
-        ))}
+        <SelectGroup>
+          {options.map((opt) => (
+            <SelectItem key={opt.value} value={String(opt.value)} disabled={opt.disabled}>
+              {opt.label}
+            </SelectItem>
+          ))}
+        </SelectGroup>
       </SelectContent>
     </Select>
   )
@@ -76,6 +85,7 @@ export function Calendar({
   captionLayout = 'dropdown',
   startMonth = DEFAULT_START_MONTH,
   endMonth = DEFAULT_END_MONTH,
+  components,
   ...props
 }: CalendarProps): React.ReactElement {
   return (
@@ -149,6 +159,9 @@ export function Calendar({
           return <Icon className={cn('size-4 pointer-events-none', cls)} />
         },
         Dropdown: CalendarDropdown,
+        // Caller overrides merge on top instead of dropping the kit's
+        // chevrons and themed dropdowns.
+        ...components,
       }}
       {...props}
     />

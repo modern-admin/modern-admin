@@ -27,6 +27,7 @@ import {
   SidebarProvider,
   cn,
   useSidebar,
+  Spinner,
 } from '@modern-admin/ui'
 import {
   ChevronDown,
@@ -34,7 +35,6 @@ import {
   Database,
   Gauge,
   Home,
-  Loader2,
   LogOut,
   History,
   Menu,
@@ -594,7 +594,7 @@ function FullscreenSpinner({ brand }: { brand?: AdminBrand } = {}): React.ReactE
         <span className="text-xl font-semibold tracking-tight">{appName}</span>
       </div>
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+        <Spinner />
         <span>{t('common:loading')}</span>
       </div>
     </div>

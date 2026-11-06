@@ -257,7 +257,7 @@ export function LoginPage({ title, hint, tagline, brand }: LoginPageProps): Reac
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={login.isPending}
-                  toggleLabel={{
+                  labels={{
                     show: t('common:showPassword'),
                     hide: t('common:hidePassword'),
                   }}

@@ -117,9 +117,19 @@ export function mergeRefs<T>(
   ...refs: ReadonlyArray<React.Ref<T> | undefined>
 ): React.RefCallback<T> {
   return (node) => {
-    for (const ref of refs) {
-      if (typeof ref === 'function') ref(node)
-      else if (ref) (ref as React.MutableRefObject<T | null>).current = node
+    const cleanups = refs.map((ref) => {
+      if (typeof ref === 'function') return ref(node)
+      if (ref) ref.current = node
+      return undefined
+    })
+    if (node == null) return
+    return () => {
+      refs.forEach((ref, index) => {
+        const cleanup = cleanups[index]
+        if (typeof cleanup === 'function') cleanup()
+        else if (typeof ref === 'function') ref(null)
+        else if (ref) ref.current = null
+      })
     }
   }
 }

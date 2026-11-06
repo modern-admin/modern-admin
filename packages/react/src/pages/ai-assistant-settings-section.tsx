@@ -1,7 +1,16 @@
 import * as React from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { Badge, Button, Input, Label, Switch, Textarea } from '@modern-admin/ui'
-import { Bot, ExternalLink, KeyRound, Save } from 'lucide-react'
+import {
+  Badge,
+  Button,
+  Input,
+  Label,
+  Switch,
+  Textarea,
+  Alert,
+  AlertDescription,
+} from '@modern-admin/ui'
+import { Bot, ExternalLink, KeyRound, Save, AlertCircle } from 'lucide-react'
 import { useAdminClient } from '../provider.js'
 import { useNotify } from '../notify.js'
 import { useI18n } from '../i18n.js'
@@ -57,9 +66,12 @@ export function AiAssistantSettingsSection(): React.ReactElement {
 
   if (settings.error) {
     return (
-      <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-        {settings.error instanceof Error ? settings.error.message : String(settings.error)}
-      </div>
+      <Alert variant="destructive">
+        <AlertCircle />
+        <AlertDescription>
+          {settings.error instanceof Error ? settings.error.message : String(settings.error)}
+        </AlertDescription>
+      </Alert>
     )
   }
 

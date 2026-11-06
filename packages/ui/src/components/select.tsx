@@ -33,10 +33,14 @@ export const Select = SelectRoot
 export const SelectGroup = SelectPrimitive.Group
 export const SelectValue = SelectPrimitive.Value
 
-export const SelectTrigger = React.forwardRef<
-  React.ElementRef<typeof SelectPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>
->(({ className, children, onMouseEnter, ...props }, ref) => {
+export const SelectTrigger = ({
+  ref,
+  className,
+  children,
+  onMouseEnter,
+  ...props
+}: React.PropsWithoutRef<React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>> &
+  React.RefAttributes<React.ElementRef<typeof SelectPrimitive.Trigger>>) => {
   const handleMouseEnter = (e: React.MouseEvent<HTMLButtonElement>): void => {
     // Set native title only when the value span is actually clipped so the
     // tooltip doesn't appear redundantly on short values.
@@ -53,7 +57,7 @@ export const SelectTrigger = React.forwardRef<
     <SelectPrimitive.Trigger
       ref={ref}
       className={cn(
-        'flex h-9 w-full cursor-pointer items-center justify-between rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1',
+        'flex h-9 w-full cursor-pointer items-center justify-between rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:focus:ring-destructive/40 [&>span]:line-clamp-1',
         className,
       )}
       onMouseEnter={handleMouseEnter}
@@ -65,17 +69,18 @@ export const SelectTrigger = React.forwardRef<
       </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
   )
-})
-SelectTrigger.displayName = SelectPrimitive.Trigger.displayName
+}
 
 // The scroll chevrons overlay the viewport with absolute positioning instead
 // of taking a layout slot. Radix only mounts them while the list can scroll in
 // that direction, so keeping them out of the flow means the list never grows or
 // jumps when they appear/disappear — and the viewport can keep a tight padding.
-export const SelectScrollUpButton = React.forwardRef<
-  React.ElementRef<typeof SelectPrimitive.ScrollUpButton>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.ScrollUpButton>
->(({ className, ...props }, ref) => (
+export const SelectScrollUpButton = ({
+  ref,
+  className,
+  ...props
+}: React.PropsWithoutRef<React.ComponentPropsWithoutRef<typeof SelectPrimitive.ScrollUpButton>> &
+  React.RefAttributes<React.ElementRef<typeof SelectPrimitive.ScrollUpButton>>) => (
   <SelectPrimitive.ScrollUpButton
     ref={ref}
     className={cn(
@@ -86,13 +91,14 @@ export const SelectScrollUpButton = React.forwardRef<
   >
     <ChevronUp className="h-4 w-4" />
   </SelectPrimitive.ScrollUpButton>
-))
-SelectScrollUpButton.displayName = SelectPrimitive.ScrollUpButton.displayName
+)
 
-export const SelectScrollDownButton = React.forwardRef<
-  React.ElementRef<typeof SelectPrimitive.ScrollDownButton>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.ScrollDownButton>
->(({ className, ...props }, ref) => (
+export const SelectScrollDownButton = ({
+  ref,
+  className,
+  ...props
+}: React.PropsWithoutRef<React.ComponentPropsWithoutRef<typeof SelectPrimitive.ScrollDownButton>> &
+  React.RefAttributes<React.ElementRef<typeof SelectPrimitive.ScrollDownButton>>) => (
   <SelectPrimitive.ScrollDownButton
     ref={ref}
     className={cn(
@@ -103,8 +109,7 @@ export const SelectScrollDownButton = React.forwardRef<
   >
     <ChevronDown className="h-4 w-4" />
   </SelectPrimitive.ScrollDownButton>
-))
-SelectScrollDownButton.displayName = SelectPrimitive.ScrollDownButton.displayName
+)
 
 export interface SelectContentProps extends React.ComponentPropsWithoutRef<
   typeof SelectPrimitive.Content
@@ -114,10 +119,16 @@ export interface SelectContentProps extends React.ComponentPropsWithoutRef<
   container?: HTMLElement | null
 }
 
-export const SelectContent = React.forwardRef<
-  React.ElementRef<typeof SelectPrimitive.Content>,
-  SelectContentProps
->(({ className, children, position = 'popper', collisionPadding, container, ...props }, ref) => {
+export const SelectContent = ({
+  ref,
+  className,
+  children,
+  position = 'popper',
+  collisionPadding,
+  container,
+  ...props
+}: React.PropsWithoutRef<SelectContentProps> &
+  React.RefAttributes<React.ElementRef<typeof SelectPrimitive.Content>>) => {
   const portalContainer = usePortalContainer()
   const viewportPadding = useViewportCollisionPadding()
   return (
@@ -151,25 +162,28 @@ export const SelectContent = React.forwardRef<
       </SelectPrimitive.Content>
     </SelectPrimitive.Portal>
   )
-})
-SelectContent.displayName = SelectPrimitive.Content.displayName
+}
 
-export const SelectLabel = React.forwardRef<
-  React.ElementRef<typeof SelectPrimitive.Label>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Label>
->(({ className, ...props }, ref) => (
+export const SelectLabel = ({
+  ref,
+  className,
+  ...props
+}: React.PropsWithoutRef<React.ComponentPropsWithoutRef<typeof SelectPrimitive.Label>> &
+  React.RefAttributes<React.ElementRef<typeof SelectPrimitive.Label>>) => (
   <SelectPrimitive.Label
     ref={ref}
     className={cn('px-2 py-1.5 text-sm font-semibold', className)}
     {...props}
   />
-))
-SelectLabel.displayName = SelectPrimitive.Label.displayName
+)
 
-export const SelectItem = React.forwardRef<
-  React.ElementRef<typeof SelectPrimitive.Item>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
->(({ className, children, ...props }, ref) => (
+export const SelectItem = ({
+  ref,
+  className,
+  children,
+  ...props
+}: React.PropsWithoutRef<React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>> &
+  React.RefAttributes<React.ElementRef<typeof SelectPrimitive.Item>>) => (
   <SelectPrimitive.Item
     ref={ref}
     className={cn(
@@ -188,20 +202,20 @@ export const SelectItem = React.forwardRef<
       <span className="block truncate">{children}</span>
     </SelectPrimitive.ItemText>
   </SelectPrimitive.Item>
-))
-SelectItem.displayName = SelectPrimitive.Item.displayName
+)
 
-export const SelectSeparator = React.forwardRef<
-  React.ElementRef<typeof SelectPrimitive.Separator>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Separator>
->(({ className, ...props }, ref) => (
+export const SelectSeparator = ({
+  ref,
+  className,
+  ...props
+}: React.PropsWithoutRef<React.ComponentPropsWithoutRef<typeof SelectPrimitive.Separator>> &
+  React.RefAttributes<React.ElementRef<typeof SelectPrimitive.Separator>>) => (
   <SelectPrimitive.Separator
     ref={ref}
     className={cn('-mx-1 my-1 h-px bg-muted', className)}
     {...props}
   />
-))
-SelectSeparator.displayName = SelectPrimitive.Separator.displayName
+)
 
 /**
  * Plain native `<select>` styled to match the rest of the kit. Useful when
@@ -210,18 +224,20 @@ SelectSeparator.displayName = SelectPrimitive.Separator.displayName
  */
 export type NativeSelectProps = React.SelectHTMLAttributes<HTMLSelectElement>
 
-export const NativeSelect = React.forwardRef<HTMLSelectElement, NativeSelectProps>(
-  ({ className, children, ...props }, ref) => (
-    <select
-      ref={ref}
-      className={cn(
-        'flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50',
-        className,
-      )}
-      {...props}
-    >
-      {children}
-    </select>
-  ),
+export const NativeSelect = ({
+  ref,
+  className,
+  children,
+  ...props
+}: React.PropsWithoutRef<NativeSelectProps> & React.RefAttributes<HTMLSelectElement>) => (
+  <select
+    ref={ref}
+    className={cn(
+      'flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:focus-visible:ring-destructive/40',
+      className,
+    )}
+    {...props}
+  >
+    {children}
+  </select>
 )
-NativeSelect.displayName = 'NativeSelect'

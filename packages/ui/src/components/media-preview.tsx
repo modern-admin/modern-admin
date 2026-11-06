@@ -3,9 +3,10 @@
 // remote photos/videos as a "Preview" button instead of raw text.
 
 import * as React from 'react'
-import { Download, Eye, ExternalLink, Loader2, AlertCircle } from 'lucide-react'
+import { Download, Eye, ExternalLink, AlertCircle } from 'lucide-react'
 import { cn } from '../lib/utils.js'
 import { Button } from './button.js'
+import { Spinner } from './spinner.js'
 import {
   Dialog,
   DialogContent,
@@ -231,7 +232,7 @@ export function MediaPreview({
       ) : null}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-3xl" closeLabel={labels?.close}>
+        <DialogContent className="max-w-3xl" labels={{ close: labels?.close }}>
           <DialogHeader>
             <DialogTitle>{titleLabel}</DialogTitle>
             {labels?.description ? (
@@ -243,7 +244,7 @@ export function MediaPreview({
 
           <div className="flex max-h-[70vh] items-center justify-center overflow-auto rounded-md border border-border bg-muted/30 p-2">
             {kindLoading ? (
-              <Loader2 className="size-8 animate-spin text-muted-foreground" />
+              <Spinner size="xl" className="text-muted-foreground" />
             ) : kind === 'image' ? (
               <img
                 src={url}
@@ -275,16 +276,12 @@ export function MediaPreview({
             <Button
               variant="default"
               size="sm"
-              disabled={downloading}
+              loading={downloading}
               onClick={() => {
                 void handleDownload()
               }}
             >
-              {downloading ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Download className="size-4" />
-              )}
+              <Download className="size-4" />
               <span>{downloadLabel}</span>
             </Button>
           </DialogFooter>

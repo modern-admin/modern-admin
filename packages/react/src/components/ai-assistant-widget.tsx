@@ -23,8 +23,9 @@ import {
   SheetHeader,
   SheetTitle,
   Textarea,
+  Spinner,
 } from '@modern-admin/ui'
-import { Bot, History, Loader2, MessageSquare, Plus, Send, Settings, X } from 'lucide-react'
+import { Bot, History, MessageSquare, Plus, Send, Settings, X } from 'lucide-react'
 import { uuidv7 } from '@modern-admin/core'
 import { useAdminClient } from '../provider.js'
 import { useFeatures } from '../hooks.js'
@@ -501,7 +502,7 @@ export function AiAssistantWidget(): React.ReactElement | null {
                   {isThinking && (
                     <div className="flex justify-start">
                       <div className="inline-flex items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
-                        <Loader2 className="size-4 animate-spin" />
+                        <Spinner />
                         {progress != null
                           ? t('aiAssistant:thinkingProgress', { progress })
                           : t('aiAssistant:thinking')}

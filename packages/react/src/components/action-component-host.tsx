@@ -13,6 +13,7 @@
 
 import * as React from 'react'
 import { AlertCircle } from 'lucide-react'
+import { Alert, AlertDescription, AlertTitle } from '@modern-admin/ui'
 import {
   useActionData,
   useInvokeBulkAction,
@@ -45,16 +46,11 @@ export interface ActionComponentHostProps {
 
 function HostError({ title, hint }: { title: string; hint?: string }): React.ReactElement {
   return (
-    <div
-      role="alert"
-      className="flex items-start gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4 dark:bg-destructive/15"
-    >
-      <AlertCircle className="mt-0.5 size-5 shrink-0 text-destructive" />
-      <div className="space-y-1 text-sm">
-        <p className="font-semibold text-destructive">{title}</p>
-        {hint && <p className="text-destructive/90">{hint}</p>}
-      </div>
-    </div>
+    <Alert variant="destructive">
+      <AlertCircle />
+      <AlertTitle>{title}</AlertTitle>
+      {hint && <AlertDescription>{hint}</AlertDescription>}
+    </Alert>
   )
 }
 

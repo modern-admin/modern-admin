@@ -52,6 +52,14 @@ function trigger(page: Page): Locator {
   return page.locator('button:has(svg.lucide-calendar-range)').first()
 }
 
+/** The inline clear button — a sibling of the trigger, never nested in it. */
+function inlineClear(page: Page): Locator {
+  return page.locator('[data-slot="date-range-input"]').first().getByRole('button', {
+    name: 'Clear',
+    exact: true,
+  })
+}
+
 /** The popover content. Radix Popover.Content has role="dialog" by default. */
 function popover(page: Page): Locator {
   return page.getByRole('dialog')
@@ -129,7 +137,7 @@ test.describe('DateRangeInput — open / close / placeholder', () => {
     await gotoAuditLog(page)
     await expect(trigger(page)).toContainText('Select date range')
     // No inline X when there is no value.
-    await expect(trigger(page).locator('[aria-label="Clear"]')).toHaveCount(0)
+    await expect(inlineClear(page)).toHaveCount(0)
   })
 
   test('clicking trigger opens the popover with calendar + footer', async ({ page }) => {
@@ -238,7 +246,7 @@ test.describe('DateRangeInput — Apply / Clear / inline X', () => {
       .click()
     await expect(trigger(page)).toContainText('Jul 3, 2022 – Jul 9, 2022')
 
-    const inlineX = trigger(page).locator('[aria-label="Clear"]')
+    const inlineX = inlineClear(page)
     await expect(inlineX).toBeVisible()
     await inlineX.click()
 
