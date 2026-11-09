@@ -65,32 +65,41 @@ test('composed refs invoke React 19 cleanup and clear object/legacy refs', () =>
   expect(cleanups).toBe(1)
 })
 
-test('React Hook Form can focus an invalid composite field on submit', async () => {
-  function Example() {
-    const form = useForm({ defaultValues: { date: '' } })
-    return (
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(() => {})}>
-          <FormField
-            control={form.control}
-            name="date"
-            rules={{ required: true }}
-            render={({ field, fieldState }) => (
-              <DatePicker {...field} aria-label="Date" invalid={fieldState.invalid} />
-            )}
-          />
-          <Button type="submit">Submit</Button>
-        </form>
-      </Form>
+for (const mode of ['date', 'datetime'] as const) {
+  test(`required ${mode} fields reach form validation and receive focus on submit`, async () => {
+    function Example() {
+      const form = useForm({ defaultValues: { date: '' } })
+      return (
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(() => {})}>
+            <FormField
+              control={form.control}
+              name="date"
+              rules={{ required: true }}
+              render={({ field, fieldState }) => (
+                <DatePicker
+                  {...field}
+                  mode={mode}
+                  required
+                  aria-label="Date"
+                  invalid={fieldState.invalid}
+                />
+              )}
+            />
+            <Button type="submit">Submit</Button>
+          </form>
+        </Form>
+      )
+    }
+    render(<Example />)
+    await userEvent.click(screen.getByRole('button', { name: 'Submit' }))
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Date' })),
     )
-  }
-  render(<Example />)
-  await userEvent.click(screen.getByRole('button', { name: 'Submit' }))
-  await waitFor(() =>
-    expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Date' })),
-  )
-  expect(document.activeElement?.getAttribute('aria-invalid')).toBe('true')
-})
+    expect(document.activeElement?.getAttribute('aria-invalid')).toBe('true')
+    expect(document.activeElement?.getAttribute('aria-required')).toBe('true')
+  })
+}
 
 test('key/value focus skips description buttons', () => {
   const ref = React.createRef<KeyValueEditorHandle>()
