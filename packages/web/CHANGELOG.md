@@ -1,5 +1,16 @@
 # @modern-admin/web
 
+## 0.14.0
+
+### Patch Changes
+
+- [#117](https://github.com/modern-admin/modern-admin/pull/117) [`62d49c0`](https://github.com/modern-admin/modern-admin/commit/62d49c0d580cf2170c86bc1ebc75d260f3e2a45e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update TanStack Query to 5.105.3 and Router to 1.170.46 across the React integrations and web bundles.
+- Updated dependencies [[`73efe60`](https://github.com/modern-admin/modern-admin/commit/73efe608d2dd40a821b0c842ded54223e8e35672), [`4887e48`](https://github.com/modern-admin/modern-admin/commit/4887e4889c3cb6181d891717f0d0861e8a8c3835), [`62d49c0`](https://github.com/modern-admin/modern-admin/commit/62d49c0d580cf2170c86bc1ebc75d260f3e2a45e), [`e1bbb6a`](https://github.com/modern-admin/modern-admin/commit/e1bbb6a795b2fb46c3706a7c8849f5a664fa1bef), [`4e38081`](https://github.com/modern-admin/modern-admin/commit/4e38081103a9ec826385f13dcbefd6df8e38b065), [`b9849af`](https://github.com/modern-admin/modern-admin/commit/b9849af66ad788f0ca12f4ce237666a4b386c49e)]:
+  - @modern-admin/ui@0.14.0
+  - @modern-admin/react@0.14.0
+  - @modern-admin/core@0.14.0
+  - @modern-admin/i18n@0.14.0
+
 ## 0.13.1
 
 ### Patch Changes

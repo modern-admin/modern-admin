@@ -1,5 +1,36 @@
 # @modern-admin/nest
 
+## 0.14.0
+
+### Patch Changes
+
+- [#112](https://github.com/modern-admin/modern-admin/pull/112) [`b10ce98`](https://github.com/modern-admin/modern-admin/commit/b10ce983c8ff82911666792abd79ae0f8319e411) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update the AI SDK to 7.0.162 and the OpenAI-compatible provider to 3.0.84, keeping optional Nest peers aligned with the reference host.
+
+- [#119](https://github.com/modern-admin/modern-admin/pull/119) [`4e38081`](https://github.com/modern-admin/modern-admin/commit/4e38081103a9ec826385f13dcbefd6df8e38b065) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update runtime dependencies and Bun/Node development types, keeping queue peers and generated host dependencies aligned.
+
+- [#120](https://github.com/modern-admin/modern-admin/pull/120) [`f229b9f`](https://github.com/modern-admin/modern-admin/commit/f229b9f556974b47f466cf980af78a534c5159f6) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update NestJS to 12.3.3 and Swagger to 12.1.0 across transports, optional peers, and generated hosts.
+
+- [#125](https://github.com/modern-admin/modern-admin/pull/125) [`b9849af`](https://github.com/modern-admin/modern-admin/commit/b9849af66ad788f0ca12f4ce237666a4b386c49e) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Complete the UI kit with semantic status and chart colors, accessible composite
+  fields, React 19 ref props, and shared alert, spinner/loading-button, pagination,
+  radio/toggle group, input group, progress, slider, hover card and button group
+  components. Replace duplicated controls in React and add a localized component
+  gallery, interaction tests and automated accessibility checks.
+  
+  Preserve external slider labels and focus invalid many-to-many fields through
+  both picker variants, including their validation descriptions.
+  
+  Theme migration: color tokens now contain complete CSS colors. Wrap existing bare
+  HSL channel overrides in `hsl(...)` and remove `hsl(var(--token))` wrappers in custom
+  CSS. The placeholder `VERSION` export is removed. Legacy label/ARIA props and the
+  old Form layout helpers remain available as deprecated compatibility APIs; use
+  `labels`, standard `aria-*` attributes and `Field` for new code.
+- Updated dependencies [[`4e38081`](https://github.com/modern-admin/modern-admin/commit/4e38081103a9ec826385f13dcbefd6df8e38b065), [`f229b9f`](https://github.com/modern-admin/modern-admin/commit/f229b9f556974b47f466cf980af78a534c5159f6), [`a97175b`](https://github.com/modern-admin/modern-admin/commit/a97175bfbcd54f51be5b2bc95812309ce0f67fc4), [`b9849af`](https://github.com/modern-admin/modern-admin/commit/b9849af66ad788f0ca12f4ce237666a4b386c49e)]:
+  - @modern-admin/auth-better-auth@0.14.0
+  - @modern-admin/core@0.14.0
+  - @modern-admin/feature-upload@0.14.0
+  - @modern-admin/i18n@0.14.0
+  - @modern-admin/queue@0.14.0
+
 ## 0.13.0
 
 ### Patch Changes
