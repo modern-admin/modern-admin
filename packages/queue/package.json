@@ -54,20 +54,20 @@
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
-    "@nestjs/bullmq": "12.0.0",
-    "@nestjs/common": "12.3.3",
-    "@nestjs/core": "12.3.3",
-    "@nestjs/testing": "12.3.3",
+    "@nestjs/bullmq": "12.0.1",
+    "@nestjs/common": "12.4.2",
+    "@nestjs/core": "12.4.2",
+    "@nestjs/testing": "12.4.2",
     "@types/bun": "1.4.4",
-    "bullmq": "6.6.1",
+    "bullmq": "6.7.2",
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2",
     "typescript": "7.0.2"
   },
   "peerDependencies": {
-    "@nestjs/bullmq": "12.0.0",
-    "@nestjs/common": "12.3.3",
-    "@nestjs/core": "12.3.3",
-    "bullmq": "6.6.1"
+    "@nestjs/bullmq": "12.0.1",
+    "@nestjs/common": "12.4.2",
+    "@nestjs/core": "12.4.2",
+    "bullmq": "6.7.2"
   }
 }

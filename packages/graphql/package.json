@@ -53,21 +53,21 @@
     "busboy": "1.6.0",
     "dataloader": "2.2.3",
     "graphql-ws": "6.4.1",
-    "ws": "8.22.0"
+    "ws": "8.22.2"
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
-    "@nestjs/common": "12.3.3",
-    "@nestjs/core": "12.3.3",
+    "@nestjs/common": "12.4.2",
+    "@nestjs/core": "12.4.2",
     "@types/bun": "1.4.4",
     "@types/busboy": "1.5.5",
     "@types/ws": "8.18.2",
-    "graphql": "17.0.2",
+    "graphql": "17.1.0",
     "typescript": "7.0.2"
   },
   "peerDependencies": {
-    "@nestjs/common": "12.3.3",
-    "@nestjs/core": "12.3.3",
-    "graphql": "17.0.2"
+    "@nestjs/common": "12.4.2",
+    "@nestjs/core": "12.4.2",
+    "graphql": "17.1.0"
   }
 }

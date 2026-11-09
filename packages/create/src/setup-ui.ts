@@ -16,14 +16,14 @@ const UI_RUNTIME_DEPENDENCIES: Record<string, string> = {
 }
 
 const UI_DEV_DEPENDENCIES: Record<string, string> = {
-  '@tailwindcss/vite': '4.3.3',
-  '@types/bun': '1.4.3',
+  '@tailwindcss/vite': '4.3.5',
+  '@types/bun': '1.4.4',
   '@types/react': '19.3.0',
   '@types/react-dom': '19.3.0',
-  '@vitejs/plugin-react': '6.1.2',
-  tailwindcss: '4.3.3',
+  '@vitejs/plugin-react': '6.3.0',
+  tailwindcss: '4.3.5',
   typescript: '7.0.2',
-  vite: '8.3.5',
+  vite: '8.3.7',
 }
 
 interface PackageJson extends Record<string, unknown> {
