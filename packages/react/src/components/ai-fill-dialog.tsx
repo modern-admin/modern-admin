@@ -4,7 +4,7 @@
 // edit page handles merging the returned values into the live form.
 
 import * as React from 'react'
-import { Sparkles, Loader2 } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 import {
   Button,
   Dialog,
@@ -101,7 +101,7 @@ export function AiFillDialog({
         if (!open) handleClose()
       }}
     >
-      <DialogContent closeLabel={t('common:close')} className="w-full max-w-md">
+      <DialogContent labels={{ close: t('common:close') }} className="w-full max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="size-4" />
@@ -134,8 +134,8 @@ export function AiFillDialog({
           <Button variant="outline" onClick={handleClose}>
             {t('common:cancel')}
           </Button>
-          <Button onClick={() => void handleFill()} disabled={!file || busy}>
-            {busy ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+          <Button onClick={() => void handleFill()} disabled={!file} loading={busy}>
+            <Sparkles className="size-4" />
             {t('aiFill:fillButton')}
           </Button>
         </DialogFooter>

@@ -118,7 +118,7 @@ function CompactValues({
       {kind !== 'added' && (
         <span
           aria-label={labels.before}
-          className="truncate rounded bg-red-50 px-1.5 text-red-900 line-through decoration-red-400/60 dark:bg-red-950/40 dark:text-red-100"
+          className="truncate rounded bg-destructive/10 px-1.5 text-foreground line-through decoration-destructive/60"
           title={before}
         >
           {before || '\u00A0'}
@@ -127,7 +127,7 @@ function CompactValues({
       {kind !== 'removed' && (
         <span
           aria-label={labels.after}
-          className="truncate rounded bg-green-50 px-1.5 text-green-900 dark:bg-green-950/40 dark:text-green-100"
+          className="truncate rounded bg-success/10 px-1.5 text-foreground"
           title={after}
         >
           {after || '\u00A0'}
@@ -153,7 +153,7 @@ function StackedValues({
       {kind !== 'added' && (
         <pre
           aria-label={labels.before}
-          className="overflow-x-auto whitespace-pre-wrap bg-red-50 px-2 py-0.5 text-red-900 dark:bg-red-950/40 dark:text-red-100"
+          className="overflow-x-auto whitespace-pre-wrap bg-destructive/10 px-2 py-0.5 text-foreground"
         >
           {prefixed('-', before)}
         </pre>
@@ -161,7 +161,7 @@ function StackedValues({
       {kind !== 'removed' && (
         <pre
           aria-label={labels.after}
-          className="overflow-x-auto whitespace-pre-wrap bg-green-50 px-2 py-0.5 text-green-900 dark:bg-green-950/40 dark:text-green-100"
+          className="overflow-x-auto whitespace-pre-wrap bg-success/10 px-2 py-0.5 text-foreground"
         >
           {prefixed('+', after)}
         </pre>

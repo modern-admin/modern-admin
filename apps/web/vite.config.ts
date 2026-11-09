@@ -1,9 +1,18 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import { fileURLToPath } from 'node:url'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  build: {
+    rolldownOptions: {
+      input: {
+        main: fileURLToPath(new URL('./index.html', import.meta.url)),
+        ui: fileURLToPath(new URL('./ui.html', import.meta.url)),
+      },
+    },
+  },
   // ProseMirror relies on class identity. Bun's isolated linker may expose
   // one version through multiple store paths unless Vite deduplicates it.
   resolve: {
@@ -25,6 +34,6 @@ export default defineConfig({
   },
   server: {
     port: Number(process.env.WEB_PORT ?? 3000),
-    host: true,
+    host: '127.0.0.1',
   },
 })

@@ -39,34 +39,38 @@ export interface ChartPanelProps {
   className?: string
 }
 
-const PALETTE = [
-  'hsl(220, 70%, 55%)',
-  'hsl(160, 60%, 45%)',
-  'hsl(30, 80%, 55%)',
-  'hsl(280, 65%, 60%)',
-  'hsl(0, 65%, 55%)',
-]
-
+// Tooltip chrome follows the active theme: every token is a complete CSS
+// color, so it drops straight into an inline style.
 const TOOLTIP_STYLE: React.CSSProperties = {
-  background: 'var(--card, #fff)',
-  border: '1px solid var(--border, #e2e8f0)',
-  borderRadius: '6px',
+  background: 'var(--popover)',
+  border: '1px solid var(--border)',
+  borderRadius: 6,
+  color: 'var(--popover-foreground)',
   fontSize: 12,
   padding: '6px 10px',
+  boxShadow: '0 4px 12px rgb(0 0 0 / 0.12)',
 }
 
-const AXIS_STYLE = { fontSize: 11 }
-// Recessive grid that stays visible in BOTH themes. `--border` can't be used
-// here: it's a bare HSL triplet (invalid as a raw `stroke`) and, wrapped, it's
-// near-black on the dark surface. `--muted-foreground` is a mid-gray in light
-// and a light-gray in dark, so a low-opacity stroke reads on either surface.
-const GRID_STROKE = 'hsl(var(--muted-foreground))'
+const TOOLTIP_LABEL_STYLE: React.CSSProperties = {
+  color: 'var(--popover-foreground)',
+  marginBottom: 2,
+}
+
+const TOOLTIP_ITEM_STYLE: React.CSSProperties = { color: 'var(--popover-foreground)' }
+
+const TOOLTIP_CURSOR = { stroke: 'var(--muted-foreground)', strokeOpacity: 0.4, strokeWidth: 1 }
+
+const AXIS_STYLE = { fontSize: 11, fill: 'var(--muted-foreground)' }
+// Recessive grid that stays visible in BOTH themes: `--muted-foreground` is a
+// mid-gray in light and a light-gray in dark, so a low-opacity stroke reads on
+// either surface (`--border` is near-black on the dark surface).
+const GRID_STROKE = 'var(--muted-foreground)'
 const GRID_OPACITY = 0.3
 
 export function ChartPanel({
   data,
   type = 'line',
-  color = PALETTE[0]!,
+  color = CHART_PALETTE[0],
   height = 260,
   labels,
   className,
@@ -86,6 +90,7 @@ export function ChartPanel({
   const mapped = data.map((d) => ({ label: d.label, [vKey]: d.value }))
 
   if (type === 'pie') {
+    const pieColors = paletteFor(mapped.length)
     return (
       <div
         className={cn(
@@ -98,10 +103,15 @@ export function ChartPanel({
           <PieChart>
             <Pie data={mapped} dataKey={vKey} nameKey="label" cx="50%" cy="50%" outerRadius="65%">
               {mapped.map((_, i) => (
-                <Cell key={i} fill={PALETTE[i % PALETTE.length]!} />
+                <Cell key={i} fill={pieColors[i]!} />
               ))}
             </Pie>
-            <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(value) => [value, vKey]} />
+            <Tooltip
+              contentStyle={TOOLTIP_STYLE}
+              labelStyle={TOOLTIP_LABEL_STYLE}
+              itemStyle={TOOLTIP_ITEM_STYLE}
+              formatter={(value) => [value, vKey]}
+            />
           </PieChart>
         </ResponsiveContainer>
       </div>
@@ -126,7 +136,12 @@ export function ChartPanel({
             axisLine={false}
           />
           <YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false} />
-          <Tooltip contentStyle={TOOLTIP_STYLE} />
+          <Tooltip
+            contentStyle={TOOLTIP_STYLE}
+            labelStyle={TOOLTIP_LABEL_STYLE}
+            itemStyle={TOOLTIP_ITEM_STYLE}
+            cursor={TOOLTIP_CURSOR}
+          />
           {type === 'area' ? (
             <Area
               type="monotone"
@@ -228,9 +243,9 @@ export function KpiCard({
 
   const tone =
     direction === 'up'
-      ? 'text-emerald-600 dark:text-emerald-400'
+      ? 'text-success'
       : direction === 'down'
-        ? 'text-rose-600 dark:text-rose-400'
+        ? 'text-destructive'
         : 'text-muted-foreground'
 
   const tpl =
@@ -321,24 +336,34 @@ export interface TimeSeriesChartProps {
   className?: string
 }
 
-// Six-color HSL palette mirroring the legacy AdminJS dashboard. For >6
-// series we generate evenly-spaced hues so each line stays distinguishable.
-const TS_PALETTE = [
-  'hsl(2, 50%, 50%)',
-  'hsl(25, 56%, 50%)',
-  'hsl(48, 65%, 49%)',
-  'hsl(189, 50%, 50%)',
-  'hsl(143, 60%, 55%)',
-  'hsl(286, 70%, 55%)',
+/**
+ * Categorical palette, one slot per `--chart-N` design token. Values are
+ * `var()` references so a theme override recolors every chart; they work in
+ * inline styles and in SVG presentation attributes alike.
+ */
+export const CHART_PALETTE = [
+  'var(--chart-1)',
+  'var(--chart-2)',
+  'var(--chart-3)',
+  'var(--chart-4)',
+  'var(--chart-5)',
+  'var(--chart-6)',
 ] as const
 
+/**
+ * `n` distinguishable series colors: the themed `CHART_PALETTE` slots first,
+ * evenly-spaced hues once a chart needs more than the palette holds.
+ */
 export function paletteFor(n: number): string[] {
-  if (n <= TS_PALETTE.length) return TS_PALETTE.slice(0, Math.max(n, 1)) as string[]
+  if (n <= CHART_PALETTE.length) return CHART_PALETTE.slice(0, Math.max(n, 1))
   const stepDeg = Math.floor(360 / n)
-  return Array.from({ length: n }, (_, i) => `hsl(${stepDeg * (i + 1)}, 55%, 55%)`)
+  return Array.from(
+    { length: n },
+    (_, i) => CHART_PALETTE[i] ?? `hsl(${stepDeg * (i + 1)}, 55%, 55%)`,
+  )
 }
 
-/** Hex twins of `TS_PALETTE` — persisted color overrides are stored as hex. */
+/** Hex twins of the default `--chart-N` values — persisted color overrides are stored as hex. */
 export const CHART_COLOR_PRESETS = [
   '#bf4440',
   '#c77438',
@@ -348,20 +373,7 @@ export const CHART_COLOR_PRESETS = [
   '#b73cdd',
 ] as const
 
-const TS_TOOLTIP_STYLE: React.CSSProperties = {
-  background: 'hsla(220, 10%, 12%, 0.92)',
-  border: '1px solid hsla(220, 10%, 30%, 0.5)',
-  borderRadius: 6,
-  color: '#fff',
-  fontSize: 12,
-  padding: '6px 10px',
-}
-
-const TS_TOOLTIP_LABEL_STYLE: React.CSSProperties = {
-  textAlign: 'center',
-  color: '#fff',
-  marginBottom: 2,
-}
+const TS_TOOLTIP_LABEL_STYLE: React.CSSProperties = { ...TOOLTIP_LABEL_STYLE, textAlign: 'center' }
 
 const compactAxisFormat = (locale?: string): ((n: number) => string) => {
   const nf = new Intl.NumberFormat(locale, {
@@ -568,10 +580,10 @@ export function TimeSeriesChart({
               allowDecimals={false}
             />
             <Tooltip
-              contentStyle={TS_TOOLTIP_STYLE}
+              contentStyle={TOOLTIP_STYLE}
               labelStyle={TS_TOOLTIP_LABEL_STYLE}
-              itemStyle={{ color: '#fff' }}
-              cursor={{ stroke: 'hsla(0, 0%, 50%, 0.4)', strokeWidth: 1 }}
+              itemStyle={TOOLTIP_ITEM_STYLE}
+              cursor={TOOLTIP_CURSOR}
               labelFormatter={(value) =>
                 labelFormatter ? labelFormatter(String(value)) : String(value)
               }

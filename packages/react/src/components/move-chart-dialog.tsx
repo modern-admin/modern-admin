@@ -63,7 +63,7 @@ export function MoveChartDialog({
         if (!open) onClose()
       }}
     >
-      <DialogContent closeLabel={t('common:close')} className="w-full max-w-md">
+      <DialogContent labels={{ close: t('common:close') }} className="w-full max-w-md">
         <DialogHeader>
           <DialogTitle>{t('chart:moveChart')}</DialogTitle>
         </DialogHeader>

@@ -170,7 +170,7 @@ test.describe('Dashboard chart builder — UI', () => {
     await expect(dialog).toBeVisible()
 
     // Pick KPI visualisation.
-    await dialog.getByRole('button', { name: 'KPI', exact: true }).click()
+    await dialog.getByRole('radio', { name: 'KPI', exact: true }).click()
     // Title.
     await dialog.locator('#chart-title').fill('E2E KPI Posts')
     // Resource = posts.

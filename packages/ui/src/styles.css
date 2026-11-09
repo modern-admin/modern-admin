@@ -22,36 +22,47 @@
 @theme {
   --animate-accordion-down: accordion-down 0.18s ease-out;
   --animate-accordion-up: accordion-up 0.18s ease-out;
-
-  --color-brand-50: #f5f7ff;
-  --color-brand-100: #e6ebff;
-  --color-brand-500: #4f5af3;
-  --color-brand-600: #3b46d8;
-  --color-brand-700: #2c36b3;
   --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
 
-  /* Semantic colors — bound to the `:root`/`.dark` HSL variables below.
-     Exposing them via @theme makes `bg-background`, `text-foreground`,
-     `border-border`, `bg-primary` work as utilities. */
-  --color-background: hsl(var(--background));
-  --color-foreground: hsl(var(--foreground));
-  --color-muted: hsl(var(--muted));
-  --color-muted-foreground: hsl(var(--muted-foreground));
-  --color-card: hsl(var(--card));
-  --color-card-foreground: hsl(var(--card-foreground));
-  --color-popover: hsl(var(--popover, var(--card)));
-  --color-popover-foreground: hsl(var(--popover-foreground, var(--card-foreground)));
-  --color-border: hsl(var(--border));
-  --color-input: hsl(var(--input));
-  --color-ring: hsl(var(--ring));
-  --color-primary: hsl(var(--primary));
-  --color-primary-foreground: hsl(var(--primary-foreground));
-  --color-secondary: hsl(var(--secondary));
-  --color-secondary-foreground: hsl(var(--secondary-foreground));
-  --color-accent: hsl(var(--accent, var(--secondary)));
-  --color-accent-foreground: hsl(var(--accent-foreground, var(--secondary-foreground)));
-  --color-destructive: hsl(var(--destructive));
-  --color-destructive-foreground: hsl(var(--destructive-foreground));
+/* Semantic colors — bound to the `:root` / `.dark` variables below.
+   `inline` makes every utility reference the raw variable (`bg-primary` →
+   `var(--primary)`) instead of a `--color-*` copy resolved once on `:root`,
+   so a `.dark` (or custom theme) class scoped to a subtree re-themes that
+   subtree too. Opacity modifiers (`bg-primary/10`) work through
+   `color-mix()`, which is why every token holds a complete color. */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover, var(--card));
+  --color-popover-foreground: var(--popover-foreground, var(--card-foreground));
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent, var(--secondary));
+  --color-accent-foreground: var(--accent-foreground, var(--secondary-foreground));
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -59,54 +70,83 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* shadcn-flavoured semantic tokens. Light theme is the default; the
-   `.dark` class flips them. Apps can override any variable for custom
-   themes — see packages/ui/themes for ready-made sets. */
+/* Design tokens. Light theme is the default; the `.dark` class flips them.
+   Every token is a complete CSS color (any syntax — hsl(), oklch(), hex),
+   so it can be used as-is in arbitrary values, inline styles and SVG
+   attributes: `shadow-[0_1px_0_var(--border)]`, `stroke="var(--chart-1)"`.
+   Override any of them to theme the admin:
+
+     :root { --primary: hsl(262 83% 58%); }
+     .dark { --primary: hsl(262 83% 68%); }
+
+   Status tokens (`success` / `warning` / `info` / `destructive`) are tuned
+   to read as text on `background` and as a fill under their `-foreground`
+   in both themes — tinted surfaces use `bg-<status>/10` + `text-<status>`. */
 :root {
-  --background: 0 0% 100%;
-  --foreground: 222 47% 11%;
-  --muted: 210 40% 96%;
-  --muted-foreground: 215 16% 47%;
-  --card: 0 0% 100%;
-  --card-foreground: 222 47% 11%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 222 47% 11%;
-  --border: 214 32% 91%;
-  --input: 214 32% 91%;
-  --ring: 215 20% 65%;
-  --primary: 222 47% 11%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 210 40% 96%;
-  --secondary-foreground: 222 47% 11%;
-  --accent: 210 40% 96%;
-  --accent-foreground: 222 47% 11%;
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 210 40% 98%;
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(222 47% 11%);
+  --muted: hsl(210 40% 96%);
+  --muted-foreground: hsl(215 16% 44%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(222 47% 11%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(222 47% 11%);
+  --border: hsl(214 32% 91%);
+  --input: hsl(214 32% 91%);
+  --ring: hsl(215 20% 65%);
+  --primary: hsl(222 47% 11%);
+  --primary-foreground: hsl(210 40% 98%);
+  --secondary: hsl(210 40% 96%);
+  --secondary-foreground: hsl(222 47% 11%);
+  --accent: hsl(210 40% 96%);
+  --accent-foreground: hsl(222 47% 11%);
+  --destructive: hsl(0 72% 42%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --success: hsl(163 94% 21%);
+  --success-foreground: hsl(0 0% 100%);
+  --warning: hsl(26 90% 31%);
+  --warning-foreground: hsl(0 0% 100%);
+  --info: hsl(221 83% 45%);
+  --info-foreground: hsl(0 0% 100%);
+  /* Categorical data-viz palette — mid-lightness so it reads on both the
+     light and the dark surface; `paletteFor()` hands these out in order. */
+  --chart-1: hsl(2 50% 50%);
+  --chart-2: hsl(25 56% 50%);
+  --chart-3: hsl(48 65% 49%);
+  --chart-4: hsl(189 50% 50%);
+  --chart-5: hsl(143 60% 55%);
+  --chart-6: hsl(286 70% 55%);
   --radius: 0.5rem;
 }
 
 .dark {
   /* Near-black neutrals. Very low saturation on a slight zinc hue so the
      palette reads as black/charcoal instead of navy. */
-  --background: 240 5% 5%;
-  --foreground: 0 0% 98%;
-  --muted: 240 4% 14%;
-  --muted-foreground: 240 5% 65%;
-  --card: 240 5% 7%;
-  --card-foreground: 0 0% 98%;
-  --popover: 240 5% 7%;
-  --popover-foreground: 0 0% 98%;
-  --border: 240 4% 18%;
-  --input: 240 4% 12%;
-  --ring: 240 5% 42%;
-  --primary: 0 0% 98%;
-  --primary-foreground: 240 6% 10%;
-  --secondary: 240 4% 14%;
-  --secondary-foreground: 0 0% 98%;
-  --accent: 240 4% 14%;
-  --accent-foreground: 0 0% 98%;
-  --destructive: 0 62% 40%;
-  --destructive-foreground: 0 0% 98%;
+  --background: hsl(240 5% 5%);
+  --foreground: hsl(0 0% 98%);
+  --muted: hsl(240 4% 14%);
+  --muted-foreground: hsl(240 5% 65%);
+  --card: hsl(240 5% 7%);
+  --card-foreground: hsl(0 0% 98%);
+  --popover: hsl(240 5% 7%);
+  --popover-foreground: hsl(0 0% 98%);
+  --border: hsl(240 4% 18%);
+  --input: hsl(240 4% 12%);
+  --ring: hsl(240 5% 42%);
+  --primary: hsl(0 0% 98%);
+  --primary-foreground: hsl(240 6% 10%);
+  --secondary: hsl(240 4% 14%);
+  --secondary-foreground: hsl(0 0% 98%);
+  --accent: hsl(240 4% 14%);
+  --accent-foreground: hsl(0 0% 98%);
+  --destructive: hsl(0 80% 68%);
+  --destructive-foreground: hsl(0 80% 12%);
+  --success: hsl(158 64% 52%);
+  --success-foreground: hsl(164 86% 10%);
+  --warning: hsl(43 96% 56%);
+  --warning-foreground: hsl(26 83% 14%);
+  --info: hsl(213 94% 68%);
+  --info-foreground: hsl(222 47% 11%);
 }
 
 @keyframes accordion-down {
@@ -135,8 +175,8 @@ body,
 
 body {
   font-family: var(--font-sans);
-  color: hsl(var(--foreground));
-  background: hsl(var(--background));
+  color: var(--foreground);
+  background: var(--background);
 }
 
 /* ── Custom scrollbars ─────────────────────────────────────────────────────
@@ -163,7 +203,7 @@ body {
   textarea
 ) {
   scrollbar-width: thin;
-  scrollbar-color: hsl(var(--border)) transparent;
+  scrollbar-color: var(--border) transparent;
 }
 
 :where(
@@ -206,7 +246,7 @@ body {
   pre,
   textarea
 )::-webkit-scrollbar-thumb {
-  background-color: hsl(var(--border));
+  background-color: var(--border);
   border: 2px solid transparent;
   border-radius: 9999px;
   background-clip: padding-box;
@@ -224,7 +264,7 @@ body {
     pre,
     textarea
   )::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(var(--muted-foreground) / 0.6);
+  background-color: color-mix(in oklab, var(--muted-foreground) 60%, transparent);
   background-clip: padding-box;
 }
 
@@ -239,7 +279,7 @@ body {
     pre,
     textarea
   )::-webkit-scrollbar-thumb:active {
-  background-color: hsl(var(--muted-foreground) / 0.85);
+  background-color: color-mix(in oklab, var(--muted-foreground) 85%, transparent);
   background-clip: padding-box;
 }
 

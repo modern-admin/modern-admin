@@ -14,8 +14,10 @@ import {
   SheetTitle,
   SheetTrigger,
   Skeleton,
+  Alert,
+  AlertDescription,
 } from '@modern-admin/ui'
-import { History, RotateCcw } from 'lucide-react'
+import { History, RotateCcw, AlertCircle } from 'lucide-react'
 import { diffSnapshots } from '@modern-admin/core'
 import { useRecordHistory, useResource, useRevertRevision } from '../hooks.js'
 import { useI18n } from '../i18n.js'
@@ -125,7 +127,7 @@ export function RevisionsButton({
         </Button>
       </SheetTrigger>
       <SheetContent
-        closeLabel={t('common:close')}
+        labels={{ close: t('common:close') }}
         side="right"
         className="w-full overflow-y-auto sm:max-w-5xl"
       >
@@ -138,9 +140,10 @@ export function RevisionsButton({
             <Skeleton className="h-64 w-full" />
           </div>
         ) : history.isError ? (
-          <div className="mt-6 rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-            {t('history:loadError')}
-          </div>
+          <Alert variant="destructive" className="mt-6">
+            <AlertCircle />
+            <AlertDescription>{t('history:loadError')}</AlertDescription>
+          </Alert>
         ) : (
           <div className="mt-6 grid gap-4 lg:grid-cols-[20rem_1fr]">
             <RevisionTimeline

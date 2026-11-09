@@ -9,10 +9,12 @@ export const DialogTrigger = DialogPrimitive.Trigger
 export const DialogPortal = DialogPrimitive.Portal
 export const DialogClose = DialogPrimitive.Close
 
-export const DialogOverlay = React.forwardRef<
-  React.ElementRef<typeof DialogPrimitive.Overlay>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
->(({ className, ...props }, ref) => (
+export const DialogOverlay = ({
+  ref,
+  className,
+  ...props
+}: React.PropsWithoutRef<React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>> &
+  React.RefAttributes<React.ElementRef<typeof DialogPrimitive.Overlay>>) => (
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
@@ -21,8 +23,7 @@ export const DialogOverlay = React.forwardRef<
     )}
     {...props}
   />
-))
-DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
+)
 
 export interface DialogContentProps extends React.ComponentPropsWithoutRef<
   typeof DialogPrimitive.Content
@@ -32,13 +33,23 @@ export interface DialogContentProps extends React.ComponentPropsWithoutRef<
    * Follows the same convention as `SidebarTrigger.toggleSidebarLabel` — this
    * package is i18n-unaware, so translated strings arrive as props.
    */
+  labels?: { close?: string }
+  /** @deprecated Use `labels.close`. */
   closeLabel?: string
+  /** Suppress the built-in close button (e.g. when the footer has its own). */
+  hideCloseButton?: boolean
 }
 
-export const DialogContent = React.forwardRef<
-  React.ElementRef<typeof DialogPrimitive.Content>,
-  DialogContentProps
->(({ className, children, closeLabel = 'Close', ...props }, ref) => {
+export const DialogContent = ({
+  ref,
+  className,
+  children,
+  closeLabel = 'Close',
+  labels,
+  hideCloseButton,
+  ...props
+}: React.PropsWithoutRef<DialogContentProps> &
+  React.RefAttributes<React.ElementRef<typeof DialogPrimitive.Content>>) => {
   // Nested popovers/selects portal into this node rather than `document.body`
   // so `react-remove-scroll` (which Radix wraps modal content in) lets touch
   // gestures scroll them on mobile. See lib/floating-layer.tsx.
@@ -56,15 +67,16 @@ export const DialogContent = React.forwardRef<
         {...props}
       >
         <LayerContainerProvider container={content}>{children}</LayerContainerProvider>
-        <DialogPrimitive.Close className="absolute right-4 top-4 z-10 cursor-pointer rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-          <X className="h-4 w-4" />
-          <span className="sr-only">{closeLabel}</span>
-        </DialogPrimitive.Close>
+        {!hideCloseButton && (
+          <DialogPrimitive.Close className="absolute right-4 top-4 z-10 cursor-pointer rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+            <X className="h-4 w-4" />
+            <span className="sr-only">{labels?.close ?? closeLabel}</span>
+          </DialogPrimitive.Close>
+        )}
       </DialogPrimitive.Content>
     </DialogPortal>
   )
-})
-DialogContent.displayName = DialogPrimitive.Content.displayName
+}
 
 export const DialogHeader = ({
   className,
@@ -79,32 +91,34 @@ export const DialogFooter = ({
   ...props
 }: React.HTMLAttributes<HTMLDivElement>): React.ReactElement => (
   <div
-    className={cn('flex flex-col-reverse sm:flex-row sm:justify-end sm:gap-2', className)}
+    className={cn('flex flex-col-reverse gap-2 sm:flex-row sm:justify-end', className)}
     {...props}
   />
 )
 DialogFooter.displayName = 'DialogFooter'
 
-export const DialogTitle = React.forwardRef<
-  React.ElementRef<typeof DialogPrimitive.Title>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>
->(({ className, ...props }, ref) => (
+export const DialogTitle = ({
+  ref,
+  className,
+  ...props
+}: React.PropsWithoutRef<React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>> &
+  React.RefAttributes<React.ElementRef<typeof DialogPrimitive.Title>>) => (
   <DialogPrimitive.Title
     ref={ref}
     className={cn('text-lg font-semibold leading-none tracking-tight', className)}
     {...props}
   />
-))
-DialogTitle.displayName = DialogPrimitive.Title.displayName
+)
 
-export const DialogDescription = React.forwardRef<
-  React.ElementRef<typeof DialogPrimitive.Description>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>
->(({ className, ...props }, ref) => (
+export const DialogDescription = ({
+  ref,
+  className,
+  ...props
+}: React.PropsWithoutRef<React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>> &
+  React.RefAttributes<React.ElementRef<typeof DialogPrimitive.Description>>) => (
   <DialogPrimitive.Description
     ref={ref}
     className={cn('text-sm text-muted-foreground', className)}
     {...props}
   />
-))
-DialogDescription.displayName = DialogPrimitive.Description.displayName
+)

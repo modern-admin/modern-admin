@@ -106,6 +106,7 @@ export function ReferenceCombobox({
   describedBy,
   invalid,
   required,
+  ref,
 }: {
   referenceResourceId: string
   value: string | number | null | undefined
@@ -125,6 +126,8 @@ export function ReferenceCombobox({
   invalid?: boolean
   /** Marks the trigger `aria-required`. */
   required?: boolean
+  /** Ref to the trigger button — lets form libraries focus the field on error. */
+  ref?: React.Ref<HTMLButtonElement>
 }): React.ReactElement {
   const [open, setOpen] = React.useState(false)
   const [query, setQuery] = React.useState('')
@@ -155,6 +158,7 @@ export function ReferenceCombobox({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
+          ref={ref}
           id={triggerId}
           variant="outline"
           role="combobox"
@@ -281,12 +285,18 @@ export function ReferenceMultiCombobox({
   onChange,
   disabled,
   placeholder,
+  ref,
+  invalid,
+  'aria-describedby': describedBy,
 }: {
   referenceResourceId: string
   value: ReadonlyArray<string | number> | null | undefined
   onChange(next: Array<string | number>): void
   disabled?: boolean
   placeholder?: string
+  ref?: React.Ref<HTMLButtonElement>
+  invalid?: boolean
+  'aria-describedby'?: string
 }): React.ReactElement {
   const [open, setOpen] = React.useState(false)
   const [query, setQuery] = React.useState('')
@@ -351,6 +361,9 @@ export function ReferenceMultiCombobox({
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
+            ref={ref}
+            aria-invalid={invalid || undefined}
+            aria-describedby={describedBy}
             variant="outline"
             role="combobox"
             aria-expanded={open}

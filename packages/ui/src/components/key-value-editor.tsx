@@ -87,6 +87,18 @@ export interface KeyValueEditorProps {
   suggestionsByKey?: Readonly<Record<string, ReadonlyArray<ComboboxSuggestion>>>
   /** Per-key loading flags to render a spinner while suggestions stream in. */
   suggestionsLoadingByKey?: Readonly<Record<string, boolean>>
+  /** Draws the error border and marks every control `aria-invalid`. */
+  invalid?: boolean
+  'aria-label'?: string
+  'aria-labelledby'?: string
+  'aria-describedby'?: string
+  /** Imperative handle — `focus()` moves focus to the first control. */
+  ref?: React.Ref<KeyValueEditorHandle>
+}
+
+/** What a `ref` on `<KeyValueEditor>` receives. Form libraries only need `focus`. */
+export interface KeyValueEditorHandle {
+  focus(): void
 }
 
 const defaultLabels: Required<Omit<KeyValueEditorLabels, 'combobox'>> &
@@ -121,8 +133,34 @@ export function KeyValueEditor({
   labels,
   suggestionsByKey,
   suggestionsLoadingByKey,
+  invalid,
+  'aria-label': ariaLabel,
+  'aria-labelledby': ariaLabelledBy,
+  'aria-describedby': ariaDescribedBy,
+  ref,
 }: KeyValueEditorProps): React.ReactElement {
   const l = { ...defaultLabels, ...labels }
+  // Per-instance prefix: two editors on one page (create wizard over the
+  // edit form, filters + form) must not emit the same `kv-<key>` ids.
+  const idPrefix = React.useId()
+  const rootRef = React.useRef<HTMLDivElement>(null)
+  React.useImperativeHandle(
+    ref,
+    () => ({
+      focus: () => {
+        rootRef.current
+          ?.querySelector<HTMLElement>(
+            '[data-kv-control] :is(input:not([type=hidden]), textarea, button, [tabindex="0"]):not(:disabled):not([aria-disabled=true])',
+          )
+          ?.focus()
+      },
+    }),
+    [],
+  )
+  const controlA11y = {
+    'aria-invalid': invalid || undefined,
+    'aria-describedby': ariaDescribedBy,
+  }
   const obj = toRecord(value)
 
   // Replace `key` with `next` and emit a brand-new object so callers using
@@ -139,12 +177,22 @@ export function KeyValueEditor({
 
   return (
     <div
-      className={cn('divide-y divide-border rounded-md border border-border bg-card', className)}
+      ref={rootRef}
+      data-slot="key-value-editor"
+      data-invalid={invalid || undefined}
+      role={ariaLabelledBy ? 'group' : undefined}
+      aria-label={ariaLabel}
+      aria-labelledby={ariaLabelledBy}
+      className={cn(
+        'divide-y divide-border rounded-md border border-border bg-card',
+        invalid && 'border-destructive',
+        className,
+      )}
     >
       {fields.map((f) => {
         const fieldType: KeyValueFieldType = f.type ?? 'string'
         const label = f.label ?? l.fieldLabelFallback(f.key)
-        const inputId = `kv-${f.key}`
+        const inputId = `${idPrefix}-kv-${f.key}`
         const raw = obj[f.key]
 
         let control: React.ReactElement
@@ -156,6 +204,7 @@ export function KeyValueEditor({
               onCheckedChange={(v) => set(f.key, Boolean(v))}
               disabled={disabled}
               aria-label={label}
+              {...controlA11y}
             />
           )
         } else if (fieldType === 'number') {
@@ -175,6 +224,7 @@ export function KeyValueEditor({
                 set(f.key, Number.isFinite(n) ? n : v)
               }}
               aria-label={label}
+              {...controlA11y}
             />
           )
         } else if (fieldType === 'textarea') {
@@ -188,6 +238,7 @@ export function KeyValueEditor({
               onChange={(e) => set(f.key, e.target.value === '' ? null : e.target.value)}
               rows={3}
               aria-label={label}
+              {...controlA11y}
             />
           )
         } else if (fieldType === 'select') {
@@ -199,7 +250,7 @@ export function KeyValueEditor({
               onValueChange={(v) => set(f.key, v === SENTINEL_EMPTY ? null : v)}
               disabled={disabled}
             >
-              <SelectTrigger id={inputId} aria-label={label}>
+              <SelectTrigger id={inputId} aria-label={label} {...controlA11y}>
                 <SelectValue placeholder={l.emptyOption} />
               </SelectTrigger>
               <SelectContent>
@@ -238,6 +289,8 @@ export function KeyValueEditor({
               disabled={disabled}
               placeholder={f.placeholder}
               aria-label={label}
+              aria-describedby={ariaDescribedBy}
+              invalid={invalid}
               labels={labels?.combobox}
             />
           )
@@ -253,6 +306,7 @@ export function KeyValueEditor({
               onBlur={onBlur}
               onChange={(e) => set(f.key, e.target.value === '' ? null : e.target.value)}
               aria-label={label}
+              {...controlA11y}
             />
           )
         }
@@ -268,7 +322,7 @@ export function KeyValueEditor({
             >
               <span className="truncate">{label}</span>
               {f.description ? (
-                <InfoTooltip content={f.description} ariaLabel={f.description} />
+                <InfoTooltip content={f.description} aria-label={f.description} />
               ) : null}
               {f.isRequired ? (
                 <span aria-hidden="true" className="text-destructive">
@@ -276,7 +330,9 @@ export function KeyValueEditor({
                 </span>
               ) : null}
             </label>
-            <div className="min-w-0 flex-1">{control}</div>
+            <div data-kv-control className="min-w-0 flex-1">
+              {control}
+            </div>
           </div>
         )
       })}

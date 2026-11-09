@@ -24,6 +24,9 @@ import {
   TooltipContent,
   TooltipTrigger,
   getModKeyLabel,
+  Alert,
+  AlertTitle,
+  AlertDescription,
 } from '@modern-admin/ui'
 import { AlertCircle, Eye, Plus, Save, Sparkles, Trash2, X } from 'lucide-react'
 import {
@@ -562,13 +565,11 @@ export function ResourceEditPage({
             </Link>
           </CardHeader>
           <CardContent>
-            <div className="flex items-start gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4 dark:bg-destructive/15">
-              <AlertCircle className="mt-0.5 size-5 shrink-0 text-destructive" />
-              <div className="space-y-1 text-sm">
-                <p className="font-semibold text-destructive">{title}</p>
-                {message && <p className="text-destructive/90">{message}</p>}
-              </div>
-            </div>
+            <Alert variant="destructive">
+              <AlertCircle />
+              <AlertTitle>{title}</AlertTitle>
+              {message && <AlertDescription>{message}</AlertDescription>}
+            </Alert>
           </CardContent>
         </Card>
       </div>
