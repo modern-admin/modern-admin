@@ -72,6 +72,7 @@ The version pull request shows the exact release result:
 - package version updates;
 - generated `CHANGELOG.md` entries;
 - synchronized workspace versions in `bun.lock`.
+- synchronized package-specific versions used by the project generator.
 
 When maintainers decide to release, they review this pull request, confirm the
 semantic versions and changelog text, wait for CI, and merge it into `develop`.

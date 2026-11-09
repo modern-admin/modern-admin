@@ -4,6 +4,7 @@ export {
   scaffold,
   renderTemplate,
   readOwnVersion,
+  frameworkVersionVariables,
   validateProjectName,
   type ScaffoldOptions,
 } from './scaffold.js'

@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { Eye, Pencil, Save, Trash2, X } from 'lucide-react'
 import {
   Alert,
   AlertDescription,
@@ -251,16 +252,27 @@ export function UiKitGallery(): React.ReactElement {
               <CardContent className="flex flex-col gap-4">
                 <div className="flex flex-wrap gap-2">
                   <Button loading={loading} onClick={() => setLoading(true)}>
+                    {!loading && <Save data-icon="inline-start" aria-hidden="true" />}
                     {t('common:save')}
                   </Button>
                   <Button variant="outline" onClick={() => setLoading(false)}>
+                    <X data-icon="inline-start" aria-hidden="true" />
                     {t('common:cancel')}
                   </Button>
-                  <Button disabled>{t('common:delete')}</Button>
+                  <Button disabled>
+                    <Trash2 data-icon="inline-start" aria-hidden="true" />
+                    {t('common:delete')}
+                  </Button>
                 </div>
                 <ButtonGroup aria-label={t('common:actions')}>
-                  <Button variant="outline">{t('common:edit')}</Button>
-                  <Button variant="outline">{t('common:show')}</Button>
+                  <Button variant="outline">
+                    <Pencil data-icon="inline-start" aria-hidden="true" />
+                    {t('common:edit')}
+                  </Button>
+                  <Button variant="outline">
+                    <Eye data-icon="inline-start" aria-hidden="true" />
+                    {t('common:show')}
+                  </Button>
                 </ButtonGroup>
                 <div className="max-w-full overflow-x-auto">
                   <Pagination

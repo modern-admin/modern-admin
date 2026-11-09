@@ -140,6 +140,21 @@ describe('setupUi', () => {
     expect(module).toContain("webPackage: './ui'")
   })
 
+  test('uses each UI package release version when the host has no framework dependencies', async () => {
+    await writeFile(
+      join(cwd, 'package.json'),
+      JSON.stringify({ name: 'fresh-host', private: true }),
+    )
+    await setupUi({ cwd })
+    const host = JSON.parse(await readFile(join(cwd, 'package.json'), 'utf8'))
+    for (const name of ['react', 'ui', 'web']) {
+      const manifest = JSON.parse(
+        await readFile(join(import.meta.dir, '..', '..', name, 'package.json'), 'utf8'),
+      )
+      expect(host.dependencies[`@modern-admin/${name}`]).toBe(`^${manifest.version}`)
+    }
+  })
+
   test('re-running preserves host components and makes no duplicate edits', async () => {
     await setupUi({ cwd })
     const componentsPath = join(cwd, 'ui', 'src', 'admin-components.ts')

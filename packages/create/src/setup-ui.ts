@@ -1,7 +1,8 @@
 import { lstat, readFile, readdir, writeFile } from 'node:fs/promises'
 import { dirname, isAbsolute, join, normalize, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { readOwnVersion, scaffold } from './scaffold.js'
+import { scaffold } from './scaffold.js'
+import { frameworkVersions } from './framework-versions.js'
 
 const DEFAULT_UI_DIR = 'ui'
 const DEFAULT_API_PROXY = 'http://localhost:3001'
@@ -544,7 +545,7 @@ export const patchStaticUiModule = (source: string, webPackage: string): ModuleP
   return { output, changed: true }
 }
 
-const modernAdminRange = async (pkg: PackageJson): Promise<string> => {
+const modernAdminRange = (pkg: PackageJson): string | undefined => {
   const dependencies = {
     ...(pkg.devDependencies ?? {}),
     ...(pkg.dependencies ?? {}),
@@ -554,7 +555,7 @@ const modernAdminRange = async (pkg: PackageJson): Promise<string> => {
   }
   const existing = Object.entries(dependencies).find(([name]) => name.startsWith('@modern-admin/'))
   if (existing) return existing[1]
-  return `^${await readOwnVersion(join(here(), '..'))}`
+  return undefined
 }
 
 const deriveUiPackageName = (hostName: unknown): string => {
@@ -594,7 +595,7 @@ const patchPackageJson = async (
   const scripts = stringRecord(pkg, 'scripts')
   const dependencies = stringRecord(pkg, 'dependencies')
   const devDependencies = stringRecord(pkg, 'devDependencies')
-  const range = await modernAdminRange(pkg)
+  const range = modernAdminRange(pkg)
   const addedDependencies: string[] = []
   const addedDevDependencies: string[] = []
   const changedScripts: string[] = []
@@ -612,8 +613,8 @@ const patchPackageJson = async (
     added.push(name)
   }
 
-  for (const name of ['@modern-admin/react', '@modern-admin/ui', '@modern-admin/web']) {
-    addDependency(dependencies, addedDependencies, name, range)
+  for (const name of ['@modern-admin/react', '@modern-admin/ui', '@modern-admin/web'] as const) {
+    addDependency(dependencies, addedDependencies, name, range ?? `^${frameworkVersions[name]}`)
   }
   for (const [name, version] of Object.entries(UI_RUNTIME_DEPENDENCIES)) {
     addDependency(dependencies, addedDependencies, name, version)

@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { fileURLToPath } from 'node:url'
 import { dirname, join, resolve } from 'node:path'
-import { readOwnVersion, scaffold, validateProjectName } from './scaffold.js'
+import { frameworkVersionVariables, scaffold, validateProjectName } from './scaffold.js'
 import { generate, type Orm } from './generate.js'
 import { setupUi } from './setup-ui.js'
 
@@ -155,17 +155,12 @@ const runScaffold = async (args: ScaffoldArgs): Promise<number> => {
   const templateDir = join(here, '..', 'template')
   const targetDir = resolve(args.target ?? `./${name}`)
 
-  // Pin the scaffolded project's @modern-admin/* deps to the CLI's own
-  // release line (see readOwnVersion) — the template carries a
-  // `{{modernAdminVersion}}` token instead of a hardcoded version.
-  const modernAdminVersion = await readOwnVersion(join(here, '..'))
-
   console.log(`Scaffolding "${name}" into ${targetDir}…`)
   const files = await scaffold({
     name,
     templateDir,
     targetDir,
-    variables: { modernAdminVersion },
+    variables: frameworkVersionVariables(),
   })
 
   console.log(`Wrote ${files.length} files. Next steps:`)
