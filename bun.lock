@@ -219,7 +219,7 @@
     },
     "packages/create": {
       "name": "@modern-admin/create",
-      "version": "0.14.1",
+      "version": "0.14.2",
       "bin": {
         "create-modern-admin": "./src/cli.ts",
         "modern-admin": "./src/cli.ts",
@@ -452,7 +452,7 @@
     },
     "packages/react": {
       "name": "@modern-admin/react",
-      "version": "0.14.1",
+      "version": "0.14.2",
       "dependencies": {
         "@hookform/resolvers": "7.0.5",
         "@modern-admin/core": "workspace:^",
@@ -620,7 +620,7 @@
     },
     "packages/web": {
       "name": "@modern-admin/web",
-      "version": "0.14.1",
+      "version": "0.14.2",
       "dependencies": {
         "@modern-admin/core": "workspace:^",
         "@modern-admin/i18n": "workspace:^",
