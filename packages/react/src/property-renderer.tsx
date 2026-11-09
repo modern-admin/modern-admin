@@ -785,6 +785,9 @@ function M2MPropertyEditor({
   value,
   onChange,
   disabled,
+  ref,
+  invalid,
+  describedBy,
 }: PropertyEditorProps): React.ReactElement {
   const m2m = property.custom?.m2m as
     | {
@@ -832,6 +835,9 @@ function M2MPropertyEditor({
   return (
     <div className="space-y-3">
       <Picker
+        ref={ref}
+        invalid={invalid}
+        aria-describedby={describedBy}
         referenceResourceId={m2m.reference}
         value={ids}
         onChange={setIds}
@@ -1085,6 +1091,9 @@ export function PropertyEditor({
     return (
       <div role="group" {...groupA11y}>
         <M2MPropertyEditor
+          ref={ref}
+          invalid={invalid}
+          describedBy={describedBy}
           property={property}
           value={value}
           onChange={onChange}

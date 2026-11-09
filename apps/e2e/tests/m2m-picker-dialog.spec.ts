@@ -50,6 +50,38 @@ function fieldByLabel(page: Page, labelPattern: RegExp) {
     .first()
 }
 
+for (const picker of ['dialog', 'combobox']) {
+  test(`invalid m2m field focuses the ${picker} trigger and describes its error`, async ({
+    page,
+  }) => {
+    // Make Tags the only required field so a failed submit must focus its
+    // picker through PropertyEditor -> M2MPropertyEditor -> RHF's field.ref.
+    await page.route('**/admin/api/config', async (route) => {
+      const response = await route.fetch()
+      const config = await response.json()
+      const posts = config.resources.find((resource: { id: string }) => resource.id === 'posts')
+      for (const property of posts.properties) {
+        property.isRequired = property.path === 'tags'
+        if (property.path === 'tags') property.custom.m2m.picker = picker
+      }
+      await route.fulfill({ response, json: config })
+    })
+    await page.goto('/resources/posts/new')
+    const tags = fieldByLabel(page, /^tags/i)
+    const trigger = tags.getByRole(picker === 'dialog' ? 'button' : 'combobox').first()
+    await expect(trigger).toBeVisible()
+    await page
+      .getByRole('button', { name: /^create$/i })
+      .first()
+      .click()
+    await expect(trigger).toBeFocused()
+    await expect(trigger).toHaveAttribute('aria-invalid', 'true')
+    const describedBy = await trigger.getAttribute('aria-describedby')
+    expect(describedBy).toBeTruthy()
+    await expect(page.locator(`[id="${describedBy}"]`)).toBeVisible()
+  })
+}
+
 test.describe('m2m picker — table dialog', () => {
   test('clicking the trigger opens a dialog with the related-resource table', async ({
     page,

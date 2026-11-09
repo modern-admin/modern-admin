@@ -333,7 +333,7 @@ test.describe('DateRangeInput — no autocommit / re-open behaviour', () => {
     await expect(popover(page)).toBeHidden()
 
     // Clear via the inline X.
-    await trigger(page).locator('[aria-label="Clear"]').click()
+    await inlineClear(page).click()
     await expect(trigger(page)).toContainText('Select date range')
 
     // Reopen — calendar must show the current month/year, not Nov 2018.

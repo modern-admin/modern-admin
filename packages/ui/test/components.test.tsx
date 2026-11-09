@@ -10,6 +10,7 @@ import { TooltipProvider } from '../src/components/tooltip.js'
 import { RadioGroup, RadioGroupItem } from '../src/components/radio-group.js'
 import { ToggleGroup, ToggleGroupItem } from '../src/components/toggle-group.js'
 import { Progress } from '../src/components/progress.js'
+import { Slider } from '../src/components/slider.js'
 import { Button } from '../src/components/button.js'
 import { Input } from '../src/components/input.js'
 import { PasswordInput } from '../src/components/password-input.js'
@@ -133,6 +134,23 @@ test('progress clamps invalid bounds consistently for visuals and ARIA', () => {
   expect(screen.getByRole('progressbar').getAttribute('aria-valuemax')).toBe('100')
   rerender(<Progress value={null} aria-label="Upload" />)
   expect(screen.getByRole('progressbar').hasAttribute('aria-valuenow')).toBe(false)
+})
+
+test('slider thumbs receive their accessible name from an external label', async () => {
+  const { rerender } = render(
+    <>
+      <span id="volume-label">Volume</span>
+      <Slider aria-labelledby="volume-label" defaultValue={[50]} />
+    </>,
+  )
+  const slider = screen.getByRole('slider', { name: 'Volume' })
+  await userEvent.tab()
+  expect(document.activeElement).toBe(slider)
+  rerender(<Slider aria-label="Brightness" defaultValue={[50]} />)
+  expect(screen.getByRole('slider', { name: 'Brightness' })).toBeDefined()
+  rerender(<Slider key="range" defaultValue={[20, 80]} thumbLabels={['Minimum', 'Maximum']} />)
+  expect(screen.getByRole('slider', { name: 'Minimum' })).toBeDefined()
+  expect(screen.getByRole('slider', { name: 'Maximum' })).toBeDefined()
 })
 
 describe('button loading', () => {

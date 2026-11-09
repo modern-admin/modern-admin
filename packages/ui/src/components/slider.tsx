@@ -18,6 +18,7 @@ export function Slider({
   max = 100,
   thumbLabels,
   'aria-label': ariaLabel,
+  'aria-labelledby': ariaLabelledBy,
   ...props
 }: SliderProps): React.ReactElement {
   // One thumb per value; fall back to a single thumb at `min`.
@@ -49,6 +50,7 @@ export function Slider({
           key={i}
           data-slot="slider-thumb"
           aria-label={thumbLabels?.[i] ?? ariaLabel}
+          aria-labelledby={ariaLabelledBy}
           className="block size-4 shrink-0 cursor-grab rounded-full border border-primary bg-background shadow-sm transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:cursor-grabbing disabled:pointer-events-none"
         />
       ))}
