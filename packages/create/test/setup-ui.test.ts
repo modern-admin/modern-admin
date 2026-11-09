@@ -130,7 +130,7 @@ describe('setupUi', () => {
     expect(host.dependencies['@modern-admin/react']).toBe('^0.5.0')
     expect(host.dependencies['@modern-admin/ui']).toBe('^0.5.0')
     expect(host.dependencies.react).toBe('19.3.1')
-    expect(host.devDependencies.vite).toBe('8.3.5')
+    expect(host.devDependencies.vite).toBe('8.3.7')
     expect(host.scripts['ui:build']).toBe('bun run --cwd ui build')
     expect(host.scripts.dev).toBe('bun run ui:build && bun --watch run src/main.ts')
     expect(host.scripts.build).toBe('tsc && bun run ui:build')

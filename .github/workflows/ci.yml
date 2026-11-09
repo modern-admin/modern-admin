@@ -21,7 +21,7 @@
 #           checked-in `*-chromium-linux.png` baselines match byte-for-byte.
 #           Isolated from the main e2e job so a container/service hiccup can't
 #           take the other specs down. Baselines are regenerated in the same
-#           image (`mcr.microsoft.com/playwright:v1.64.1-noble`).
+#           image (`mcr.microsoft.com/playwright:v1.65.0-noble`).
 
 name: CI
 
@@ -113,7 +113,7 @@ jobs:
     # Match @playwright/test and the visual job; browsers and OS dependencies
     # are already installed, so no browser dependency apt step is needed.
     container:
-      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      image: mcr.microsoft.com/playwright:v1.65.0-noble
     # Service containers share the job's network. Keep these images in step with
     # docker-compose.yml by hand: Dependabot's docker-compose ecosystem updates
     # that file, but no ecosystem touches image tags inside a workflow.
@@ -191,9 +191,9 @@ jobs:
     timeout-minutes: 15
     # Run inside the official Playwright image so chromium + its fonts match
     # the environment the checked-in baselines were generated in. Pin the tag
-    # to the installed @playwright/test version (1.64.1).
+    # to the installed @playwright/test version (1.65.0).
     container:
-      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      image: mcr.microsoft.com/playwright:v1.65.0-noble
     # Both E2E jobs use service containers. Keep these images in step with
     # docker-compose.yml by hand: Dependabot's docker-compose ecosystem updates
     # that file, but no ecosystem touches image tags inside a workflow.

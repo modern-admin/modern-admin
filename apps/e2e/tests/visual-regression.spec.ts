@@ -16,7 +16,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test'
  *
  *   docker build --platform linux/amd64 -t modern-admin-visual - <<'DOCKERFILE'
  *   FROM oven/bun:1.4.4 AS bun
- *   FROM mcr.microsoft.com/playwright:v1.64.1-noble
+ *   FROM mcr.microsoft.com/playwright:v1.65.0-noble
  *   COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
  *   DOCKERFILE
  *   docker run --rm --platform linux/amd64 --network host \
@@ -91,7 +91,7 @@ test.describe('Visual regression — apps/web', () => {
   // been regenerated inside the `e2e-visual` container image (see the header
   // comment for the one-liner). Re-enable by dropping `.skip` once the
   // `*-chromium-linux.png` baselines are regenerated in
-  // `mcr.microsoft.com/playwright:v1.64.1-noble` and committed. The lighter
+  // `mcr.microsoft.com/playwright:v1.65.0-noble` and committed. The lighter
   // `customer form` / `settings` snapshots stay active and still gate layout.
   test.skip('home / dashboard', async ({ page }) => {
     await page.goto('/')
