@@ -227,7 +227,6 @@ export function DatePicker({
             onBlur={handleInputBlur}
             placeholder={inputPlaceholder}
             disabled={disabled}
-            required={required}
             aria-label={ariaLabelProp ?? ariaLabel}
             aria-labelledby={ariaLabelledBy}
             aria-describedby={ariaDescribedByProp ?? describedBy}
