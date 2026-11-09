@@ -1,5 +1,14 @@
 # @modern-admin/react
 
+## 0.14.2
+
+### Patch Changes
+
+- [#130](https://github.com/modern-admin/modern-admin/pull/130) [`1ad00ac`](https://github.com/modern-admin/modern-admin/commit/1ad00ac0653a580f0d0ce27dd2b191ec64cc0e2d) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Generate host dependencies from each framework package's prepared release version
+  instead of the CLI version, keeping independently versioned packages installable.
+  Synchronize the generator's version catalog during release preparation and use it
+  for custom UI setup defaults. Add leading action icons to the UI kit gallery.
+
 ## 0.14.1
 
 ### Patch Changes
