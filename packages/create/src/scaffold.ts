@@ -1,5 +1,6 @@
 import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { dirname, join, relative } from 'node:path'
+import { frameworkVersions } from './framework-versions.js'
 
 export interface ScaffoldOptions {
   name: string
@@ -148,15 +149,11 @@ const ensureEmptyTarget = async (dir: string): Promise<void> => {
 
 /**
  * Version of the published `@modern-admin/create` package itself, read from
- * its own package.json. The scaffold template pins every `@modern-admin/*`
- * dependency to `^{{modernAdminVersion}}`, and the CLI substitutes this
- * value — the package versions in the linked changesets group move in
- * lockstep, so the CLI's own version always names the current release line
- * and the template can never drift behind published packages.
+ * its own package.json. Framework dependency versions are independent and
+ * are supplied separately by `frameworkVersionVariables`.
  *
- * `packageDir` is the directory containing package.json — the CLI passes
- * `../` relative to the executing module, which resolves correctly from
- * both `src/cli.ts` (bun bin) and the compiled `dist/cli.js`.
+ * `packageDir` is the directory containing package.json, one level above
+ * either the source module or its compiled counterpart.
  */
 export const readOwnVersion = async (packageDir: string): Promise<string> => {
   const raw = await readFile(join(packageDir, 'package.json'), 'utf8')
@@ -166,6 +163,15 @@ export const readOwnVersion = async (packageDir: string): Promise<string> => {
   }
   return pkg.version
 }
+
+/** Package-specific template tokens, synchronized by the release versioning step. */
+export const frameworkVersionVariables = (): Record<string, string> =>
+  Object.fromEntries(
+    Object.entries(frameworkVersions).map(([name, version]) => [
+      `${name.slice('@modern-admin/'.length).replaceAll('-', '_')}_version`,
+      version,
+    ]),
+  )
 
 const isLikelyText = (buf: Buffer): boolean => {
   // Heuristic: NUL byte in the first 4 KiB → binary.

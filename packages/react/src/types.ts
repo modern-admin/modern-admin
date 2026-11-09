@@ -309,4 +309,11 @@ export interface PropertyEditorProps {
   invalid?: boolean
   /** Whether the field is required — sets `aria-required`. */
   required?: boolean
+  /**
+   * Receives the editor's focus target (a DOM control, or a handle with a
+   * `focus()` method for composite editors). Record forms pass
+   * react-hook-form's `field.ref` here so a failed submit focuses the first
+   * invalid field. Custom editors should forward it to their main control.
+   */
+  ref?: React.RefCallback<unknown>
 }

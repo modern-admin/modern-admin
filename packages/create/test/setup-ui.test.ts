@@ -130,7 +130,7 @@ describe('setupUi', () => {
     expect(host.dependencies['@modern-admin/react']).toBe('^0.5.0')
     expect(host.dependencies['@modern-admin/ui']).toBe('^0.5.0')
     expect(host.dependencies.react).toBe('19.3.1')
-    expect(host.devDependencies.vite).toBe('8.3.5')
+    expect(host.devDependencies.vite).toBe('8.3.7')
     expect(host.scripts['ui:build']).toBe('bun run --cwd ui build')
     expect(host.scripts.dev).toBe('bun run ui:build && bun --watch run src/main.ts')
     expect(host.scripts.build).toBe('tsc && bun run ui:build')
@@ -138,6 +138,21 @@ describe('setupUi', () => {
 
     const module = await readFile(join(cwd, 'src', 'app.module.ts'), 'utf8')
     expect(module).toContain("webPackage: './ui'")
+  })
+
+  test('uses each UI package release version when the host has no framework dependencies', async () => {
+    await writeFile(
+      join(cwd, 'package.json'),
+      JSON.stringify({ name: 'fresh-host', private: true }),
+    )
+    await setupUi({ cwd })
+    const host = JSON.parse(await readFile(join(cwd, 'package.json'), 'utf8'))
+    for (const name of ['react', 'ui', 'web']) {
+      const manifest = JSON.parse(
+        await readFile(join(import.meta.dir, '..', '..', name, 'package.json'), 'utf8'),
+      )
+      expect(host.dependencies[`@modern-admin/${name}`]).toBe(`^${manifest.version}`)
+    }
   })
 
   test('re-running preserves host components and makes no duplicate edits', async () => {

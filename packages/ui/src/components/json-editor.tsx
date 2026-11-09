@@ -32,6 +32,13 @@ export const formatJsonValue = (value: unknown): string => {
   }
 }
 
+export interface JsonEditorLabels {
+  /** The inline "Format" button. Default: 'Format'. */
+  format?: string
+  /** Prefix for parse-error messages. Default: 'Invalid JSON'. */
+  invalid?: string
+}
+
 export interface JsonEditorProps {
   value: unknown
   onChange(next: unknown): void
@@ -40,18 +47,25 @@ export interface JsonEditorProps {
   placeholder?: string
   rows?: number
   className?: string
-  /** Translated label for the inline "Format" button. */
-  formatLabel?: string
-  /** Translated prefix for parse-error messages. */
-  invalidLabel?: string
+  labels?: JsonEditorLabels
   /** `id` of the textarea, so a `<label for=…>` can point at it. */
   id?: string
-  /** Forwarded to the textarea as `aria-describedby`. */
-  describedBy?: string
+  name?: string
+  'aria-label'?: string
+  'aria-labelledby'?: string
+  'aria-describedby'?: string
   /** Marks the textarea `aria-invalid` (a parse error does so on its own). */
   invalid?: boolean
   /** Marks the textarea `aria-required`. */
   required?: boolean
+  /** Ref to the `<textarea>` — lets form libraries focus the field on error. */
+  ref?: React.Ref<HTMLTextAreaElement>
+  /** @deprecated Use `labels.format`. */
+  formatLabel?: string
+  /** @deprecated Use `labels.invalid`. */
+  invalidLabel?: string
+  /** @deprecated Use `aria-describedby`. */
+  describedBy?: string
 }
 
 // Canonical (key-stable, no whitespace) JSON serialization used to decide
@@ -84,13 +98,22 @@ export function JsonEditor({
   placeholder = '{}',
   rows = 8,
   className,
-  formatLabel = 'Format',
-  invalidLabel = 'Invalid JSON',
+  labels,
   id,
-  describedBy,
+  name,
+  'aria-label': ariaLabel,
+  'aria-labelledby': ariaLabelledBy,
+  'aria-describedby': ariaDescribedByProp,
   invalid,
   required,
+  ref,
+  formatLabel: formatLabelProp,
+  invalidLabel: invalidLabelProp,
+  describedBy,
 }: JsonEditorProps): React.ReactElement {
+  const formatLabel = labels?.format ?? formatLabelProp ?? 'Format'
+  const invalidLabel = labels?.invalid ?? invalidLabelProp ?? 'Invalid JSON'
+  const errorId = React.useId()
   const [draft, setDraft] = React.useState<string>(() => formatJsonValue(value))
   const [error, setError] = React.useState<string | null>(null)
 
@@ -150,7 +173,11 @@ export function JsonEditor({
     <div className={cn('space-y-2', className)}>
       <div className="relative">
         <Textarea
+          ref={ref}
           id={id}
+          name={name}
+          aria-label={ariaLabel}
+          aria-labelledby={ariaLabelledBy}
           value={draft}
           onChange={(e) => handleChange(e.target.value)}
           onBlur={onBlur}
@@ -158,13 +185,14 @@ export function JsonEditor({
           rows={rows}
           spellCheck={false}
           placeholder={placeholder}
-          aria-describedby={describedBy}
+          aria-describedby={
+            [ariaDescribedByProp ?? describedBy, error ? errorId : undefined]
+              .filter(Boolean)
+              .join(' ') || undefined
+          }
           aria-invalid={invalid || error !== null || undefined}
           aria-required={required || undefined}
-          className={cn(
-            'pr-20 font-mono text-xs leading-relaxed',
-            error && 'border-destructive focus-visible:ring-destructive/40',
-          )}
+          className="pr-20 font-mono text-xs leading-relaxed"
         />
         <Button
           type="button"
@@ -174,13 +202,15 @@ export function JsonEditor({
           disabled={disabled || draft.trim() === ''}
           className="absolute right-1 top-1 h-7 px-2 text-xs"
           title={formatLabel}
+          // The text label is hidden on narrow screens; keep the name.
+          aria-label={formatLabel}
         >
           <Wand2 className="size-3.5" />
           <span className="hidden sm:inline">{formatLabel}</span>
         </Button>
       </div>
       {error ? (
-        <p className="flex items-start gap-1.5 text-xs text-destructive">
+        <p id={errorId} role="alert" className="flex items-start gap-1.5 text-xs text-destructive">
           <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
           <span className="break-all">
             {invalidLabel}: {error}

@@ -1,13 +1,10 @@
-// Release guard for the scaffold template: every @modern-admin/* dependency
-// in template/package.json must carry the `^{{modernAdminVersion}}` token
-// (never a hardcoded version), and scaffolding must substitute the CLI's own
-// package.json version — so `bun create @modern-admin` always pins the
-// release line that was just published, not a stale one.
+// Release guard: generated dependencies must match their individual workspace
+// versions, including releases where the CLI and framework patches differ.
 import { describe, expect, test, beforeEach, afterEach } from 'bun:test'
 import { mkdtemp, readFile, rm, symlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { readOwnVersion, scaffold } from '../src/scaffold.js'
+import { frameworkVersionVariables, readOwnVersion, scaffold } from '../src/scaffold.js'
 
 const packageDir = join(import.meta.dir, '..')
 const templateDir = join(packageDir, 'template')
@@ -35,12 +32,13 @@ describe('scaffold template versions', () => {
     expect(readme).toContain("import { hashPassword } from 'better-auth/crypto'")
   })
 
-  test('template pins every @modern-admin/* dep to the version token', async () => {
+  test('template pins every @modern-admin/* dep to its own version token', async () => {
     const raw = await readFile(join(templateDir, 'package.json'), 'utf8')
     const deps = modernAdminDeps(JSON.parse(raw))
     expect(Object.keys(deps).length).toBeGreaterThan(0)
     for (const [name, range] of Object.entries(deps)) {
-      expect(`${name}: ${range}`).toBe(`${name}: ^{{modernAdminVersion}}`)
+      const token = `${name.slice('@modern-admin/'.length).replaceAll('-', '_')}_version`
+      expect(`${name}: ${range}`).toBe(`${name}: ^{{${token}}}`)
     }
   })
 
@@ -61,21 +59,42 @@ describe('scaffold template versions', () => {
       await rm(targetDir, { recursive: true, force: true })
     })
 
-    test('pins @modern-admin/* deps to the CLI release line, no tokens left', async () => {
-      const version = await readOwnVersion(packageDir)
+    test('CLI uses each framework package release version, including mixed patch versions', async () => {
+      const child = Bun.spawnSync(
+        [
+          process.execPath,
+          join(packageDir, 'src/cli.ts'),
+          'mixed-version-app',
+          '--target',
+          targetDir,
+        ],
+        { stdout: 'pipe', stderr: 'pipe' },
+      )
+      expect(child.exitCode, child.stderr.toString()).toBe(0)
+      const generated = JSON.parse(await readFile(join(targetDir, 'package.json'), 'utf8'))
+      for (const [name, range] of Object.entries(modernAdminDeps(generated))) {
+        const manifest = JSON.parse(
+          await readFile(
+            join(packageDir, '..', name.slice('@modern-admin/'.length), 'package.json'),
+            'utf8',
+          ),
+        )
+        expect(`${name}: ${range}`).toBe(`${name}: ^${manifest.version}`)
+      }
+    })
+
+    test('substitutes every framework version token', async () => {
       await scaffold({
         name: 'demo-app',
         templateDir,
         targetDir,
-        variables: { modernAdminVersion: version },
+        variables: frameworkVersionVariables(),
       })
       const raw = await readFile(join(targetDir, 'package.json'), 'utf8')
       expect(raw).not.toInclude('{{')
       const deps = modernAdminDeps(JSON.parse(raw))
       expect(Object.keys(deps).length).toBeGreaterThan(0)
-      for (const range of Object.values(deps)) {
-        expect(range).toBe(`^${version}`)
-      }
+      expect(Object.values(deps).every((range) => /^\^\d+\.\d+\.\d+$/.test(range))).toBe(true)
     })
 
     test('Prisma CLI loads the generated config and validates the schema without a database', async () => {
@@ -83,7 +102,7 @@ describe('scaffold template versions', () => {
         name: 'prisma-config-test',
         templateDir,
         targetDir,
-        variables: { modernAdminVersion: await readOwnVersion(packageDir) },
+        variables: frameworkVersionVariables(),
       })
       await symlink(join(packageDir, 'node_modules'), join(targetDir, 'node_modules'), 'dir')
       const child = Bun.spawn(

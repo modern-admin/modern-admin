@@ -17,6 +17,9 @@ import {
   Skeleton,
   cn,
   dateFnsLocale,
+  Alert,
+  AlertDescription,
+  Spinner,
 } from '@modern-admin/ui'
 import {
   ChevronDown,
@@ -26,10 +29,10 @@ import {
   FileText,
   Key,
   KeyRound,
-  Loader2,
   LogIn,
   Pencil,
   Trash2,
+  AlertCircle,
 } from 'lucide-react'
 import {
   useInfiniteAuditLog,
@@ -77,50 +80,50 @@ const FALLBACK_STYLE: ActionStyle = {
 const ACTION_STYLES: Record<string, ActionStyle> = {
   new: {
     Icon: FilePlus,
-    iconClass: 'text-blue-600 dark:text-blue-300',
-    bgClass: 'bg-blue-100 dark:bg-blue-950/40',
+    iconClass: 'text-info',
+    bgClass: 'bg-info/15',
     titleKey: 'audit:action.new',
   },
   edit: {
     Icon: Pencil,
-    iconClass: 'text-emerald-600 dark:text-emerald-300',
-    bgClass: 'bg-emerald-100 dark:bg-emerald-950/40',
+    iconClass: 'text-success',
+    bgClass: 'bg-success/15',
     titleKey: 'audit:action.edit',
   },
   delete: {
     Icon: Trash2,
-    iconClass: 'text-rose-600 dark:text-rose-300',
-    bgClass: 'bg-rose-100 dark:bg-rose-950/40',
+    iconClass: 'text-destructive',
+    bgClass: 'bg-destructive/15',
     titleKey: 'audit:action.delete',
   },
   bulkDelete: {
     Icon: Trash2,
-    iconClass: 'text-rose-600 dark:text-rose-300',
-    bgClass: 'bg-rose-100 dark:bg-rose-950/40',
+    iconClass: 'text-destructive',
+    bgClass: 'bg-destructive/15',
     titleKey: 'audit:action.bulkDelete',
   },
   login: {
     Icon: LogIn,
-    iconClass: 'text-violet-600 dark:text-violet-300',
-    bgClass: 'bg-violet-100 dark:bg-violet-950/40',
+    iconClass: 'text-chart-6',
+    bgClass: 'bg-chart-6/15',
     titleKey: 'audit:action.login',
   },
   'apiKey.create': {
     Icon: Key,
-    iconClass: 'text-amber-600 dark:text-amber-300',
-    bgClass: 'bg-amber-100 dark:bg-amber-950/40',
+    iconClass: 'text-warning',
+    bgClass: 'bg-warning/15',
     titleKey: 'audit:action.apiKeyCreate',
   },
   'apiKey.update': {
     Icon: KeyRound,
-    iconClass: 'text-amber-600 dark:text-amber-300',
-    bgClass: 'bg-amber-100 dark:bg-amber-950/40',
+    iconClass: 'text-warning',
+    bgClass: 'bg-warning/15',
     titleKey: 'audit:action.apiKeyUpdate',
   },
   'apiKey.delete': {
     Icon: Trash2,
-    iconClass: 'text-rose-600 dark:text-rose-300',
-    bgClass: 'bg-rose-100 dark:bg-rose-950/40',
+    iconClass: 'text-destructive',
+    bgClass: 'bg-destructive/15',
     titleKey: 'audit:action.apiKeyDelete',
   },
 }
@@ -308,9 +311,10 @@ export function AuditLogPage(): React.ReactElement {
               <Skeleton className="h-20 w-full" />
             </div>
           ) : log.isError ? (
-            <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-              {t('audit:loadError')}
-            </div>
+            <Alert variant="destructive">
+              <AlertCircle />
+              <AlertDescription>{t('audit:loadError')}</AlertDescription>
+            </Alert>
           ) : events.length === 0 ? (
             <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
               {t('audit:noEvents')}
@@ -335,7 +339,7 @@ export function AuditLogPage(): React.ReactElement {
           <div ref={sentinelRef} className="h-1" aria-hidden />
           {log.isFetchingNextPage && (
             <div className="flex justify-center py-4">
-              <Loader2 className="size-5 animate-spin text-muted-foreground" />
+              <Spinner size="lg" label={t('common:loading')} className="text-muted-foreground" />
             </div>
           )}
         </CardContent>
@@ -538,9 +542,10 @@ function AuditEntryChanges({
   }
   if (history.isError) {
     return (
-      <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive">
-        {t('audit:loadDiffError')}
-      </div>
+      <Alert variant="destructive" size="sm">
+        <AlertCircle />
+        <AlertDescription>{t('audit:loadDiffError')}</AlertDescription>
+      </Alert>
     )
   }
 

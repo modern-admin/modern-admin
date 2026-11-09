@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/core",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "description": "Core abstractions of the Modern Admin framework — adapters, resources, decorators, actions, ports.",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/core#readme",
   "keywords": [
@@ -55,7 +55,7 @@
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
-    "@types/bun": "1.4.3",
+    "@types/bun": "1.4.4",
     "typescript": "7.0.2"
   }
 }

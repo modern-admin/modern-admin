@@ -1,5 +1,21 @@
 # @modern-admin/license
 
+## 0.14.1
+
+### Patch Changes
+
+- [#128](https://github.com/modern-admin/modern-admin/pull/128) [`c4a4411`](https://github.com/modern-admin/modern-admin/commit/c4a44111ac74b64fe2e7c23ebb5dd0898b43f7f8) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Update external dependencies to their latest stable releases, including NestJS,
+  GraphQL, Better Auth, BullMQ, the AI SDK, Tiptap, and the frontend toolchain. Keep
+  peer requirements, generated host and custom UI dependencies, and installation
+  instructions aligned. Refresh transitive dependencies and the ProseMirror model
+  override; update Playwright and its matching CI image together.
+
+## 0.14.0
+
+### Patch Changes
+
+- [#119](https://github.com/modern-admin/modern-admin/pull/119) [`4e38081`](https://github.com/modern-admin/modern-admin/commit/4e38081103a9ec826385f13dcbefd6df8e38b065) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update runtime dependencies and Bun/Node development types, keeping queue peers and generated host dependencies aligned.
+
 ## 0.12.0
 
 ### Patch Changes

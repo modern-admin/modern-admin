@@ -6,18 +6,25 @@
 // the server's timezone and drift. Incoming values may be in any ISO shape;
 // only what we emit is normalised. The trigger is a real text
 // input so users can also type the date manually; clicks on the trailing
-// calendar icon open the popover with the inline picker.
+// calendar icon open the popover with the inline picker, which is anchored to
+// the whole field rather than the icon.
 
 import * as React from 'react'
 import { format, isValid, parse, parseISO, type Locale } from 'date-fns'
 import { Calendar as CalendarIcon } from 'lucide-react'
-import { cn } from '../lib/utils.js'
-import { Button } from './button.js'
 import { Calendar } from './calendar.js'
 import { Input } from './input.js'
-import { Popover, PopoverContent, PopoverTrigger } from './popover.js'
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from './input-group.js'
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from './popover.js'
 
 export type DatePickerMode = 'date' | 'datetime'
+
+export interface DatePickerLabels {
+  /** aria-label of the calendar button. Default: 'Open calendar'. */
+  openCalendar?: string
+  /** Label of the time input shown in datetime mode. Default: 'Time'. */
+  time?: string
+}
 
 export interface DatePickerProps {
   value: string | null | undefined
@@ -25,16 +32,11 @@ export interface DatePickerProps {
   mode?: DatePickerMode
   disabled?: boolean
   placeholder?: string
-  /** Applied to the outer wrapper div (controls width, etc.). */
+  /** Styles the visible box (width, height, …). */
   className?: string
-  /** Applied to the inner text Input — use to override height / font size. */
+  /** Applied to the inner text `<input>` — e.g. a smaller font size. */
   inputClassName?: string
-  /** ARIA label forwarded to the trigger input (mobile users / screen readers). */
-  ariaLabel?: string
-  /** ARIA label for the calendar icon button. Default: "Open calendar". */
-  openCalendarLabel?: string
-  /** Label for the time input shown in datetime mode. Default: "Time". */
-  timeLabel?: string
+  labels?: DatePickerLabels
   /**
    * date-fns locale for the popover calendar — month names, weekday headers,
    * and react-day-picker's own ARIA labels. Without it the calendar renders
@@ -43,12 +45,24 @@ export interface DatePickerProps {
   locale?: Locale
   /** `id` of the trigger input, so a `<label for=…>` can point at it. */
   id?: string
-  /** Forwarded to the trigger input as `aria-describedby`. */
-  describedBy?: string
-  /** Marks the trigger input `aria-invalid`. */
+  name?: string
+  'aria-label'?: string
+  'aria-labelledby'?: string
+  'aria-describedby'?: string
+  /** Marks the trigger input `aria-invalid` and draws the error border. */
   invalid?: boolean
   /** Marks the trigger input `aria-required`. */
   required?: boolean
+  /** Ref to the text `<input>` — lets form libraries focus the field on error. */
+  ref?: React.Ref<HTMLInputElement>
+  /** @deprecated Use `aria-label`. */
+  ariaLabel?: string
+  /** @deprecated Use `aria-describedby`. */
+  describedBy?: string
+  /** @deprecated Use `labels.openCalendar`. */
+  openCalendarLabel?: string
+  /** @deprecated Use `labels.time`. */
+  timeLabel?: string
 }
 
 const DATE_FMT = 'yyyy-MM-dd'
@@ -106,15 +120,24 @@ export function DatePicker({
   placeholder,
   className,
   inputClassName,
-  ariaLabel,
-  openCalendarLabel = 'Open calendar',
-  timeLabel = 'Time',
+  labels,
   locale,
   id,
-  describedBy,
+  name,
+  'aria-label': ariaLabelProp,
+  'aria-labelledby': ariaLabelledBy,
+  'aria-describedby': ariaDescribedByProp,
   invalid,
   required,
+  ref,
+  ariaLabel,
+  describedBy,
+  openCalendarLabel,
+  timeLabel,
 }: DatePickerProps): React.ReactElement {
+  const openCalendarText = labels?.openCalendar ?? openCalendarLabel ?? 'Open calendar'
+  const timeText = labels?.time ?? timeLabel ?? 'Time'
+  const timeInputId = React.useId()
   const [open, setOpen] = React.useState(false)
   const date = parseValue(value)
   // Local draft for the text input — keeps user typing intact even when
@@ -191,36 +214,36 @@ export function DatePicker({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <div className={cn('relative w-full', className)}>
-        <Input
-          type="text"
-          inputMode="numeric"
-          id={id}
-          value={draft}
-          onChange={handleInputChange}
-          onBlur={handleInputBlur}
-          placeholder={inputPlaceholder}
-          disabled={disabled}
-          aria-label={ariaLabel}
-          aria-describedby={describedBy}
-          aria-invalid={invalid || undefined}
-          aria-required={required || undefined}
-          className={cn(inputClassName, 'pr-10')}
-        />
-        <PopoverTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
+      <PopoverAnchor asChild>
+        <InputGroup className={className}>
+          <InputGroupInput
+            ref={ref}
+            type="text"
+            inputMode="numeric"
+            id={id}
+            name={name}
+            value={draft}
+            onChange={handleInputChange}
+            onBlur={handleInputBlur}
+            placeholder={inputPlaceholder}
             disabled={disabled}
-            aria-label={openCalendarLabel}
-            className="absolute right-1 top-1/2 size-8 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-          >
-            <CalendarIcon className="size-4" />
-          </Button>
-        </PopoverTrigger>
-      </div>
-      <PopoverContent className="w-auto p-0" align="start">
+            aria-label={ariaLabelProp ?? ariaLabel}
+            aria-labelledby={ariaLabelledBy}
+            aria-describedby={ariaDescribedByProp ?? describedBy}
+            aria-invalid={invalid || undefined}
+            aria-required={required || undefined}
+            className={inputClassName}
+          />
+          <InputGroupAddon align="inline-end">
+            <PopoverTrigger asChild>
+              <InputGroupButton disabled={disabled} aria-label={openCalendarText}>
+                <CalendarIcon />
+              </InputGroupButton>
+            </PopoverTrigger>
+          </InputGroupAddon>
+        </InputGroup>
+      </PopoverAnchor>
+      <PopoverContent className="w-auto p-0" align="start" aria-label={openCalendarText}>
         <Calendar
           mode="single"
           selected={date}
@@ -234,8 +257,11 @@ export function DatePicker({
         />
         {mode === 'datetime' && (
           <div className="flex items-center gap-2 border-t border-border p-3">
-            <span className="text-xs text-muted-foreground">{timeLabel}</span>
+            <label htmlFor={timeInputId} className="text-xs text-muted-foreground">
+              {timeText}
+            </label>
             <Input
+              id={timeInputId}
               type="time"
               value={time}
               disabled={!date}

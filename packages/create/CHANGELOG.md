@@ -1,5 +1,39 @@
 # @modern-admin/create
 
+## 0.14.2
+
+### Patch Changes
+
+- [#130](https://github.com/modern-admin/modern-admin/pull/130) [`1ad00ac`](https://github.com/modern-admin/modern-admin/commit/1ad00ac0653a580f0d0ce27dd2b191ec64cc0e2d) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Generate host dependencies from each framework package's prepared release version
+  instead of the CLI version, keeping independently versioned packages installable.
+  Synchronize the generator's version catalog during release preparation and use it
+  for custom UI setup defaults. Add leading action icons to the UI kit gallery.
+
+## 0.14.1
+
+### Patch Changes
+
+- [#128](https://github.com/modern-admin/modern-admin/pull/128) [`c4a4411`](https://github.com/modern-admin/modern-admin/commit/c4a44111ac74b64fe2e7c23ebb5dd0898b43f7f8) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Update external dependencies to their latest stable releases, including NestJS,
+  GraphQL, Better Auth, BullMQ, the AI SDK, Tiptap, and the frontend toolchain. Keep
+  peer requirements, generated host and custom UI dependencies, and installation
+  instructions aligned. Refresh transitive dependencies and the ProseMirror model
+  override; update Playwright and its matching CI image together.
+
+## 0.14.0
+
+### Patch Changes
+
+- [#114](https://github.com/modern-admin/modern-admin/pull/114) [`0b1c23c`](https://github.com/modern-admin/modern-admin/commit/0b1c23c1f3365cd3925fe7b4dfd9f68c1f46f64e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Use Redis 8.10.3 in generated hosts, matching the reference development stack and CI services.
+
+- [#119](https://github.com/modern-admin/modern-admin/pull/119) [`4e38081`](https://github.com/modern-admin/modern-admin/commit/4e38081103a9ec826385f13dcbefd6df8e38b065) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update runtime dependencies and Bun/Node development types, keeping queue peers and generated host dependencies aligned.
+
+- [#120](https://github.com/modern-admin/modern-admin/pull/120) [`f229b9f`](https://github.com/modern-admin/modern-admin/commit/f229b9f556974b47f466cf980af78a534c5159f6) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update NestJS to 12.3.3 and Swagger to 12.1.0 across transports, optional peers, and generated hosts.
+
+- [#122](https://github.com/modern-admin/modern-admin/pull/122) [`a97175b`](https://github.com/modern-admin/modern-admin/commit/a97175bfbcd54f51be5b2bc95812309ce0f67fc4) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update Better Auth and its API key plugin to 1.7.17, keeping provider peers, generated hosts, and installation instructions aligned.
+- Updated dependencies [[`4e38081`](https://github.com/modern-admin/modern-admin/commit/4e38081103a9ec826385f13dcbefd6df8e38b065)]:
+  - @modern-admin/system-drizzle@0.14.0
+  - @modern-admin/system-prisma@0.14.0
+
 ## 0.13.0
 
 ### Patch Changes

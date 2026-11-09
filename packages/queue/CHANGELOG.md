@@ -1,5 +1,25 @@
 # @modern-admin/queue
 
+## 0.14.1
+
+### Patch Changes
+
+- [#128](https://github.com/modern-admin/modern-admin/pull/128) [`c4a4411`](https://github.com/modern-admin/modern-admin/commit/c4a44111ac74b64fe2e7c23ebb5dd0898b43f7f8) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Update external dependencies to their latest stable releases, including NestJS,
+  GraphQL, Better Auth, BullMQ, the AI SDK, Tiptap, and the frontend toolchain. Keep
+  peer requirements, generated host and custom UI dependencies, and installation
+  instructions aligned. Refresh transitive dependencies and the ProseMirror model
+  override; update Playwright and its matching CI image together.
+
+## 0.14.0
+
+### Patch Changes
+
+- [#119](https://github.com/modern-admin/modern-admin/pull/119) [`4e38081`](https://github.com/modern-admin/modern-admin/commit/4e38081103a9ec826385f13dcbefd6df8e38b065) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update runtime dependencies and Bun/Node development types, keeping queue peers and generated host dependencies aligned.
+
+- [#120](https://github.com/modern-admin/modern-admin/pull/120) [`f229b9f`](https://github.com/modern-admin/modern-admin/commit/f229b9f556974b47f466cf980af78a534c5159f6) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update NestJS to 12.3.3 and Swagger to 12.1.0 across transports, optional peers, and generated hosts.
+- Updated dependencies [[`4e38081`](https://github.com/modern-admin/modern-admin/commit/4e38081103a9ec826385f13dcbefd6df8e38b065)]:
+  - @modern-admin/core@0.14.0
+
 ## 0.13.0
 
 ### Patch Changes

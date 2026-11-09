@@ -14,14 +14,48 @@ export { initTheme, readThemeMode, setThemeMode, type ThemeMode } from './lib/th
 
 // Form-control primitives
 export { Button, buttonVariants, type ButtonProps } from './components/button.js'
-export { Input, type InputProps } from './components/input.js'
-export { PasswordInput, type PasswordInputProps } from './components/password-input.js'
+export {
+  ButtonGroup,
+  buttonGroupVariants,
+  type ButtonGroupProps,
+} from './components/button-group.js'
+export { Spinner, spinnerVariants, type SpinnerProps } from './components/spinner.js'
+export { Input, inputClassName, type InputProps } from './components/input.js'
+export {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+  InputGroupText,
+  InputGroupTextarea,
+  type InputGroupAddonProps,
+} from './components/input-group.js'
+export {
+  PasswordInput,
+  type PasswordInputLabels,
+  type PasswordInputProps,
+} from './components/password-input.js'
 export { Textarea, type TextareaProps } from './components/textarea.js'
 export { Label } from './components/label.js'
 export { Checkbox } from './components/checkbox.js'
 export { Switch } from './components/switch.js'
+export { RadioGroup, RadioGroupItem } from './components/radio-group.js'
+export { Toggle, toggleVariants, type ToggleProps } from './components/toggle.js'
+export {
+  ToggleGroup,
+  ToggleGroupItem,
+  type ToggleGroupItemProps,
+  type ToggleGroupProps,
+} from './components/toggle-group.js'
+export { Slider, type SliderProps } from './components/slider.js'
+export { Progress, type ProgressProps } from './components/progress.js'
 export { Calendar, type CalendarProps } from './components/calendar.js'
-export { DatePicker, type DatePickerProps, type DatePickerMode } from './components/date-picker.js'
+export {
+  DatePicker,
+  type DatePickerLabels,
+  type DatePickerProps,
+  type DatePickerMode,
+} from './components/date-picker.js'
 export {
   DateRangeInput,
   type DateRangeInputProps,
@@ -54,13 +88,27 @@ export {
 } from './components/breadcrumb.js'
 export { Badge, badgeVariants, type BadgeProps } from './components/badge.js'
 export {
+  Alert,
+  AlertTitle,
+  AlertDescription,
+  alertVariants,
+  type AlertProps,
+} from './components/alert.js'
+export {
   Card,
   CardHeader,
   CardTitle,
   CardDescription,
   CardContent,
   CardFooter,
+  type CardTitleProps,
 } from './components/card.js'
+export {
+  Pagination,
+  getPageWindow,
+  type PaginationLabels,
+  type PaginationProps,
+} from './components/pagination.js'
 export {
   Table,
   TableHeader,
@@ -71,7 +119,13 @@ export {
   TableCell,
   TableCaption,
 } from './components/table.js'
-export { Avatar, AvatarImage, AvatarFallback } from './components/avatar.js'
+export {
+  Avatar,
+  AvatarImage,
+  AvatarFallback,
+  avatarVariants,
+  type AvatarProps,
+} from './components/avatar.js'
 export { Separator } from './components/separator.js'
 export { ScrollArea, ScrollBar } from './components/scroll-area.js'
 export { Skeleton } from './components/skeleton.js'
@@ -122,6 +176,12 @@ export {
   DropdownMenuRadioGroup,
 } from './components/dropdown-menu.js'
 export { Popover, PopoverTrigger, PopoverContent, PopoverAnchor } from './components/popover.js'
+export {
+  HoverCard,
+  HoverCardTrigger,
+  HoverCardContent,
+  type HoverCardContentProps,
+} from './components/hover-card.js'
 export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './components/tooltip.js'
 export { InfoTooltip, type InfoTooltipProps } from './components/info-tooltip.js'
 export { Kbd, getModKeyLabel } from './components/kbd.js'
@@ -231,6 +291,8 @@ export {
 // Richtext
 export {
   RichtextEditor,
+  type RichtextEditorHandle,
+  type RichtextEditorLabels,
   type RichtextEditorProps,
   type RichtextFormat,
 } from './components/richtext-editor.js'
@@ -249,6 +311,7 @@ export {
   JsonEditor,
   JsonView,
   formatJsonValue,
+  type JsonEditorLabels,
   type JsonEditorProps,
   type JsonViewProps,
 } from './components/json-editor.js'
@@ -265,6 +328,7 @@ export {
 export {
   KeyValueEditor,
   KeyValueView,
+  type KeyValueEditorHandle,
   type KeyValueEditorProps,
   type KeyValueEditorLabels,
   type KeyValueViewProps,
@@ -274,7 +338,7 @@ export {
 } from './components/key-value-editor.js'
 
 // File input (upload drop-zone + current file display)
-export { FileInput, type FileInputProps } from './components/file-input.js'
+export { FileInput, type FileInputLabels, type FileInputProps } from './components/file-input.js'
 export {
   MultiFileInput,
   type MultiFileInputProps,
@@ -291,6 +355,7 @@ export {
   KpiCard,
   TimeSeriesChart,
   paletteFor,
+  CHART_PALETTE,
   CHART_COLOR_PRESETS,
   type ChartType,
   type ChartDataPoint,
@@ -327,5 +392,3 @@ export {
   type AuditTimelineLabels,
   type AuditTimelineProps,
 } from './components/audit-timeline.js'
-
-export const VERSION = '0.0.0'

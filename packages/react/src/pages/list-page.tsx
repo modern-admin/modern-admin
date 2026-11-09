@@ -76,15 +76,12 @@ import {
   TooltipContent,
   TooltipTrigger,
   dateFnsLocale,
+  Pagination,
 } from '@modern-admin/ui'
 import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
   Download,
   Eye,
   Inbox,
@@ -1836,23 +1833,6 @@ function ColumnVisibilityMenu({
   )
 }
 
-/** Sliding window of up to `windowSize` page indices centred on `pageIndex`. */
-function getPageRange(pageIndex: number, pageCount: number, windowSize = 10): number[] {
-  if (pageCount <= 0) return []
-  const half = Math.floor(windowSize / 2)
-  let start = pageIndex - half
-  let end = start + windowSize
-  if (start < 0) {
-    start = 0
-    end = windowSize
-  }
-  if (end > pageCount) {
-    end = pageCount
-    start = Math.max(0, end - windowSize)
-  }
-  return Array.from({ length: end - start }, (_, i) => start + i)
-}
-
 function Paginator({
   table,
   total,
@@ -1864,7 +1844,6 @@ function Paginator({
 }): React.ReactElement {
   const { pageIndex, pageSize } = table.state.pagination
   const pageCount = table.getPageCount()
-  const pages = getPageRange(pageIndex, pageCount)
   // Click-and-drag horizontal scroll on the page-buttons row, mirroring the
   // table wrapper. Callback ref returns a cleanup so React 19 detaches the
   // pointer listeners automatically when the row unmounts.
@@ -1912,56 +1891,18 @@ function Paginator({
             container instead of scrolling internally. `cursor-grab` hints the
             drag affordance; buttons keep their own `cursor-pointer`. */}
         <div ref={paginationScrollRef} className="max-w-full cursor-grab overflow-x-auto">
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.setPageIndex(0)}
-              disabled={!table.getCanPreviousPage()}
-              aria-label={t('common:firstPage')}
-            >
-              <ChevronsLeft className="size-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-              aria-label={t('common:previousPage')}
-            >
-              <ChevronLeft className="size-4" />
-            </Button>
-            {pages.map((p) => (
-              <Button
-                key={p}
-                variant={p === pageIndex ? 'default' : 'outline'}
-                size="sm"
-                className="text-xs"
-                onClick={() => table.setPageIndex(p)}
-                aria-current={p === pageIndex ? 'page' : undefined}
-              >
-                {p + 1}
-              </Button>
-            ))}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-              aria-label={t('common:nextPage')}
-            >
-              <ChevronRight className="size-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.setPageIndex(pageCount - 1)}
-              disabled={!table.getCanNextPage()}
-              aria-label={t('common:lastPage')}
-            >
-              <ChevronsRight className="size-4" />
-            </Button>
-          </div>
+          <Pagination
+            pageIndex={pageIndex}
+            pageCount={pageCount}
+            onPageChange={(next) => table.setPageIndex(next)}
+            labels={{
+              navigation: t('common:pagination'),
+              first: t('common:firstPage'),
+              previous: t('common:previousPage'),
+              next: t('common:nextPage'),
+              last: t('common:lastPage'),
+            }}
+          />
         </div>
       </div>
     </div>
@@ -2199,7 +2140,7 @@ function FilterPanel({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
-        closeLabel={t('common:close')}
+        labels={{ close: t('common:close') }}
         side="right"
         className="flex w-full flex-col gap-0 p-0 sm:max-w-md"
         aria-describedby={undefined}
@@ -2364,14 +2305,16 @@ function DateFilterField({
             mode={mode}
             value={from}
             onChange={(next) => emit('between', next, to)}
-            ariaLabel={t('common:from')}
+            aria-label={t('common:from')}
+            labels={{ openCalendar: t('common:openCalendar'), time: t('common:time') }}
             locale={locale}
           />
           <DatePicker
             mode={mode}
             value={to}
             onChange={(next) => emit('between', from, next)}
-            ariaLabel={t('common:to')}
+            aria-label={t('common:to')}
+            labels={{ openCalendar: t('common:openCalendar'), time: t('common:time') }}
             locale={locale}
           />
         </div>

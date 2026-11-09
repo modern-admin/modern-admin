@@ -39,8 +39,9 @@ import {
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
+  Spinner,
 } from '@modern-admin/ui'
-import { AlertCircle, ChevronLeft, Loader2 } from 'lucide-react'
+import { AlertCircle, ChevronLeft } from 'lucide-react'
 import { BasepathContext, Link, useRoute } from './router.js'
 import { getRouteExtension } from './extension-registry.js'
 import { useI18n } from './i18n.js'
@@ -96,7 +97,7 @@ function PageChunkSpinner(): React.ReactElement {
       aria-busy="true"
       className="flex items-center justify-center py-24 text-muted-foreground"
     >
-      <Loader2 className="size-5 animate-spin" aria-hidden="true" />
+      <Spinner size="lg" />
     </div>
   )
 }

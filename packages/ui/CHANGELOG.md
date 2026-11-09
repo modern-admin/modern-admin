@@ -1,5 +1,48 @@
 # @modern-admin/ui
 
+## 0.14.1
+
+### Patch Changes
+
+- [#128](https://github.com/modern-admin/modern-admin/pull/128) [`c4a4411`](https://github.com/modern-admin/modern-admin/commit/c4a44111ac74b64fe2e7c23ebb5dd0898b43f7f8) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Update external dependencies to their latest stable releases, including NestJS,
+  GraphQL, Better Auth, BullMQ, the AI SDK, Tiptap, and the frontend toolchain. Keep
+  peer requirements, generated host and custom UI dependencies, and installation
+  instructions aligned. Refresh transitive dependencies and the ProseMirror model
+  override; update Playwright and its matching CI image together.
+
+- [#127](https://github.com/modern-admin/modern-admin/pull/127) [`96b3665`](https://github.com/modern-admin/modern-admin/commit/96b36656d915a663d42ee7d6e901ecda31295205) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Keep required date and datetime fields in form-library validation so empty values
+  show translated form errors and receive focus instead of blocking submission with
+  native browser validation. Preserve the accessible required state.
+
+## 0.14.0
+
+### Minor Changes
+
+- [#125](https://github.com/modern-admin/modern-admin/pull/125) [`b9849af`](https://github.com/modern-admin/modern-admin/commit/b9849af66ad788f0ca12f4ce237666a4b386c49e) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Complete the UI kit with semantic status and chart colors, accessible composite
+  fields, React 19 ref props, and shared alert, spinner/loading-button, pagination,
+  radio/toggle group, input group, progress, slider, hover card and button group
+  components. Replace duplicated controls in React and add a localized component
+  gallery, interaction tests and automated accessibility checks.
+  
+  Preserve external slider labels and focus invalid many-to-many fields through
+  both picker variants, including their validation descriptions.
+  
+  Theme migration: color tokens now contain complete CSS colors. Wrap existing bare
+  HSL channel overrides in `hsl(...)` and remove `hsl(var(--token))` wrappers in custom
+  CSS. The placeholder `VERSION` export is removed. Legacy label/ARIA props and the
+  old Form layout helpers remain available as deprecated compatibility APIs; use
+  `labels`, standard `aria-*` attributes and `Field` for new code.
+
+### Patch Changes
+
+- [#123](https://github.com/modern-admin/modern-admin/pull/123) [`73efe60`](https://github.com/modern-admin/modern-admin/commit/73efe608d2dd40a821b0c842ded54223e8e35672) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Hide the tab focus ring after mouse or touch input while preserving keyboard focus indicators and the active tab underline.
+
+- [#116](https://github.com/modern-admin/modern-admin/pull/116) [`4887e48`](https://github.com/modern-admin/modern-admin/commit/4887e4889c3cb6181d891717f0d0861e8a8c3835) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update React Hook Form to 7.91.0 and its validation resolvers to 7.0.2.
+
+- [#118](https://github.com/modern-admin/modern-admin/pull/118) [`e1bbb6a`](https://github.com/modern-admin/modern-admin/commit/e1bbb6a795b2fb46c3706a7c8849f5a664fa1bef) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update the Tiptap editor packages together to 3.32.2.
+
+- [#119](https://github.com/modern-admin/modern-admin/pull/119) [`4e38081`](https://github.com/modern-admin/modern-admin/commit/4e38081103a9ec826385f13dcbefd6df8e38b065) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update runtime dependencies and Bun/Node development types, keeping queue peers and generated host dependencies aligned.
+
 ## 0.13.1
 
 ### Patch Changes

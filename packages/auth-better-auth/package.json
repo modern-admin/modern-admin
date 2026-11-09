@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/auth-better-auth",
-  "version": "0.13.0",
+  "version": "0.14.1",
   "description": "Better Auth provider integration for Modern Admin (cookie sessions + API keys).",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/auth-better-auth#readme",
   "keywords": [
@@ -54,11 +54,11 @@
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
-    "@types/bun": "1.4.3",
-    "better-auth": "1.7.12",
+    "@types/bun": "1.4.4",
+    "better-auth": "1.7.18",
     "typescript": "7.0.2"
   },
   "peerDependencies": {
-    "better-auth": "1.7.12"
+    "better-auth": "1.7.18"
   }
 }

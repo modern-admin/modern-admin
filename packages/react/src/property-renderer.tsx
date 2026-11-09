@@ -170,7 +170,7 @@ function CopiableDisplay({
             copied ? t('settings:apiKeys.created.copied') : t('settings:apiKeys.created.copy')
           }
         >
-          {copied ? <Check className="size-4 text-emerald-600" /> : <Copy className="size-4" />}
+          {copied ? <Check className="size-4 text-success" /> : <Copy className="size-4" />}
         </Button>
       </TooltipTrigger>
       <TooltipContent>
@@ -524,6 +524,10 @@ interface FilePropertyEditorProps {
   onChange(next: unknown): void
   disabled?: boolean
   resourceId?: string
+  invalid?: boolean
+  describedBy?: string
+  /** Focus target for react-hook-form — the dropzone button. */
+  editorRef?: React.RefCallback<unknown>
 }
 
 /** Build the public URL for a stored key, using `{key}` substitution. */
@@ -554,6 +558,9 @@ function FilePropertyEditor({
   onChange,
   disabled,
   resourceId,
+  invalid,
+  describedBy,
+  editorRef,
 }: FilePropertyEditorProps): React.ReactElement {
   const client = useAdminClient()
   const { t } = useI18n()
@@ -701,6 +708,9 @@ function FilePropertyEditor({
         accept={accept}
         error={uploadError ?? undefined}
         disabled={disabled}
+        invalid={invalid}
+        aria-describedby={describedBy}
+        ref={editorRef}
         labels={{
           chooseFiles: t('common:chooseFiles'),
           dragAndDrop: t('common:dragAndDrop'),
@@ -738,6 +748,9 @@ function FilePropertyEditor({
       uploadingName={activePending?.name}
       error={uploadError ?? erroredPending?.error ?? undefined}
       disabled={disabled}
+      invalid={invalid}
+      aria-describedby={describedBy}
+      ref={editorRef}
       labels={{
         chooseFile: t('common:chooseFile'),
         dragAndDrop: t('common:dragAndDrop'),
@@ -772,6 +785,9 @@ function M2MPropertyEditor({
   value,
   onChange,
   disabled,
+  ref,
+  invalid,
+  describedBy,
 }: PropertyEditorProps): React.ReactElement {
   const m2m = property.custom?.m2m as
     | {
@@ -819,6 +835,9 @@ function M2MPropertyEditor({
   return (
     <div className="space-y-3">
       <Picker
+        ref={ref}
+        invalid={invalid}
+        aria-describedby={describedBy}
         referenceResourceId={m2m.reference}
         value={ids}
         onChange={setIds}
@@ -901,11 +920,17 @@ function KeyValueEditorWithSuggestions({
   value,
   onChange,
   disabled,
+  invalid,
+  describedBy,
+  editorRef,
 }: {
   fields: ReadonlyArray<KeyValueFieldSpec>
   value: unknown
   onChange(next: Record<string, unknown>): void
   disabled?: boolean
+  invalid?: boolean
+  describedBy?: string
+  editorRef?: React.RefCallback<unknown>
 }): React.ReactElement {
   const client = useAdminClient()
   const { t } = useI18n()
@@ -969,6 +994,9 @@ function KeyValueEditorWithSuggestions({
       disabled={disabled}
       suggestionsByKey={suggestionsByKey}
       suggestionsLoadingByKey={suggestionsLoadingByKey}
+      invalid={invalid}
+      aria-describedby={describedBy}
+      ref={editorRef}
       labels={{
         combobox: {
           loading: t('common:loading'),
@@ -1023,12 +1051,14 @@ export function PropertyEditor({
   describedBy,
   invalid,
   required,
+  ref,
 }: PropertyEditorProps): React.ReactElement {
   const { components } = useAdminContext()
   const { t, locale } = useI18n()
   // Spread onto every editor that renders a single labelable control, so the
   // `<label for=…>` above it resolves and the error text is announced with it.
   const a11y = {
+    ref,
     id,
     'aria-describedby': describedBy,
     'aria-invalid': invalid || undefined,
@@ -1052,6 +1082,7 @@ export function PropertyEditor({
         describedBy={describedBy}
         invalid={invalid}
         required={required}
+        ref={ref}
       />
     )
   }
@@ -1060,6 +1091,9 @@ export function PropertyEditor({
     return (
       <div role="group" {...groupA11y}>
         <M2MPropertyEditor
+          ref={ref}
+          invalid={invalid}
+          describedBy={describedBy}
           property={property}
           value={value}
           onChange={onChange}
@@ -1080,6 +1114,9 @@ export function PropertyEditor({
       return (
         <div role="group" {...groupA11y}>
           <ArrayPicker
+            ref={ref}
+            invalid={invalid}
+            aria-describedby={describedBy}
             referenceResourceId={property.reference}
             value={arr}
             onChange={(next) => onChange(next)}
@@ -1098,6 +1135,7 @@ export function PropertyEditor({
         describedBy={describedBy}
         invalid={invalid}
         required={required}
+        ref={ref}
       />
     )
   }
@@ -1143,6 +1181,9 @@ export function PropertyEditor({
               value={value}
               onChange={(next) => onChange(next)}
               disabled={disabled}
+              invalid={invalid}
+              describedBy={describedBy}
+              editorRef={ref}
             />
           </div>
         )
@@ -1152,12 +1193,12 @@ export function PropertyEditor({
           value={value}
           onChange={onChange}
           disabled={disabled}
-          formatLabel={t('common:format')}
-          invalidLabel={t('common:invalidJson')}
+          labels={{ format: t('common:format'), invalid: t('common:invalidJson') }}
           id={id}
-          describedBy={describedBy}
+          aria-describedby={describedBy}
           invalid={invalid}
           required={required}
+          ref={ref}
         />
       )
     case 'number':
@@ -1182,14 +1223,14 @@ export function PropertyEditor({
           value={value == null ? '' : String(value)}
           onChange={(v) => onChange(v === '' ? null : v)}
           disabled={disabled}
-          ariaLabel={property.label}
-          openCalendarLabel={t('common:openCalendar')}
-          timeLabel={t('common:time')}
+          aria-label={property.label}
+          labels={{ openCalendar: t('common:openCalendar'), time: t('common:time') }}
           locale={dateFnsLocale(locale)}
           id={id}
-          describedBy={describedBy}
+          aria-describedby={describedBy}
           invalid={invalid}
           required={required}
+          ref={ref}
         />
       )
     case 'datetime':
@@ -1200,14 +1241,14 @@ export function PropertyEditor({
           value={value == null ? '' : String(value)}
           onChange={(v) => onChange(v === '' ? null : v)}
           disabled={disabled}
-          ariaLabel={property.label}
-          openCalendarLabel={t('common:openCalendar')}
-          timeLabel={t('common:time')}
+          aria-label={property.label}
+          labels={{ openCalendar: t('common:openCalendar'), time: t('common:time') }}
           locale={dateFnsLocale(locale)}
           id={id}
-          describedBy={describedBy}
+          aria-describedby={describedBy}
           invalid={invalid}
           required={required}
+          ref={ref}
         />
       )
     case 'richtext':
@@ -1217,8 +1258,10 @@ export function PropertyEditor({
           onChange={(v) => onChange(v)}
           format="html"
           disabled={disabled}
-          ariaLabel={property.label}
-          ariaDescribedBy={describedBy}
+          aria-label={property.label}
+          aria-describedby={describedBy}
+          invalid={invalid}
+          ref={ref}
           labels={{
             bold: t('richtext:bold'),
             italic: t('richtext:italic'),
@@ -1248,8 +1291,10 @@ export function PropertyEditor({
           onChange={(v) => onChange(v)}
           format="markdown"
           disabled={disabled}
-          ariaLabel={property.label}
-          ariaDescribedBy={describedBy}
+          aria-label={property.label}
+          aria-describedby={describedBy}
+          invalid={invalid}
+          ref={ref}
           labels={{
             bold: t('richtext:bold'),
             italic: t('richtext:italic'),
@@ -1288,7 +1333,7 @@ export function PropertyEditor({
           value={stringValue}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
-          toggleLabel={{
+          labels={{
             show: t('common:showPassword'),
             hide: t('common:hidePassword'),
           }}
@@ -1304,6 +1349,9 @@ export function PropertyEditor({
             onChange={onChange}
             disabled={disabled}
             resourceId={resourceId}
+            invalid={invalid}
+            describedBy={describedBy}
+            editorRef={ref}
           />
         </div>
       )
@@ -1355,6 +1403,7 @@ export function PropertyEditor({
             describedBy={describedBy}
             invalid={invalid}
             required={required}
+            ref={ref}
           />
         )
       }
