@@ -1,5 +1,15 @@
 # @modern-admin/auth-better-auth
 
+## 0.14.0
+
+### Patch Changes
+
+- [#119](https://github.com/modern-admin/modern-admin/pull/119) [`4e38081`](https://github.com/modern-admin/modern-admin/commit/4e38081103a9ec826385f13dcbefd6df8e38b065) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update runtime dependencies and Bun/Node development types, keeping queue peers and generated host dependencies aligned.
+
+- [#122](https://github.com/modern-admin/modern-admin/pull/122) [`a97175b`](https://github.com/modern-admin/modern-admin/commit/a97175bfbcd54f51be5b2bc95812309ce0f67fc4) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update Better Auth and its API key plugin to 1.7.17, keeping provider peers, generated hosts, and installation instructions aligned.
+- Updated dependencies [[`4e38081`](https://github.com/modern-admin/modern-admin/commit/4e38081103a9ec826385f13dcbefd6df8e38b065)]:
+  - @modern-admin/core@0.14.0
+
 ## 0.13.0
 
 ### Patch Changes

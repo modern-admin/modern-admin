@@ -1,5 +1,28 @@
 # @modern-admin/i18n
 
+## 0.14.0
+
+### Minor Changes
+
+- [#125](https://github.com/modern-admin/modern-admin/pull/125) [`b9849af`](https://github.com/modern-admin/modern-admin/commit/b9849af66ad788f0ca12f4ce237666a4b386c49e) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Complete the UI kit with semantic status and chart colors, accessible composite
+  fields, React 19 ref props, and shared alert, spinner/loading-button, pagination,
+  radio/toggle group, input group, progress, slider, hover card and button group
+  components. Replace duplicated controls in React and add a localized component
+  gallery, interaction tests and automated accessibility checks.
+  
+  Preserve external slider labels and focus invalid many-to-many fields through
+  both picker variants, including their validation descriptions.
+  
+  Theme migration: color tokens now contain complete CSS colors. Wrap existing bare
+  HSL channel overrides in `hsl(...)` and remove `hsl(var(--token))` wrappers in custom
+  CSS. The placeholder `VERSION` export is removed. Legacy label/ARIA props and the
+  old Form layout helpers remain available as deprecated compatibility APIs; use
+  `labels`, standard `aria-*` attributes and `Field` for new code.
+
+### Patch Changes
+
+- [#119](https://github.com/modern-admin/modern-admin/pull/119) [`4e38081`](https://github.com/modern-admin/modern-admin/commit/4e38081103a9ec826385f13dcbefd6df8e38b065) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update runtime dependencies and Bun/Node development types, keeping queue peers and generated host dependencies aligned.
+
 ## 0.12.0
 
 ### Patch Changes
