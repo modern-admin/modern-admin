@@ -16,6 +16,19 @@ import { admin } from 'better-auth/plugins'
 
 const built = buildBetterAuth({
   database: prismaAdapter(prisma, { provider: 'postgresql' }),
+  emailAndPassword: process.env.SSO_ONLY !== 'true',
+  oidcSsoProviders: process.env.SSO_ISSUER
+    ? [
+        {
+          providerId: process.env.SSO_PROVIDER_ID ?? 'authentik',
+          name: process.env.SSO_PROVIDER_NAME ?? 'authentik',
+          issuer: process.env.SSO_ISSUER,
+          discoveryUrl: process.env.SSO_DISCOVERY_URL,
+          clientId: process.env.SSO_CLIENT_ID ?? '',
+          clientSecret: process.env.SSO_CLIENT_SECRET ?? '',
+        },
+      ]
+    : [],
   modelNames: {
     user: 'maUser',
     session: 'maSession',

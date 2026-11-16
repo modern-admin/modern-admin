@@ -10,11 +10,13 @@ import {
   type LoginCredentials,
 } from '@modern-admin/core'
 import { isBetterAuthApiKeyRequest, type BetterAuthApiKeySource } from './api-key-request.js'
+import { getOidcSsoProviders } from './oidc-sso.js'
 
 export { isBetterAuthApiKeyRequest, type BetterAuthApiKeySource } from './api-key-request.js'
 
 export { accountIdentityPlugin } from './account-identity-plugin.js'
 export { oauthCallbackReplayPlugin } from './oauth-callback-replay-plugin.js'
+export { oidcSsoPlugin, type OidcSsoProvider } from './oidc-sso.js'
 
 export {
   BUILTIN_AUTHORITATIVE_ACCOUNT_ISSUERS,
@@ -302,9 +304,22 @@ export class BetterAuthProvider implements IAuthProvider {
 
   getUiProps(): Record<string, unknown> {
     const opts = this.options.auth.options ?? {}
+    const ssoProviders = getOidcSsoProviders(opts.plugins)
     return {
-      providers: Object.keys(opts.socialProviders ?? {}),
+      providers: [
+        ...new Set([
+          ...Object.keys(opts.socialProviders ?? {}),
+          ...ssoProviders.map(({ providerId }) => providerId),
+        ]),
+      ],
       emailAndPassword: Boolean(opts.emailAndPassword?.enabled),
+      ...(ssoProviders.length
+        ? {
+            providerLabels: Object.fromEntries(
+              ssoProviders.map(({ providerId, name }) => [providerId, name]),
+            ),
+          }
+        : {}),
     }
   }
 

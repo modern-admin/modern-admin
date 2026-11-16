@@ -21,6 +21,8 @@ import type {
 export interface AuthUiProps {
   /** Enabled OAuth provider ids, e.g. ['google', 'github']. */
   providers: string[]
+  /** Display names supplied by server configuration, keyed by provider id. */
+  providerLabels?: Record<string, string>
   emailAndPassword: boolean
 }
 
@@ -416,12 +418,20 @@ export class AdminClient implements IAdminClient {
    *  `callbackUrl` defaults to the current page so the app re-checks auth
    *  after the provider redirects back. */
   async loginSocial(provider: string, callbackUrl?: string): Promise<void> {
-    const resolved = callbackUrl ?? this.getCurrentUrl()
+    let resolved = callbackUrl ?? this.getCurrentUrl()
+    // A retry after an OAuth error must return to a clean login URL.
+    if (!callbackUrl) {
+      const url = new URL(resolved, 'http://localhost')
+      url.searchParams.delete('error')
+      url.searchParams.delete('error_description')
+      resolved = resolved.startsWith('/') ? `${url.pathname}${url.search}${url.hash}` : url.href
+    }
     const data = await this.requestOnce<{ url?: string }>(this.socialSignInPath, {
       method: 'POST',
-      body: JSON.stringify({ provider, callbackURL: resolved }),
+      body: JSON.stringify({ provider, callbackURL: resolved, errorCallbackURL: resolved }),
     })
-    if (data.url) this.navigate(data.url)
+    if (!data.url) throw new Error('Authentication provider did not return a redirect URL')
+    this.navigate(data.url)
   }
 
   /** Sign the current session out. Better Auth's sign-out endpoint requires

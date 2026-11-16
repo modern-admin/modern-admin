@@ -5,7 +5,7 @@
 // to the authenticated app shell.
 //
 // Social providers are driven entirely by the server: BetterAuthProvider
-// returns the list of enabled provider ids from `betterAuth({ socialProviders })`.
+// returns enabled social and OIDC SSO provider ids and their display names.
 // Known providers (google, github, apple) get a dedicated lucide icon; any
 // other id falls back to Globe with a capitalised label.
 
@@ -130,6 +130,9 @@ export function LoginPage({ title, hint, tagline, brand }: LoginPageProps): Reac
 
   const providers = authUi?.providers ?? []
   const showEmailForm = authUi === undefined || authUi.emailAndPassword
+  const ssoFailed =
+    socialLogin.isError ||
+    (typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('error'))
 
   const submit = (event: React.FormEvent<HTMLFormElement>): void => {
     event.preventDefault()
@@ -210,16 +213,27 @@ export function LoginPage({ title, hint, tagline, brand }: LoginPageProps): Reac
                     key={id}
                     type="button"
                     variant="outline"
-                    className="w-full gap-2"
+                    className="w-full min-w-0 gap-2"
                     disabled={socialLogin.isPending}
                     onClick={() => socialLogin.mutate(id)}
                   >
                     {icon}
-                    {t('auth:continueWith').replace('{provider}', label)}
+                    <span className="truncate">
+                      {t('auth:continueWith').replace(
+                        '{provider}',
+                        authUi?.providerLabels?.[id] ?? label,
+                      )}
+                    </span>
                   </Button>
                 )
               })}
             </div>
+          )}
+
+          {ssoFailed && (
+            <FieldError role="alert" className="mb-4">
+              {t('auth:ssoFailed')}
+            </FieldError>
           )}
 
           {/* Divider between social and email/password */}

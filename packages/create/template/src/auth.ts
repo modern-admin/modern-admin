@@ -17,11 +17,30 @@ import { apiKey } from '@better-auth/api-key'
 import { admin } from 'better-auth/plugins'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
 import { uuidv7, type ILogStore } from '@modern-admin/core'
-import { accountIdentityPlugin, oauthCallbackReplayPlugin } from '@modern-admin/auth-better-auth'
+import {
+  accountIdentityPlugin,
+  oauthCallbackReplayPlugin,
+  oidcSsoPlugin,
+} from '@modern-admin/auth-better-auth'
 import { prisma } from './db.js'
 
 const port = Number(process.env.PORT ?? 3001)
 const baseURL = process.env.BETTER_AUTH_URL ?? `http://localhost:${port}`
+const ssoProviders = process.env.SSO_ISSUER
+  ? [
+      {
+        providerId: process.env.SSO_PROVIDER_ID ?? 'authentik',
+        name: process.env.SSO_PROVIDER_NAME ?? 'authentik',
+        issuer: process.env.SSO_ISSUER,
+        discoveryUrl: process.env.SSO_DISCOVERY_URL,
+        clientId: process.env.SSO_CLIENT_ID ?? '',
+        clientSecret: process.env.SSO_CLIENT_SECRET ?? '',
+      },
+    ]
+  : []
+if (process.env.SSO_ONLY === 'true' && !ssoProviders.length) {
+  throw new Error('SSO_ONLY requires an OIDC provider')
+}
 
 // Audit-log sink for the `session.create.after` hook. The NestJS DI
 // container that owns the real store is bootstrapped AFTER this module
@@ -48,7 +67,7 @@ export const auth = betterAuth({
   session: { modelName: 'maSession' },
   verification: { modelName: 'maVerification' },
   emailAndPassword: {
-    enabled: true,
+    enabled: process.env.SSO_ONLY !== 'true',
     // Public registration disabled. New admins are added from inside
     // the panel (Settings → Admins).
     disableSignUp: true,
@@ -63,7 +82,12 @@ export const auth = betterAuth({
       enabled: true,
       // Defaults to every active OAuth provider. Narrow this list if
       // you do NOT trust a provider's verified-email signal.
-      trustedProviders: ['github', 'google', 'apple'],
+      trustedProviders: [
+        'github',
+        'google',
+        'apple',
+        ...ssoProviders.map(({ providerId }) => providerId),
+      ],
     },
   },
   trustedOrigins: process.env.WEB_ORIGIN?.split(',') ?? [],
@@ -71,6 +95,7 @@ export const auth = betterAuth({
   plugins: [
     accountIdentityPlugin(),
     oauthCallbackReplayPlugin(),
+    ...(ssoProviders.length ? [oidcSsoPlugin({ providers: ssoProviders })] : []),
     apiKey({
       apiKeyHeaders: 'x-api-key',
       requireName: true,
