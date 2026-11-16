@@ -43,6 +43,8 @@ export const es: LocaleBundle = {
     'auth:email': 'Correo',
     'auth:password': 'Contraseña',
     'auth:loginFailed': 'Credenciales no válidas.',
+    'auth:ssoFailed':
+      'El inicio de sesión SSO ha fallado. Inténtalo de nuevo o contacta con tu administrador.',
     'errors:notFound': 'No encontrado.',
     'errors:forbidden': 'No tienes acceso a este recurso.',
     'errors:apiKeyEndpointForbidden': 'Las claves API no pueden acceder a este endpoint.',

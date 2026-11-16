@@ -58,6 +58,32 @@ describe('AdminClient — audit log', () => {
 })
 
 describe('AdminClient — injectable boundaries', () => {
+  it('starts SSO with success/error callbacks and removes stale errors on retry', async () => {
+    let sent: unknown
+    const navigate = mock(() => undefined)
+    const client = new AdminClient({
+      getCurrentUrl: () =>
+        'https://admin.example.test/admin?resource=users&error=failed&error_description=bad#records',
+      navigate,
+      fetchImpl: async (_input, init) => {
+        sent = JSON.parse(String(init?.body))
+        return Response.json({ url: 'https://sso.example.test/authorize' })
+      },
+    })
+    await client.loginSocial('authentik')
+    expect(sent).toEqual({
+      provider: 'authentik',
+      callbackURL: 'https://admin.example.test/admin?resource=users#records',
+      errorCallbackURL: 'https://admin.example.test/admin?resource=users#records',
+    })
+    expect(navigate).toHaveBeenCalledWith('https://sso.example.test/authorize')
+  })
+
+  it('reports a missing SSO redirect URL as an error', async () => {
+    const client = new AdminClient({ fetchImpl: async () => Response.json({}) })
+    await expect(client.loginSocial('authentik')).rejects.toThrow('redirect URL')
+  })
+
   it('uses provider-specific auth paths', async () => {
     const seen: string[] = []
     const client = new AdminClient({
@@ -70,7 +96,7 @@ describe('AdminClient — injectable boundaries', () => {
       navigate: () => undefined,
       fetchImpl: async (input) => {
         seen.push(String(input))
-        return new Response(JSON.stringify({}), {
+        return new Response(JSON.stringify({ url: 'https://sso.example.test/authorize' }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
         })

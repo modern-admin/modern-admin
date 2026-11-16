@@ -11,7 +11,12 @@
 import { betterAuth, type BetterAuthOptions, type BetterAuthPlugin } from 'better-auth'
 import { APIError } from 'better-auth/api'
 import { apiKey } from '@better-auth/api-key'
-import { accountIdentityPlugin, oauthCallbackReplayPlugin } from '@modern-admin/auth-better-auth'
+import {
+  accountIdentityPlugin,
+  oauthCallbackReplayPlugin,
+  oidcSsoPlugin,
+  type OidcSsoProvider,
+} from '@modern-admin/auth-better-auth'
 import { uuidv7, type ILogStore } from '@modern-admin/core'
 
 export interface BuildBetterAuthOptions {
@@ -57,6 +62,10 @@ export interface BuildBetterAuthOptions {
    * you have a provider whose verified-email signal you do NOT trust.
    */
   oauthTrustedProviders?: string[]
+  /** OIDC identity providers, including authentik. New-user sign-up is opt-in. */
+  oidcSsoProviders?: OidcSsoProvider[]
+  /** Disable email/password endpoints for SSO-only deployments. Defaults to true. */
+  emailAndPassword?: boolean
 }
 
 export interface BuiltBetterAuth {
@@ -109,6 +118,8 @@ export const buildBetterAuth = ({
   defaultPort = 3001,
   allowlistOnly = false,
   oauthTrustedProviders,
+  oidcSsoProviders = [],
+  emailAndPassword = true,
 }: BuildBetterAuthOptions): BuiltBetterAuth => {
   // Fail fast on a missing/weak signing secret. Better Auth otherwise
   // auto-generates a throwaway secret in dev, which silently rotates on every
@@ -144,6 +155,9 @@ export const buildBetterAuth = ({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     }
   }
+  if (!emailAndPassword && !oidcSsoProviders.length && !Object.keys(socialProviders).length) {
+    throw new Error('At least one sign-in method must be enabled')
+  }
   // API keys plugin — adds `apikey` table, `x-api-key` header recognition,
   // and the management endpoints used by the Settings → API Keys UI.
   // Permissions are stored per-key as `Record<resourceId, action[]>`; the
@@ -157,6 +171,7 @@ export const buildBetterAuth = ({
   const plugins: BetterAuthPlugin[] = [
     accountIdentityPlugin(),
     oauthCallbackReplayPlugin(),
+    ...(oidcSsoProviders.length ? [oidcSsoPlugin({ providers: oidcSsoProviders })] : []),
     apiKey({
       apiKeyHeaders: 'x-api-key',
       // Names are required so list rows are identifiable in the UI.
@@ -248,7 +263,7 @@ export const buildBetterAuth = ({
       'http://localhost:5173',
     ],
     emailAndPassword: {
-      enabled: true,
+      enabled: emailAndPassword,
       autoSignIn: true,
       ...(allowlistOnly ? { disableSignUp: true } : {}),
     },

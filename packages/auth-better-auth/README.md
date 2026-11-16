@@ -35,6 +35,131 @@ apply the adapter-specific transactional migration shipped by
 fail closed on unknown providers and duplicate identities and never merge or
 delete users.
 
+## OIDC SSO and authentik
+
+Use `oidcSsoPlugin()` to connect one or more OpenID Connect providers. It uses
+Better Auth's authorization-code flow with PKCE, state and nonce checks, and
+requires a signed ID token validated through discovery/JWKS. The configured
+issuer must exactly match discovery, including its trailing slash. Unavailable
+discovery, missing verification metadata and issuer mismatches fail auth
+initialization rather than falling back to an unverified profile.
+
+```ts
+import { betterAuth } from 'better-auth'
+import {
+  accountIdentityPlugin,
+  BetterAuthProvider,
+  oauthCallbackReplayPlugin,
+  oidcSsoPlugin,
+} from '@modern-admin/auth-better-auth'
+
+const auth = betterAuth({
+  // Keep your database, secret, UUID v7 generator and other plugins here.
+  baseURL: 'https://admin.example.com',
+  basePath: '/admin/api/auth',
+  trustedOrigins: ['https://admin.example.com'],
+  emailAndPassword: { enabled: true, disableSignUp: true },
+  account: { accountLinking: { enabled: true } },
+  plugins: [
+    accountIdentityPlugin(),
+    oauthCallbackReplayPlugin(),
+    oidcSsoPlugin({
+      providers: [
+        {
+          providerId: 'authentik',
+          name: 'Company SSO',
+          issuer: process.env.SSO_ISSUER!,
+          clientId: process.env.SSO_CLIENT_ID!,
+          clientSecret: process.env.SSO_CLIENT_SECRET!,
+        },
+      ],
+    }),
+  ],
+})
+
+const provider = new BetterAuthProvider({ auth })
+```
+
+Mount the same `auth` instance with
+`createBetterAuthMiddleware(toNodeHandler(auth), { auth })` at its `basePath`.
+The public login configuration exposes only provider ids, names and whether
+password login is enabled. Client secrets and discovery settings stay on the
+server. The login page automatically shows a “Continue with Company SSO” button.
+
+### Configure authentik
+
+1. Create an application with an OAuth2/OpenID Connect **confidential** provider.
+   Choose a signing key and enable the `openid`, `email`, `profile` scope mappings.
+2. Register the exact redirect URI
+   `https://admin.example.com/admin/api/auth/callback/authentik` using strict matching.
+   Keep the default per-application issuer, for example
+   `https://auth.example.com/application/o/modern-admin/`.
+3. Provide the issuer, client id and client secret to the server through your
+   secret manager. Discovery defaults to
+   `<issuer>/.well-known/openid-configuration`. Set `discoveryUrl` explicitly if
+   your IdP serves discovery elsewhere, including authentik's global issuer mode.
+4. Configure authentik to emit a truthful `email_verified: true` claim only for
+   verified addresses. Unverified identities cannot sign in, including identities
+   from `trustedProviders`. Restrict application access with authentik policies.
+5. Provision the local admin user with a verified email and the appropriate
+   role before their first SSO login. Matching verified emails link the external
+   account; subsequent logins use its immutable subject. Changing the IdP email
+   does not transfer account ownership. IdP claims never assign admin roles.
+
+`allowSignUp` defaults to `false` for each provider and cannot be bypassed with
+`requestSignUp` from the browser. Set `allowSignUp: true` only when your host
+deliberately supports provisioning and assigns a suitable default role. Existing
+host allowlist hooks still apply. Configure account-linking restrictions through
+Better Auth's `account.accountLinking`; this plugin does not relax them.
+
+For several admin panels, register a separate client/application and exact
+callback for each panel with the same authentik instance. Each panel maintains
+its own users, roles and sessions; authentik reuses its central login session.
+Additional providers are entries in `providers`, with distinct `providerId`s.
+Keep provider ids and issuer URLs stable once accounts are linked.
+
+### Reference app and generated hosts
+
+The Prisma reference app and newly generated hosts accept `SSO_ISSUER`,
+`SSO_DISCOVERY_URL` (optional), `SSO_CLIENT_ID`, `SSO_CLIENT_SECRET`,
+`SSO_PROVIDER_ID` (default `authentik`) and `SSO_PROVIDER_NAME`.
+Their `.env.example` files list the settings without real credentials.
+
+The reference app's Better Auth mount is `/api/auth`, so its callback is
+`https://<api-host>/api/auth/callback/authentik`. Generated hosts use
+`/admin/api/auth/callback/authentik`. Use the API's public URL, not the SPA
+origin when they run on separate domains. Set `AUTH_BASE_URL` for the reference
+app or `BETTER_AUTH_URL` for a generated host, and configure `WEB_ORIGIN`.
+
+Hosts using `buildBetterAuth()` can instead pass `oidcSsoProviders: [...]` and
+`emailAndPassword: false` programmatically. Set `allowlistOnly: true` to retain
+the host-wide provisioning restriction even for providers allowing sign-up.
+
+After testing SSO with an existing user, set `SSO_ONLY=true` to disable
+password login endpoints on the server as well as the form. This does not
+revoke existing sessions or API keys, disable other plugins such as passkeys,
+or implement organization-specific mandatory SSO. Keep a tested recovery
+procedure through server configuration. Provider changes require a restart.
+
+Modern Admin's client follows Better Auth's RP-initiated logout URL when the
+IdP advertises an end-session endpoint. To keep the central IdP session alive
+when logging out of one panel, set `disableProviderLogout: true` on that
+provider. Back-channel logout, SCIM and SAML are outside this OIDC integration;
+an IdP account being disabled does not immediately revoke an existing local
+session. Configure session lifetimes accordingly.
+
+### Design references
+
+Sentry separates its [provider configuration](https://github.com/getsentry/sentry/blob/master/src/sentry/models/authprovider.py),
+[external identity](https://github.com/getsentry/sentry/blob/master/src/sentry/models/authidentity.py)
+and [login/membership pipeline](https://github.com/getsentry/sentry/blob/master/src/sentry/auth/helper.py).
+Modern Admin keeps that separation through server-side provider configuration,
+the existing account identity schema and local authorization roles. It uses
+Better Auth for protocol handling rather than copying Sentry's organization model.
+
+Protocol setup: [authentik OAuth2/OIDC](https://docs.goauthentik.io/add-secure-apps/providers/oauth2/),
+[Better Auth Generic OAuth](https://www.better-auth.com/docs/plugins/generic-oauth).
+
 ## API keys
 
 With Better Auth's api-key plugin (`enableSessionForAPIKeys: true`), a key

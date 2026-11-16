@@ -62,6 +62,21 @@ describe('buildBetterAuth', () => {
     expect(config.secret).toBeDefined()
   })
 
+  test('rejects disabling the last sign-in method', () => {
+    const github = process.env.GITHUB_CLIENT_ID
+    const google = process.env.GOOGLE_CLIENT_ID
+    delete process.env.GITHUB_CLIENT_ID
+    delete process.env.GOOGLE_CLIENT_ID
+    try {
+      expect(() => buildBetterAuth({ database: makeDatabase(), emailAndPassword: false })).toThrow(
+        'At least one sign-in method',
+      )
+    } finally {
+      if (github !== undefined) process.env.GITHUB_CLIENT_ID = github
+      if (google !== undefined) process.env.GOOGLE_CLIENT_ID = google
+    }
+  })
+
   test('preserves the Modern Admin account identity schema with the installed Better Auth version', () => {
     const { config } = buildBetterAuth({ database: makeDatabase() })
     const account = getAuthTables(config).account!

@@ -43,6 +43,8 @@ export const ru: LocaleBundle = {
     'auth:email': 'Email',
     'auth:password': 'Пароль',
     'auth:loginFailed': 'Неверные данные.',
+    'auth:ssoFailed':
+      'Не удалось войти через SSO. Попробуйте ещё раз или обратитесь к администратору.',
     'errors:notFound': 'Не найдено.',
     'errors:forbidden': 'Нет доступа к этому ресурсу.',
     'errors:apiKeyEndpointForbidden': 'API-ключам запрещён доступ к этому эндпоинту.',

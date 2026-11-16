@@ -43,6 +43,8 @@ export const ptBR: LocaleBundle = {
     'auth:email': 'Email',
     'auth:password': 'Senha',
     'auth:loginFailed': 'Credenciais inválidas.',
+    'auth:ssoFailed':
+      'Falha no login SSO. Tente novamente ou entre em contato com seu administrador.',
     'errors:notFound': 'Não encontrado.',
     'errors:forbidden': 'Você não tem acesso a este recurso.',
     'errors:apiKeyEndpointForbidden': 'As chaves de API não podem acessar este endpoint.',

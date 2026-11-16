@@ -43,6 +43,7 @@ export const ja: LocaleBundle = {
     'auth:email': 'メールアドレス',
     'auth:password': 'パスワード',
     'auth:loginFailed': '認証情報が無効です。',
+    'auth:ssoFailed': 'SSO ログインに失敗しました。もう一度試すか、管理者にお問い合わせください。',
     'errors:notFound': '見つかりません。',
     'errors:forbidden': 'このリソースへのアクセス権がありません。',
     'errors:apiKeyEndpointForbidden': 'APIキーはこのエンドポイントにアクセスできません。',
