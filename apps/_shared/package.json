@@ -27,9 +27,9 @@
     "@modern-admin/feature-upload": "workspace:*",
     "@modern-admin/nest": "workspace:*",
     "@modern-admin/queue": "workspace:*",
-    "@nestjs/common": "12.4.2",
-    "@nestjs/core": "12.4.2",
-    "@nestjs/platform-express": "12.4.2",
+    "@nestjs/common": "12.5.0",
+    "@nestjs/core": "12.5.0",
+    "@nestjs/platform-express": "12.5.0",
     "better-auth": "1.7.18",
     "reflect-metadata": "0.2.2"
   },
