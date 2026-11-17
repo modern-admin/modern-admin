@@ -14,7 +14,7 @@
     "@axe-core/playwright": "4.14.0",
     "@modern-admin/core": "workspace:*",
     "@modern-admin/tsconfig": "workspace:*",
-    "@playwright/test": "1.65.0",
+    "@playwright/test": "1.65.1",
     "@types/bun": "1.4.4",
     "@types/node": "26.6.6",
     "postgres": "4.1.0",
