@@ -1,5 +1,17 @@
 # @modern-admin/nest
 
+## 0.15.0
+
+### Patch Changes
+
+- [#144](https://github.com/modern-admin/modern-admin/pull/144) [`e5e7034`](https://github.com/modern-admin/modern-admin/commit/e5e7034b7cdd81682bbcbdbdf86ceca92f27af52) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Update Better Auth, NestJS, GraphQL WebSocket, React Hook Form, Tiptap, Vite, and the AI SDK.
+  Keep the generated app's dependency pins aligned with the published packages.
+- Updated dependencies [[`e5e7034`](https://github.com/modern-admin/modern-admin/commit/e5e7034b7cdd81682bbcbdbdf86ceca92f27af52), [`4d87465`](https://github.com/modern-admin/modern-admin/commit/4d87465b3f02258f11496e0cabc625a25c84a5d4)]:
+  - @modern-admin/auth-better-auth@0.15.0
+  - @modern-admin/feature-upload@0.15.0
+  - @modern-admin/queue@0.15.0
+  - @modern-admin/i18n@0.15.0
+
 ## 0.14.1
 
 ### Patch Changes

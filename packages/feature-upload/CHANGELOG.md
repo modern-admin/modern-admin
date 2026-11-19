@@ -1,5 +1,12 @@
 # @modern-admin/feature-upload
 
+## 0.15.0
+
+### Patch Changes
+
+- [#144](https://github.com/modern-admin/modern-admin/pull/144) [`e5e7034`](https://github.com/modern-admin/modern-admin/commit/e5e7034b7cdd81682bbcbdbdf86ceca92f27af52) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Update Better Auth, NestJS, GraphQL WebSocket, React Hook Form, Tiptap, Vite, and the AI SDK.
+  Keep the generated app's dependency pins aligned with the published packages.
+
 ## 0.14.1
 
 ### Patch Changes
