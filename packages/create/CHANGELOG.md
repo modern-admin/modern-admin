@@ -1,5 +1,18 @@
 # @modern-admin/create
 
+## 0.15.0
+
+### Minor Changes
+
+- [#132](https://github.com/modern-admin/modern-admin/pull/132) [`4d87465`](https://github.com/modern-admin/modern-admin/commit/4d87465b3f02258f11496e0cabc625a25c84a5d4) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Add configurable OIDC SSO login with authentik setup instructions, verified ID tokens,
+  explicit provisioning, provider display names, translated login errors and SSO-only
+  password endpoint configuration in generated hosts.
+
+### Patch Changes
+
+- [#144](https://github.com/modern-admin/modern-admin/pull/144) [`e5e7034`](https://github.com/modern-admin/modern-admin/commit/e5e7034b7cdd81682bbcbdbdf86ceca92f27af52) Thanks [@SergiyIva](https://github.com/SergiyIva)! - Update Better Auth, NestJS, GraphQL WebSocket, React Hook Form, Tiptap, Vite, and the AI SDK.
+  Keep the generated app's dependency pins aligned with the published packages.
+
 ## 0.14.2
 
 ### Patch Changes
