@@ -46,6 +46,24 @@ bun run dev
 
 The admin panel is now live at **http://localhost:3001/admin**.
 
+## SSO with authentik
+
+Set the `SSO_*` settings shown in `.env.example` and create an OAuth2/OIDC
+confidential client in authentik. Use the exact redirect URI
+`https://<admin-host>/admin/api/auth/callback/authentik`, a signing key and the
+`openid`, `email`, `profile` scope mappings. The issuer must exactly match the
+discovery document, including its trailing slash. Require verified email
+addresses in authentik; the panel rejects unverified identities.
+
+Only existing admin users can sign in by default. Provision their local user
+with a verified email and a role first; SSO does not import administrator roles from the provider.
+Set `SSO_ONLY=true` after testing the integration to disable password login
+on the server. Existing sessions and API keys retain their normal lifetime.
+Restart the service after changing provider settings.
+
+See the [SSO integration guide](https://github.com/modern-admin/modern-admin/tree/develop/packages/auth-better-auth#oidc-sso-and-authentik)
+for programmatic multi-provider configuration, account linking and logout.
+
 ## First-run admin user
 
 The schema seeds zero users. Create one via a quick script. It uses Better

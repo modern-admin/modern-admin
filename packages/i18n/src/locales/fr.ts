@@ -43,6 +43,7 @@ export const fr: LocaleBundle = {
     'auth:email': 'E-mail',
     'auth:password': 'Mot de passe',
     'auth:loginFailed': 'Identifiants invalides.',
+    'auth:ssoFailed': 'La connexion SSO a échoué. Réessayez ou contactez votre administrateur.',
     'errors:notFound': 'Introuvable.',
     'errors:forbidden': 'Accès refusé à cette ressource.',
     'errors:apiKeyEndpointForbidden':

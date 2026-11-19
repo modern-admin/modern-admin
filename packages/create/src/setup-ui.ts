@@ -24,7 +24,7 @@ const UI_DEV_DEPENDENCIES: Record<string, string> = {
   '@vitejs/plugin-react': '6.3.0',
   tailwindcss: '4.3.5',
   typescript: '7.0.2',
-  vite: '8.3.7',
+  vite: '8.3.8',
 }
 
 interface PackageJson extends Record<string, unknown> {

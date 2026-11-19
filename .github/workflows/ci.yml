@@ -21,7 +21,7 @@
 #           checked-in `*-chromium-linux.png` baselines match byte-for-byte.
 #           Isolated from the main e2e job so a container/service hiccup can't
 #           take the other specs down. Baselines are regenerated in the same
-#           image (`mcr.microsoft.com/playwright:v1.65.0-noble`).
+#           image (`mcr.microsoft.com/playwright:v1.65.1-noble`).
 
 name: CI
 
@@ -113,7 +113,7 @@ jobs:
     # Match @playwright/test and the visual job; browsers and OS dependencies
     # are already installed, so no browser dependency apt step is needed.
     container:
-      image: mcr.microsoft.com/playwright:v1.65.0-noble
+      image: mcr.microsoft.com/playwright:v1.65.1-noble
     # Service containers share the job's network. Keep these images in step with
     # docker-compose.yml by hand: Dependabot's docker-compose ecosystem updates
     # that file, but no ecosystem touches image tags inside a workflow.
@@ -144,15 +144,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # setup-bun needs unzip; browser dependencies already ship in the image.
-      - name: Install unzip
-        run: apt-get update && apt-get install -y --no-install-recommends unzip
+      # The Playwright image already has curl, Node.js, and tar. Install the
+      # official Bun binary tarball without contacting Ubuntu package mirrors.
+      - &setup_playwright_bun
+        name: Setup bun
+        run: |
+          bun_bin="$RUNNER_TEMP/bun-bin"
+          bun_archive="$RUNNER_TEMP/bun.tgz"
+          bun_metadata=$(curl -fsSL --retry 3 --connect-timeout 10 --max-time 60 \
+            https://registry.npmjs.org/@oven/bun-linux-x64/latest)
+          bun_tarball=$(node -p 'JSON.parse(process.argv[1]).dist.tarball' "$bun_metadata")
+          curl -fsSL --retry 3 --connect-timeout 10 --max-time 60 "$bun_tarball" -o "$bun_archive"
+          mkdir -p "$bun_bin"
+          tar -xzf "$bun_archive" -C "$bun_bin" --strip-components=2 package/bin/bun
+          "$bun_bin/bun" --version
+          printf '%s\n' "$bun_bin" >> "$GITHUB_PATH"
         timeout-minutes: 5
-
-      - name: Setup bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with:
-          bun-version: latest
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -191,9 +198,9 @@ jobs:
     timeout-minutes: 15
     # Run inside the official Playwright image so chromium + its fonts match
     # the environment the checked-in baselines were generated in. Pin the tag
-    # to the installed @playwright/test version (1.65.0).
+    # to the installed @playwright/test version (1.65.1).
     container:
-      image: mcr.microsoft.com/playwright:v1.65.0-noble
+      image: mcr.microsoft.com/playwright:v1.65.1-noble
     # Both E2E jobs use service containers. Keep these images in step with
     # docker-compose.yml by hand: Dependabot's docker-compose ecosystem updates
     # that file, but no ecosystem touches image tags inside a workflow.
@@ -221,18 +228,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # The Playwright image is Debian-based but ships no `unzip`, which
-      # oven-sh/setup-bun needs to extract the bun archive.
-      # This is the only apt call in the job; cap it so a stalled mirror
-      # cannot hang it for the full job timeout.
-      - name: Install unzip
-        run: apt-get update && apt-get install -y --no-install-recommends unzip
-        timeout-minutes: 5
-
-      - name: Setup bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with:
-          bun-version: latest
+      - *setup_playwright_bun
 
       - name: Install dependencies
         run: bun install --frozen-lockfile

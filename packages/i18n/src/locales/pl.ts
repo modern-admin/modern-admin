@@ -43,6 +43,8 @@ export const pl: LocaleBundle = {
     'auth:email': 'Email',
     'auth:password': 'Hasło',
     'auth:loginFailed': 'Nieprawidłowe dane logowania.',
+    'auth:ssoFailed':
+      'Logowanie SSO nie powiodło się. Spróbuj ponownie lub skontaktuj się z administratorem.',
     'errors:notFound': 'Nie znaleziono.',
     'errors:forbidden': 'Brak dostępu do tego zasobu.',
     'errors:apiKeyEndpointForbidden': 'Klucze API nie mają dostępu do tego punktu końcowego.',

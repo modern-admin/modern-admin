@@ -1,6 +1,6 @@
 {
   "name": "@modern-admin/graphql",
-  "version": "0.14.1",
+  "version": "0.15.0",
   "description": "Apollo + code-first GraphQL transport for @modern-admin/core.",
   "homepage": "https://github.com/modern-admin/modern-admin/tree/main/packages/graphql#readme",
   "keywords": [
@@ -52,13 +52,13 @@
     "@modern-admin/core": "workspace:^",
     "busboy": "1.6.0",
     "dataloader": "2.2.3",
-    "graphql-ws": "6.4.1",
+    "graphql-ws": "6.4.3",
     "ws": "8.22.2"
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
-    "@nestjs/common": "12.4.2",
-    "@nestjs/core": "12.4.2",
+    "@nestjs/common": "12.5.1",
+    "@nestjs/core": "12.5.1",
     "@types/bun": "1.4.4",
     "@types/busboy": "1.5.5",
     "@types/ws": "8.18.2",
@@ -66,8 +66,8 @@
     "typescript": "7.0.2"
   },
   "peerDependencies": {
-    "@nestjs/common": "12.4.2",
-    "@nestjs/core": "12.4.2",
+    "@nestjs/common": "12.5.1",
+    "@nestjs/core": "12.5.1",
     "graphql": "17.1.0"
   }
 }
