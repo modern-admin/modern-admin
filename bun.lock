@@ -409,11 +409,11 @@
         "typescript": "7.0.2",
       },
       "peerDependencies": {
-        "@ai-sdk/openai-compatible": "3.0.87",
+        "@ai-sdk/openai-compatible": "3.0.93",
         "@openrouter/ai-sdk-provider": "3.1.0",
         "@scalar/nestjs-api-reference": "1.2.35",
         "@types/express": "5.0.6",
-        "ai": "7.0.166",
+        "ai": "7.0.177",
         "express": "5.3.0",
       },
       "optionalPeers": [

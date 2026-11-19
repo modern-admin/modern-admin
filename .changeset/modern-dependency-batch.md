@@ -11,5 +11,5 @@
 '@modern-admin/web': patch
 ---
 
-Update Better Auth, NestJS, GraphQL WebSocket, React Hook Form, Tiptap, and Vite.
+Update Better Auth, NestJS, GraphQL WebSocket, React Hook Form, Tiptap, Vite, and the AI SDK.
 Keep the generated app's dependency pins aligned with the published packages.
