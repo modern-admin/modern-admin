@@ -15,7 +15,7 @@
     "@modern-admin/core": "workspace:*",
     "@modern-admin/tsconfig": "workspace:*",
     "@playwright/test": "1.65.1",
-    "@types/bun": "1.4.4",
+    "@types/bun": "1.4.5",
     "@types/node": "26.6.6",
     "postgres": "4.1.1",
     "typescript": "7.0.2"
