@@ -82,7 +82,7 @@
     "@modern-admin/i18n": "workspace:^",
     "@modern-admin/react": "workspace:^",
     "@modern-admin/ui": "workspace:^",
-    "@tanstack/react-query": "5.107.1"
+    "@tanstack/react-query": "5.108.2"
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
