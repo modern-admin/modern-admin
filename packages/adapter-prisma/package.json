@@ -55,7 +55,7 @@
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
     "@prisma/client": "7.10.1",
-    "@types/bun": "1.4.4",
+    "@types/bun": "1.4.5",
     "prisma": "7.10.1",
     "typescript": "7.0.2"
   },

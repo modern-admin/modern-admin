@@ -74,7 +74,7 @@
     "@modern-admin/nest": "workspace:*",
     "@modern-admin/tsconfig": "workspace:*",
     "@nestjs/swagger": "12.1.2",
-    "@types/bun": "1.4.4",
+    "@types/bun": "1.4.5",
     "@types/busboy": "1.5.5",
     "graphql": "17.1.0",
     "typescript": "7.0.2"
