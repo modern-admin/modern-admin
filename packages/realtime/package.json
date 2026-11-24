@@ -54,14 +54,14 @@
   },
   "devDependencies": {
     "@modern-admin/tsconfig": "workspace:*",
-    "@nestjs/common": "12.5.1",
-    "@nestjs/websockets": "12.5.1",
+    "@nestjs/common": "12.6.0",
+    "@nestjs/websockets": "12.6.0",
     "@types/bun": "1.4.4",
     "typescript": "7.0.2"
   },
   "peerDependencies": {
-    "@nestjs/common": "12.5.1",
-    "@nestjs/websockets": "12.5.1",
+    "@nestjs/common": "12.6.0",
+    "@nestjs/websockets": "12.6.0",
     "@nestjs/platform-socket.io": "12.5.1"
   },
   "peerDependenciesMeta": {
